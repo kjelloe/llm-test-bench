@@ -8,7 +8,7 @@ from pathlib import Path
 
 from ollama_client import OllamaError, chat
 from parsing import parse_file_blocks, validate_edits
-from reporting import print_summary, write_results
+from reporting import print_comparison_table, print_summary, write_results
 from tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
 
 
@@ -171,6 +171,7 @@ def main() -> None:
 
     write_results(results, args.out)
     print(f"\nResults written to {args.out}")
+    print_comparison_table(results)
     print_summary(results)
 
 
