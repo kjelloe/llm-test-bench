@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+results*.json
+/task_data/node_slugify/node_modules/
+/task_data/node_slugify/package-lock.json
+/task_data/dotnet_sas/src/*/bin/
+/task_data/dotnet_sas/src/*/obj/
+/task_data/dotnet_sas/tests/*/bin/
+/task_data/dotnet_sas/tests/*/obj/
