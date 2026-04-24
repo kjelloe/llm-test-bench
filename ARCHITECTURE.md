@@ -2,177 +2,165 @@
 
 This repo contains a local, reproducible benchmark harness for evaluating coding-capable LLMs served by **Ollama** (running locally, typically in WSL). The harness runs a suite of deterministic tasks (Node.js, Python, .NET/Azure-flavored) against one or more models and scores them on:
 
-- **Correctness:** do tests pass after applying the model’s edits?
+- **Correctness:** do tests pass after applying the model's edits?
 - **Edit validity:** did the model produce machine-parseable edits?
 - **Safety/discipline:** did it modify only allowed files?
-- **Performance:** wall-clock time, tokens/sec (from Ollama metrics), prompt/eval token counts
+- **Performance:** wall-clock time, tokens/sec, prompt/eval token counts
 
 Key design choice: use a **whole-file edit protocol** instead of diffs (more robust for local models).
 
+### Repository Layout
+
+```
+bench.py            CLI runner — orchestrates model × task matrix
+tasks.py            Task dataclass, built-in task definitions, prompt builder, subprocess helpers
+ollama_client.py    POST /api/chat (non-streaming), metrics extraction
+parsing.py          BEGIN_FILE/END_FILE parser, allow-list validation
+reporting.py        Comparison table, failure detail, JSON writer
+requirements.txt    pytest only (harness is stdlib-first)
+run.sh              Venv setup + bench.py entrypoint
+compare.sh          Runs canonical 4-model set; forwards extra args to run.sh
+preflight.sh        Dependency checker (GPU, Ollama, models, Python, Node, .NET)
+tests/
+  conftest.py       sys.path shim
+  test_parsing.py   Unit tests for the BEGIN_FILE/END_FILE parser
+task_data/
+  node_slugify/     package.json, src/slug.js (baseline), tests/slug.test.js
+  python_safe_div/  calc.py (baseline), conftest.py, tests/test_calc.py
+  dotnet_sas/       MicroAzureSas.sln, src/…/SasHelper.cs (baseline), tests/…/SasHelperTests.cs
+```
+
 ### Goals
 
-- Run locally, offline except for initial package restores (npm, pip, nuget) when tasks require it.
-- Reproducible runs: deterministic settings (seed, temperature=0), pinned task fixtures.
+- Run locally, offline except for initial package restores (npm, pip, nuget).
+- Reproducible runs: deterministic settings (`seed=1`, `temperature=0`), pinned task fixtures.
 - Model-agnostic via Ollama `/api/chat`.
-- Easy to extend: adding tasks should be straightforward (a “task plugin” pattern).
-- Produce artifacts suitable for CI and dashboards: JSON output + optional summary table.
+- Easy to extend: adding a task means adding a `Task(…)` definition and a `task_data/` subfolder.
+- Produce artifacts suitable for CI and dashboards: JSON output + console table.
 
 ### Non-goals
 
-- Not a comprehensive “human eval” system.
-- Not intended to benchmark multimodal features (even if models support vision).
+- Not a comprehensive "human eval" system.
+- Not intended to benchmark multimodal features.
 - Not a general agent; it is a benchmark harness with strict IO protocols.
 
 ### High-level Flow
 
-For each model M and task T:
+For each `(model, task)` pair:
 
-1. Create an isolated temporary working directory.
-2. Materialize the task repo (files, tests, configs).
-3. Initialize `git` repo (optional but useful for debugging and capturing snapshots).
-4. Run baseline tests; assert failure (ensures the task is valid).
-5. Build a prompt containing:
-   - file list
-   - failing test output
-   - full contents of relevant files
-   - list of editable file paths (strict allow-list)
-   - strict output format instructions
-6. Call Ollama `/api/chat` with deterministic options:
-   - `temperature=0`
-   - `seed=<int>`
-   - `num_ctx=<int>`
-   - `num_predict=<int>` (kept modest to prevent rambling)
-7. Parse the model response into one or more `BEGIN_FILE/END_FILE` blocks.
-8. Validate:
-   - all edited files are within the editable allow-list
-   - content is non-empty and decodable
-9. Apply edits by overwriting those files.
-10. Run tests again.
-11. Record results (pass/fail, timings, tok/s, error categories, etc.).
+1. **Copy** `task_data/<task.subdir>/` into a fresh `tempfile.mkdtemp()` workdir.
+2. **Setup** — run `task.setup_cmd` if present (e.g. `npm install`, `dotnet restore`).
+3. **Baseline verification** — run `task.test_cmd`; assert it exits non-zero. If it passes, record `BASELINE_PASSED_INVALID_TASK` and skip.
+4. **Prompt** — read editable + context files from workdir; build a structured prompt with the `BEGIN_FILE/END_FILE` format rules (see `tasks.build_prompt`).
+5. **Model call** — POST `/api/chat` via `ollama_client.chat()` with `stream=false` and deterministic options.
+6. **Parse** — extract `BEGIN_FILE … END_FILE` blocks from raw response text (`parsing.parse_file_blocks`).
+7. **Validate** — check all edited paths are in `task.editable_files` (`parsing.validate_edits`).
+8. **Apply** — overwrite files in the workdir.
+9. **Test** — re-run `task.test_cmd`; record `tests_pass`.
+10. **Cleanup** — delete workdir (unless `--keep-workdirs`).
 
 ### System Components
 
-#### 1) CLI Runner (`bench`)
+#### `bench.py` — CLI Runner
 
-Responsibilities:
-- parse CLI args (models, tasks, ollama URL, output path, knobs)
-- orchestrate model × task matrix
-- collect, aggregate, and write results
+- Parses CLI args; builds the `(model, task)` matrix.
+- Calls `run_one()` per pair; collects result records.
+- On completion: writes `results.json`, prints comparison table, prints failure detail.
 
-Key flags (proposed):
-- `--models ...`
-- `--tasks ...` (or default suite)
-- `--ollama-url http://127.0.0.1:11434/api/chat`
-- `--num-ctx 16384`
-- `--temperature 0`
-- `--seed 1`
-- `--num-predict 400`
-- `--out results.json`
-- `--format json|jsonl|table`
-- `--keep-workdirs` (debug)
+#### `tasks.py` — Task Library + Prompt Builder
 
-#### 2) Task Library (`tasks/`)
+Two responsibilities kept in one module to avoid a thin `prompting.py` abstraction:
 
-Each task provides:
-- `name`
-- `language` tag (node/python/dotnet)
-- a `materialize(repo_dir)` function returning:
-  - test command (argv list)
-  - editable file allow-list
-  - context file list to include in prompt
-  - optional environment setup steps
-- optional “warmup” hook for dependency restore caching
+- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`.
+- **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
+- **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
+- **`BUILTIN_TASKS` / `TASK_MAP`**: the three built-in tasks and a lookup dict.
 
-Tasks should be small, deterministic, and representative:
-- Node: string sanitation, async behavior, edge-case parsing, small API refactor
-- Python: correctness checks + regression tests
-- .NET: SDK usage correctness + strict compilation + unit tests
+#### `ollama_client.py` — Model Adapter
 
-#### 3) Prompt Builder (`prompting.py`)
+- Single public function `chat(...)`.
+- Uses `urllib.request` (stdlib); no third-party HTTP library.
+- Returns `OllamaResponse(content, metrics)` where `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
 
-Produces:
-- system prompt (rules + output format)
-- user prompt (repo metadata + failing output + file contents)
+#### `parsing.py` — Edit Protocol Parser
 
-Must ensure:
-- small enough to fit within `num_ctx`
-- stable ordering
-- explicit editable allow-list
+- `parse_file_blocks(text)` — regex over `BEGIN_FILE <path>\n…\nEND_FILE`; returns `list[FileEdit]`.
+- `validate_edits(edits, allow_list)` — returns violation strings for any path outside the allow-list.
 
-#### 4) Model Adapter (`ollama_client.py`)
+#### `reporting.py` — Output
 
-Encapsulates `/api/chat` call and extracts metrics:
-- `wall_s`
-- `prompt_eval_count`, `eval_count`
-- `prompt_eval_duration`, `eval_duration`
-- derived tokens/sec
-
-#### 5) Output/Reporting (`reporting.py`)
-
-Writes:
-- `results.json` (or JSONL)
-- optional markdown summary table:
-  - pass rate by model/task
-  - avg tok/s by model
-  - failure breakdown (parse error vs invalid edit vs tests still failing)
+- `print_comparison_table(results)` — ASCII table: rows = models, columns = tasks + summary. Each cell shows `PASS/FAIL`, `tok/s`, `wall_s`. Summary column shows pass count, avg tok/s, total seconds.
+- `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
+- `write_results(results, path)` — JSON dump.
 
 ### Data Model (Result Record)
 
-Per run (model × task):
-
-- `model`: string
-- `task`: string
-- `baseline_rc`: int
-- `baseline_failed`: bool
-- `edited_files`: list[string]
-- `edit_parse_ok`: bool
-- `edit_policy_ok`: bool
-- `tests_pass`: bool
-- `post_rc`: int
-- `metrics`: object (from Ollama)
-- `tok_per_s`: float|null
-- `error_kind`: enum
-  - `NO_BLOCKS`
-  - `EDITED_NONEDITABLE_FILE`
-  - `TESTS_STILL_FAIL`
-  - `BASELINE_PASSED_INVALID_TASK`
-  - `TOOL_ERROR`
-- `error_detail`: string (truncated)
+| Field | Type | Notes |
+|---|---|---|
+| `model` | string | |
+| `task` | string | |
+| `baseline_failed` | bool | |
+| `baseline_rc` | int | |
+| `edit_parse_ok` | bool | |
+| `edit_policy_ok` | bool | |
+| `tests_pass` | bool | |
+| `edited_files` | list[string] | |
+| `error_kind` | string\|null | `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR` |
+| `error_detail` | string\|null | truncated, max ~500 chars |
+| `metrics` | object | `prompt_eval_count`, `eval_count`, `*_duration_ms` |
+| `tok_per_s` | float | |
+| `wall_s` | float | total including setup + model + tests |
 
 ### Edit Protocol (Whole-file)
 
-Model output must be:
+Model output must consist solely of one or more blocks:
 
+```
 BEGIN_FILE <relative/path>
 <full updated file content>
 END_FILE
+```
 
-Repeat blocks if editing multiple files.
+Strictness enforced:
+- `NO_BLOCKS` if `parse_file_blocks` returns empty.
+- `EDITED_NONEDITABLE_FILE` if any path is outside the task's `editable_files`.
 
-Strictness:
-- No extra text outside blocks.
-- Only editable allow-list paths may appear.
+### Task Authoring Contract
+
+A valid task must satisfy:
+1. Baseline tests **fail** (`test_cmd` exits non-zero on unmodified `task_data/`).
+2. After the correct minimal fix to `editable_files`, tests **pass**.
+3. `editable_files` allow-list is as small as possible (ideally one file).
+4. `context_files` provide everything the model needs to understand the fix (tests, config).
 
 ### Security / Safety Notes
 
 - Tasks run arbitrary code (tests). Only run trusted task suites.
-- Use isolated temp directories.
-- Consider running in a container for untrusted external repos.
+- Each run gets an isolated `tempfile.mkdtemp()` directory; the source `task_data/` is never modified.
+- `subprocess.run` is used throughout; `shell=True` is never used.
 
-### Extensibility Plan
+### Extensibility
 
-- Add “external repo” mode:
-  - clone a repo (local path provided)
-  - run a defined failing test command
-  - restrict editable allow-list (e.g., one file)
-  - optionally provide a set of “benchmark scenarios” as YAML.
+**Adding a task:**
 
-- Add “multiple trials” mode:
-  - run each model/task N times with different seeds
-  - report mean/variance.
+```python
+MY_TASK = Task(
+    id="my_task",
+    description="Fix the bug in src/foo.py so tests pass.",
+    subdir="my_task",           # → task_data/my_task/
+    editable_files=["src/foo.py"],
+    context_files=["tests/test_foo.py"],
+    test_cmd=["python", "-m", "pytest", "tests/"],
+    test_timeout=30,
+)
+```
+
+Then add `task_data/my_task/` with baseline source + tests, and register `MY_TASK` in `BUILTIN_TASKS`.
+
+**Future: external repo mode** — define tasks in YAML pointing at local repo paths with a test command and editable allow-list.
 
 ### Known Constraints
 
-- First run of npm/nuget may be slower due to restores.
-- Models may violate formatting; harness should classify failures clearly.
-- Large context windows increase KV cache; speed varies by model quant and VRAM spill.
+- First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
+- Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
+- Large context windows increase KV cache pressure; speed varies by model quantization and VRAM.
