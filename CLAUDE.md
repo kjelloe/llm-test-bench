@@ -19,7 +19,11 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 #### Safety & Determinism
 
 - Default `temperature=0` and `seed=1`.
-- Keep `num_predict` small enough to avoid rambling outputs (300–500).
+- `num_predict` default is 400 for simple/instruct models. Use 1200+ for thinking models
+  (gemma4, deepseek-r1, etc.) — their reasoning tokens consume the budget before the answer.
+  `compare.sh` sets `--num-predict 1200` explicitly.
+- Default `--model-timeout` is 300s. Large models at ~1–2 tok/s need up to 250s for 400 tokens;
+  the old 120s default caused spurious TOOL_ERROR timeouts.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement

@@ -12,6 +12,21 @@ from reporting import print_comparison_table, print_summary, write_results
 from tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
 
 
+def _no_blocks_detail(resp, num_predict: int) -> str:
+    """Build a diagnostic string for NO_BLOCKS failures."""
+    truncated = resp.metrics.eval_count >= num_predict - 5
+    parts = []
+    if resp.thinking:
+        parts.append(f"[thinking: {resp.thinking[:120].replace(chr(10), ' ')}…]")
+    raw = resp.content
+    if raw:
+        snippet = raw[:200] if len(raw) <= 200 else raw[:100] + "\n…\n" + raw[-100:]
+        parts.append(snippet)
+    if truncated and not raw:
+        parts.append(f"[response empty — all {resp.metrics.eval_count} tokens used for thinking]")
+    return "\n".join(parts) if parts else "(empty response)"
+
+
 def run_one(
     model: str,
     task: Task,
@@ -20,6 +35,7 @@ def run_one(
     temperature: float,
     seed: int,
     num_predict: int,
+    model_timeout: int,
     keep_workdir: bool = False,
 ) -> dict:
     record: dict = {
@@ -30,6 +46,7 @@ def run_one(
         "edit_parse_ok": False,
         "edit_policy_ok": False,
         "tests_pass": False,
+        "response_truncated": False,
         "edited_files": [],
         "error_kind": None,
         "error_detail": None,
@@ -68,6 +85,7 @@ def run_one(
                 temperature=temperature,
                 seed=seed,
                 num_predict=num_predict,
+                timeout=model_timeout,
             )
         except OllamaError as exc:
             record["error_kind"] = "TOOL_ERROR"
@@ -83,13 +101,14 @@ def run_one(
             "total_duration_ms": round(m.total_duration / 1e6, 1),
         }
         record["tok_per_s"] = round(m.tok_per_s, 1)
+        record["response_truncated"] = m.eval_count >= num_predict - 5
 
         # --- parse edits ---
         edits = parse_file_blocks(resp.content)
         record["edit_parse_ok"] = bool(edits)
         if not edits:
             record["error_kind"] = "NO_BLOCKS"
-            record["error_detail"] = resp.content[:300]
+            record["error_detail"] = _no_blocks_detail(resp, num_predict)
             return record
 
         # --- policy check ---
@@ -135,7 +154,10 @@ def main() -> None:
     parser.add_argument("--num-ctx", type=int, default=8192)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--num-predict", type=int, default=400)
+    parser.add_argument("--num-predict", type=int, default=400,
+                        help="Max tokens to generate. Use 1200+ for thinking models (default: 400)")
+    parser.add_argument("--model-timeout", type=int, default=300,
+                        help="Ollama HTTP request timeout in seconds (default: 300)")
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
@@ -163,10 +185,12 @@ def main() -> None:
             temperature=args.temperature,
             seed=args.seed,
             num_predict=args.num_predict,
+            model_timeout=args.model_timeout,
             keep_workdir=args.keep_workdirs,
         )
         status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
-        print(f"{status}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
+        trunc = " TRUNCATED" if record.get("response_truncated") else ""
+        print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
         results.append(record)
 
     write_results(results, args.out)

@@ -24,10 +24,18 @@ def build_prompt(task: Task, workdir: Path) -> str:
     lines = [
         "You are a coding assistant. Fix the file(s) listed under EDITABLE FILES so all tests pass.",
         "",
+        "OUTPUT FORMAT — you must follow this exactly:",
+        "",
+        "BEGIN_FILE path/to/file.ext",
+        "... complete corrected file content ...",
+        "END_FILE",
+        "",
         "RULES:",
-        "- Output ONLY BEGIN_FILE / END_FILE blocks. No explanations, no markdown fences.",
+        "- Output ONLY BEGIN_FILE / END_FILE blocks. Nothing else.",
+        "- Do NOT use markdown code fences (```), XML, JSON, or any other wrapper.",
+        "- Do NOT add preamble, explanation, or commentary before or after the blocks.",
         "- Only edit files listed under EDITABLE FILES.",
-        "- Output the complete updated file content inside each block.",
+        "- Output the complete file content inside each block — not just the changed lines.",
         "",
         f"TASK: {task.description}",
         "",
@@ -120,7 +128,9 @@ DOTNET_SAS = Task(
     description=(
         "SasHelper.GenerateSasUri in src/MicroAzureSas/SasHelper.cs "
         "produces a SAS token with ExpiresOn set in the past. "
-        "Fix it so ExpiresOn is approximately 60 minutes in the future."
+        "Fix it so ExpiresOn is approximately 60 minutes in the future. "
+        "Change only the AddMinutes value — do not add, remove, or change any using directives "
+        "or any other part of the file."
     ),
     subdir="dotnet_sas",
     editable_files=["src/MicroAzureSas/SasHelper.cs"],

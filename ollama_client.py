@@ -22,6 +22,7 @@ class OllamaMetrics:
 @dataclass
 class OllamaResponse:
     content: str
+    thinking: str          # non-empty for models with thinking mode (deepseek-r1, gemma4, etc.)
     metrics: OllamaMetrics
 
 
@@ -37,7 +38,7 @@ def chat(
     temperature: float = 0.0,
     seed: int = 1,
     num_predict: int = 400,
-    timeout: int = 120,
+    timeout: int = 300,
 ) -> OllamaResponse:
     url = base_url.rstrip("/") + "/api/chat"
     payload = {
@@ -67,9 +68,10 @@ def chat(
     except TimeoutError as exc:
         raise OllamaError(f"Timed out after {timeout}s") from exc
 
-    content = body.get("message", {}).get("content", "")
+    msg = body.get("message", {})
     return OllamaResponse(
-        content=content,
+        content=msg.get("content", ""),
+        thinking=msg.get("thinking", ""),
         metrics=OllamaMetrics(
             prompt_eval_count=body.get("prompt_eval_count", 0),
             eval_count=body.get("eval_count", 0),
