@@ -39,12 +39,14 @@ def chat(
     seed: int = 1,
     num_predict: int = 400,
     timeout: int = 300,
+    think: bool = False,
 ) -> OllamaResponse:
     url = base_url.rstrip("/") + "/api/chat"
     payload = {
         "model": model,
         "messages": messages,
         "stream": False,
+        "think": think,   # False disables reasoning tokens for deepseek-r1, gemma4, etc.
         "options": {
             "num_ctx": num_ctx,
             "temperature": temperature,

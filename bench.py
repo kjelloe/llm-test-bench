@@ -36,6 +36,7 @@ def run_one(
     seed: int,
     num_predict: int,
     model_timeout: int,
+    think: bool = False,
     keep_workdir: bool = False,
 ) -> dict:
     record: dict = {
@@ -47,6 +48,7 @@ def run_one(
         "edit_policy_ok": False,
         "tests_pass": False,
         "response_truncated": False,
+        "response_snippet": None,
         "edited_files": [],
         "error_kind": None,
         "error_detail": None,
@@ -80,12 +82,16 @@ def run_one(
             resp = chat(
                 base_url=ollama_url,
                 model=model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."},
+                    {"role": "user", "content": prompt},
+                ],
                 num_ctx=num_ctx,
                 temperature=temperature,
                 seed=seed,
                 num_predict=num_predict,
                 timeout=model_timeout,
+                think=think,
             )
         except OllamaError as exc:
             record["error_kind"] = "TOOL_ERROR"
@@ -102,6 +108,9 @@ def run_one(
         }
         record["tok_per_s"] = round(m.tok_per_s, 1)
         record["response_truncated"] = m.eval_count >= num_predict - 5
+        # Save a snippet of the raw model output for post-hoc debugging
+        raw = resp.content
+        record["response_snippet"] = (raw[:300] if len(raw) <= 300 else raw[:150] + "\n…\n" + raw[-150:])
 
         # --- parse edits ---
         edits = parse_file_blocks(resp.content)
@@ -158,6 +167,8 @@ def main() -> None:
                         help="Max tokens to generate. Use 1200+ for thinking models (default: 400)")
     parser.add_argument("--model-timeout", type=int, default=300,
                         help="Ollama HTTP request timeout in seconds (default: 300)")
+    parser.add_argument("--think", action="store_true", default=False,
+                        help="Enable thinking/reasoning mode for models that support it (default: off)")
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
@@ -186,6 +197,7 @@ def main() -> None:
             seed=args.seed,
             num_predict=args.num_predict,
             model_timeout=args.model_timeout,
+            think=args.think,
             keep_workdir=args.keep_workdirs,
         )
         status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"

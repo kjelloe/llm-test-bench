@@ -71,7 +71,11 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
             text=True,
             timeout=timeout,
         )
-        return r.returncode, (r.stdout + r.stderr)[-800:]
+        out = r.stdout + r.stderr
+        # Keep the head (primary errors) and tail (summary) — both matter for cascading failures.
+        if len(out) > 1200:
+            out = out[:600] + "\n…(truncated)…\n" + out[-400:]
+        return r.returncode, out
     except subprocess.TimeoutExpired:
         return -1, f"Timed out after {timeout}s"
 
@@ -129,8 +133,9 @@ DOTNET_SAS = Task(
         "SasHelper.GenerateSasUri in src/MicroAzureSas/SasHelper.cs "
         "produces a SAS token with ExpiresOn set in the past. "
         "Fix it so ExpiresOn is approximately 60 minutes in the future. "
-        "Change only the AddMinutes value — do not add, remove, or change any using directives "
-        "or any other part of the file."
+        "The ONLY change required is the integer argument to AddMinutes: change -10 to 60. "
+        "Do not add, remove, or change any using directives, class structure, "
+        "method signatures, or any other line. Output the complete file with only that one value changed."
     ),
     subdir="dotnet_sas",
     editable_files=["src/MicroAzureSas/SasHelper.cs"],
