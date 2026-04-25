@@ -12,11 +12,15 @@ def print_comparison_table(results: list[dict]) -> None:
     tasks  = list(dict.fromkeys(r["task"]  for r in results))
     idx    = {(r["model"], r["task"]): r for r in results}
 
+    # Assumed speed rank: position in --models arg order (1 = fastest assumed)
+    speed_rank = {m: i + 1 for i, m in enumerate(models)}
+
     # Column widths
     # cell layout: "PASS  " (6) + "  42.3t/s" (9) + "  " (2) + "  14.2s" (7) = 24
     model_w = max(len("Model"), max(len(m) for m in models))
     CELL_W  = 24   # "PASS  1234.5t/s    14.2s"
     SUM_W   = 25   # "3/3  1234.5t/s  1234.5s"
+    SPD_W   = 3    # "1" – "9", centred
 
     def cell(r: dict | None) -> str:
         if r is None:
@@ -35,30 +39,32 @@ def print_comparison_table(results: list[dict]) -> None:
 
     bar = (
         "+" + "-" * (model_w + 2)
+        + "+" + "-" * (SPD_W + 2)
         + ("+" + "-" * (CELL_W + 2)) * len(tasks)
         + "+" + "-" * (SUM_W + 2) + "+"
     )
 
     print()
     print("=" * len(bar))
-    print("COMPARISON TABLE")
+    print("COMPARISON TABLE  (Spd: assumed rank 1=fastest)")
     print("=" * len(bar))
     print(bar)
 
     # Task name headers
     task_hdrs = "".join(f"| {t:<{CELL_W}} " for t in tasks)
-    print(f"| {'Model':<{model_w}} {task_hdrs}| {'pass  avg tok/s   tot s':<{SUM_W}} |")
+    print(f"| {'Model':<{model_w}} | {'Spd':^{SPD_W}} {task_hdrs}| {'pass  avg tok/s   tot s':<{SUM_W}} |")
 
     # Sub-header: column meaning
     sub_hdrs = "".join(f"| {'ok  tok/s  wall':<{CELL_W}} " for _ in tasks)
-    print(f"| {'':<{model_w}} {sub_hdrs}| {'':<{SUM_W}} |")
+    print(f"| {'':<{model_w}} | {'est':^{SPD_W}} {sub_hdrs}| {'':<{SUM_W}} |")
 
     print(bar)
 
     for model in models:
         recs  = [idx.get((model, t)) for t in tasks]
         cells = "".join(f"| {cell(r)} " for r in recs)
-        print(f"| {model:<{model_w}} {cells}| {summary(recs):<{SUM_W}} |")
+        rank  = speed_rank[model]
+        print(f"| {model:<{model_w}} | {rank:^{SPD_W}} {cells}| {summary(recs):<{SUM_W}} |")
 
     print(bar)
 

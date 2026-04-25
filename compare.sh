@@ -12,10 +12,11 @@ set -euo pipefail
 
 ./run.sh \
   --models \
-    qwen2.5-coder:32b-instruct-q8_0 \
-    gemma4:31b \
+    qwen2.5-coder:14b \
+    qwen3-coder:30b \
     llama3.3:70b-instruct-q4_K_M \
-    deepseek-r1:32b \
+    qwen3.5:122b \
+    gpt-oss:120b \
   --num-predict 1200 \
   --model-timeout 300 \
   --out results-compare.json \

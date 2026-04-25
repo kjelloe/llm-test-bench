@@ -30,10 +30,11 @@ Example output:
   ✓  Ollama reachable at http://127.0.0.1:11434
 
 ── Ollama models ──
-  ✓  qwen2.5-coder:32b-instruct-q8_0
-  ✓  gemma4:31b
+  ✓  qwen2.5-coder:14b
+  ✓  qwen3-coder:30b
   ✓  llama3.3:70b-instruct-q4_K_M
-  ✓  deepseek-r1:32b
+  ✓  qwen3.5:122b
+  ✓  gpt-oss:120b
 
 ── Python ──
   ✓  Python 3.12.3
@@ -60,7 +61,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs `qwen2.5-coder:32b-instruct-q8_0`, `gemma4:31b`, `llama3.3:70b-instruct-q4_K_M`, and `deepseek-r1:32b` against all three tasks and writes results to `results-compare.json`.
+This runs `qwen2.5-coder:14b`, `qwen3-coder:30b`, `llama3.3:70b-instruct-q4_K_M`, `qwen3.5:122b`, and `gpt-oss:120b` against all three tasks and writes results to `results-compare.json`.
 
 ### Run a single model
 

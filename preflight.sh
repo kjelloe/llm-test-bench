@@ -14,10 +14,11 @@ section(){ echo; echo -e "${BOLD}── $* ──${NC}"; }
 
 # ── models that compare.sh will benchmark ────────────────────────────────────
 REQUIRED_MODELS=(
-  "qwen2.5-coder:32b-instruct-q8_0"
-  "gemma4:31b"
+  "qwen2.5-coder:14b"
+  "qwen3-coder:30b"
   "llama3.3:70b-instruct-q4_K_M"
-  "deepseek-r1:32b"
+  "qwen3.5:122b"
+  "gpt-oss:120b"
 )
 
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
