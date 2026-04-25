@@ -149,5 +149,41 @@ DOTNET_SAS = Task(
     setup_timeout=180,
 )
 
-BUILTIN_TASKS: list[Task] = [NODE_SLUGIFY, PYTHON_SAFE_DIV, DOTNET_SAS]
+NODE_CSV_PARSER = Task(
+    id="node_csv_parser",
+    description=(
+        "The parseCSV function in src/csv.js is broken. "
+        "It uses a naive comma-split that fails on quoted fields. "
+        "Fix it so it correctly parses RFC 4180-style CSV: "
+        "(1) fields may be wrapped in double-quotes; "
+        "(2) a quoted field may contain commas; "
+        "(3) a double-quote inside a quoted field is escaped as two consecutive "
+        "double-quotes (\"\"\"); "
+        "(4) unquoted fields and empty fields must still work as before."
+    ),
+    subdir="node_csv_parser",
+    editable_files=["src/csv.js"],
+    context_files=["tests/csv.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/csv.test.js"],
+    test_timeout=30,
+)
+
+PYTHON_LRU_CACHE = Task(
+    id="python_lru_cache",
+    description=(
+        "LRUCache.get() in lru_cache.py is broken: it returns the cached value "
+        "but does not promote the accessed node to the MRU position. "
+        "This means recently-read keys can be incorrectly evicted before "
+        "keys that have not been accessed. "
+        "Fix get() so that every successful lookup moves the node to the MRU end "
+        "of the list, making it the last candidate for eviction."
+    ),
+    subdir="python_lru_cache",
+    editable_files=["lru_cache.py"],
+    context_files=["tests/test_lru_cache.py"],
+    test_cmd=["python", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
+BUILTIN_TASKS: list[Task] = [NODE_SLUGIFY, PYTHON_SAFE_DIV, DOTNET_SAS, NODE_CSV_PARSER, PYTHON_LRU_CACHE]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

@@ -1,0 +1,6 @@
+{
+  "name": "node-csv-parser-bench",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true
+}
