@@ -27,3 +27,26 @@ Llama 3.1 8B	8B dense	128K	6GB	General purpose, entry point
 Model	Size	Max Tokens	Dims	Best For
 nomic-embed-text	274MB	8,192	768	RAG embeddings, semantic search
 VRAM measured with Q4_K_M quantization at default context length. Actual usage varies with context size. KV cache adds 1-2GB at default lengths, 14GB+ at 32K context for 70B models.
+
+
+# RECOMMENDATION: 
+
+5060 16GB VRAM:
+qwen2.5-coder:14b
+deepseek-coder-v2:16b
+qwen3-coder:30b
+gemma4:26b
+qwen2.5-coder:32b
+deepseek-r1:32b
++ llama3.3:70b-instruct-q4_K_M
++ qwen3.5:122b
++ gpt-oss:120b
+
+4090 24 GB VRAM:
+qwen2.5-coder:14b
+qwen2.5-coder:32b
+qwen3-coder:30b
+gemma4:31b
+deepseek-r1:32b
++ qwen3.5:122b
++ gpt-oss:120b

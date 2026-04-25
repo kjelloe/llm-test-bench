@@ -3,8 +3,9 @@ set -euo pipefail
 
 # Run the full benchmark across all candidate models and print a comparison table.
 #
-# --num-predict 1200  : thinking models need extra tokens for reasoning before
-#                       they emit the BEGIN_FILE block; 400 is too few.
+# --num-predict 2400  : thinking models (gpt-oss, qwen3.5) consume tokens for
+#                       internal reasoning before emitting the BEGIN_FILE block;
+#                       1200 was too few for gpt-oss on complex tasks (CSV parser).
 # --model-timeout 900 : 120B models on RAM (qwen3.5:122b, gpt-oss:120b) can run at
 #                       1–2 tok/s; at 1200 tokens that's up to 1200s worst-case.
 #                       900s covers most runs without waiting indefinitely on hangs.
@@ -17,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/bench-models.sh"
 
 MODEL_TIMEOUT=900
-NUM_PREDICT=1200
+NUM_PREDICT=2400
 OUT="$SCRIPT_DIR/results-compare.json"
 STATS_FILE="$SCRIPT_DIR/compare-history.json"
 

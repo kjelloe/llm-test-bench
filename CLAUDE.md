@@ -19,9 +19,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 #### Safety & Determinism
 
 - Default `temperature=0` and `seed=1`.
-- `num_predict` default is 400 for simple/instruct models. Use 1200+ for thinking models
-  (gemma4, deepseek-r1, etc.) — their reasoning tokens consume the budget before the answer.
-  `compare.sh` sets `--num-predict 1200` explicitly.
+- `num_predict` default is 400 for simple/instruct models. Use 2400+ for thinking models
+  (gpt-oss, qwen3.5, deepseek-r1, etc.) — their reasoning tokens consume the budget before
+  the answer. `compare.sh` sets `--num-predict 2400` explicitly; 1200 was too few for
+  gpt-oss:120b on complex tasks (CSV parser ran out mid-reasoning).
 - Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 900`
   because 120B RAM-bound models (qwen3.5:122b, gpt-oss:120b) at ~1–2 tok/s need up to
   ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.
