@@ -87,6 +87,12 @@ idx     = {(r["model"], r["task"]): r for r in results}
 total_wall   = sum(r.get("wall_s", 0) for r in results)
 total_passes = sum(1 for r in results if r.get("tests_pass"))
 
+# Compute actual tok/s rank (1 = fastest measured)
+tok_order = sorted(models, key=lambda m: -sum(
+    idx[(m, t)]["tok_per_s"] for t in tasks if (m, t) in idx and idx[(m,t)].get("tok_per_s",0) > 0
+) / max(1, sum(1 for t in tasks if (m,t) in idx and idx[(m,t)].get("tok_per_s",0) > 0)))
+actual_rank = {m: i+1 for i, m in enumerate(tok_order)}
+
 per_model = []
 for rank, model in enumerate(models, 1):
     recs   = [idx.get((model, t)) for t in tasks]
@@ -107,9 +113,10 @@ for rank, model in enumerate(models, 1):
                 entry["error_kind"] = r["error_kind"]
             per_task[t] = entry
     per_model.append({
-        "model":        model,
-        "assumed_rank": rank,
-        "passes":       passes,
+        "model":         model,
+        "assumed_rank":  rank,
+        "actual_tok_rank": actual_rank[model],
+        "passes":        passes,
         "fails":        len(tasks) - passes,
         "avg_tok_per_s": round(sum(toks) / len(toks), 1) if toks else 0.0,
         "total_wall_s": round(sum(r["wall_s"] for r in recs if r), 1),
