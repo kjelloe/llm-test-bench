@@ -41,6 +41,7 @@ def chat(
     timeout: int = 300,
     think: bool = False,
     num_thread: int | None = None,
+    keep_alive: str | int | None = None,
 ) -> OllamaResponse:
     url = base_url.rstrip("/") + "/api/chat"
     options: dict = {
@@ -51,13 +52,15 @@ def chat(
     }
     if num_thread is not None and num_thread > 0:
         options["num_thread"] = num_thread
-    payload = {
+    payload: dict = {
         "model": model,
         "messages": messages,
         "stream": False,
         "think": think,   # False disables reasoning tokens for deepseek-r1, gemma4, etc.
         "options": options,
     }
+    if keep_alive is not None:
+        payload["keep_alive"] = keep_alive
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode(),

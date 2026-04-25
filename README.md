@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `gemma4:26b`, `gpt-oss:120b`, `qwen3.5:122b`, `llama3.3:70b-instruct-q4_K_M`) against all six tasks and writes results to `results-compare.json`.
+This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `gemma4:26b`, `gpt-oss:120b`, `qwen3.5:122b`, `llama3.3:70b-instruct-q4_K_M`) against all seven tasks and writes results to `results-compare.json`.
 
 ### Run a single model
 
@@ -121,6 +121,7 @@ Tasks are tagged with a difficulty level (L1–L3) used to compute the **Skill**
 | `python_lru_cache` | L2 | Python / pytest | `LRUCache.get()` in `lru_cache.py` returns the value but doesn't promote the node to MRU, causing wrong eviction order |
 | `node_csv_parser` | L3 | Node.js / ESM | `parseCSV()` in `src/csv.js` splits naively on commas — breaks on quoted fields containing commas or escaped quotes |
 | `python_lfu_cache` | L3 | Python / pytest | `LFUCache._promote()` in `lfu_cache.py` doesn't update `min_freq` when a frequency bucket empties, causing `KeyError` on the next eviction |
+| `python_bst_delete` | L3 | Python / pytest | `BST._delete()` in `bst.py` finds the in-order successor but discards the return value of the recursive delete, leaving a duplicate node in the tree |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
 

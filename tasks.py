@@ -191,6 +191,26 @@ PYTHON_LRU_CACHE = Task(
     test_timeout=30,
 )
 
+PYTHON_BST_DELETE = Task(
+    id="python_bst_delete",
+    difficulty=3,
+    description=(
+        "BST._delete() in bst.py has a bug in the two-children case. "
+        "When the deleted node has two children, the code correctly finds the "
+        "in-order successor and copies its value up, but then calls _delete() "
+        "on the right subtree without using the return value. "
+        "Because _delete() returns the modified subtree root rather than mutating "
+        "in place, the successor node is never actually removed — it remains as a "
+        "duplicate. Fix _delete() so the return value of the recursive call is "
+        "assigned back to node.right. Do not change any other method."
+    ),
+    subdir="python_bst_delete",
+    editable_files=["bst.py"],
+    context_files=["tests/test_bst.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
 PYTHON_LFU_CACHE = Task(
     id="python_lfu_cache",
     difficulty=3,
@@ -216,5 +236,6 @@ BUILTIN_TASKS: list[Task] = [
     NODE_CSV_PARSER,
     PYTHON_LRU_CACHE,
     PYTHON_LFU_CACHE,
+    PYTHON_BST_DELETE,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

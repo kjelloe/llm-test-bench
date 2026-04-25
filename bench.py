@@ -200,6 +200,7 @@ def main() -> None:
                     timeout=args.model_timeout,
                     think=False,
                     num_thread=args.num_thread if args.num_thread > 0 else None,
+                    keep_alive=-1,  # keep loaded until evicted by memory pressure, not by timeout
                 )
                 print(f"done  {time.monotonic() - t0:.1f}s")
             except OllamaError as exc:
