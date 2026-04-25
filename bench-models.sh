@@ -4,6 +4,7 @@
 MODELS=(
   "qwen3-coder:30b"
   "qwen2.5-coder:14b"
+  "gemma4:26b"
   "gpt-oss:120b"
   "qwen3.5:122b"
   "llama3.3:70b-instruct-q4_K_M"

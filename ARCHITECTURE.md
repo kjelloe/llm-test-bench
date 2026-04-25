@@ -1,6 +1,14 @@
 ### Overview
 
-This repo contains a local, reproducible benchmark harness for evaluating coding-capable LLMs served by **Ollama** (running locally, typically in WSL). The harness runs a suite of deterministic tasks (Node.js, Python, .NET/Azure-flavored) against one or more models and scores them on:
+This repo contains a local, reproducible benchmark harness for evaluating LLMs served by **Ollama** (running locally, typically in WSL) across three capability dimensions:
+
+- **Coding (v1 — implemented):** fix broken code so deterministic tests pass.
+- **Reasoning (v2 — designed):** read documents and answer structured questions.
+- **Agent tasks (v3 — early design):** use tools to accomplish goals in a real environment.
+
+Each type runs as a separate benchmark. This document covers the implemented architecture (v1) and the planned architecture (v2, v3).
+
+For the coding benchmark specifically, the harness scores models on:
 
 - **Correctness:** do tests pass after applying the model's edits?
 - **Edit validity:** did the model produce machine-parseable edits?
@@ -12,22 +20,53 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 ### Repository Layout
 
 ```
-bench.py            CLI runner — orchestrates model × task matrix
-tasks.py            Task dataclass, built-in task definitions, prompt builder, subprocess helpers
-ollama_client.py    POST /api/chat (non-streaming), metrics extraction
-parsing.py          BEGIN_FILE/END_FILE parser, allow-list validation
-reporting.py        Comparison table, failure detail, JSON writer
-requirements.txt    pytest only (harness is stdlib-first)
-run.sh              Venv setup + bench.py entrypoint
-compare.sh          Runs canonical 4-model set; forwards extra args to run.sh
-preflight.sh        Dependency checker (GPU, Ollama, models, Python, Node, .NET)
+# ── Coding benchmark (v1 — implemented) ─────────────────────────────────────
+bench.py                  CLI runner — orchestrates model × task matrix
+tasks.py                  Task dataclass, built-in task definitions, prompt builder, subprocess helpers
+ollama_client.py          POST /api/chat (non-streaming), metrics extraction
+parsing.py                BEGIN_FILE/END_FILE parser, allow-list validation
+reporting.py              Comparison table, failure detail, JSON writer
+requirements.txt          pytest only (harness is stdlib-first)
+run.sh                    Venv setup + bench.py entrypoint
+compare.sh                Runs canonical model set; sources bench-models.sh; forwards extra args
+bench-models.sh           Canonical model list (ordered fastest → slowest); sourced by compare/preflight/install
+preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
+install-models.sh         Pulls any missing models from bench-models.sh
+show-all-models.sh        Runs ollama show on every locally installed model
+compare-history.json      Last 10 coding run summaries (git-ignored, machine-local)
 tests/
-  conftest.py         sys.path shim
-  test_parsing.py     Unit tests for the BEGIN_FILE/END_FILE parser
+  conftest.py             sys.path shim
+  test_parsing.py         Unit tests for the BEGIN_FILE/END_FILE parser
 task_data/
-  node_slugify/     package.json, src/slug.js (baseline), tests/slug.test.js
-  python_safe_div/  calc.py (baseline), conftest.py, tests/test_calc.py
-  dotnet_sas/       MicroAzureSas.sln, src/…/SasHelper.cs (baseline), tests/…/SasHelperTests.cs
+  node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
+  python_safe_div/        calc.py (baseline), conftest.py, tests/test_calc.py
+  dotnet_sas/             MicroAzureSas.sln, src/…/SasHelper.cs (baseline), tests/…/SasHelperTests.cs
+  node_csv_parser/        package.json, src/csv.js (baseline), tests/csv.test.js
+  python_lru_cache/       lru_cache.py (baseline), conftest.py, tests/test_lru_cache.py
+
+# ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
+compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
+bench-reasoning-models.sh (planned) Model list for reasoning runs
+compare-reasoning-history.json  (planned, git-ignored)
+task_data_reasoning/
+  <task_id>/
+    documents/            Source documents (article.txt, data.csv, report.txt, article.pdf)
+    answer.txt            Editable baseline (empty — model fills this)
+    expected.json         Ground truth: [{id, question, expected, match}]
+    tests/
+      test_answers.py     Reads answer.txt, scores against expected.json
+
+# ── Agent benchmark (v3 — early design) ─────────────────────────────────────
+bench_agent.py            (planned) Multi-turn tool-calling harness
+compare-agent.sh          (planned) Agent equivalent of compare.sh
+task_data_agent/
+  <task_id>/
+    goal.txt              Natural language task description
+    tools.json            Available tools for this task
+    setup/                Seed files placed in workdir before agent runs
+    expected/             Expected output files / state for verification
+    tests/
+      verify.py           Checks workdir state after agent run completes
 ```
 
 ### Goals
@@ -167,3 +206,87 @@ Then add `task_data/my_task/` with baseline source + tests, and register `MY_TAS
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM.
+- Thinking models (gpt-oss, qwen3.5) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the current minimum for complex tasks.
+
+---
+
+## Planned: Reasoning Benchmark (v2)
+
+### Design Approach
+
+Reuse `bench.py` and the `BEGIN_FILE/END_FILE` protocol without modification. The "editable file" is `answer.txt`; the "tests" are a small pytest script that checks answers against `expected.json`. All existing harness features (workdir isolation, timeout handling, metrics, comparison table) apply unchanged.
+
+### High-level Flow
+
+For each `(model, task)` pair:
+
+1. **Copy** `task_data_reasoning/<task.subdir>/` into a fresh workdir.
+2. **Baseline verification** — run `pytest tests/`; assert it exits non-zero (empty `answer.txt` fails).
+3. **Prompt** — context files are the documents in `documents/`; editable file is `answer.txt`.
+4. **Model call** — same `ollama_client.chat()` with larger `--num-ctx` (32768+).
+5. **Parse** — extract `BEGIN_FILE answer.txt … END_FILE` from response.
+6. **Apply** — write model's `answer.txt` to workdir.
+7. **Test** — run `pytest tests/`; `test_answers.py` reads `answer.txt`, compares each Q-line against `expected.json` using the configured match type (`exact`, `normalized`, `numeric`, `contains`).
+8. **Cleanup** — delete workdir.
+
+### New Components Required
+
+| Component | What it does |
+|---|---|
+| `compare-reasoning.sh` | Sources `bench-reasoning-models.sh`; sets `--num-ctx 32768 --num-predict 800`; writes `results-reasoning.json`; updates `compare-reasoning-history.json` |
+| `bench-reasoning-models.sh` | Same structure as `bench-models.sh`; may include same models but with different settings |
+| `test_answers.py` (per task) | Reads `answer.txt`; parses Q-lines; compares against `expected.json`; fails if any answer is wrong |
+
+### Answer Match Types
+
+```python
+# exact:      answer.strip().lower() == expected.strip().lower()
+# normalized: strip punctuation/units/extra spaces, then exact
+# numeric:    abs(float(answer) - float(expected)) / max(float(expected), 1) <= 0.01
+# contains:   expected.strip().lower() in answer.strip().lower()
+```
+
+### Settings Differences vs. Coding
+
+| Setting | Coding | Reasoning |
+|---|---|---|
+| `--num-ctx` | 8192 | 32768–131072 |
+| `--num-predict` | 2400 | 400–800 (answers are short) |
+| `--think` | Off | Test both on/off |
+
+---
+
+## Planned: Agent Benchmark (v3)
+
+**Status: early design only. No implementation started.**
+
+### Why a New Harness
+
+Agent tasks require a multi-turn conversation loop: the model calls a tool, the harness executes it, the result is appended to the conversation, and the model continues. This cannot be expressed as a single `chat()` call. `bench_agent.py` will implement this loop with a configurable `--max-turns` limit.
+
+### Planned High-level Flow
+
+1. **Setup** — copy `task_data_agent/<task.subdir>/setup/` into workdir; make tools available.
+2. **Turn loop** — call `ollama_client.chat()` with accumulated conversation history.
+   - If response contains a tool call: execute the tool, append result to history, continue.
+   - If response contains no tool call: treat as task completion.
+   - If `--max-turns` reached: record `TOOL_ERROR`.
+3. **Verify** — run `tests/verify.py`; inspect workdir state; record `tests_pass`.
+4. **Cleanup** — delete workdir.
+
+### Tool Interface (planned)
+
+Tools are defined in `tools.json` per task and made available to Ollama via the function-calling API:
+
+```json
+[
+  {"name": "browser_get",   "description": "Fetch the text content of a URL"},
+  {"name": "shell_run",     "description": "Run a shell command and return stdout"},
+  {"name": "file_write",    "description": "Write content to a file in the workdir"},
+  {"name": "pdf_convert",   "description": "Convert a file to PDF using LibreOffice"}
+]
+```
+
+### Model Requirement
+
+Only Ollama models with function-calling support can run agent tasks. Models without it will produce `NO_BLOCKS` on the first turn and be scored as a failure. `bench_agent.py` will warn at startup if a model is known to lack tool support.

@@ -1,27 +1,43 @@
-### Product Spec: Local LLM Coding Benchmark Harness (Ollama)
+### Product Spec: Local LLM Benchmark Harness (Ollama)
 
 #### Problem
 
-We want a repeatable way to compare local LLMs for coding tasks across:
-- Node.js (primary)
-- Python (secondary)
-- .NET/Azure (business)
+We want a repeatable, locally-runnable way to compare Ollama-served LLMs across three capability dimensions:
 
-The benchmark should reflect real developer workflows (Aider "whole file" edits) and avoid fragile diff parsing. It must run locally with Ollama and produce clear pass/fail plus performance metrics.
+- **Coding** — fix broken code so deterministic tests pass (Node.js, Python, .NET)
+- **Reasoning** — read supplied documents and answer structured questions correctly
+- **Agent tasks** — use tools to accomplish goals in a real environment (open URL, extract data, produce files)
+
+Each dimension runs as a separate benchmark with its own task suite, scripts, model settings, and history file. Results are not mixed across types.
 
 #### Users
 
-- Developer benchmarking local models before choosing "daily driver" vs "heavy lifter".
-- Teams comparing a fixed set of local models on standardized tasks.
+- Developer choosing a "daily driver" or "heavy lifter" local model for coding.
+- Researcher or analyst evaluating model document comprehension.
+- Engineer assessing agentic capability for automated workflows.
 
-#### Success Metrics
+#### Success Metrics (all types)
 
-- Benchmark runs end-to-end locally with one command.
-- Results are reproducible across runs (given pinned tasks + deterministic model options).
-- Clear report of why failures happened (format vs policy vs correctness).
+- Each benchmark runs end-to-end locally with one command.
+- Results are reproducible (pinned tasks, deterministic settings).
+- Clear pass/fail reporting with failure categorisation.
 - Adding a new task takes <30 minutes.
 
-#### Functional Requirements
+---
+
+### Benchmark Types
+
+| Type | Version | Status | Entry point | Task data |
+|---|---|---|---|---|
+| Coding | v1 | Implemented | `compare.sh` | `task_data/` |
+| Reasoning | v2 | Designed, not yet implemented | `compare-reasoning.sh` | `task_data_reasoning/` |
+| Agent tasks | v3 | Early design only | `compare-agent.sh` | `task_data_agent/` |
+
+---
+
+## Type 1: Coding Benchmark
+
+### Functional Requirements
 
 1) CLI Runner (`bench.py`)
 - Entrypoint: `python3 bench.py` (or `./run.sh` which manages the venv).
@@ -43,14 +59,19 @@ The benchmark should reflect real developer workflows (Aider "whole file" edits)
 
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
-- `compare.sh`: calls `run.sh` with the canonical set of benchmark models; forwards extra args.
+- `compare.sh`: calls `run.sh` with models from `bench-models.sh`; sets `--num-predict 2400 --model-timeout 900`; forwards extra args.
+- `bench-models.sh`: canonical model list (ordered fastest → slowest by observed tok/s); sourced by `compare.sh`, `preflight.sh`, and `install-models.sh`.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models, Python, Node, .NET).
+- `install-models.sh`: pulls any models in `bench-models.sh` not yet present locally.
+- `show-all-models.sh`: runs `ollama show` on every locally installed model.
 
 3) Task Suite (`tasks.py` + `task_data/`)
 - Built-in tasks:
   - `node_slugify` — ESM `src/slug.js`; fix punctuation + whitespace collapsing; `node --test`
   - `python_safe_div` — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
   - `dotnet_sas` — Azure SAS expiry in the past; fix to ~60 min future; `xUnit`
+  - `node_csv_parser` — ESM `src/csv.js`; naive comma-split must be replaced with RFC 4180 quoted-field parser; `node --test`
+  - `python_lru_cache` — `LRUCache.get()` must promote accessed node to MRU position; `pytest`
 - Each task must:
   - fail baseline tests deterministically (verified before the model call)
   - specify an editable allow-list (one file by default)
@@ -80,10 +101,11 @@ The benchmark should reflect real developer workflows (Aider "whole file" edits)
 
 7) Outputs
 - `results.json`: list of records (one per model × task).
-- Console comparison table: per-task `PASS/FAIL`, `tok/s`, `wall_s` per model; summary column with pass count, avg tok/s, total wall seconds.
-- Console failure detail: error kind breakdown with a one-line sample per category.
+- Console comparison table: rows = models, columns = tasks + summary; each cell shows `PASS/FAIL`, `tok/s`, `wall_s`; `Spd` column shows assumed speed rank (1 = fastest, by `bench-models.sh` order).
+- Console failure detail: error kind counts + one-line sample per category.
+- `compare-history.json`: last 10 run summaries with per-model/per-task breakdown; used to show estimated runtime in the compare header.
 
-#### Result Record Schema
+### Result Record Schema
 
 Per model × task run:
 
@@ -105,38 +127,243 @@ Per model × task run:
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
 
-#### Non-functional Requirements
+### Recommended Settings
 
-- Works on WSL Ubuntu (primary environment).
-- Minimal dependencies: stdlib-only for the harness; `pytest` for running the harness's own tests.
-- Timeouts on all subprocess calls and model HTTP calls.
-- Temp workdirs are deleted after each run (unless `--keep-workdirs`).
+| Setting | Value | Notes |
+|---|---|---|
+| `--num-ctx` | 8192 | Default; increase for large prompt tasks |
+| `--num-predict` | 2400 | Thinking models use tokens for reasoning before BEGIN_FILE |
+| `--model-timeout` | 900 | 120B RAM-bound models can take 600–1200s at 1–2 tok/s |
+| `--think` | off | Thinking tokens consume budget before the code block appears |
+| `--temperature` | 0.0 | Reproducibility |
 
-#### Example CLI
+### Task Authoring Contract
+
+1. Baseline tests **fail** (`test_cmd` exits non-zero on unmodified `task_data/`).
+2. After the correct minimal fix to `editable_files`, tests **pass**.
+3. `editable_files` allow-list is as small as possible (ideally one file).
+4. `context_files` provide everything the model needs to understand the fix (tests, config).
+
+### Example CLI
 
 ```bash
-# All four benchmark models, all tasks
+# All benchmark models, all tasks
 ./compare.sh
 
-# Specific models or tasks
-./run.sh --models qwen2.5-coder:32b-instruct-q8_0 --tasks python_safe_div
+# Specific model or task subset
+./run.sh --models qwen3-coder:30b --tasks python_safe_div node_csv_parser
 
-# Larger context window, forwarded via compare.sh
+# Larger context window
 ./compare.sh --num-ctx 16384
+
+# Keep workdirs for debugging a failure
+./run.sh --models qwen2.5-coder:14b --tasks node_csv_parser --keep-workdirs
 ```
 
-#### Out of Scope (v1)
+---
 
-- Auto-downloading models.
-- Web UI dashboard.
-- Multi-turn repair loops.
-- `bench.yaml` config file (use CLI flags).
+## Type 2: Reasoning Benchmark
+
+### Overview
+
+Models are given one or more documents (plain text, extracted PDF, CSV, scraped news article) as context and must answer a set of structured questions. Answers are written to a single output file (`answer.txt`) using the same `BEGIN_FILE/END_FILE` protocol as coding tasks — requiring **zero harness code changes**.
+
+**Status: designed, not yet implemented.**
+
+### Functional Requirements
+
+1) Scripts
+- `compare-reasoning.sh`: equivalent of `compare.sh` for reasoning tasks; sources `bench-reasoning-models.sh`; sets `--num-ctx 32768 --num-predict 800 --model-timeout 900`.
+- `bench-reasoning-models.sh`: canonical model list for reasoning runs (same models as coding initially).
+- `compare-reasoning-history.json`: separate history file for reasoning runs.
+
+2) Task Suite (`task_data_reasoning/`)
+
+Each reasoning task:
+- Has one editable file: `answer.txt` (empty or placeholder baseline — tests must fail).
+- Has one or more context files in `documents/`: the documents to reason about.
+- Defines a test command: `python -m pytest tests/ -v --tb=short`.
+- The test script reads `answer.txt` and checks each answer against `expected.json`.
+
+3) Answer Protocol
+
+Model output must be a single `BEGIN_FILE answer.txt … END_FILE` block.
+
+Answer file format (one line per question):
+```
+Q1: <answer>
+Q2: <answer>
+Q3: <answer>
+```
+
+4) Scoring
+
+Each question in `expected.json` specifies a `match` type:
+
+| Match type | Rule |
+|---|---|
+| `exact` | Case-insensitive string equality after stripping whitespace |
+| `normalized` | Strip units, punctuation, and extra whitespace before comparing |
+| `contains` | Expected string appears anywhere in the answer |
+| `numeric` | Parse both as floats; pass if within ±1% (or absolute ±0.5 for small values) |
+
+Overall task result: `tests_pass = True` only if **all** questions pass. Individual question results are recorded in `error_detail` for later partial-score analysis.
+
+5) Additional Failure Categories (reasoning-specific)
+
+- `WRONG_ANSWERS` — `answer.txt` produced and parseable but one or more answers are incorrect.
+- `MALFORMED_ANSWERS` — `answer.txt` does not contain the expected Q-line format.
+
+### Task File Layout
+
+```
+task_data_reasoning/
+  <task_id>/
+    documents/
+      article.txt       # plain text — web scrape cleaned to article body only
+      article.pdf       # original PDF for reference (text pre-extracted to .txt for prompts)
+      data.csv          # supporting tabular data
+      report.txt        # long spec or report; note if chunking is needed
+    answer.txt          # editable baseline (empty or placeholder — tests must fail)
+    expected.json       # ground truth answers
+    tests/
+      test_answers.py   # reads answer.txt, scores against expected.json
+```
+
+**expected.json schema:**
+```json
+[
+  {
+    "id":       "Q1",
+    "question": "What date was the report published?",
+    "expected": "2024-03-15",
+    "match":    "exact"
+  },
+  {
+    "id":       "Q2",
+    "question": "What was the projected GDP figure mentioned in the article?",
+    "expected": "47.3",
+    "match":    "numeric"
+  },
+  {
+    "id":       "Q3",
+    "question": "Which country ranked first in the index?",
+    "expected": "Netherlands",
+    "match":    "exact"
+  }
+]
+```
+
+### Recommended Settings
+
+| Setting | Value | Reason |
+|---|---|---|
+| `--num-ctx` | 32768–131072 | Documents can be large; match to longest document |
+| `--num-predict` | 400–800 | Answers are short; leave budget for long-doc prefill |
+| `--model-timeout` | 900 | Long prefill for large context windows |
+| `--think` | Test both on/off | Reasoning tokens may help or hurt; worth comparing |
+| `--temperature` | 0.0 | Reproducibility |
+
+### Task Authoring Contract
+
+1. Baseline `answer.txt` must be empty or contain wrong answers — tests must fail before the model runs.
+2. Questions must have genuinely unambiguous answers determinable solely from the supplied documents.
+3. Prefer `exact` or `numeric` match types; use `contains` only when the answer is a proper noun or phrase that could not be accidentally present.
+4. Note the document and approximate location of each answer in a comment in `expected.json`.
+5. Verify the correct answers manually against the source document before committing.
+
+### Document Types and Sourcing
+
+| File type | Where to put it | Notes |
+|---|---|---|
+| Web article (scraped) | `documents/article.txt` | Strip nav, ads, and boilerplate; keep article body only |
+| Original PDF | `documents/article.pdf` | Keep for reference; extract text to `.txt` for model prompts |
+| CSV / data table | `documents/data.csv` | Include as-is — models handle CSV well in context |
+| Long report or spec | `documents/report.txt` | Note if chunking is needed for very long docs (>100K tokens) |
+
+---
+
+## Type 3: Agent Benchmark
+
+### Overview
+
+Models are given a natural-language goal and access to tools (browser, shell, file system) and must accomplish it autonomously in a multi-turn conversation. This requires a new harness component (`bench_agent.py`) and is significantly more complex than Types 1 and 2.
+
+**Status: early design only. Not yet implemented.**
+
+### Key Differences from Types 1 and 2
+
+| Aspect | Coding / Reasoning | Agent |
+|---|---|---|
+| Turns | Single turn | Multi-turn (model calls tools, observes results, continues) |
+| Output protocol | `BEGIN_FILE/END_FILE` blocks | Tool-call JSON (Ollama function calling API) |
+| Verification | Run tests / check answers | Inspect environment state after task completes |
+| Model requirement | Any Ollama model | Must support Ollama function/tool calling |
+| Harness | `bench.py` (existing) | `bench_agent.py` (new) |
+| Reproducibility | High (deterministic) | Lower (depends on external state, network, timing) |
+
+### Planned Task Types
+
+- **Web extraction**: navigate to a URL, extract a specific data point, write it to a file.
+- **File conversion**: read an input file, transform format (e.g. CSV → PDF), verify output.
+- **Multi-step research**: retrieve information from multiple sources, produce a summary file.
+
+### Task File Layout
+
+```
+task_data_agent/
+  <task_id>/
+    goal.txt            # natural language task description shown to the model
+    tools.json          # which tools are available for this task (browser, shell, file)
+    setup/              # seed files placed in workdir before the agent runs
+    expected/           # expected output files or state patterns for verification
+    tests/
+      verify.py         # checks workdir state after agent run completes
+```
+
+### Planned Settings
+
+| Setting | Value | Reason |
+|---|---|---|
+| `--num-ctx` | 32768+ | Multi-turn history accumulates rapidly |
+| `--num-predict` | Unlimited per turn | Agent must reason and call tools freely |
+| `--think` | On | Complex multi-step goals benefit from reasoning tokens |
+| `--temperature` | 0.0 | Reproducibility |
+| `--max-turns` | TBD (new flag) | Prevent runaway tool-calling loops |
+
+### Out of Scope (v3 pre-implementation)
+
+- Auto-sandboxing of browser or OS environment.
+- Scoring of intermediate steps (only final state is verified).
+- Partial credit for partially-completed goals.
+- Models without Ollama function-calling support.
+
+---
+
+## Common: Non-functional Requirements
+
+- Works on WSL Ubuntu (primary environment).
+- Minimal dependencies: stdlib-only for harness core; `pytest` for task test scripts.
+- Timeouts on all subprocess calls and model HTTP calls.
+- Temp workdirs deleted after each run (unless `--keep-workdirs`).
+- History files (`compare-history.json`, `compare-reasoning-history.json`) are machine-local and git-ignored.
+
+## Common: Out of Scope (current)
+
+- Auto-downloading models (use `install-models.sh`).
+- Web UI or HTML dashboard.
 - JSONL output format.
-- Container sandbox for untrusted repos.
+- Container sandbox for untrusted task repos.
+- Multi-turn repair loops for coding tasks.
+- Cross-type combined result tables.
 
-#### Future Enhancements
+## Future Enhancements
 
-- External repo scenarios described in YAML (repo path, test command, editable files, context globs).
-- Multiple trials per model/task with confidence intervals.
-- HTML report generation.
-- `--format table` pretty-print via `tabulate`.
+- **Reasoning**: partial scoring with per-question breakdown in results JSON.
+- **Reasoning**: paired `--think on/off` runs with automatic delta comparison.
+- **Reasoning**: vision-capable model support for PDF screenshots (vs. pre-extracted text).
+- **Agent**: `bench_agent.py` with Ollama function-calling loop and `--max-turns` flag.
+- **Agent**: browser automation via Playwright for web extraction tasks.
+- **All types**: multiple trials per model/task with confidence intervals.
+- **All types**: HTML report generation.
+- **All types**: external task definitions in YAML (repo path, test command, editable files, context globs).
