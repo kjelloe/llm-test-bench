@@ -22,8 +22,8 @@ run.sh              Venv setup + bench.py entrypoint
 compare.sh          Runs canonical 4-model set; forwards extra args to run.sh
 preflight.sh        Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 tests/
-  conftest.py       sys.path shim
-  test_parsing.py   Unit tests for the BEGIN_FILE/END_FILE parser
+  conftest.py         sys.path shim
+  test_parsing.py     Unit tests for the BEGIN_FILE/END_FILE parser
 task_data/
   node_slugify/     package.json, src/slug.js (baseline), tests/slug.test.js
   python_safe_div/  calc.py (baseline), conftest.py, tests/test_calc.py
@@ -80,7 +80,8 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 - Single public function `chat(...)`.
 - Uses `urllib.request` (stdlib); no third-party HTTP library.
-- Returns `OllamaResponse(content, metrics)` where `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
+- Accepts `think: bool` to enable reasoning tokens for models that support it (deepseek-r1, gemma4, etc.).
+- Returns `OllamaResponse(content, thinking, metrics)` where `thinking` holds the model's reasoning trace and `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
 
 #### `parsing.py` — Edit Protocol Parser
 
@@ -110,6 +111,8 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 | `metrics` | object | `prompt_eval_count`, `eval_count`, `*_duration_ms` |
 | `tok_per_s` | float | |
 | `wall_s` | float | total including setup + model + tests |
+| `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
+| `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
 
 ### Edit Protocol (Whole-file)
 

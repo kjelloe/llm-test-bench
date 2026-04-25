@@ -34,6 +34,8 @@ The benchmark should reflect real developer workflows (Aider "whole file" edits)
   - `--temperature` (default: 0.0)
   - `--seed` (default: 1)
   - `--num-predict` (default: 400)
+  - `--model-timeout` (default: 300, seconds)
+  - `--think` (enable thinking/reasoning mode for supported models)
   - `--out` (default: `results.json`)
   - `--keep-workdirs` (debug: skip temp dir cleanup)
 - Prints live progress (`[i/total] model task ... PASS/FAIL wall_s tok/s`).
@@ -100,6 +102,8 @@ Per model × task run:
 | `metrics` | object | from Ollama response |
 | `tok_per_s` | float | derived |
 | `wall_s` | float | total elapsed seconds including setup + model call + tests |
+| `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
+| `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
 
 #### Non-functional Requirements
 

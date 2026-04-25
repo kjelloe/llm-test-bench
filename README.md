@@ -134,6 +134,8 @@ python3 bench.py --help
   --temperature FLOAT          Default: 0.0
   --seed INT                   Default: 1
   --num-predict INT            Max output tokens (default: 400)
+  --model-timeout INT          Ollama HTTP request timeout in seconds (default: 300)
+  --think                      Enable thinking/reasoning mode for supported models
   --out FILE                   Results JSON path (default: results.json)
   --keep-workdirs              Don't delete temp workdirs (useful for debugging)
 ```
