@@ -99,10 +99,13 @@ def run_tests(task: Task, workdir: Path) -> tuple[bool, str]:
 NODE_SLUGIFY = Task(
     id="node_slugify",
     description=(
-        "The slugify function in src/slug.js is broken. "
-        "Fix it so it: lowercases the input, strips all punctuation, "
-        "collapses runs of whitespace/hyphens into a single hyphen, "
-        "and trims leading/trailing hyphens."
+        "The slugify function in src/slug.js is broken. Fix it so all tests pass. "
+        "The function must: "
+        "(1) lowercase the input; "
+        "(2) remove apostrophes silently without creating a separator (\"it's\" → \"its\", not \"it-s\"); "
+        "(3) replace every remaining run of non-alphanumeric characters "
+        "(spaces, hyphens, punctuation, etc.) with a single hyphen; "
+        "(4) trim any leading and trailing hyphens from the result."
     ),
     subdir="node_slugify",
     editable_files=["src/slug.js"],

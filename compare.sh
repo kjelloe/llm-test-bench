@@ -44,11 +44,16 @@ printf "  Max runtime : %ds  (%ds timeout × %d models × %d tasks)\n" \
 if [[ -f "$STATS_FILE" ]]; then
   python3 - "$STATS_FILE" <<'PYEOF'
 import json, sys
-d = json.load(open(sys.argv[1]))
-w = d.get("last_run_wall_s", 0)
-ts = d.get("last_run_timestamp", "?")
-m, s = int(w // 60), int(w % 60)
-print(f"  Est. runtime: {w:.0f}s ({m}m {s}s)  [last run: {ts}]")
+history = json.load(open(sys.argv[1]))
+runs = history.get("runs", [])
+if runs:
+    last = runs[-1]
+    w  = last.get("total_wall_s", 0)
+    ts = last.get("last_run_timestamp", last.get("timestamp", "?"))
+    o  = last.get("overall", {})
+    passed, pairs = o.get("passes", "?"), o.get("pairs", "?")
+    m, s = int(w // 60), int(w % 60)
+    print(f"  Est. runtime: {w:.0f}s ({m}m {s}s)  [last run: {ts}, result: {passed}/{pairs} passed]")
 PYEOF
 else
   echo "  Est. runtime: unknown  (no previous run recorded)"
@@ -64,24 +69,67 @@ echo
   --out "$OUT" \
   "$@"
 
-# ── Save stats for next run's estimated runtime ───────────────────────────────
+# ── Save run to history file ──────────────────────────────────────────────────
 python3 - "$OUT" "$STATS_FILE" <<'PYEOF'
 import json, sys, datetime
+from collections import defaultdict
 from pathlib import Path
 
-results_path, stats_path = Path(sys.argv[1]), Path(sys.argv[2])
+results_path, history_path = Path(sys.argv[1]), Path(sys.argv[2])
 if not results_path.exists():
     sys.exit()
 
 results = json.loads(results_path.read_text())
-total_wall = sum(r.get("wall_s", 0) for r in results)
+models  = list(dict.fromkeys(r["model"] for r in results))
+tasks   = list(dict.fromkeys(r["task"]  for r in results))
+idx     = {(r["model"], r["task"]): r for r in results}
 
-stats = {
-    "last_run_wall_s":   round(total_wall, 1),
-    "last_run_timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
-    "last_run_models":   list(dict.fromkeys(r["model"] for r in results)),
-    "last_run_tasks":    list(dict.fromkeys(r["task"]  for r in results)),
+total_wall   = sum(r.get("wall_s", 0) for r in results)
+total_passes = sum(1 for r in results if r.get("tests_pass"))
+
+per_model = []
+for rank, model in enumerate(models, 1):
+    recs   = [idx.get((model, t)) for t in tasks]
+    passes = sum(1 for r in recs if r and r.get("tests_pass"))
+    toks   = [r["tok_per_s"] for r in recs if r and r.get("tok_per_s", 0) > 0]
+    errs   = defaultdict(int)
+    for r in recs:
+        if r and not r.get("tests_pass") and r.get("error_kind"):
+            errs[r["error_kind"]] += 1
+    per_task = {}
+    for t in tasks:
+        r = idx.get((model, t))
+        if r:
+            entry = {"pass": r.get("tests_pass", False),
+                     "tok_per_s": r.get("tok_per_s", 0),
+                     "wall_s": r.get("wall_s", 0)}
+            if not r.get("tests_pass") and r.get("error_kind"):
+                entry["error_kind"] = r["error_kind"]
+            per_task[t] = entry
+    per_model.append({
+        "model":        model,
+        "assumed_rank": rank,
+        "passes":       passes,
+        "fails":        len(tasks) - passes,
+        "avg_tok_per_s": round(sum(toks) / len(toks), 1) if toks else 0.0,
+        "total_wall_s": round(sum(r["wall_s"] for r in recs if r), 1),
+        "error_kinds":  dict(errs),
+        "per_task":     per_task,
+    })
+
+run = {
+    "timestamp":    datetime.datetime.now().isoformat(timespec="seconds"),
+    "total_wall_s": round(total_wall, 1),
+    "models":       models,
+    "tasks":        tasks,
+    "overall":      {"pairs": len(results), "passes": total_passes,
+                     "fails": len(results) - total_passes},
+    "per_model":    per_model,
 }
-Path(stats_path).write_text(json.dumps(stats, indent=2))
-print(f"Stats saved → {stats_path}  (total wall: {total_wall:.0f}s)")
+
+history = json.loads(history_path.read_text()) if history_path.exists() else {"runs": []}
+history["runs"].append(run)
+history["runs"] = history["runs"][-10:]  # keep last 10 runs
+history_path.write_text(json.dumps(history, indent=2))
+print(f"\nHistory saved → {history_path}  ({total_passes}/{len(results)} passed, total wall: {total_wall:.0f}s)")
 PYEOF
