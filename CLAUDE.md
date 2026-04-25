@@ -22,8 +22,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 - `num_predict` default is 400 for simple/instruct models. Use 1200+ for thinking models
   (gemma4, deepseek-r1, etc.) — their reasoning tokens consume the budget before the answer.
   `compare.sh` sets `--num-predict 1200` explicitly.
-- Default `--model-timeout` is 300s. Large models at ~1–2 tok/s need up to 250s for 400 tokens;
-  the old 120s default caused spurious TOOL_ERROR timeouts.
+- Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 900`
+  because 120B RAM-bound models (qwen3.5:122b, gpt-oss:120b) at ~1–2 tok/s need up to
+  ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement
