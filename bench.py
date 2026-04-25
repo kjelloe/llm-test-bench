@@ -169,10 +169,35 @@ def main() -> None:
                         help="Ollama HTTP request timeout in seconds (default: 300)")
     parser.add_argument("--think", action="store_true", default=False,
                         help="Enable thinking/reasoning mode for models that support it (default: off)")
+    parser.add_argument("--warmup", action="store_true", default=False,
+                        help="Send a tiny prompt to each model before benchmarking to force model load (default: off)")
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
     args = parser.parse_args()
+
+    if args.warmup:
+        unique_models = list(dict.fromkeys(args.models))
+        print(f"Warming up {len(unique_models)} model(s)...")
+        for model in unique_models:
+            print(f"  [warmup] {model!r} ...", end=" ", flush=True)
+            t0 = time.monotonic()
+            try:
+                chat(
+                    base_url=args.ollama_url,
+                    model=model,
+                    messages=[{"role": "user", "content": "Say OK."}],
+                    num_ctx=512,
+                    temperature=0.0,
+                    seed=1,
+                    num_predict=5,
+                    timeout=args.model_timeout,
+                    think=False,
+                )
+                print(f"done  {time.monotonic() - t0:.1f}s")
+            except OllamaError as exc:
+                print(f"FAILED ({exc})")
+        print()
 
     if args.tasks:
         unknown = [t for t in args.tasks if t not in TASK_MAP]

@@ -67,6 +67,7 @@ echo
   --models "${MODELS[@]}" \
   --num-predict "$NUM_PREDICT" \
   --model-timeout "$MODEL_TIMEOUT" \
+  --warmup \
   --out "$OUT" \
   "$@"
 

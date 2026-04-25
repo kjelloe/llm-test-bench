@@ -52,6 +52,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `--num-predict` (default: 400)
   - `--model-timeout` (default: 300, seconds)
   - `--think` (enable thinking/reasoning mode for supported models)
+  - `--warmup` (send a tiny prompt to each model before the benchmark loop to force model load; eliminates cold-start timing penalty on the first task)
   - `--out` (default: `results.json`)
   - `--keep-workdirs` (debug: skip temp dir cleanup)
 - Prints live progress (`[i/total] model task ... PASS/FAIL wall_s tok/s`).

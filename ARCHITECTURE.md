@@ -113,7 +113,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`.
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
-- **`BUILTIN_TASKS` / `TASK_MAP`**: the three built-in tasks and a lookup dict.
+- **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
 
 #### `ollama_client.py` — Model Adapter
 

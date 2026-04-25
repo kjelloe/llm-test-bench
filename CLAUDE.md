@@ -23,6 +23,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   (gpt-oss, qwen3.5, deepseek-r1, etc.) — their reasoning tokens consume the budget before
   the answer. `compare.sh` sets `--num-predict 2400` explicitly; 1200 was too few for
   gpt-oss:120b on complex tasks (CSV parser ran out mid-reasoning).
+- `--warmup` sends a 5-token dummy prompt to each model before the benchmark loop to force
+  model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
+  (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.
 - Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 900`
   because 120B RAM-bound models (qwen3.5:122b, gpt-oss:120b) at ~1–2 tok/s need up to
   ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.

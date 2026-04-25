@@ -139,6 +139,9 @@ python3 bench.py --help
   --num-predict INT            Max output tokens (default: 400)
   --model-timeout INT          Ollama HTTP request timeout in seconds (default: 300)
   --think                      Enable thinking/reasoning mode for supported models
+  --warmup                     Send a tiny prompt to each model before benchmarking
+                               to force model load; eliminates cold-start wall-time
+                               penalty on the first task (enabled by default in compare.sh)
   --out FILE                   Results JSON path (default: results.json)
   --keep-workdirs              Don't delete temp workdirs (useful for debugging)
 ```
