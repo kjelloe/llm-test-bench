@@ -230,9 +230,11 @@ def main() -> None:
         print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
         results.append(record)
 
+    task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
+
     write_results(results, args.out)
     print(f"\nResults written to {args.out}")
-    print_comparison_table(results)
+    print_comparison_table(results, task_difficulties=task_difficulties)
     print_summary(results)
 
 

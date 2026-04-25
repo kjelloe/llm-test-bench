@@ -18,6 +18,7 @@ class Task:
     test_timeout: int = 60
     setup_cmd: list[str] | None = None
     setup_timeout: int = 120
+    difficulty: int = 1  # 1=Easy  2=Medium  3=Hard
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -98,6 +99,7 @@ def run_tests(task: Task, workdir: Path) -> tuple[bool, str]:
 
 NODE_SLUGIFY = Task(
     id="node_slugify",
+    difficulty=2,
     description=(
         "The slugify function in src/slug.js is broken. Fix it so all tests pass. "
         "The function must: "
@@ -118,6 +120,7 @@ NODE_SLUGIFY = Task(
 
 PYTHON_SAFE_DIV = Task(
     id="python_safe_div",
+    difficulty=1,
     description=(
         "calc.safe_div(a, b) must raise ValueError (not ZeroDivisionError) "
         "when b == 0. The current implementation does not do this. "
@@ -132,6 +135,7 @@ PYTHON_SAFE_DIV = Task(
 
 DOTNET_SAS = Task(
     id="dotnet_sas",
+    difficulty=1,
     description=(
         "SasHelper.GenerateSasUri in src/MicroAzureSas/SasHelper.cs "
         "produces a SAS token with ExpiresOn set in the past. "
@@ -151,6 +155,7 @@ DOTNET_SAS = Task(
 
 NODE_CSV_PARSER = Task(
     id="node_csv_parser",
+    difficulty=3,
     description=(
         "The parseCSV function in src/csv.js is broken. "
         "It uses a naive comma-split that fails on quoted fields. "
@@ -170,6 +175,7 @@ NODE_CSV_PARSER = Task(
 
 PYTHON_LRU_CACHE = Task(
     id="python_lru_cache",
+    difficulty=2,
     description=(
         "LRUCache.get() in lru_cache.py is broken: it returns the cached value "
         "but does not promote the accessed node to the MRU position. "
@@ -185,5 +191,32 @@ PYTHON_LRU_CACHE = Task(
     test_timeout=30,
 )
 
-BUILTIN_TASKS: list[Task] = [NODE_SLUGIFY, PYTHON_SAFE_DIV, DOTNET_SAS, NODE_CSV_PARSER, PYTHON_LRU_CACHE]
+PYTHON_LFU_CACHE = Task(
+    id="python_lfu_cache",
+    difficulty=3,
+    description=(
+        "LFUCache in lfu_cache.py is broken: _promote() does not update self.min_freq "
+        "when the old frequency bucket becomes empty. "
+        "Specifically, after deleting a key from freq_map[freq], if that bucket is now empty "
+        "AND freq == self.min_freq, then self.min_freq must be incremented to freq + 1. "
+        "Without this update the next eviction call reads self.min_freq, finds an empty bucket, "
+        "and raises KeyError. "
+        "Fix _promote() so self.min_freq is always kept accurate. "
+        "Do not change any other method."
+    ),
+    subdir="python_lfu_cache",
+    editable_files=["lfu_cache.py"],
+    context_files=["tests/test_lfu_cache.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
+BUILTIN_TASKS: list[Task] = [
+    NODE_SLUGIFY,
+    PYTHON_SAFE_DIV,
+    DOTNET_SAS,
+    NODE_CSV_PARSER,
+    PYTHON_LRU_CACHE,
+    PYTHON_LFU_CACHE,
+]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

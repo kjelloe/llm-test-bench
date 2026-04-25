@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `gemma4:26b`, `gpt-oss:120b`, `qwen3.5:122b`, `llama3.3:70b-instruct-q4_K_M`) against all five tasks and writes results to `results-compare.json`.
+This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `gemma4:26b`, `gpt-oss:120b`, `qwen3.5:122b`, `llama3.3:70b-instruct-q4_K_M`) against all six tasks and writes results to `results-compare.json`.
 
 ### Run a single model
 
@@ -111,15 +111,29 @@ Results are also written to JSON (`results.json` by default, `results-compare.js
 
 ## Tasks
 
-| ID | Language | What the model must fix |
-|----|----------|------------------------|
-| `node_slugify` | Node.js / ESM | `slugify()` in `src/slug.js` doesn't strip punctuation or collapse hyphens |
-| `python_safe_div` | Python / pytest | `safe_div()` raises `ZeroDivisionError` instead of `ValueError` |
-| `dotnet_sas` | .NET 8 / xUnit | Azure SAS token `ExpiresOn` is 10 min in the past instead of 60 min in the future |
-| `node_csv_parser` | Node.js / ESM | `parseCSV()` in `src/csv.js` splits naively on commas — breaks on quoted fields containing commas or escaped quotes |
-| `python_lru_cache` | Python / pytest | `LRUCache.get()` in `lru_cache.py` returns the value but doesn't promote the node to MRU, causing wrong eviction order |
+Tasks are tagged with a difficulty level (L1–L3) used to compute the **Skill** rating in the results table.
+
+| ID | Level | Language | What the model must fix |
+|----|-------|----------|------------------------|
+| `python_safe_div` | L1 | Python / pytest | `safe_div()` raises `ZeroDivisionError` instead of `ValueError` |
+| `dotnet_sas` | L1 | .NET 8 / xUnit | Azure SAS token `ExpiresOn` is 10 min in the past instead of 60 min in the future |
+| `node_slugify` | L2 | Node.js / ESM | `slugify()` in `src/slug.js` doesn't strip punctuation or collapse hyphens |
+| `python_lru_cache` | L2 | Python / pytest | `LRUCache.get()` in `lru_cache.py` returns the value but doesn't promote the node to MRU, causing wrong eviction order |
+| `node_csv_parser` | L3 | Node.js / ESM | `parseCSV()` in `src/csv.js` splits naively on commas — breaks on quoted fields containing commas or escaped quotes |
+| `python_lfu_cache` | L3 | Python / pytest | `LFUCache._promote()` in `lfu_cache.py` doesn't update `min_freq` when a frequency bucket empties, causing `KeyError` on the next eviction |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
+
+### Skill rating
+
+The **Skill** column in the results table shows the highest difficulty tier where a model passes *all* tasks at that level and below:
+
+| Rating | Meaning |
+|--------|---------|
+| `L3` | Passes all tasks (L1 + L2 + L3) |
+| `L2` | Passes L1 + L2, fails at least one L3 task |
+| `L1` | Passes L1 only, fails at least one L2 task |
+| `<L1` | Fails at least one L1 task |
 
 ---
 
@@ -131,7 +145,8 @@ python3 bench.py --help
   --models MODEL [MODEL ...]   Ollama model names (required)
   --tasks TASK_ID [...]        Subset of tasks (default: all)
                                Choices: node_slugify, python_safe_div, dotnet_sas,
-                                        node_csv_parser, python_lru_cache
+                                        node_csv_parser, python_lru_cache,
+                                        python_lfu_cache
   --ollama-url URL             Default: http://localhost:11434
   --num-ctx INT                Context window tokens (default: 8192)
   --temperature FLOAT          Default: 0.0

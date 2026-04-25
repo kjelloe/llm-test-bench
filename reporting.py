@@ -7,7 +7,19 @@ def write_results(results: list[dict], path: str) -> None:
     Path(path).write_text(json.dumps(results, indent=2), encoding="utf-8")
 
 
-def print_comparison_table(results: list[dict]) -> None:
+def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dict[str, int]) -> str:
+    """Return highest difficulty tier N where the model passes ALL tasks at levels 1..N."""
+    if not task_difficulties:
+        return "?"
+    max_level = max(task_difficulties.get(t, 1) for t in tasks)
+    for level in range(max_level, 0, -1):
+        tasks_up_to = [t for t in tasks if task_difficulties.get(t, 1) <= level]
+        if all(idx.get((model, t), {}).get("tests_pass", False) for t in tasks_up_to):
+            return f"L{level}"
+    return "<L1"
+
+
+def print_comparison_table(results: list[dict], task_difficulties: dict[str, int] | None = None) -> None:
     models = list(dict.fromkeys(r["model"] for r in results))
     tasks  = list(dict.fromkeys(r["task"]  for r in results))
     idx    = {(r["model"], r["task"]): r for r in results}
@@ -21,6 +33,7 @@ def print_comparison_table(results: list[dict]) -> None:
     CELL_W  = 24   # "PASS  1234.5t/s    14.2s"
     SUM_W   = 25   # "3/3  1234.5t/s  1234.5s"
     SPD_W   = 3    # "1" – "9", centred
+    SKILL_W = 5    # "L3", "<L1", centred
 
     def cell(r: dict | None) -> str:
         if r is None:
@@ -40,23 +53,35 @@ def print_comparison_table(results: list[dict]) -> None:
     bar = (
         "+" + "-" * (model_w + 2)
         + "+" + "-" * (SPD_W + 2)
+        + "+" + "-" * (SKILL_W + 2)
         + ("+" + "-" * (CELL_W + 2)) * len(tasks)
         + "+" + "-" * (SUM_W + 2) + "+"
     )
 
+    # Build difficulty legend for header (e.g. "L1:2 L2:2 L3:2")
+    if task_difficulties:
+        from collections import Counter
+        counts = Counter(task_difficulties.get(t, 1) for t in tasks)
+        legend = "  ".join(f"L{lvl}:{n}" for lvl, n in sorted(counts.items()))
+    else:
+        legend = "L1-L3"
+
     print()
     print("=" * len(bar))
-    print("COMPARISON TABLE  (Spd: assumed rank 1=fastest)")
+    print(f"COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: {legend})")
     print("=" * len(bar))
     print(bar)
 
     # Task name headers
     task_hdrs = "".join(f"| {t:<{CELL_W}} " for t in tasks)
-    print(f"| {'Model':<{model_w}} | {'Spd':^{SPD_W}} {task_hdrs}| {'pass  avg tok/s   tot s':<{SUM_W}} |")
+    print(f"| {'Model':<{model_w}} | {'Spd':^{SPD_W}} | {'Skill':^{SKILL_W}} {task_hdrs}| {'pass  avg tok/s   tot s':<{SUM_W}} |")
 
     # Sub-header: column meaning
-    sub_hdrs = "".join(f"| {'ok  tok/s  wall':<{CELL_W}} " for _ in tasks)
-    print(f"| {'':<{model_w}} | {'est':^{SPD_W}} {sub_hdrs}| {'':<{SUM_W}} |")
+    if task_difficulties:
+        task_sub = "".join(f"| {'(L'+str(task_difficulties.get(t,1))+') ok  tok/s  wall':<{CELL_W}} " for t in tasks)
+    else:
+        task_sub = "".join(f"| {'ok  tok/s  wall':<{CELL_W}} " for _ in tasks)
+    print(f"| {'':<{model_w}} | {'est':^{SPD_W}} | {'L1-3':^{SKILL_W}} {task_sub}| {'':<{SUM_W}} |")
 
     print(bar)
 
@@ -64,7 +89,8 @@ def print_comparison_table(results: list[dict]) -> None:
         recs  = [idx.get((model, t)) for t in tasks]
         cells = "".join(f"| {cell(r)} " for r in recs)
         rank  = speed_rank[model]
-        print(f"| {model:<{model_w}} | {rank:^{SPD_W}} {cells}| {summary(recs):<{SUM_W}} |")
+        skill = _skill_level(model, tasks, idx, task_difficulties or {})
+        print(f"| {model:<{model_w}} | {rank:^{SPD_W}} | {skill:^{SKILL_W}} {cells}| {summary(recs):<{SUM_W}} |")
 
     print(bar)
 
