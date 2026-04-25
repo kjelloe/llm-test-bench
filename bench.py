@@ -181,8 +181,10 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.warmup:
-        unique_models = list(dict.fromkeys(args.models))
-        print(f"Warming up {len(unique_models)} model(s)...")
+        # Reverse order: warm up slowest models first so fast models are still
+        # loaded when their benchmark tasks run (large models evict earlier ones).
+        unique_models = list(reversed(list(dict.fromkeys(args.models))))
+        print(f"Warming up {len(unique_models)} model(s) (slowest → fastest)...")
         for model in unique_models:
             print(f"  [warmup] {model!r} ...", end=" ", flush=True)
             t0 = time.monotonic()

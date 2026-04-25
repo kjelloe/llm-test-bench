@@ -195,14 +195,12 @@ PYTHON_LFU_CACHE = Task(
     id="python_lfu_cache",
     difficulty=3,
     description=(
-        "LFUCache in lfu_cache.py is broken: _promote() does not update self.min_freq "
-        "when the old frequency bucket becomes empty. "
-        "Specifically, after deleting a key from freq_map[freq], if that bucket is now empty "
-        "AND freq == self.min_freq, then self.min_freq must be incremented to freq + 1. "
-        "Without this update the next eviction call reads self.min_freq, finds an empty bucket, "
-        "and raises KeyError. "
-        "Fix _promote() so self.min_freq is always kept accurate. "
-        "Do not change any other method."
+        "LFUCache in lfu_cache.py has a bug that causes a KeyError during eviction "
+        "after certain get/put sequences. "
+        "The cache's internal frequency tracking becomes inconsistent under specific access patterns, "
+        "causing the next put() that triggers eviction to crash. "
+        "Identify the invariant that _promote() fails to maintain and fix it. "
+        "Do not change put() or get() directly — the fix belongs in _promote()."
     ),
     subdir="python_lfu_cache",
     editable_files=["lfu_cache.py"],
