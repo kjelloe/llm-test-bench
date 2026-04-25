@@ -1,0 +1,8 @@
+MODELS=(
+  "qwen2.5-coder:14b"           # The Speed Demon (Fast Tier)
+  "qwen3-coder:30b"             # The Workhorse (Middle Tier - Modern)
+  "llama3.3:70b-instruct-q4_K_M" # The Standard (Large Tier)
+  "qwen3.5:122b"                 # The MoE Specialist (Giant Tier - MoE)
+  "gpt-oss:120b"                 # The Reasoning Giant (Giant Tier - Dense)
+)
+
