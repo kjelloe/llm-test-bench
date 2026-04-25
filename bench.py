@@ -38,6 +38,7 @@ def run_one(
     model_timeout: int,
     think: bool = False,
     keep_workdir: bool = False,
+    num_thread: int | None = None,
 ) -> dict:
     record: dict = {
         "model": model,
@@ -92,6 +93,7 @@ def run_one(
                 num_predict=num_predict,
                 timeout=model_timeout,
                 think=think,
+                num_thread=num_thread,
             )
         except OllamaError as exc:
             record["error_kind"] = "TOOL_ERROR"
@@ -167,6 +169,8 @@ def main() -> None:
                         help="Max tokens to generate. Use 1200+ for thinking models (default: 400)")
     parser.add_argument("--model-timeout", type=int, default=300,
                         help="Ollama HTTP request timeout in seconds (default: 300)")
+    parser.add_argument("--num-thread", type=int, default=10,
+                        help="CPU threads for Ollama inference; 0 = let Ollama decide (default: 10)")
     parser.add_argument("--think", action="store_true", default=False,
                         help="Enable thinking/reasoning mode for models that support it (default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
@@ -193,6 +197,7 @@ def main() -> None:
                     num_predict=5,
                     timeout=args.model_timeout,
                     think=False,
+                    num_thread=args.num_thread if args.num_thread > 0 else None,
                 )
                 print(f"done  {time.monotonic() - t0:.1f}s")
             except OllamaError as exc:
@@ -224,6 +229,7 @@ def main() -> None:
             model_timeout=args.model_timeout,
             think=args.think,
             keep_workdir=args.keep_workdirs,
+            num_thread=args.num_thread if args.num_thread > 0 else None,
         )
         status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
         trunc = " TRUNCATED" if record.get("response_truncated") else ""

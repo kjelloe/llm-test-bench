@@ -40,19 +40,23 @@ def chat(
     num_predict: int = 400,
     timeout: int = 300,
     think: bool = False,
+    num_thread: int | None = None,
 ) -> OllamaResponse:
     url = base_url.rstrip("/") + "/api/chat"
+    options: dict = {
+        "num_ctx": num_ctx,
+        "temperature": temperature,
+        "seed": seed,
+        "num_predict": num_predict,
+    }
+    if num_thread is not None and num_thread > 0:
+        options["num_thread"] = num_thread
     payload = {
         "model": model,
         "messages": messages,
         "stream": False,
         "think": think,   # False disables reasoning tokens for deepseek-r1, gemma4, etc.
-        "options": {
-            "num_ctx": num_ctx,
-            "temperature": temperature,
-            "seed": seed,
-            "num_predict": num_predict,
-        },
+        "options": options,
     }
     req = urllib.request.Request(
         url,
