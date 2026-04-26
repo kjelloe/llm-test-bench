@@ -43,6 +43,9 @@ task_data/
   dotnet_sas/             MicroAzureSas.sln, src/…/SasHelper.cs (baseline), tests/…/SasHelperTests.cs
   node_csv_parser/        package.json, src/csv.js (baseline), tests/csv.test.js
   python_lru_cache/       lru_cache.py (baseline), conftest.py, tests/test_lru_cache.py
+  python_lfu_cache/       lfu_cache.py (baseline), tests/test_lfu_cache.py
+  python_bst_delete/      bst.py (baseline), tests/test_bst.py
+  python_multifile_rename/ product.py (context), inventory.py + reports.py (baseline, 2 editable files), tests/
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
@@ -110,7 +113,7 @@ For each `(model, task)` pair:
 
 Two responsibilities kept in one module to avoid a thin `prompting.py` abstraction:
 
-- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`.
+- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=Easy/2=Medium/3=Hard, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`).
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
 - **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
@@ -120,6 +123,8 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - Single public function `chat(...)`.
 - Uses `urllib.request` (stdlib); no third-party HTTP library.
 - Accepts `think: bool` to enable reasoning tokens for models that support it (deepseek-r1, gemma4, etc.).
+- Accepts `num_thread: int | None` to cap CPU threads (default 10 via CLI, passed per request).
+- Accepts `keep_alive: str | int | None` — warmup calls use `-1` (keep loaded until memory pressure evicts) to prevent Ollama's 5-minute timeout from unloading slow RAM-resident models before their tasks run.
 - Returns `OllamaResponse(content, thinking, metrics)` where `thinking` holds the model's reasoning trace and `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
 
 #### `parsing.py` — Edit Protocol Parser
@@ -129,7 +134,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 #### `reporting.py` — Output
 
-- `print_comparison_table(results)` — ASCII table: rows = models, columns = tasks + summary. Each cell shows `PASS/FAIL`, `tok/s`, `wall_s`. Summary column shows pass count, avg tok/s, total seconds.
+- `print_comparison_table(results, task_difficulties)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)`.
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
 - `write_results(results, path)` — JSON dump.
 
@@ -172,8 +177,8 @@ Strictness enforced:
 A valid task must satisfy:
 1. Baseline tests **fail** (`test_cmd` exits non-zero on unmodified `task_data/`).
 2. After the correct minimal fix to `editable_files`, tests **pass**.
-3. `editable_files` allow-list is as small as possible (ideally one file).
-4. `context_files` provide everything the model needs to understand the fix (tests, config).
+3. `editable_files` allow-list is as small as possible (one file for single-bug tasks; two files for cross-module refactoring tasks).
+4. `context_files` provide everything the model needs to understand the fix (tests, config, related modules).
 
 ### Security / Safety Notes
 
@@ -185,6 +190,7 @@ A valid task must satisfy:
 
 **Adding a task:**
 
+Single-file task:
 ```python
 MY_TASK = Task(
     id="my_task",
@@ -192,12 +198,28 @@ MY_TASK = Task(
     subdir="my_task",           # → task_data/my_task/
     editable_files=["src/foo.py"],
     context_files=["tests/test_foo.py"],
-    test_cmd=["python", "-m", "pytest", "tests/"],
+    test_cmd=["python3", "-m", "pytest", "tests/"],
     test_timeout=30,
+    difficulty=2,
 )
 ```
 
-Then add `task_data/my_task/` with baseline source + tests, and register `MY_TASK` in `BUILTIN_TASKS`.
+Multi-file task with a larger context window:
+```python
+MY_MULTIFILE_TASK = Task(
+    id="my_multifile_task",
+    description="A rename propagated in module_a.py but not in module_b.py or module_c.py. Fix both.",
+    subdir="my_multifile_task",
+    editable_files=["module_b.py", "module_c.py"],   # model must output two BEGIN_FILE blocks
+    context_files=["module_a.py", "tests/test_all.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/"],
+    test_timeout=30,
+    difficulty=2,
+    num_ctx=16384,              # runner uses max(global --num-ctx, this value)
+)
+```
+
+Then add `task_data/my_task/` with baseline source + tests, and register the task in `BUILTIN_TASKS`.
 
 **Future: external repo mode** — define tasks in YAML pointing at local repo paths with a test command and editable allow-list.
 
@@ -205,8 +227,10 @@ Then add `task_data/my_task/` with baseline source + tests, and register `MY_TAS
 
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
-- Large context windows increase KV cache pressure; speed varies by model quantization and VRAM.
+- Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
 - Thinking models (gpt-oss, qwen3.5) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the current minimum for complex tasks.
+- Warmup calls use `keep_alive=-1` so Ollama does not unload large RAM-resident models (gpt-oss, qwen3.5) during the ~400s warmup gap; models are evicted by memory pressure only, not by timeout.
+- `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 
 ---
 
