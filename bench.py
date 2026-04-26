@@ -176,18 +176,27 @@ def main() -> None:
     parser.add_argument("--think", action="store_true", default=False,
                         help="Enable thinking/reasoning mode for models that support it (default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
-                        help="Send a tiny prompt to each model before benchmarking to force model load (default: off)")
+                        help="Send a tiny prompt to each model just before its first task to force model load (default: off)")
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
     args = parser.parse_args()
 
-    if args.warmup:
-        # Reverse order: warm up slowest models first so fast models are still
-        # loaded when their benchmark tasks run (large models evict earlier ones).
-        unique_models = list(reversed(list(dict.fromkeys(args.models))))
-        print(f"Warming up {len(unique_models)} model(s) (slowest → fastest)...")
-        for model in unique_models:
+    if args.tasks:
+        unknown = [t for t in args.tasks if t not in TASK_MAP]
+        if unknown:
+            parser.error(f"Unknown task IDs: {unknown}. Available: {sorted(TASK_MAP)}")
+        tasks_to_run = [TASK_MAP[t] for t in args.tasks]
+    else:
+        tasks_to_run = BUILTIN_TASKS
+
+    pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
+    total = len(pairs)
+    results = []
+    current_model: str | None = None
+
+    for i, (model, task) in enumerate(pairs, 1):
+        if args.warmup and model != current_model:
             print(f"  [warmup] {model!r} ...", end=" ", flush=True)
             t0 = time.monotonic()
             try:
@@ -202,26 +211,12 @@ def main() -> None:
                     timeout=args.model_timeout,
                     think=False,
                     num_thread=args.num_thread if args.num_thread > 0 else None,
-                    keep_alive=-1,  # keep loaded until evicted by memory pressure, not by timeout
+                    keep_alive=-1,
                 )
                 print(f"done  {time.monotonic() - t0:.1f}s")
             except OllamaError as exc:
                 print(f"FAILED ({exc})")
-        print()
-
-    if args.tasks:
-        unknown = [t for t in args.tasks if t not in TASK_MAP]
-        if unknown:
-            parser.error(f"Unknown task IDs: {unknown}. Available: {sorted(TASK_MAP)}")
-        tasks_to_run = [TASK_MAP[t] for t in args.tasks]
-    else:
-        tasks_to_run = BUILTIN_TASKS
-
-    pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
-    total = len(pairs)
-    results = []
-
-    for i, (model, task) in enumerate(pairs, 1):
+            current_model = model
         print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
         record = run_one(
             model=model,

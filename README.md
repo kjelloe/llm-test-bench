@@ -161,10 +161,10 @@ python3 bench.py --help
   --num-thread INT             CPU threads for Ollama inference; 0 = let Ollama decide
                                (default: 10 — limits heat without affecting GPU tok/s)
   --think                      Enable thinking/reasoning mode for supported models
-  --warmup                     Send a tiny prompt to each model before benchmarking
-                               (slowest → fastest order so fast models are still loaded
-                               when their tasks run; uses keep_alive=-1 so models stay
-                               resident through the full run; enabled by default in compare.sh)
+  --warmup                     Send a tiny prompt to each model just before its first task
+                               to force model load (JIT per model; uses keep_alive=-1 so
+                               the model stays resident through all its own tasks;
+                               enabled by default in compare.sh)
   --out FILE                   Results JSON path (default: results.json)
   --keep-workdirs              Don't delete temp workdirs (useful for debugging)
 ```

@@ -196,14 +196,12 @@ PYTHON_BST_DELETE = Task(
     id="python_bst_delete",
     difficulty=3,
     description=(
-        "BST._delete() in bst.py has a bug in the two-children case. "
-        "When the deleted node has two children, the code correctly finds the "
-        "in-order successor and copies its value up, but then calls _delete() "
-        "on the right subtree without using the return value. "
-        "Because _delete() returns the modified subtree root rather than mutating "
-        "in place, the successor node is never actually removed — it remains as a "
-        "duplicate. Fix _delete() so the return value of the recursive call is "
-        "assigned back to node.right. Do not change any other method."
+        "BST.delete() in bst.py produces incorrect results for certain deletion patterns. "
+        "After deleting a node, the tree may contain duplicate values and the deleted "
+        "node's value may still be findable via search(). "
+        "The bug affects only specific tree shapes — simpler deletions work correctly. "
+        "Identify the invariant that _delete() fails to maintain and fix it. "
+        "Do not change insert(), search(), or inorder()."
     ),
     subdir="python_bst_delete",
     editable_files=["bst.py"],

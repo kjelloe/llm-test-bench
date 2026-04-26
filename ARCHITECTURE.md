@@ -124,7 +124,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - Uses `urllib.request` (stdlib); no third-party HTTP library.
 - Accepts `think: bool` to enable reasoning tokens for models that support it (deepseek-r1, gemma4, etc.).
 - Accepts `num_thread: int | None` to cap CPU threads (default 10 via CLI, passed per request).
-- Accepts `keep_alive: str | int | None` — warmup calls use `-1` (keep loaded until memory pressure evicts) to prevent Ollama's 5-minute timeout from unloading slow RAM-resident models before their tasks run.
+- Accepts `keep_alive: str | int | None` — JIT warmup calls use `-1` (keep loaded until memory pressure evicts) so each model stays resident through all of its own tasks.
 - Returns `OllamaResponse(content, thinking, metrics)` where `thinking` holds the model's reasoning trace and `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
 
 #### `parsing.py` — Edit Protocol Parser
@@ -229,7 +229,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
 - Thinking models (gpt-oss, qwen3.5) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the current minimum for complex tasks.
-- Warmup calls use `keep_alive=-1` so Ollama does not unload large RAM-resident models (gpt-oss, qwen3.5) during the ~400s warmup gap; models are evicted by memory pressure only, not by timeout.
+- Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 
 ---
