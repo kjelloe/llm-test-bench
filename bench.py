@@ -60,6 +60,7 @@ def run_one(
         "metrics": {},
         "tok_per_s": 0.0,
         "wall_s": 0.0,
+        "kv_cache": None,
     }
     wall_start = time.monotonic()
     workdir = prepare_workdir(task)
@@ -84,6 +85,7 @@ def run_one(
         # --- model call ---
         prompt = build_prompt(task, workdir)
         effective_num_ctx = max(num_ctx, task.num_ctx) if task.num_ctx else num_ctx
+        vram_pre = get_gpu_snapshot()   # before prompt eval — weights loaded, no KV cache yet
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
         try:
@@ -109,6 +111,7 @@ def run_one(
             record["error_detail"] = str(exc)[:500]
             record["gpu_snapshots"] = {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None}
             return record
+        vram_post = get_gpu_snapshot()  # after full inference — weights + KV cache (prompt + output)
         stop_poll.set()
         poll_thread.join(timeout=2.0)
         peak_snap = snap_holder[0] if snap_holder else None
@@ -128,6 +131,23 @@ def run_one(
             "total_duration_ms": round(m.total_duration / 1e6, 1),
         }
         record["tok_per_s"] = round(m.tok_per_s, 1)
+
+        total_kv_tokens = m.prompt_eval_count + m.eval_count
+        kv_delta_mb: int | None = None
+        kv_mb_per_1k: float | None = None
+        if vram_pre and vram_post and total_kv_tokens > 0:
+            kv_delta_mb = max(0, vram_post["vram_used_mb"] - vram_pre["vram_used_mb"])
+            if kv_delta_mb > 0:
+                kv_mb_per_1k = round(kv_delta_mb / total_kv_tokens * 1000, 1)
+        record["kv_cache"] = {
+            "vram_before_mb": vram_pre["vram_used_mb"] if vram_pre else None,
+            "vram_after_mb": vram_post["vram_used_mb"] if vram_post else None,
+            "delta_mb": kv_delta_mb,
+            "prompt_tokens": m.prompt_eval_count,
+            "gen_tokens": m.eval_count,
+            "total_tokens": total_kv_tokens,
+            "kv_mb_per_1k_tokens": kv_mb_per_1k,
+        }
         record["response_truncated"] = m.eval_count >= num_predict - 5
         # Save a snippet of the raw model output for post-hoc debugging
         raw = resp.content
