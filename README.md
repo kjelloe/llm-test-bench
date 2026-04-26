@@ -30,12 +30,12 @@ Example output:
   ✓  Ollama reachable at http://127.0.0.1:11434
 
 ── Ollama models ──
-  ✓  qwen3-coder:30b
+  ✓  gpt-oss:20b
   ✓  qwen2.5-coder:14b
+  ✓  qwen3-coder:30b
   ✓  gemma4:26b
-  ✓  gpt-oss:120b
   ✓  qwen3.5:35b
-  ✓  devstral-small-2
+  ✓  gpt-oss:120b
 
 ── Python ──
   ✓  Python 3.12.3
@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `devstral-small-2`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all eight tasks and writes results to `results-compare.json`.
+This runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all nine tasks and writes results to `results-compare.json`.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
@@ -91,22 +91,22 @@ The header printed before each run shows estimated runtime from the previous run
 At the end of every run a comparison table is printed:
 
 ```
-COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:3)
-+-------------------+-----+-------+--------------------------+--------------------------+--  …  --+---------------------------+
-| Model             | Spd | Skill | python_safe_div          | node_slugify             |   …     | pass  avg tok/s   tot s   |
-|                   | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     |                           |
-+-------------------+-----+-------+--------------------------+--------------------------+--  …  --+---------------------------+
-| qwen3-coder:30b   |  1  |  L3   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | 8/8    39.5t/s     …s     |
-| qwen2.5-coder:14b |  2  |  L2   | PASS    42.9t/s     6.5s | PASS    41.9t/s     7.2s |   …     | 7/8    41.8t/s     …s     |
-+-------------------+-----+-------+--------------------------+--------------------------+--  …  --+---------------------------+
+COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:3  L4:1)
++--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
+| Model              | Spd | Skill | python_safe_div          | node_slugify             |   …     | node_memoize_bug         | pass  avg tok/s   tot s   |
+|                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L4) ok  tok/s  wall     |                           |
++--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
+| gpt-oss:20b        |  1  |  L2   | PASS    82.1t/s     8.3s | PASS    81.7t/s    23.4s |   …     | PASS    82.8t/s    16.3s | 7/9    82.0t/s     …s     |
+| qwen3-coder:30b    |  3  |  L3   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS    43.5t/s    14.1s | 9/9    39.5t/s     …s     |
++--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 
 FAILURE DETAIL
-  Model: qwen2.5-coder:14b
-    TESTS_STILL_FAIL: 1
-      e.g. TAP version 13 # Subtest: quoted field with escaped double-quote …
+  Model: gpt-oss:20b
+    NO_BLOCKS: 2
+      e.g. [thinking: We need to fix _promote to update min_freq … all 2400 tokens used for thinking]
 ```
 
-The **Skill** column shows the highest difficulty tier (L1–L3) where the model passes *all* tasks at that level and below.
+The **Skill** column shows the highest difficulty tier (L1–L4) where the model passes *all* tasks at that level and below.
 
 Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`).
 
@@ -114,7 +114,7 @@ Results are also written to JSON (`results.json` by default, `results-compare.js
 
 ## Tasks
 
-Tasks are tagged with a difficulty level (L1–L3) used to compute the **Skill** rating in the results table.
+Tasks are tagged with a difficulty level (L1–L4) used to compute the **Skill** rating in the results table.
 
 | ID | Level | Language | What the model must fix |
 |----|-------|----------|------------------------|
@@ -124,8 +124,9 @@ Tasks are tagged with a difficulty level (L1–L3) used to compute the **Skill**
 | `python_lru_cache` | L2 | Python / pytest | `LRUCache.get()` in `lru_cache.py` returns the value but doesn't promote the node to MRU, causing wrong eviction order |
 | `node_csv_parser` | L3 | Node.js / ESM | `parseCSV()` in `src/csv.js` splits naively on commas — breaks on quoted fields containing commas or escaped quotes |
 | `python_lfu_cache` | L3 | Python / pytest | `LFUCache._promote()` in `lfu_cache.py` doesn't update `min_freq` when a frequency bucket empties, causing `KeyError` on the next eviction |
-| `python_minheap` | L3 | Python / pytest | `MinHeap._sift_down()` in `minheap.py` skips the right child — `pop()` returns elements out of order when the right child is the true minimum |
+| `python_minheap` | L3 | Python / pytest | `MinHeap.pop()` in `minheap.py` returns elements out of order for certain inputs — the heap's internal structure is corrupted when removing elements |
 | `python_multifile_rename` | L2 | Python / pytest | `price_cents` was renamed to `price` in `product.py` but two dependent files (`inventory.py`, `reports.py`) still use the old name — model must output **two** `BEGIN_FILE` blocks |
+| `node_memoize_bug` | L4 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result; pricing tests fail with wrong values |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
 
@@ -135,7 +136,8 @@ The **Skill** column in the results table shows the highest difficulty tier wher
 
 | Rating | Meaning |
 |--------|---------|
-| `L3` | Passes all tasks (L1 + L2 + L3) |
+| `L4` | Passes all tasks (L1 + L2 + L3 + L4) |
+| `L3` | Passes L1 + L2 + L3, fails at least one L4 task |
 | `L2` | Passes L1 + L2, fails at least one L3 task |
 | `L1` | Passes L1 only, fails at least one L2 task |
 | `<L1` | Fails at least one L1 task |
@@ -151,8 +153,8 @@ python3 bench.py --help
   --tasks TASK_ID [...]        Subset of tasks (default: all)
                                Choices: node_slugify, python_safe_div, dotnet_sas,
                                         node_csv_parser, python_lru_cache,
-                                        python_lfu_cache, python_bst_delete,
-                                        python_multifile_rename
+                                        python_lfu_cache, python_minheap,
+                                        python_multifile_rename, node_memoize_bug
   --ollama-url URL             Default: http://localhost:11434
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx

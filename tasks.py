@@ -196,12 +196,11 @@ PYTHON_MINHEAP = Task(
     id="python_minheap",
     difficulty=3,
     description=(
-        "MinHeap in minheap.py has a bug in _sift_down() that corrupts the heap "
-        "invariant after pop(). When elements are removed, the heap no longer "
-        "guarantees that each parent is less than or equal to its children — "
-        "causing subsequent pop() calls to return elements out of order. "
-        "push() and peek() work correctly. "
-        "Identify the invariant that _sift_down() fails to maintain and fix it."
+        "MinHeap in minheap.py has a bug that causes pop() to return elements in "
+        "the wrong order for certain inputs. push() and peek() work correctly — "
+        "the heap is built correctly, but removing elements corrupts the internal "
+        "structure so the min-heap property no longer holds. "
+        "Identify the invariant that is violated during pop() and fix it."
     ),
     subdir="python_minheap",
     editable_files=["minheap.py"],
@@ -225,6 +224,25 @@ PYTHON_LFU_CACHE = Task(
     editable_files=["lfu_cache.py"],
     context_files=["tests/test_lfu_cache.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
+NODE_MEMOIZE_BUG = Task(
+    id="node_memoize_bug",
+    difficulty=4,
+    description=(
+        "The pricing module's tests are failing with wrong return values. "
+        "The pricing logic in src/pricing.js is correct — applyDiscount() and computeTax() "
+        "implement their formulas correctly and must not be modified. "
+        "The memoize() utility in src/memoize.js is used to cache results for both functions; "
+        "it has a bug that causes calls with the same first argument but different subsequent "
+        "arguments to return a previously cached result instead of computing a fresh one. "
+        "Fix src/memoize.js so all tests pass."
+    ),
+    subdir="node_memoize_bug",
+    editable_files=["src/memoize.js"],
+    context_files=["src/pricing.js", "tests/pricing.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/pricing.test.js"],
     test_timeout=30,
 )
 
@@ -257,5 +275,6 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_LFU_CACHE,
     PYTHON_MINHEAP,
     PYTHON_MULTIFILE_RENAME,
+    NODE_MEMOIZE_BUG,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

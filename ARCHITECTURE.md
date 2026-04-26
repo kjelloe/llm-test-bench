@@ -46,6 +46,7 @@ task_data/
   python_lfu_cache/       lfu_cache.py (baseline), tests/test_lfu_cache.py
   python_minheap/         minheap.py (baseline), tests/test_minheap.py
   python_multifile_rename/ product.py (context), inventory.py + reports.py (baseline, 2 editable files), tests/
+  node_memoize_bug/       package.json, src/memoize.js (baseline), src/pricing.js (context), tests/pricing.test.js
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
@@ -114,7 +115,7 @@ For each `(model, task)` pair:
 
 Two responsibilities kept in one module to avoid a thin `prompting.py` abstraction:
 
-- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=Easy/2=Medium/3=Hard, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`).
+- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=L1/2=L2/3=L3/4=L4, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`).
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
 - **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
@@ -123,7 +124,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 - Single public function `chat(...)`.
 - Uses `urllib.request` (stdlib); no third-party HTTP library.
-- Accepts `think: bool` to enable reasoning tokens for models that support it (deepseek-r1, gemma4, etc.).
+- Accepts `think: bool` to enable reasoning tokens for models that support it (gpt-oss, qwen3.5, gemma4, deepseek-r1, etc.).
 - Accepts `num_thread: int | None` to cap CPU threads (default 10 via CLI, passed per request).
 - Accepts `keep_alive: str | int | None` — JIT warmup calls use `-1` (keep loaded until memory pressure evicts) so each model stays resident through all of its own tasks.
 - Returns `OllamaResponse(content, thinking, metrics)` where `thinking` holds the model's reasoning trace and `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
@@ -135,7 +136,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 #### `reporting.py` — Output
 
-- `print_comparison_table(results, task_difficulties)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)`.
+- `print_comparison_table(results, task_difficulties)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)/(L4)`. The Skill column and legend are derived dynamically from the current task set's max difficulty.
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
 - `write_results(results, path)` — JSON dump.
 
@@ -236,7 +237,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
-- Thinking models (gpt-oss, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the current minimum for complex tasks.
+- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). gpt-oss:20b has a hard ceiling on python_lfu_cache — it exhausts even 4800 tokens on reasoning and never emits output; this is a capability limit, not a budget issue.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 
