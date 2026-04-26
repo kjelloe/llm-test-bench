@@ -79,6 +79,7 @@ def run_one(
 
         # --- model call ---
         prompt = build_prompt(task, workdir)
+        effective_num_ctx = max(num_ctx, task.num_ctx) if task.num_ctx else num_ctx
         try:
             resp = chat(
                 base_url=ollama_url,
@@ -87,7 +88,7 @@ def run_one(
                     {"role": "system", "content": "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."},
                     {"role": "user", "content": prompt},
                 ],
-                num_ctx=num_ctx,
+                num_ctx=effective_num_ctx,
                 temperature=temperature,
                 seed=seed,
                 num_predict=num_predict,
@@ -102,6 +103,7 @@ def run_one(
 
         m = resp.metrics
         record["metrics"] = {
+            "num_ctx": effective_num_ctx,
             "prompt_eval_count": m.prompt_eval_count,
             "eval_count": m.eval_count,
             "prompt_eval_duration_ms": round(m.prompt_eval_duration / 1e6, 1),

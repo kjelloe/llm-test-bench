@@ -19,6 +19,7 @@ class Task:
     setup_cmd: list[str] | None = None
     setup_timeout: int = 120
     difficulty: int = 1  # 1=Easy  2=Medium  3=Hard
+    num_ctx: int | None = None  # override global --num-ctx for this task (None = use global)
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -229,6 +230,26 @@ PYTHON_LFU_CACHE = Task(
     test_timeout=30,
 )
 
+PYTHON_MULTIFILE_RENAME = Task(
+    id="python_multifile_rename",
+    difficulty=2,
+    description=(
+        "The Product dataclass in product.py recently renamed the field price_cents (int, "
+        "hundredths of a dollar) to price (float, dollars). "
+        "Two dependent modules — inventory.py and reports.py — still use the old "
+        "attribute name price_cents and still divide by 100 to convert to dollars. "
+        "Fix both files: replace every occurrence of p.price_cents / 100 with p.price "
+        "and every occurrence of p.price_cents with p.price. "
+        "Output a BEGIN_FILE / END_FILE block for each of the two files."
+    ),
+    subdir="python_multifile_rename",
+    editable_files=["inventory.py", "reports.py"],
+    context_files=["product.py", "tests/test_inventory_reports.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    num_ctx=16384,
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -237,5 +258,6 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_LRU_CACHE,
     PYTHON_LFU_CACHE,
     PYTHON_BST_DELETE,
+    PYTHON_MULTIFILE_RENAME,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
