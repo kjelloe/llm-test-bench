@@ -35,7 +35,7 @@ Example output:
   ✓  gemma4:26b
   ✓  gpt-oss:120b
   ✓  qwen3.5:35b
-  ✓  codestral:22b
+  ✓  devstral-small-2
 
 ── Python ──
   ✓  Python 3.12.3
@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `codestral:22b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all eight tasks and writes results to `results-compare.json`.
+This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `devstral-small-2`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all eight tasks and writes results to `results-compare.json`.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
@@ -124,7 +124,7 @@ Tasks are tagged with a difficulty level (L1–L3) used to compute the **Skill**
 | `python_lru_cache` | L2 | Python / pytest | `LRUCache.get()` in `lru_cache.py` returns the value but doesn't promote the node to MRU, causing wrong eviction order |
 | `node_csv_parser` | L3 | Node.js / ESM | `parseCSV()` in `src/csv.js` splits naively on commas — breaks on quoted fields containing commas or escaped quotes |
 | `python_lfu_cache` | L3 | Python / pytest | `LFUCache._promote()` in `lfu_cache.py` doesn't update `min_freq` when a frequency bucket empties, causing `KeyError` on the next eviction |
-| `python_bst_delete` | L3 | Python / pytest | `BST._delete()` in `bst.py` finds the in-order successor but discards the return value of the recursive delete, leaving a duplicate node in the tree |
+| `python_minheap` | L3 | Python / pytest | `MinHeap._sift_down()` in `minheap.py` skips the right child — `pop()` returns elements out of order when the right child is the true minimum |
 | `python_multifile_rename` | L2 | Python / pytest | `price_cents` was renamed to `price` in `product.py` but two dependent files (`inventory.py`, `reports.py`) still use the old name — model must output **two** `BEGIN_FILE` blocks |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.

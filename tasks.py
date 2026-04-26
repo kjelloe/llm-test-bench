@@ -192,20 +192,20 @@ PYTHON_LRU_CACHE = Task(
     test_timeout=30,
 )
 
-PYTHON_BST_DELETE = Task(
-    id="python_bst_delete",
+PYTHON_MINHEAP = Task(
+    id="python_minheap",
     difficulty=3,
     description=(
-        "BST.delete() in bst.py is broken for nodes with two children. "
-        "After such a deletion the BST invariant is violated: inorder traversal "
-        "produces duplicate values, and the tree structure is incorrect. "
-        "Leaf deletion and single-child deletion work correctly. "
-        "Identify the invariant that _delete() fails to maintain in the two-children "
-        "case and fix it. Do not change insert(), search(), or inorder()."
+        "MinHeap in minheap.py has a bug in _sift_down() that corrupts the heap "
+        "invariant after pop(). When elements are removed, the heap no longer "
+        "guarantees that each parent is less than or equal to its children — "
+        "causing subsequent pop() calls to return elements out of order. "
+        "push() and peek() work correctly. "
+        "Identify the invariant that _sift_down() fails to maintain and fix it."
     ),
-    subdir="python_bst_delete",
-    editable_files=["bst.py"],
-    context_files=["tests/test_bst.py"],
+    subdir="python_minheap",
+    editable_files=["minheap.py"],
+    context_files=["tests/test_minheap.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
 )
@@ -255,7 +255,7 @@ BUILTIN_TASKS: list[Task] = [
     NODE_CSV_PARSER,
     PYTHON_LRU_CACHE,
     PYTHON_LFU_CACHE,
-    PYTHON_BST_DELETE,
+    PYTHON_MINHEAP,
     PYTHON_MULTIFILE_RENAME,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

@@ -44,7 +44,7 @@ task_data/
   node_csv_parser/        package.json, src/csv.js (baseline), tests/csv.test.js
   python_lru_cache/       lru_cache.py (baseline), conftest.py, tests/test_lru_cache.py
   python_lfu_cache/       lfu_cache.py (baseline), tests/test_lfu_cache.py
-  python_bst_delete/      bst.py (baseline), tests/test_bst.py
+  python_minheap/         minheap.py (baseline), tests/test_minheap.py
   python_multifile_rename/ product.py (context), inventory.py + reports.py (baseline, 2 editable files), tests/
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────

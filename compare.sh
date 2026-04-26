@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Run the full benchmark across all candidate models and print a comparison table.
 #
-# --num-predict 2400  : thinking models (gpt-oss, qwen3.5) consume tokens for
+# --num-predict 2400  : thinking models (gpt-oss:120b, qwen3.5:35b) consume tokens for
 #                       internal reasoning before emitting the BEGIN_FILE block;
 #                       1200 was too few for gpt-oss on complex tasks (CSV parser).
 # --model-timeout 900 : large RAM-bound models (gpt-oss:120b) can run at
