@@ -47,6 +47,7 @@ task_data/
   python_minheap/         minheap.py (baseline), tests/test_minheap.py
   python_multifile_rename/ product.py (context), inventory.py + reports.py (baseline, 2 editable files), tests/
   node_memoize_bug/       package.json, src/memoize.js (baseline), src/pricing.js (context), tests/pricing.test.js
+  python_ledger_bug/      ledger.py (baseline), account.py (context), tests/test_ledger.py
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh

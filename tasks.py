@@ -227,9 +227,29 @@ PYTHON_LFU_CACHE = Task(
     test_timeout=30,
 )
 
+PYTHON_LEDGER_BUG = Task(
+    id="python_ledger_bug",
+    difficulty=4,
+    description=(
+        "Ledger.transfer() in ledger.py has a bug that corrupts account state when a "
+        "transfer fails due to insufficient funds. "
+        "Successful transfers work correctly. "
+        "When a transfer raises InsufficientFunds, the source account's balance is "
+        "correctly left unchanged — but the destination account's balance has already "
+        "been modified. "
+        "Fix ledger.py so that a failed transfer leaves both accounts in exactly the "
+        "state they were in before the call."
+    ),
+    subdir="python_ledger_bug",
+    editable_files=["ledger.py"],
+    context_files=["account.py", "tests/test_ledger.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
 NODE_MEMOIZE_BUG = Task(
     id="node_memoize_bug",
-    difficulty=4,
+    difficulty=3,
     description=(
         "The pricing module's tests are failing with wrong return values. "
         "The pricing logic in src/pricing.js is correct — applyDiscount() and computeTax() "
@@ -276,5 +296,6 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_MINHEAP,
     PYTHON_MULTIFILE_RENAME,
     NODE_MEMOIZE_BUG,
+    PYTHON_LEDGER_BUG,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

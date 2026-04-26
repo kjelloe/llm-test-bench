@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all nine tasks and writes results to `results-compare.json`.
+This runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all ten tasks and writes results to `results-compare.json`.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
@@ -126,7 +126,8 @@ Tasks are tagged with a difficulty level (L1–L4) used to compute the **Skill**
 | `python_lfu_cache` | L3 | Python / pytest | `LFUCache._promote()` in `lfu_cache.py` doesn't update `min_freq` when a frequency bucket empties, causing `KeyError` on the next eviction |
 | `python_minheap` | L3 | Python / pytest | `MinHeap.pop()` in `minheap.py` returns elements out of order for certain inputs — the heap's internal structure is corrupted when removing elements |
 | `python_multifile_rename` | L2 | Python / pytest | `price_cents` was renamed to `price` in `product.py` but two dependent files (`inventory.py`, `reports.py`) still use the old name — model must output **two** `BEGIN_FILE` blocks |
-| `node_memoize_bug` | L4 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result; pricing tests fail with wrong values |
+| `node_memoize_bug` | L3 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result; pricing tests fail with wrong values |
+| `python_ledger_bug` | L4 | Python / pytest | `Ledger.transfer()` in `ledger.py` credits the destination account before checking the source balance — a failed transfer raises `InsufficientFunds` and leaves the source unchanged, but the destination has already been modified |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
 
@@ -154,7 +155,8 @@ python3 bench.py --help
                                Choices: node_slugify, python_safe_div, dotnet_sas,
                                         node_csv_parser, python_lru_cache,
                                         python_lfu_cache, python_minheap,
-                                        python_multifile_rename, node_memoize_bug
+                                        python_multifile_rename, node_memoize_bug,
+                                        python_ledger_bug
   --ollama-url URL             Default: http://localhost:11434
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx
