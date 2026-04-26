@@ -7,8 +7,8 @@ import threading
 import time
 from pathlib import Path
 
-from gpu_monitor import get_gpu_snapshot, launch_peak_poller
-from ollama_client import OllamaError, chat
+from gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
+from ollama_client import OllamaError, chat, unload_model
 from parsing import parse_file_blocks, validate_edits
 from reporting import print_comparison_table, print_summary, write_results
 from tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
@@ -214,9 +214,22 @@ def main() -> None:
     gpu_before: dict | None = None
     gpu_after: dict | None = None
 
+    startup_snap = get_gpu_snapshot()
+    system_baseline_vram_mb: int | None = startup_snap["vram_used_mb"] if startup_snap else None
+
     for i, (model, task) in enumerate(pairs, 1):
         if model != current_model:
-            gpu_before = get_gpu_snapshot()
+            if current_model is not None:
+                print(f"  [gpu] unloading {current_model!r} ...", end=" ", flush=True)
+                unload_model(args.ollama_url, current_model)
+                print("done")
+            gpu_before = wait_for_gpu_idle(baseline_vram_mb=system_baseline_vram_mb)
+            if gpu_before and gpu_before.get("dirty"):
+                print(
+                    f"  [gpu] WARNING: VRAM ({gpu_before['vram_used_mb']} MB) did not drain to "
+                    f"baseline ({system_baseline_vram_mb} MB + 200) within 10s — "
+                    f"before_load snapshot is dirty"
+                )
             gpu_after = None
             if args.warmup:
                 print(f"  [warmup] {model!r} ...", end=" ", flush=True)

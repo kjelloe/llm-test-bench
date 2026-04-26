@@ -30,6 +30,23 @@ class OllamaError(Exception):
     pass
 
 
+def unload_model(base_url: str, model: str, timeout: int = 30) -> None:
+    """Ask Ollama to evict model weights from VRAM immediately (keep_alive=0). Best-effort."""
+    url = base_url.rstrip("/") + "/api/generate"
+    payload = {"model": model, "keep_alive": 0}
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            resp.read()
+    except Exception:
+        pass
+
+
 def chat(
     base_url: str,
     model: str,
