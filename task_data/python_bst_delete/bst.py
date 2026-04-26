@@ -56,7 +56,6 @@ class BST:
         elif val > node.val:
             node.right = self._delete(node.right, val)
         else:
-            # Leaf or single child — correct
             if node.left is None:
                 return node.right
             if node.right is None:
@@ -66,7 +65,5 @@ class BST:
             while successor.left is not None:
                 successor = successor.left
             node.val = successor.val
-            # BUG: return value of _delete not assigned back to node.right,
-            # so the successor node is never removed from the right subtree.
-            self._delete(node.right, successor.val)
+            node.left = self._delete(node.left, successor.val)
         return node

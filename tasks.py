@@ -196,12 +196,12 @@ PYTHON_BST_DELETE = Task(
     id="python_bst_delete",
     difficulty=3,
     description=(
-        "BST.delete() in bst.py produces incorrect results for certain deletion patterns. "
-        "After deleting a node, the tree may contain duplicate values and the deleted "
-        "node's value may still be findable via search(). "
-        "The bug affects only specific tree shapes — simpler deletions work correctly. "
-        "Identify the invariant that _delete() fails to maintain and fix it. "
-        "Do not change insert(), search(), or inorder()."
+        "BST.delete() in bst.py is broken for nodes with two children. "
+        "After such a deletion the BST invariant is violated: inorder traversal "
+        "produces duplicate values, and the tree structure is incorrect. "
+        "Leaf deletion and single-child deletion work correctly. "
+        "Identify the invariant that _delete() fails to maintain in the two-children "
+        "case and fix it. Do not change insert(), search(), or inorder()."
     ),
     subdir="python_bst_delete",
     editable_files=["bst.py"],

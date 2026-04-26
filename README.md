@@ -35,7 +35,7 @@ Example output:
   ✓  gemma4:26b
   ✓  gpt-oss:120b
   ✓  qwen3.5:35b
-  ✓  llama3.3:70b-instruct-q4_K_M
+  ✓  codestral:22b
 
 ── Python ──
   ✓  Python 3.12.3
@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `gemma4:26b`, `gpt-oss:120b`, `qwen3.5:35b`, `llama3.3:70b-instruct-q4_K_M`) against all eight tasks and writes results to `results-compare.json`.
+This runs all models defined in `bench-models.sh` (`qwen3-coder:30b`, `qwen2.5-coder:14b`, `codestral:22b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all eight tasks and writes results to `results-compare.json`.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
