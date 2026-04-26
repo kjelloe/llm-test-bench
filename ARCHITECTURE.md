@@ -33,7 +33,7 @@ bench-models.sh           Canonical model list (ordered fastest → slowest); so
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 install-models.sh         Pulls any missing models from bench-models.sh
 show-all-models.sh        Runs ollama show on every locally installed model
-compare-history.json      Last 10 coding run summaries (git-ignored, machine-local)
+compare-history.json      Run summaries + per-model history archive (git-ignored, machine-local)
 tests/
   conftest.py             sys.path shim
   test_parsing.py         Unit tests for the BEGIN_FILE/END_FILE parser
@@ -106,6 +106,7 @@ For each `(model, task)` pair:
 #### `bench.py` — CLI Runner
 
 - Parses CLI args; builds the `(model, task)` matrix.
+- If `--warmup`: sends a tiny prompt to each model just before its first task (JIT, not bulk upfront) using `keep_alive=-1` to keep it resident through all its tasks.
 - Calls `run_one()` per pair; collects result records.
 - On completion: writes `results.json`, prints comparison table, prints failure detail.
 
@@ -137,6 +138,13 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - `print_comparison_table(results, task_difficulties)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)`.
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
 - `write_results(results, path)` — JSON dump.
+
+#### `compare-history.json` — Run + Model Archive
+
+Written by `compare.sh` after each run. Two top-level sections:
+
+- **`runs`** — last 10 full run summaries (timestamp, models, tasks, overall pass/fail, per-model breakdown). Used by the `compare.sh` header to show estimated runtime for the next run.
+- **`model_history`** — dict keyed by model name; each value is a list of that model's last 10 run entries (`timestamp`, `passes`, `total_tasks`, `avg_tok_per_s`, `total_wall_s`, `per_task`). Persists across model set changes — models swapped out of `bench-models.sh` retain their history and appear in the header as "Archived models".
 
 ### Data Model (Result Record)
 
@@ -228,7 +236,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
-- Thinking models (gpt-oss, qwen3.5) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the current minimum for complex tasks.
+- Thinking models (gpt-oss, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the current minimum for complex tasks.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 

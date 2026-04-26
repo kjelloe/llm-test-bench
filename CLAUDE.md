@@ -27,7 +27,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
   (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.
 - Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 900`
-  because 120B RAM-bound models (qwen3.5:122b, gpt-oss:120b) at ~1–2 tok/s need up to
+  because large RAM-bound models (gpt-oss:120b) at ~1–2 tok/s need up to
   ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 

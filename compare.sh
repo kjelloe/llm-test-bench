@@ -6,7 +6,7 @@ set -euo pipefail
 # --num-predict 2400  : thinking models (gpt-oss, qwen3.5) consume tokens for
 #                       internal reasoning before emitting the BEGIN_FILE block;
 #                       1200 was too few for gpt-oss on complex tasks (CSV parser).
-# --model-timeout 900 : 120B models on RAM (qwen3.5:122b, gpt-oss:120b) can run at
+# --model-timeout 900 : large RAM-bound models (gpt-oss:120b) can run at
 #                       1–2 tok/s; at 1200 tokens that's up to 1200s worst-case.
 #                       900s covers most runs without waiting indefinitely on hangs.
 #
@@ -43,18 +43,36 @@ printf "  Max runtime : %ds  (%ds timeout × %d models × %d tasks)\n" \
   "$MAX_RUNTIME" "$MODEL_TIMEOUT" "$NUM_MODELS" "$NUM_TASKS"
 
 if [[ -f "$STATS_FILE" ]]; then
-  python3 - "$STATS_FILE" <<'PYEOF'
+  python3 - "$STATS_FILE" "${MODELS[@]}" <<'PYEOF'
 import json, sys
 history = json.load(open(sys.argv[1]))
+current_models = sys.argv[2:]
 runs = history.get("runs", [])
 if runs:
     last = runs[-1]
     w  = last.get("total_wall_s", 0)
-    ts = last.get("last_run_timestamp", last.get("timestamp", "?"))
+    ts = last.get("timestamp", "?")
     o  = last.get("overall", {})
     passed, pairs = o.get("passes", "?"), o.get("pairs", "?")
     m, s = int(w // 60), int(w % 60)
     print(f"  Est. runtime: {w:.0f}s ({m}m {s}s)  [last run: {ts}, result: {passed}/{pairs} passed]")
+mh = history.get("model_history", {})
+if mh:
+    print("  Model history:")
+    for model in current_models:
+        entries = mh.get(model, [])
+        if entries:
+            e = entries[-1]
+            print(f"    {model:<40s} last {e['passes']}/{e['total_tasks']}  {e['avg_tok_per_s']} tok/s  [{e['timestamp'][:10]}]")
+        else:
+            print(f"    {model:<40s} no prior data")
+    # Show archived models not in current set
+    archived = [m for m in mh if m not in current_models]
+    if archived:
+        print("  Archived models (not in current run):")
+        for model in archived:
+            e = mh[model][-1]
+            print(f"    {model:<40s} last {e['passes']}/{e['total_tasks']}  {e['avg_tok_per_s']} tok/s  [{e['timestamp'][:10]}]")
 PYEOF
 else
   echo "  Est. runtime: unknown  (no previous run recorded)"
@@ -136,9 +154,25 @@ run = {
     "per_model":    per_model,
 }
 
-history = json.loads(history_path.read_text()) if history_path.exists() else {"runs": []}
+history = json.loads(history_path.read_text()) if history_path.exists() else {"runs": [], "model_history": {}}
+history.setdefault("model_history", {})
 history["runs"].append(run)
-history["runs"] = history["runs"][-10:]  # keep last 10 runs
+history["runs"] = history["runs"][-10:]  # keep last 10 full runs
+
+# Per-model archive — persists across model set changes
+mh = history["model_history"]
+for m in per_model:
+    entry = {
+        "timestamp":    run["timestamp"],
+        "passes":       m["passes"],
+        "total_tasks":  len(tasks),
+        "avg_tok_per_s": m["avg_tok_per_s"],
+        "total_wall_s": m["total_wall_s"],
+        "per_task":     m["per_task"],
+    }
+    mh.setdefault(m["model"], []).append(entry)
+    mh[m["model"]] = mh[m["model"]][-10:]  # keep last 10 entries per model
+
 history_path.write_text(json.dumps(history, indent=2))
 print(f"\nHistory saved → {history_path}  ({total_passes}/{len(results)} passed, total wall: {total_wall:.0f}s)")
 PYEOF
