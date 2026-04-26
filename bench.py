@@ -3,9 +3,11 @@
 
 import argparse
 import shutil
+import threading
 import time
 from pathlib import Path
 
+from gpu_monitor import get_gpu_snapshot, launch_peak_poller
 from ollama_client import OllamaError, chat
 from parsing import parse_file_blocks, validate_edits
 from reporting import print_comparison_table, print_summary, write_results
@@ -39,6 +41,8 @@ def run_one(
     think: bool = False,
     keep_workdir: bool = False,
     num_thread: int | None = None,
+    gpu_before: dict | None = None,
+    gpu_after: dict | None = None,
 ) -> dict:
     record: dict = {
         "model": model,
@@ -80,6 +84,8 @@ def run_one(
         # --- model call ---
         prompt = build_prompt(task, workdir)
         effective_num_ctx = max(num_ctx, task.num_ctx) if task.num_ctx else num_ctx
+        stop_poll = threading.Event()
+        poll_thread, snap_holder = launch_peak_poller(stop_poll)
         try:
             resp = chat(
                 base_url=ollama_url,
@@ -97,9 +103,20 @@ def run_one(
                 num_thread=num_thread,
             )
         except OllamaError as exc:
+            stop_poll.set()
+            poll_thread.join(timeout=2.0)
             record["error_kind"] = "TOOL_ERROR"
             record["error_detail"] = str(exc)[:500]
+            record["gpu_snapshots"] = {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None}
             return record
+        stop_poll.set()
+        poll_thread.join(timeout=2.0)
+        peak_snap = snap_holder[0] if snap_holder else None
+        record["gpu_snapshots"] = {
+            "before_load": gpu_before,
+            "after_load": gpu_after,
+            "peak_during_gen": peak_snap,
+        }
 
         m = resp.metrics
         record["metrics"] = {
@@ -194,28 +211,34 @@ def main() -> None:
     total = len(pairs)
     results = []
     current_model: str | None = None
+    gpu_before: dict | None = None
+    gpu_after: dict | None = None
 
     for i, (model, task) in enumerate(pairs, 1):
-        if args.warmup and model != current_model:
-            print(f"  [warmup] {model!r} ...", end=" ", flush=True)
-            t0 = time.monotonic()
-            try:
-                chat(
-                    base_url=args.ollama_url,
-                    model=model,
-                    messages=[{"role": "user", "content": "Say OK."}],
-                    num_ctx=512,
-                    temperature=0.0,
-                    seed=1,
-                    num_predict=5,
-                    timeout=args.model_timeout,
-                    think=False,
-                    num_thread=args.num_thread if args.num_thread > 0 else None,
-                    keep_alive=-1,
-                )
-                print(f"done  {time.monotonic() - t0:.1f}s")
-            except OllamaError as exc:
-                print(f"FAILED ({exc})")
+        if model != current_model:
+            gpu_before = get_gpu_snapshot()
+            gpu_after = None
+            if args.warmup:
+                print(f"  [warmup] {model!r} ...", end=" ", flush=True)
+                t0 = time.monotonic()
+                try:
+                    chat(
+                        base_url=args.ollama_url,
+                        model=model,
+                        messages=[{"role": "user", "content": "Say OK."}],
+                        num_ctx=512,
+                        temperature=0.0,
+                        seed=1,
+                        num_predict=5,
+                        timeout=args.model_timeout,
+                        think=False,
+                        num_thread=args.num_thread if args.num_thread > 0 else None,
+                        keep_alive=-1,
+                    )
+                    print(f"done  {time.monotonic() - t0:.1f}s")
+                except OllamaError as exc:
+                    print(f"FAILED ({exc})")
+                gpu_after = get_gpu_snapshot()
             current_model = model
         print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
         record = run_one(
@@ -230,6 +253,8 @@ def main() -> None:
             think=args.think,
             keep_workdir=args.keep_workdirs,
             num_thread=args.num_thread if args.num_thread > 0 else None,
+            gpu_before=gpu_before,
+            gpu_after=gpu_after,
         )
         status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
         trunc = " TRUNCATED" if record.get("response_truncated") else ""

@@ -1,1 +1,2 @@
 pytest>=7.4
+nvidia-ml-py>=12.0  # optional: GPU snapshots via pynvml; bench.py warns and continues without it
