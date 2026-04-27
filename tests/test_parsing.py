@@ -72,6 +72,37 @@ def test_validate_edits_empty_list():
     assert validate_edits([], ["src/foo.py"]) == []
 
 
+def test_dedent_strips_uniform_leading_whitespace():
+    # codestral outputs all lines with 3-space leading indent inside BEGIN_FILE blocks
+    text = (
+        "BEGIN_FILE calc.py\n"
+        "   def safe_div(a, b):\n"
+        "       if b == 0:\n"
+        "           raise ValueError('zero')\n"
+        "       return a / b\n"
+        "END_FILE"
+    )
+    edits = parse_file_blocks(text)
+    assert len(edits) == 1
+    assert edits[0].content.startswith("def safe_div")
+    assert "raise ValueError" in edits[0].content
+
+
+def test_dedent_preserves_relative_indentation():
+    # dedent strips common prefix only — relative indentation must survive
+    text = (
+        "BEGIN_FILE foo.py\n"
+        "   x = 1\n"
+        "   if x:\n"
+        "       y = 2\n"
+        "END_FILE"
+    )
+    edits = parse_file_blocks(text)
+    content = edits[0].content
+    assert content.startswith("x = 1")
+    assert "    y = 2" in content  # 4-space indent relative to stripped baseline
+
+
 def test_validate_all_forbidden():
     edits = [FileEdit("secret.py", "")]
     violations = validate_edits(edits, ["src/foo.py"])

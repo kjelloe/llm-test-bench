@@ -56,13 +56,21 @@ Example output:
 
 ## Quick start
 
-### Run all benchmark models
+### Run the canonical benchmark (6 models)
 
 ```bash
 ./compare.sh
 ```
 
-This runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all ten tasks and writes results to `results-compare.json`.
+Runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all ten tasks. Writes results to `results-compare.json`.
+
+### Run the extended benchmark (8 models)
+
+```bash
+./compare-extended.sh
+```
+
+Runs all eight models evaluated to date (adds `codestral:22b` and `devstral-small-2`). Writes results to `results-extended.json`. Estimated runtime: 2.5–4 hours.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
@@ -108,7 +116,16 @@ FAILURE DETAIL
 
 The **Skill** column shows the highest difficulty tier (L1–L4) where the model passes *all* tasks at that level and below.
 
-Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`).
+Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`, `results-extended.json` for `compare-extended.sh`).
+
+### GPU telemetry
+
+If `nvidia-ml-py` is installed (it is via `requirements.txt`), each result record includes:
+
+- **`gpu_snapshots`** — three snapshots per model: `before_load` (taken after the previous model's weights drain from VRAM), `after_load` (after warmup), and `peak_during_gen` (highest `gpu_util` seen across 500ms polls during generation — captures peak activity even on sub-second tasks).
+- **`kv_cache`** — VRAM delta before vs. after each `chat()` call, plus `kv_mb_per_1k_tokens` derived from the delta and total token count. Useful for comparing KV cache efficiency across quantizations.
+
+The `before_load` snapshot includes a `"dirty": true` flag if VRAM did not drain to near-baseline within 10 seconds after the model unload request.
 
 ---
 

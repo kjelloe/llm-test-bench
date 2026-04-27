@@ -23,12 +23,14 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 # ── Coding benchmark (v1 — implemented) ─────────────────────────────────────
 bench.py                  CLI runner — orchestrates model × task matrix
 tasks.py                  Task dataclass, built-in task definitions, prompt builder, subprocess helpers
-ollama_client.py          POST /api/chat (non-streaming), metrics extraction
+ollama_client.py          POST /api/chat (non-streaming), metrics extraction; unload_model()
 parsing.py                BEGIN_FILE/END_FILE parser, allow-list validation
 reporting.py              Comparison table, failure detail, JSON writer
-requirements.txt          pytest only (harness is stdlib-first)
+gpu_monitor.py            pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
+requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 run.sh                    Venv setup + bench.py entrypoint
-compare.sh                Runs canonical model set; sources bench-models.sh; forwards extra args
+compare.sh                Runs canonical 6-model set; sources bench-models.sh; forwards extra args
+compare-extended.sh       Runs all 8 evaluated models × all tasks; writes results-extended.json
 bench-models.sh           Canonical model list (ordered fastest → slowest); sourced by compare/preflight/install
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 install-models.sh         Pulls any missing models from bench-models.sh
@@ -108,7 +110,10 @@ For each `(model, task)` pair:
 #### `bench.py` — CLI Runner
 
 - Parses CLI args; builds the `(model, task)` matrix.
-- If `--warmup`: sends a tiny prompt to each model just before its first task (JIT, not bulk upfront) using `keep_alive=-1` to keep it resident through all its tasks.
+- At startup: captures `system_baseline_vram_mb` from `get_gpu_snapshot()` (before any model loads) for use as the VRAM drain reference between models.
+- On model switch: calls `unload_model(previous_model)` to explicitly evict weights from VRAM, then calls `wait_for_gpu_idle(baseline_vram_mb=…)` which polls until `gpu_util < 5%` AND `vram_used_mb < baseline + 200 MB` AND VRAM stable between polls (10s timeout; marks snapshot `dirty: true` on timeout and prints a warning).
+- If `--warmup`: sends a tiny prompt to each model just before its first task (JIT, not bulk upfront) using `keep_alive=-1` to keep it resident through all its tasks. Captures `gpu_after` snapshot post-warmup.
+- Per task in `run_one()`: takes `vram_pre` snapshot before `chat()`, starts `launch_peak_poller()` thread, calls `chat()`, takes `vram_post` immediately after, stops the poller, stores `peak_during_gen`.
 - Calls `run_one()` per pair; collects result records.
 - On completion: writes `results.json`, prints comparison table, prints failure detail.
 
@@ -123,12 +128,16 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 #### `ollama_client.py` — Model Adapter
 
-- Single public function `chat(...)`.
-- Uses `urllib.request` (stdlib); no third-party HTTP library.
-- Accepts `think: bool` to enable reasoning tokens for models that support it (gpt-oss, qwen3.5, gemma4, deepseek-r1, etc.).
-- Accepts `num_thread: int | None` to cap CPU threads (default 10 via CLI, passed per request).
-- Accepts `keep_alive: str | int | None` — JIT warmup calls use `-1` (keep loaded until memory pressure evicts) so each model stays resident through all of its own tasks.
-- Returns `OllamaResponse(content, thinking, metrics)` where `thinking` holds the model's reasoning trace and `metrics.tok_per_s` is derived from `eval_count / (eval_duration_ns / 1e9)`.
+- `chat(...)` — main inference call. Uses `urllib.request` (stdlib); no third-party HTTP library. Accepts `think: bool` (reasoning tokens), `num_thread: int | None` (CPU cap), `keep_alive: str | int | None` (warmup calls use `-1` to keep model resident). Returns `OllamaResponse(content, thinking, metrics)`.
+- `unload_model(base_url, model, timeout)` — POSTs to `/api/generate` with `keep_alive=0` to immediately evict model weights from VRAM. Fire-and-forget; exceptions swallowed. Called by `bench.py` before each model switch so the VRAM drain wait has something to wait for.
+
+#### `gpu_monitor.py` — GPU Telemetry
+
+Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gracefully with a `RuntimeWarning` if pynvml is unavailable — all functions return `None` and the benchmark continues normally.
+
+- `get_gpu_snapshot() -> dict | None` — single point-in-time sample: `vram_used_mb`, `gpu_util`, `mem_bandwidth_util` for GPU 0.
+- `wait_for_gpu_idle(timeout, baseline_vram_mb, …) -> dict | None` — polls every 500ms until all three conditions hold simultaneously: `gpu_util < 5%`, `vram_used_mb < baseline_vram_mb + 200`, and VRAM delta < 50 MB between consecutive polls. Hard timeout: 10s. On timeout: returns last snapshot with `"dirty": True`; clean exit returns snapshot with `"dirty": False`. Used between model loads to ensure `before_load` captures true idle baseline.
+- `launch_peak_poller(stop_event, poll_interval) -> (Thread, list)` — background thread that polls every 500ms until `stop_event` is set, then does one final poll. Records the sample with the highest `gpu_util` seen across all polls. Captures genuine peak GPU activity regardless of task duration (replaces the old fixed 5-second delayed snapshot which missed short tasks).
 
 #### `parsing.py` — Edit Protocol Parser
 
@@ -162,11 +171,35 @@ Written by `compare.sh` after each run. Two top-level sections:
 | `edited_files` | list[string] | |
 | `error_kind` | string\|null | `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR` |
 | `error_detail` | string\|null | truncated, max ~500 chars |
-| `metrics` | object | `prompt_eval_count`, `eval_count`, `*_duration_ms` |
+| `metrics` | object | `num_ctx`, `prompt_eval_count`, `eval_count`, `prompt_eval_duration_ms`, `eval_duration_ms`, `total_duration_ms` |
 | `tok_per_s` | float | |
 | `wall_s` | float | total including setup + model + tests |
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
+| `gpu_snapshots` | object\|null | see below; null if pynvml unavailable |
+| `kv_cache` | object\|null | see below; null if pynvml unavailable or inference failed |
+
+**`gpu_snapshots` fields:**
+
+| Field | Notes |
+|---|---|
+| `before_load` | Snapshot after previous model evicted + VRAM drained to idle. Includes `dirty: true` if the 10s wait timed out with VRAM still above baseline. |
+| `after_load` | Snapshot after warmup completes (weights resident). `null` if `--warmup` not used. |
+| `peak_during_gen` | Sample with highest `gpu_util` seen across 500ms polls during the `chat()` call. Captures peak GPU activity regardless of task duration. |
+
+Each snapshot: `{vram_used_mb, gpu_util, mem_bandwidth_util}` plus `dirty` (bool) on `before_load`.
+
+**`kv_cache` fields:**
+
+| Field | Notes |
+|---|---|
+| `vram_before_mb` | VRAM immediately before `chat()` — weights loaded, no KV cache for this request |
+| `vram_after_mb` | VRAM immediately after `chat()` returns — weights + full KV cache |
+| `delta_mb` | `max(0, vram_after_mb - vram_before_mb)` — KV cache allocation (prompt + output tokens) |
+| `prompt_tokens` | `prompt_eval_count` from Ollama metrics |
+| `gen_tokens` | `eval_count` from Ollama metrics |
+| `total_tokens` | `prompt_tokens + gen_tokens` |
+| `kv_mb_per_1k_tokens` | `delta_mb / total_tokens * 1000`; null if delta is 0 |
 
 ### Edit Protocol (Whole-file)
 
@@ -238,9 +271,12 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
-- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). gpt-oss:20b has a hard ceiling on python_lfu_cache — it exhausts even 4800 tokens on reasoning and never emits output; this is a capability limit, not a budget issue.
+- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). gpt-oss:20b has a hard ceiling on `python_lfu_cache` — it exhausts even 4800 tokens on reasoning and never emits output; this is a capability limit, not a budget issue.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
+- GPU monitoring requires `nvidia-ml-py` and an NVIDIA GPU. Without it, `gpu_snapshots` and `kv_cache` fields are `null`; the benchmark otherwise runs identically.
+- Ollama keeps the previous model's weights in VRAM after the last request (even when GPU utilisation drops to 0%). `unload_model()` + `wait_for_gpu_idle()` forces a clean drain before each model switch, but if Ollama doesn't evict within 10s the snapshot is marked `dirty: true`.
+- KV cache delta (`kv_cache.delta_mb`) covers both prompt and output tokens since the full KV cache is allocated across the complete inference call. Prompt tokens dominate for typical task prompt sizes (400–700 tokens vs. 50–200 generated).
 
 ---
 

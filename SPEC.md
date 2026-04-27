@@ -61,21 +61,27 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
 - `compare.sh`: calls `run.sh` with models from `bench-models.sh`; sets `--num-predict 2400 --model-timeout 900`; forwards extra args.
-- `bench-models.sh`: canonical model list (ordered fastest → slowest by observed tok/s); sourced by `compare.sh`, `preflight.sh`, and `install-models.sh`.
+- `compare-extended.sh`: like `compare.sh` but runs all 8 evaluated models (vs. the 6 in the canonical set); writes `results-extended.json`; updates shared `compare-history.json`.
+- `bench-models.sh`: canonical 6-model list (ordered fastest → slowest by observed tok/s); sourced by `compare.sh`, `preflight.sh`, and `install-models.sh`.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models, Python, Node, .NET).
 - `install-models.sh`: pulls any models in `bench-models.sh` not yet present locally.
 - `show-all-models.sh`: runs `ollama show` on every locally installed model.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks:
-  - `node_slugify` — ESM `src/slug.js`; fix punctuation + whitespace collapsing; `node --test`
-  - `python_safe_div` — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
-  - `dotnet_sas` — Azure SAS expiry in the past; fix to ~60 min future; `xUnit`
-  - `node_csv_parser` — ESM `src/csv.js`; naive comma-split must be replaced with RFC 4180 quoted-field parser; `node --test`
-  - `python_lru_cache` — `LRUCache.get()` must promote accessed node to MRU position; `pytest`
+- Built-in tasks (10 total, difficulty L1–L4):
+  - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
+  - `dotnet_sas` (L1) — Azure SAS expiry is 10 min in the past; fix to 60 min future; `xUnit`
+  - `node_slugify` (L2) — ESM `src/slug.js`; fix punctuation stripping + hyphen collapsing; `node --test`
+  - `python_lru_cache` (L2) — `LRUCache.get()` must promote accessed node to MRU position; `pytest`
+  - `python_multifile_rename` (L2) — `price_cents` renamed to `price` in `product.py`; fix two dependent files; model must output two `BEGIN_FILE` blocks; `pytest`
+  - `node_csv_parser` (L3) — ESM `src/csv.js`; naive comma-split must handle quoted fields with embedded commas and escaped quotes; `node --test`
+  - `python_lfu_cache` (L3) — `LFUCache._promote()` must update `min_freq` when a frequency bucket empties; `pytest`
+  - `python_minheap` (L3) — `MinHeap.pop()` corrupts heap structure on certain inputs; `pytest`
+  - `node_memoize_bug` (L3) — `memoize()` key uses only `String(args[0])`; must use `JSON.stringify(args)` to avoid stale cache on multi-arg calls; `node --test`
+  - `python_ledger_bug` (L4) — `Ledger.transfer()` credits the destination before checking the source balance; a failed transfer corrupts the destination; fix by reordering check → debit → credit → log; `pytest`
 - Each task must:
   - fail baseline tests deterministically (verified before the model call)
-  - specify an editable allow-list (one file by default)
+  - specify an editable allow-list (one file by default; two for cross-module tasks)
   - provide context files included verbatim in the prompt
   - define a test command as an argv list with a timeout
 
@@ -84,6 +90,13 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - Defaults enforce determinism: `temperature=0`, `seed=1`.
 - Records Ollama-provided metrics: `prompt_eval_count`, `eval_count`, durations (ns).
 - Derives `tok_per_s` from `eval_count / (eval_duration / 1e9)`.
+- Between models: calls `unload_model()` (POST `/api/generate` with `keep_alive=0`) then polls until VRAM drains to near-baseline before taking `before_load` snapshot.
+
+5) GPU Telemetry (optional; requires `nvidia-ml-py`)
+- Three GPU snapshots per model switch: `before_load` (after idle-wait), `after_load` (after warmup).
+- One peak-poll result per task: `peak_during_gen` — highest `gpu_util` sample seen across 500ms polls during the `chat()` call.
+- Two VRAM readings per task: `vram_before_mb` (before `chat()`) and `vram_after_mb` (after `chat()`); delta used to compute `kv_mb_per_1k_tokens`.
+- All GPU fields are `null` if pynvml is unavailable; benchmark otherwise unaffected.
 
 5) Edit Application
 - Parse `BEGIN_FILE <path> … END_FILE` blocks from raw model output.
@@ -122,11 +135,13 @@ Per model × task run:
 | `edited_files` | list[string] | paths actually written |
 | `error_kind` | string\|null | see categories above |
 | `error_detail` | string\|null | truncated output snippet |
-| `metrics` | object | from Ollama response |
-| `tok_per_s` | float | derived |
+| `metrics` | object | `num_ctx`, `prompt_eval_count`, `eval_count`, `*_duration_ms` |
+| `tok_per_s` | float | derived from Ollama eval metrics |
 | `wall_s` | float | total elapsed seconds including setup + model call + tests |
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
+| `gpu_snapshots` | object\|null | `before_load` (with `dirty` flag), `after_load`, `peak_during_gen`; null if pynvml unavailable |
+| `kv_cache` | object\|null | `vram_before_mb`, `vram_after_mb`, `delta_mb`, `prompt_tokens`, `gen_tokens`, `total_tokens`, `kv_mb_per_1k_tokens`; null if pynvml unavailable or inference failed |
 
 ### Recommended Settings
 
