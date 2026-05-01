@@ -60,12 +60,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
-- `compare.sh`: calls `run.sh` with models from `bench-models.sh`; sets `--num-predict 2400 --model-timeout 900`; forwards extra args.
-- `compare-extended.sh`: like `compare.sh` but runs all 8 evaluated models (vs. the 6 in the canonical set); writes `results-extended.json`; updates shared `compare-history.json`.
-- `bench-models.sh`: canonical 6-model list (ordered fastest → slowest by observed tok/s); sourced by `compare.sh`, `preflight.sh`, and `install-models.sh`.
-- `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models, Python, Node, .NET).
-- `install-models.sh`: pulls any models in `bench-models.sh` not yet present locally.
-- `show-all-models.sh`: runs `ollama show` on every locally installed model.
+- `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 2400 --model-timeout 900`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`.
+- `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models from `models/default.txt`, Python, Node, .NET).
+- `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
 
 3) Task Suite (`tasks.py` + `task_data/`)
 - Built-in tasks (13 total, difficulty L1–L5):
@@ -118,7 +115,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
 7) Outputs
 - `results.json`: list of records (one per model × task).
-- Console comparison table: rows = models, columns = tasks + summary; each cell shows `PASS/FAIL`, `tok/s`, `wall_s`; `Spd` column shows assumed speed rank (1 = fastest, by `bench-models.sh` order).
+- Console comparison table: rows = models, columns = tasks + summary; each cell shows `PASS/FAIL`, `tok/s`, `wall_s`; `Spd` column shows assumed speed rank (1 = fastest, by model set order).
 - Console failure detail: error kind counts + one-line sample per category.
 - `compare-history.json`: last 10 run summaries with per-model/per-task breakdown; used to show estimated runtime in the compare header.
 
@@ -369,7 +366,7 @@ task_data_agent/
 
 ## Common: Out of Scope (current)
 
-- Auto-downloading models (use `install-models.sh`).
+- Auto-downloading models (use `fetch.sh`).
 - Web UI or HTML dashboard.
 - JSONL output format.
 - Container sandbox for untrusted task repos.

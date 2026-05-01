@@ -107,7 +107,7 @@ unset _clean _skip _arg _line _f _name _count
 NUM_MODELS=${#MODELS[@]}
 NUM_TASKS=$(python3 -c "
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
-from tasks import BUILTIN_TASKS
+from lib.tasks import BUILTIN_TASKS
 print(len(BUILTIN_TASKS))
 " 2>/dev/null || echo 11)
 MAX_RUNTIME=$(( MODEL_TIMEOUT * NUM_MODELS * NUM_TASKS ))

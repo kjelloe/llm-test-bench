@@ -7,11 +7,11 @@ import threading
 import time
 from pathlib import Path
 
-from gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
-from ollama_client import OllamaError, chat, unload_model
-from parsing import parse_file_blocks, validate_edits
-from reporting import print_comparison_table, print_summary, write_results
-from tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
+from lib.gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
+from lib.ollama_client import OllamaError, chat, unload_model
+from lib.parsing import parse_file_blocks, validate_edits
+from lib.reporting import print_comparison_table, print_summary, write_results
+from lib.tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
 
 
 def _no_blocks_detail(resp, num_predict: int) -> str:

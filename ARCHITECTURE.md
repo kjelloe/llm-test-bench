@@ -22,20 +22,19 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 ```
 # ── Coding benchmark (v1 — implemented) ─────────────────────────────────────
 bench.py                  CLI runner — orchestrates model × task matrix
-tasks.py                  Task dataclass, built-in task definitions, prompt builder, subprocess helpers
-ollama_client.py          POST /api/chat (non-streaming), metrics extraction; unload_model()
-parsing.py                BEGIN_FILE/END_FILE parser, allow-list validation
-reporting.py              Comparison table, failure detail, JSON writer
-gpu_monitor.py            pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 run.sh                    Venv setup + bench.py entrypoint
-compare.sh                Runs canonical 6-model set; sources bench-models.sh; forwards extra args
-compare-extended.sh       Runs all 8 evaluated models × all tasks; writes results-extended.json
-bench-models.sh           Canonical model list (ordered fastest → slowest); sourced by compare/preflight/install
+compare.sh                Runs a model set (default/extended/full); reads models/*.txt; forwards extra args
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
-install-models.sh         Pulls any missing models from bench-models.sh
-show-all-models.sh        Runs ollama show on every locally installed model
+fetch.sh                  Pulls models by set name, set file path, or bare model name
 compare-history.json      Run summaries + per-model history archive (git-ignored, machine-local)
+lib/                      Python support modules (imported by bench.py) and shell utilities
+  tasks.py                Task dataclass, built-in task definitions, prompt builder, subprocess helpers
+  ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
+  parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
+  reporting.py            Comparison table, failure detail, JSON writer
+  gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
+  show-all-models.sh      Runs ollama show on every locally installed model
 tests/
   conftest.py             sys.path shim
   test_parsing.py         Unit tests for the BEGIN_FILE/END_FILE parser

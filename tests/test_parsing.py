@@ -1,4 +1,4 @@
-from parsing import FileEdit, parse_file_blocks, validate_edits
+from lib.parsing import FileEdit, parse_file_blocks, validate_edits
 
 
 def test_single_block():

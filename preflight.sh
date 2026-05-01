@@ -13,9 +13,13 @@ warn()   { echo -e "  ${YELLOW}~${NC}  $*";           WARN=$((WARN + 1)); }
 section(){ echo; echo -e "${BOLD}── $* ──${NC}"; }
 
 # ── models that compare.sh will benchmark ────────────────────────────────────
-# shellcheck source=bench-models.sh
-source "$(dirname "$0")/bench-models.sh"
-REQUIRED_MODELS=("${MODELS[@]}")
+REQUIRED_MODELS=()
+while IFS= read -r _line || [[ -n "$_line" ]]; do
+    _line="${_line%%#*}"
+    _line="${_line//[[:space:]]/}"
+    [[ -n "$_line" ]] && REQUIRED_MODELS+=("$_line")
+done < "$(dirname "$0")/models/default.txt"
+unset _line
 
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 

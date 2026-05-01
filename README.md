@@ -61,12 +61,12 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all thirteen tasks. Writes results to `results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all thirteen tasks. Writes results to `results-compare.json`.
 
 ### Run the extended benchmark (8 models)
 
 ```bash
-./compare-extended.sh
+./compare.sh extended
 ```
 
 Runs all eight models evaluated to date (adds `codestral:22b` and `devstral-small-2`). Writes results to `results-extended.json`. Estimated runtime: 2.5–4 hours.
@@ -115,7 +115,7 @@ FAILURE DETAIL
 
 The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below.
 
-Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`, `results-extended.json` for `compare-extended.sh`).
+Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`, `results-extended.json` for `compare.sh extended`).
 
 ### GPU telemetry
 
