@@ -51,6 +51,8 @@ task_data/
   node_memoize_bug/       package.json, src/memoize.js (baseline), src/pricing.js (context), tests/pricing.test.js
   python_ledger_bug/      ledger.py (baseline), account.py (context), tests/test_ledger.py
   python_expr_eval/       expr_eval.py (baseline), tests/test_expr_eval.py
+  python_dijkstra/        dijkstra.py (baseline), tests/test_dijkstra.py
+  python_hashmap/         hashmap.py (baseline), tests/test_hashmap.py
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
@@ -122,7 +124,7 @@ For each `(model, task)` pair:
 
 Two responsibilities kept in one module to avoid a thin `prompting.py` abstraction:
 
-- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=L1/2=L2/3=L3/4=L4, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`).
+- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=L1/2=L2/3=L3/4=L4/5=L5, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`), `min_predict` (optional per-task floor on `--num-predict`; useful when thinking models need extended token budget for reasoning before output).
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
 - **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
@@ -272,7 +274,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
-- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). gpt-oss:20b has a hard ceiling on `python_lfu_cache` — it exhausts even 4800 tokens on reasoning and never emits output; this is a capability limit, not a budget issue.
+- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` and `python_minheap` use `min_predict=12800` because gpt-oss:20b burns ~5500 tokens of thinking before outputting the fix.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 - GPU monitoring requires `nvidia-ml-py` and an NVIDIA GPU. Without it, `gpu_snapshots` and `kv_cache` fields are `null`; the benchmark otherwise runs identically.

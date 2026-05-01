@@ -68,7 +68,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - `show-all-models.sh`: runs `ollama show` on every locally installed model.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (10 total, difficulty L1–L4):
+- Built-in tasks (13 total, difficulty L1–L5):
   - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
   - `dotnet_sas` (L1) — Azure SAS expiry is 10 min in the past; fix to 60 min future; `xUnit`
   - `node_slugify` (L2) — ESM `src/slug.js`; fix punctuation stripping + hyphen collapsing; `node --test`
@@ -76,10 +76,12 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `python_multifile_rename` (L2) — `price_cents` renamed to `price` in `product.py`; fix two dependent files; model must output two `BEGIN_FILE` blocks; `pytest`
   - `node_csv_parser` (L3) — ESM `src/csv.js`; naive comma-split must handle quoted fields with embedded commas and escaped quotes; `node --test`
   - `python_lfu_cache` (L3) — `LFUCache._promote()` must update `min_freq` when a frequency bucket empties; `pytest`
-  - `python_minheap` (L3) — `MinHeap.pop()` corrupts heap structure on certain inputs; `pytest`
+  - `python_minheap` (L3) — `MinHeap._sift_down()` checks left child only; add missing right-child comparison so smallest of current/left/right is always chosen; `pytest`
   - `node_memoize_bug` (L3) — `memoize()` key uses only `String(args[0])`; must use `JSON.stringify(args)` to avoid stale cache on multi-arg calls; `node --test`
   - `python_ledger_bug` (L4) — `Ledger.transfer()` credits the destination before checking the source balance; a failed transfer corrupts the destination; fix by reordering check → debit → credit → log; `pytest`
   - `python_expr_eval` (L4) — `Parser.expr()` loops on `*`/`/` and `Parser.term()` loops on `+`/`-`, inverting arithmetic precedence; fix by swapping the operator sets so `expr` handles `+`/`-` and `term` handles `*`/`/`; `pytest`
+  - `python_dijkstra` (L5) — `dijkstra()` marks nodes visited when enqueued instead of dequeued; shorter paths discovered later are silently ignored; fix by moving `seen.add()` to the dequeue point; `pytest`
+  - `python_hashmap` (L5) — `HashMap.delete()` clears slots directly instead of writing a tombstone; breaks linear-probe chains causing `get()` to miss keys inserted after a colliding deletion; `pytest`
 - Each task must:
   - fail baseline tests deterministically (verified before the model call)
   - specify an editable allow-list (one file by default; two for cross-module tasks)

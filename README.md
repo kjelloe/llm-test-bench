@@ -61,7 +61,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all eleven tasks. Writes results to `results-compare.json`.
+Runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all thirteen tasks. Writes results to `results-compare.json`.
 
 ### Run the extended benchmark (8 models)
 
@@ -98,7 +98,7 @@ The header printed before each run shows estimated runtime from the previous run
 At the end of every run a comparison table is printed:
 
 ```
-COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:3  L4:2)
+COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:4  L4:2  L5:2)
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 | Model              | Spd | Skill | python_safe_div          | node_slugify             |   …     | node_memoize_bug         | pass  avg tok/s   tot s   |
 |                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L4) ok  tok/s  wall     |                           |
@@ -113,7 +113,7 @@ FAILURE DETAIL
       e.g. [thinking: We need to fix _promote to update min_freq … all 2400 tokens used for thinking]
 ```
 
-The **Skill** column shows the highest difficulty tier (L1–L4) where the model passes *all* tasks at that level and below.
+The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below.
 
 Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`, `results-extended.json` for `compare-extended.sh`).
 
@@ -130,7 +130,7 @@ The `before_load` snapshot includes a `"dirty": true` flag if VRAM did not drain
 
 ## Tasks
 
-Tasks are tagged with a difficulty level (L1–L4) used to compute the **Skill** rating in the results table.
+Tasks are tagged with a difficulty level (L1–L5) used to compute the **Skill** rating in the results table.
 
 | ID | Level | Language | What the model must fix |
 |----|-------|----------|------------------------|
@@ -138,13 +138,15 @@ Tasks are tagged with a difficulty level (L1–L4) used to compute the **Skill**
 | `dotnet_sas` | L1 | .NET 8 / xUnit | Azure SAS token `ExpiresOn` is 10 min in the past instead of 60 min in the future |
 | `node_slugify` | L2 | Node.js / ESM | `slugify()` in `src/slug.js` doesn't strip punctuation or collapse hyphens |
 | `python_lru_cache` | L2 | Python / pytest | `LRUCache.get()` in `lru_cache.py` returns the value but doesn't promote the node to MRU, causing wrong eviction order |
+| `python_multifile_rename` | L2 | Python / pytest | `price_cents` was renamed to `price` in `product.py` but two dependent files (`inventory.py`, `reports.py`) still use the old name — model must output **two** `BEGIN_FILE` blocks |
 | `node_csv_parser` | L3 | Node.js / ESM | `parseCSV()` in `src/csv.js` splits naively on commas — breaks on quoted fields containing commas or escaped quotes |
 | `python_lfu_cache` | L3 | Python / pytest | `LFUCache._promote()` in `lfu_cache.py` doesn't update `min_freq` when a frequency bucket empties, causing `KeyError` on the next eviction |
-| `python_minheap` | L3 | Python / pytest | `MinHeap.pop()` in `minheap.py` returns elements out of order for certain inputs — the heap's internal structure is corrupted when removing elements |
-| `python_multifile_rename` | L2 | Python / pytest | `price_cents` was renamed to `price` in `product.py` but two dependent files (`inventory.py`, `reports.py`) still use the old name — model must output **two** `BEGIN_FILE` blocks |
-| `node_memoize_bug` | L3 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result; pricing tests fail with wrong values |
-| `python_ledger_bug` | L4 | Python / pytest | `Ledger.transfer()` in `ledger.py` credits the destination account before checking the source balance — a failed transfer raises `InsufficientFunds` and leaves the source unchanged, but the destination has already been modified |
-| `python_expr_eval` | L4 | Python / pytest | `Parser` in `expr_eval.py` has `expr()` and `term()` with their operator sets swapped — `*`/`/` are treated as low-precedence and `+`/`-` as high-precedence, inverting standard arithmetic precedence; parenthesised sub-expressions evaluate correctly |
+| `python_minheap` | L3 | Python / pytest | `MinHeap._sift_down()` in `minheap.py` checks the left child only — missing right-child comparison causes `pop()` to return elements out of order |
+| `node_memoize_bug` | L3 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result |
+| `python_ledger_bug` | L4 | Python / pytest | `Ledger.transfer()` in `ledger.py` credits the destination account before checking the source balance — a failed transfer leaves the destination corrupted |
+| `python_expr_eval` | L4 | Python / pytest | `Parser.expr()` and `Parser.term()` have their operator sets swapped — `*`/`/` are treated as low-precedence and `+`/`-` as high-precedence, inverting standard arithmetic precedence |
+| `python_dijkstra` | L5 | Python / pytest | `dijkstra()` in `dijkstra.py` marks nodes visited when enqueued instead of when dequeued — shorter paths discovered later are silently ignored, producing wrong distances and paths |
+| `python_hashmap` | L5 | Python / pytest | `HashMap.delete()` in `hashmap.py` clears slots directly instead of writing a tombstone — breaks linear-probe chains, causing `get()` to miss keys inserted after a colliding deletion |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
 
@@ -154,7 +156,8 @@ The **Skill** column in the results table shows the highest difficulty tier wher
 
 | Rating | Meaning |
 |--------|---------|
-| `L4` | Passes all tasks (L1 + L2 + L3 + L4) |
+| `L5` | Passes all tasks (L1 + L2 + L3 + L4 + L5) |
+| `L4` | Passes L1 + L2 + L3 + L4, fails at least one L5 task |
 | `L3` | Passes L1 + L2 + L3, fails at least one L4 task |
 | `L2` | Passes L1 + L2, fails at least one L3 task |
 | `L1` | Passes L1 only, fails at least one L2 task |
@@ -173,7 +176,8 @@ python3 bench.py --help
                                         node_csv_parser, python_lru_cache,
                                         python_lfu_cache, python_minheap,
                                         python_multifile_rename, node_memoize_bug,
-                                        python_ledger_bug, python_expr_eval
+                                        python_ledger_bug, python_expr_eval,
+                                        python_dijkstra, python_hashmap
   --ollama-url URL             Default: http://localhost:11434
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx
