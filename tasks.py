@@ -19,7 +19,9 @@ class Task:
     setup_cmd: list[str] | None = None
     setup_timeout: int = 120
     difficulty: int = 1  # 1=Easy  2=Medium  3=Hard
-    num_ctx: int | None = None  # override global --num-ctx for this task (None = use global)
+    num_ctx: int | None = None      # override global --num-ctx for this task (None = use global)
+    min_predict: int | None = None  # floor on --num-predict for this task; useful when the output
+                                    # file is large and thinking models need extra token budget
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -196,17 +198,21 @@ PYTHON_MINHEAP = Task(
     id="python_minheap",
     difficulty=3,
     description=(
-        "MinHeap in minheap.py has a bug that causes pop() to return elements in "
-        "the wrong order for certain inputs. push() and peek() work correctly — "
-        "the heap is built correctly, but removing elements corrupts the internal "
-        "structure so the min-heap property no longer holds. "
-        "Identify the invariant that is violated during pop() and fix it."
+        "MinHeap._sift_down in minheap.py is missing a check for the right child. "
+        "It compares the current node against the left child only — when the right child "
+        "is the smallest of the three candidates, it is ignored and the heap property "
+        "is violated after pop(). "
+        "Add the missing right-child comparison so the smallest of current, left, and right "
+        "is always chosen. "
+        "Do not change push(), pop(), peek(), __len__(), _sift_up(), or _swap(). "
+        "Output the complete file."
     ),
     subdir="python_minheap",
     editable_files=["minheap.py"],
     context_files=["tests/test_minheap.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=12800,  # gpt-oss:20b burns all 2400 default tokens in reasoning — needs extended budget
 )
 
 PYTHON_LFU_CACHE = Task(
@@ -225,6 +231,7 @@ PYTHON_LFU_CACHE = Task(
     context_files=["tests/test_lfu_cache.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=12800,  # ~350 tokens output; gpt-oss:20b burns ~5500 tokens reasoning → 4800 is not enough, 12800 gives safe headroom
 )
 
 PYTHON_LEDGER_BUG = Task(
@@ -282,6 +289,8 @@ PYTHON_EXPR_EVAL = Task(
     context_files=["tests/test_expr_eval.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=4800,  # ~630 tokens to output the full file; thinking models burn 1500-2000 tokens
+                       # on reasoning before writing — 2400 is not enough, 4800 gives safe headroom
 )
 
 PYTHON_MULTIFILE_RENAME = Task(

@@ -85,6 +85,7 @@ def run_one(
         # --- model call ---
         prompt = build_prompt(task, workdir)
         effective_num_ctx = max(num_ctx, task.num_ctx) if task.num_ctx else num_ctx
+        effective_num_predict = max(num_predict, task.min_predict) if task.min_predict else num_predict
         vram_pre = get_gpu_snapshot()   # before prompt eval — weights loaded, no KV cache yet
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
@@ -99,7 +100,7 @@ def run_one(
                 num_ctx=effective_num_ctx,
                 temperature=temperature,
                 seed=seed,
-                num_predict=num_predict,
+                num_predict=effective_num_predict,
                 timeout=model_timeout,
                 think=think,
                 num_thread=num_thread,
@@ -148,7 +149,7 @@ def run_one(
             "total_tokens": total_kv_tokens,
             "kv_mb_per_1k_tokens": kv_mb_per_1k,
         }
-        record["response_truncated"] = m.eval_count >= num_predict - 5
+        record["response_truncated"] = m.eval_count >= effective_num_predict - 5
         # Save a snippet of the raw model output for post-hoc debugging
         raw = resp.content
         record["response_snippet"] = (raw[:300] if len(raw) <= 300 else raw[:150] + "\n…\n" + raw[-150:])
@@ -158,7 +159,7 @@ def run_one(
         record["edit_parse_ok"] = bool(edits)
         if not edits:
             record["error_kind"] = "NO_BLOCKS"
-            record["error_detail"] = _no_blocks_detail(resp, num_predict)
+            record["error_detail"] = _no_blocks_detail(resp, effective_num_predict)
             return record
 
         # --- policy check ---
