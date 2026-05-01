@@ -62,7 +62,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all ten tasks. Writes results to `results-compare.json`.
+Runs all models defined in `bench-models.sh` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all eleven tasks. Writes results to `results-compare.json`.
 
 ### Run the extended benchmark (8 models)
 
@@ -99,7 +99,7 @@ The header printed before each run shows estimated runtime from the previous run
 At the end of every run a comparison table is printed:
 
 ```
-COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:3  L4:1)
+COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:3  L4:2)
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 | Model              | Spd | Skill | python_safe_div          | node_slugify             |   …     | node_memoize_bug         | pass  avg tok/s   tot s   |
 |                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L4) ok  tok/s  wall     |                           |
@@ -145,6 +145,7 @@ Tasks are tagged with a difficulty level (L1–L4) used to compute the **Skill**
 | `python_multifile_rename` | L2 | Python / pytest | `price_cents` was renamed to `price` in `product.py` but two dependent files (`inventory.py`, `reports.py`) still use the old name — model must output **two** `BEGIN_FILE` blocks |
 | `node_memoize_bug` | L3 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result; pricing tests fail with wrong values |
 | `python_ledger_bug` | L4 | Python / pytest | `Ledger.transfer()` in `ledger.py` credits the destination account before checking the source balance — a failed transfer raises `InsufficientFunds` and leaves the source unchanged, but the destination has already been modified |
+| `python_expr_eval` | L4 | Python / pytest | `Parser` in `expr_eval.py` has `expr()` and `term()` with their operator sets swapped — `*`/`/` are treated as low-precedence and `+`/`-` as high-precedence, inverting standard arithmetic precedence; parenthesised sub-expressions evaluate correctly |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
 
@@ -173,7 +174,7 @@ python3 bench.py --help
                                         node_csv_parser, python_lru_cache,
                                         python_lfu_cache, python_minheap,
                                         python_multifile_rename, node_memoize_bug,
-                                        python_ledger_bug
+                                        python_ledger_bug, python_expr_eval
   --ollama-url URL             Default: http://localhost:11434
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx

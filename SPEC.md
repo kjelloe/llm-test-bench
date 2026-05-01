@@ -79,6 +79,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `python_minheap` (L3) — `MinHeap.pop()` corrupts heap structure on certain inputs; `pytest`
   - `node_memoize_bug` (L3) — `memoize()` key uses only `String(args[0])`; must use `JSON.stringify(args)` to avoid stale cache on multi-arg calls; `node --test`
   - `python_ledger_bug` (L4) — `Ledger.transfer()` credits the destination before checking the source balance; a failed transfer corrupts the destination; fix by reordering check → debit → credit → log; `pytest`
+  - `python_expr_eval` (L4) — `Parser.expr()` loops on `*`/`/` and `Parser.term()` loops on `+`/`-`, inverting arithmetic precedence; fix by swapping the operator sets so `expr` handles `+`/`-` and `term` handles `*`/`/`; `pytest`
 - Each task must:
   - fail baseline tests deterministically (verified before the model call)
   - specify an editable allow-list (one file by default; two for cross-module tasks)

@@ -266,6 +266,24 @@ NODE_MEMOIZE_BUG = Task(
     test_timeout=30,
 )
 
+PYTHON_EXPR_EVAL = Task(
+    id="python_expr_eval",
+    difficulty=4,
+    description=(
+        "The evaluate() function in expr_eval.py produces incorrect results for "
+        "expressions that mix addition/subtraction with multiplication/division. "
+        "Standard arithmetic precedence requires multiplication and division to bind "
+        "more tightly than addition and subtraction — but the current implementation "
+        "inverts this. Parenthesised sub-expressions evaluate correctly. "
+        "Fix expr_eval.py so that all tests pass."
+    ),
+    subdir="python_expr_eval",
+    editable_files=["expr_eval.py"],
+    context_files=["tests/test_expr_eval.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
 PYTHON_MULTIFILE_RENAME = Task(
     id="python_multifile_rename",
     difficulty=2,
@@ -297,5 +315,6 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_MULTIFILE_RENAME,
     NODE_MEMOIZE_BUG,
     PYTHON_LEDGER_BUG,
+    PYTHON_EXPR_EVAL,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

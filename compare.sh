@@ -28,7 +28,7 @@ NUM_TASKS=$(python3 -c "
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from tasks import BUILTIN_TASKS
 print(len(BUILTIN_TASKS))
-" 2>/dev/null || echo 3)
+" 2>/dev/null || echo 11)
 MAX_RUNTIME=$(( MODEL_TIMEOUT * NUM_MODELS * NUM_TASKS ))
 
 echo "════════════════════════════════════════════════════════════"

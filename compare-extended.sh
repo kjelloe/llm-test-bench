@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Extended benchmark — all 8 models that have been evaluated, all 10 tasks.
+# Extended benchmark — all 8 models that have been evaluated, all 11 tasks.
 # Writes to results-extended.json and appends to compare-history.json.
 #
 # Excluded:
@@ -34,7 +34,7 @@ NUM_TASKS=$(python3 -c "
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from tasks import BUILTIN_TASKS
 print(len(BUILTIN_TASKS))
-" 2>/dev/null || echo 10)
+" 2>/dev/null || echo 11)
 MAX_RUNTIME=$(( MODEL_TIMEOUT * NUM_MODELS * NUM_TASKS ))
 
 echo "════════════════════════════════════════════════════════════"
