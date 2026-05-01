@@ -329,6 +329,21 @@ PYTHON_DIJKSTRA = Task(
     min_predict=12800,
 )
 
+PYTHON_HASHMAP = Task(
+    id="python_hashmap",
+    difficulty=5,
+    description=(
+        "HashMap in hashmap.py returns wrong results after certain sequences of "
+        "put() and delete() calls. Fix it so all tests pass."
+    ),
+    subdir="python_hashmap",
+    editable_files=["hashmap.py"],
+    context_files=["tests/test_hashmap.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=8192,
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -342,5 +357,6 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_LEDGER_BUG,
     PYTHON_EXPR_EVAL,
     PYTHON_DIJKSTRA,
+    PYTHON_HASHMAP,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
