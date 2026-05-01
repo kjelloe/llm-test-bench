@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # llm-test-bench
 Testing different models in a series of purposefully built tasks
 
@@ -227,4 +226,4 @@ dotnet test
 3. Add a `Task(…)` entry in `tasks.py` and register it in `BUILTIN_TASKS`.
 
 See `ARCHITECTURE.md` for a complete example.
->>>>>>> 4ebc430 (Claude added README)
+

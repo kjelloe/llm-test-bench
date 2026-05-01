@@ -313,6 +313,22 @@ PYTHON_MULTIFILE_RENAME = Task(
     num_ctx=16384,
 )
 
+PYTHON_DIJKSTRA = Task(
+    id="python_dijkstra",
+    difficulty=5,
+    description=(
+        "dijkstra() in dijkstra.py returns incorrect shortest distances and predecessor "
+        "maps for certain graph topologies, causing shortest_path() to reconstruct wrong routes. "
+        "Fix dijkstra() so all tests pass. Do not modify shortest_path()."
+    ),
+    subdir="python_dijkstra",
+    editable_files=["dijkstra.py"],
+    context_files=["tests/test_dijkstra.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=12800,
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -325,5 +341,6 @@ BUILTIN_TASKS: list[Task] = [
     NODE_MEMOIZE_BUG,
     PYTHON_LEDGER_BUG,
     PYTHON_EXPR_EVAL,
+    PYTHON_DIJKSTRA,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
