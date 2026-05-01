@@ -1,0 +1,29 @@
+# Full model set — every unique locally available model (2026-04-27)
+# Duplicates excluded (identical model ID):
+#   codestral:latest              == codestral:22b           (0898a8b286d5)
+#   llama3.3:70b-instruct-q4_K_M  == llama3.3:70b           (a6eb4748fd29)
+#
+# Order: fastest → slowest estimated tok/s
+
+gpt-oss:20b                       # ~82 tok/s  GPU, thinking
+qwen14b-fast:latest               # ~60 tok/s  GPU, est
+qwen2.5-coder:14b                 # ~40 tok/s  GPU
+deepcoder:14b                     # ~40 tok/s  GPU, thinking, est
+phi4-reasoning:14b                # ~40 tok/s  GPU, thinking, est
+deepseek-coder-v2:16b             # ~35 tok/s  GPU, est
+deepseek16b-hybrid:latest         # ~35 tok/s  GPU, est
+qwen3.6:35b-A3B                   # ~40 tok/s  MoE (3.5B active), thinking, est
+qwen3-coder:30b                   # ~40 tok/s  GPU
+devstral:24b                      # ~25 tok/s  GPU, est
+qwen3.5:27b                       # ~25 tok/s  GPU, thinking, est
+codestral:22b                     # ~18 tok/s  GPU
+devstral-small-2                  # ~16 tok/s  GPU
+gemma4:26b                        # ~28 tok/s  GPU, partial offload
+gemma4:31b                        # ~22 tok/s  GPU, partial offload, est
+qwq:32b                           # ~18 tok/s  GPU, thinking, est
+deepseek-r1:32b                   # ~15 tok/s  GPU, thinking, est
+qwen2.5-coder:32b                 # ~15 tok/s  GPU, partial offload, est
+qwen32b-hybrid:latest             # ~15 tok/s  GPU, partial offload, est
+qwen3.5:35b                       # ~16 tok/s  RAM-partial, thinking
+qwen2.5-coder:32b-instruct-q8_0   # ~10 tok/s  VRAM-heavy q8, est
+llama3.3:70b                      # ~1.6 tok/s RAM-bound

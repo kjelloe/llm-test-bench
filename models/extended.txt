@@ -1,0 +1,12 @@
+# Extended model set — all 8 models evaluated to date
+# Adds codestral:22b and devstral-small-2 vs the default set
+# Order: fastest → slowest by observed avg tok/s
+
+gpt-oss:20b          # ~82 tok/s  GPU, thinking
+qwen2.5-coder:14b    # ~40 tok/s  GPU
+qwen3-coder:30b      # ~36 tok/s  GPU
+gemma4:26b           # ~28 tok/s  GPU, partial offload
+codestral:22b        # ~18 tok/s  GPU
+devstral-small-2     # ~16 tok/s  GPU
+qwen3.5:35b          # ~16 tok/s  RAM-partial, thinking
+gpt-oss:120b         # ~11 tok/s  RAM, thinking
