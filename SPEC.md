@@ -53,7 +53,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `--model-timeout` (default: 300, seconds)
   - `--think` (enable thinking/reasoning mode for supported models)
   - `--warmup` (send a tiny prompt to each model before the benchmark loop to force model load; eliminates cold-start timing penalty on the first task)
-  - `--out` (default: `results.json`)
+  - `--out` (default: `output/results.json`)
   - `--keep-workdirs` (debug: skip temp dir cleanup)
 - Prints live progress (`[i/total] model task ... PASS/FAIL wall_s tok/s`).
 - Prints a comparison table and failure detail on completion.
@@ -114,10 +114,10 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `TOOL_ERROR` — setup/test runner timeout or crash
 
 7) Outputs
-- `results.json`: list of records (one per model × task).
+- `output/results.json` (or the path passed to `--out`): list of records (one per model × task).
 - Console comparison table: rows = models, columns = tasks + summary; each cell shows `PASS/FAIL`, `tok/s`, `wall_s`; `Spd` column shows assumed speed rank (1 = fastest, by model set order).
 - Console failure detail: error kind counts + one-line sample per category.
-- `compare-history.json`: last 10 run summaries with per-model/per-task breakdown; used to show estimated runtime in the compare header.
+- `output/compare-history.json`: last 10 run summaries with per-model/per-task breakdown; used to show estimated runtime in the compare header.
 
 ### Result Record Schema
 
@@ -362,7 +362,7 @@ task_data_agent/
 - Minimal dependencies: stdlib-only for harness core; `pytest` for task test scripts.
 - Timeouts on all subprocess calls and model HTTP calls.
 - Temp workdirs deleted after each run (unless `--keep-workdirs`).
-- History files (`compare-history.json`, `compare-reasoning-history.json`) are machine-local and git-ignored.
+- History and results files live in `output/` (git-ignored); the directory is created automatically on first run.
 
 ## Common: Out of Scope (current)
 

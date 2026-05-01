@@ -1,0 +1,414 @@
+════════════════════════════════════════════════════════
+  MODEL: qwen3.5:122b
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen35moe    
+    parameters          125.1B       
+    context length      262144       
+    embedding length    3072         
+    quantization        Q4_K_M       
+    requires            0.17.1       
+
+  Capabilities
+    completion    
+    vision        
+    tools         
+    thinking      
+
+  Parameters
+    temperature    1       
+    top_k          20      
+    top_p          0.95    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwq:32b
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2     
+    parameters          32.8B     
+    context length      40960     
+    embedding length    5120      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+
+  Parameters
+    repeat_penalty    1                 
+    stop              "<|im_start|>"    
+    stop              "<|im_end|>"      
+    temperature       0.6               
+    top_k             40                
+    top_p             0.95              
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: gemma4:26b
+════════════════════════════════════════════════════════
+  Model
+    architecture        gemma4    
+    parameters          25.8B     
+    context length      262144    
+    embedding length    2816      
+    quantization        Q4_K_M    
+    requires            0.20.0    
+
+  Capabilities
+    completion    
+    vision        
+    tools         
+    thinking      
+
+  Parameters
+    temperature    1       
+    top_k          64      
+    top_p          0.95    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwen3-coder:30b
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen3moe    
+    parameters          30.5B       
+    context length      262144      
+    embedding length    2048        
+    quantization        Q4_K_M      
+
+  Capabilities
+    completion    
+    tools         
+
+  Parameters
+    repeat_penalty    1.05               
+    stop              "<|im_start|>"     
+    stop              "<|im_end|>"       
+    stop              "<|endoftext|>"    
+    temperature       0.7                
+    top_k             20                 
+    top_p             0.8                
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: gemma4:31b
+════════════════════════════════════════════════════════
+  Model
+    architecture        gemma4    
+    parameters          31.3B     
+    context length      262144    
+    embedding length    5376      
+    quantization        Q4_K_M    
+    requires            0.20.0    
+
+  Capabilities
+    completion    
+    vision        
+    tools         
+    thinking      
+
+  Parameters
+    temperature    1       
+    top_k          64      
+    top_p          0.95    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwen2.5-coder:32b-instruct-q8_0
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2    
+    parameters          32.8B    
+    context length      32768    
+    embedding length    5120     
+    quantization        Q8_0     
+
+  Capabilities
+    completion    
+    tools         
+    insert        
+
+  System
+    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: deepseek-r1:32b
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2     
+    parameters          32.8B     
+    context length      131072    
+    embedding length    5120      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    thinking      
+
+  Parameters
+    stop    "<｜begin▁of▁sentence｜>"    
+    stop    "<｜end▁of▁sentence｜>"      
+    stop    "<｜User｜>"                 
+    stop    "<｜Assistant｜>"            
+
+  License
+    MIT License                    
+    Copyright (c) 2023 DeepSeek    
+    ...                            
+
+
+════════════════════════════════════════════════════════
+  MODEL: llama3.3:70b
+════════════════════════════════════════════════════════
+  Model
+    architecture        llama     
+    parameters          70.6B     
+    context length      131072    
+    embedding length    8192      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+
+  Parameters
+    stop    "<|start_header_id|>"    
+    stop    "<|end_header_id|>"      
+    stop    "<|eot_id|>"             
+
+  License
+    LLAMA 3.3 COMMUNITY LICENSE AGREEMENT               
+    Llama 3.3 Version Release Date: December 6, 2024    
+    ...                                                 
+
+
+════════════════════════════════════════════════════════
+  MODEL: llama3.3:70b-instruct-q4_K_M
+════════════════════════════════════════════════════════
+  Model
+    architecture        llama     
+    parameters          70.6B     
+    context length      131072    
+    embedding length    8192      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+
+  Parameters
+    stop    "<|start_header_id|>"    
+    stop    "<|end_header_id|>"      
+    stop    "<|eot_id|>"             
+
+  License
+    LLAMA 3.3 COMMUNITY LICENSE AGREEMENT               
+    Llama 3.3 Version Release Date: December 6, 2024    
+    ...                                                 
+
+
+════════════════════════════════════════════════════════
+  MODEL: deepseek16b-hybrid:latest
+════════════════════════════════════════════════════════
+  Model
+    architecture        deepseek2    
+    parameters          15.7B        
+    context length      163840       
+    embedding length    2048         
+    quantization        Q4_0         
+
+  Capabilities
+    completion    
+    insert        
+
+  Parameters
+    num_gpu           60              
+    repeat_penalty    1.1             
+    stop              "User:"         
+    stop              "Assistant:"    
+    temperature       0.1             
+    top_p             0.9             
+    num_batch         256             
+    num_ctx           8192            
+
+  System
+    You are a senior software engineer.                  
+    Plan before coding. Prefer safe, minimal changes.    
+    ...                                                  
+
+  License
+    DEEPSEEK LICENSE AGREEMENT      
+    Version 1.0, 23 October 2023    
+    ...                             
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwen32b-hybrid:latest
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2     
+    parameters          32.8B     
+    context length      32768     
+    embedding length    5120      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+    insert        
+
+  Parameters
+    repeat_penalty    1.1     
+    temperature       0.1     
+    top_p             0.9     
+    num_batch         128     
+    num_ctx           4096    
+    num_gpu           40      
+
+  System
+    You are a senior software architect.                 
+    Plan before coding. Prefer safe, minimal changes.    
+    ...                                                  
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: deepseek-coder-v2:16b
+════════════════════════════════════════════════════════
+  Model
+    architecture        deepseek2    
+    parameters          15.7B        
+    context length      163840       
+    embedding length    2048         
+    quantization        Q4_0         
+
+  Capabilities
+    completion    
+    insert        
+
+  Parameters
+    stop    "User:"         
+    stop    "Assistant:"    
+
+  License
+    DEEPSEEK LICENSE AGREEMENT      
+    Version 1.0, 23 October 2023    
+    ...                             
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwen2.5-coder:32b
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2     
+    parameters          32.8B     
+    context length      32768     
+    embedding length    5120      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+    insert        
+
+  System
+    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwen14b-fast:latest
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2     
+    parameters          14.8B     
+    context length      32768     
+    embedding length    5120      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+    insert        
+
+  Parameters
+    num_ctx           8192    
+    repeat_penalty    1.1     
+    temperature       0.1     
+    top_p             0.9     
+
+  System
+    You are a senior software engineer.    
+    Be concise. Propose a plan first.      
+    ...                                    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+
+════════════════════════════════════════════════════════
+  MODEL: qwen2.5-coder:14b
+════════════════════════════════════════════════════════
+  Model
+    architecture        qwen2     
+    parameters          14.8B     
+    context length      32768     
+    embedding length    5120      
+    quantization        Q4_K_M    
+
+  Capabilities
+    completion    
+    tools         
+    insert        
+
+  System
+    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+

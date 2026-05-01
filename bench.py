@@ -215,7 +215,7 @@ def main() -> None:
                         help="Enable thinking/reasoning mode for models that support it (default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
                         help="Send a tiny prompt to each model just before its first task to force model load (default: off)")
-    parser.add_argument("--out", default="results.json")
+    parser.add_argument("--out", default="output/results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
     args = parser.parse_args()
@@ -297,6 +297,7 @@ def main() -> None:
 
     task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
 
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     write_results(results, args.out)
     print(f"\nResults written to {args.out}")
     print_comparison_table(results, task_difficulties=task_difficulties)

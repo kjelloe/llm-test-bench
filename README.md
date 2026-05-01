@@ -61,7 +61,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all thirteen tasks. Writes results to `results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all thirteen tasks. Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (8 models)
 
@@ -69,7 +69,7 @@ Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:1
 ./compare.sh extended
 ```
 
-Runs all eight models evaluated to date (adds `codestral:22b` and `devstral-small-2`). Writes results to `results-extended.json`. Estimated runtime: 2.5–4 hours.
+Runs all eight models evaluated to date (adds `codestral:22b` and `devstral-small-2`). Writes results to `output/results-extended.json`. Estimated runtime: 2.5–4 hours.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
@@ -115,7 +115,7 @@ FAILURE DETAIL
 
 The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below.
 
-Results are also written to JSON (`results.json` by default, `results-compare.json` for `compare.sh`, `results-extended.json` for `compare.sh extended`).
+Results are also written to JSON (default: `output/results.json`; `output/results-compare.json` for `compare.sh`; `output/results-extended.json` for `compare.sh extended`).
 
 ### GPU telemetry
 
@@ -192,7 +192,7 @@ python3 bench.py --help
                                to force model load (JIT per model; uses keep_alive=-1 so
                                the model stays resident through all its own tasks;
                                enabled by default in compare.sh)
-  --out FILE                   Results JSON path (default: results.json)
+  --out FILE                   Results JSON path (default: output/results.json)
   --keep-workdirs              Don't delete temp workdirs (useful for debugging)
 ```
 

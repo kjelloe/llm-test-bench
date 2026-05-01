@@ -2,8 +2,7 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
-results*.json
-compare-history.json
+output/
 /task_data/node_slugify/node_modules/
 /task_data/node_slugify/package-lock.json
 /task_data/dotnet_sas/src/*/bin/

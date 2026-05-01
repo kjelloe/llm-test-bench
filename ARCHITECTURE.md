@@ -27,14 +27,19 @@ run.sh                    Venv setup + bench.py entrypoint
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; forwards extra args
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 fetch.sh                  Pulls models by set name, set file path, or bare model name
-compare-history.json      Run summaries + per-model history archive (git-ignored, machine-local)
 lib/                      Python support modules (imported by bench.py) and shell utilities
   tasks.py                Task dataclass, built-in task definitions, prompt builder, subprocess helpers
   ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
   reporting.py            Comparison table, failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
+  history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
   show-all-models.sh      Runs ollama show on every locally installed model
+output/                   Runtime artifacts — git-ignored, created on first run
+  results-compare.json    Written by compare.sh (default set)
+  results-<set>.json      Written by compare.sh <set> (e.g. extended, full)
+  results.json            Written by run.sh / bench.py --out default
+  compare-history.json    Run summaries + per-model history archive
 tests/
   conftest.py             sys.path shim
   test_parsing.py         Unit tests for the BEGIN_FILE/END_FILE parser
@@ -117,7 +122,7 @@ For each `(model, task)` pair:
 - If `--warmup`: sends a tiny prompt to each model just before its first task (JIT, not bulk upfront) using `keep_alive=-1` to keep it resident through all its tasks. Captures `gpu_after` snapshot post-warmup.
 - Per task in `run_one()`: takes `vram_pre` snapshot before `chat()`, starts `launch_peak_poller()` thread, calls `chat()`, takes `vram_post` immediately after, stops the poller, stores `peak_during_gen`.
 - Calls `run_one()` per pair; collects result records.
-- On completion: writes `results.json`, prints comparison table, prints failure detail.
+- On completion: writes results to `--out` path (default `output/results.json`), prints comparison table, prints failure detail.
 
 #### `tasks.py` — Task Library + Prompt Builder
 
@@ -152,9 +157,15 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
 - `write_results(results, path)` — JSON dump.
 
-#### `compare-history.json` — Run + Model Archive
+#### `lib/history.py` — Run History Manager
 
-Written by `compare.sh` after each run. Two top-level sections:
+Called by `compare.sh` with two subcommands:
+- `history.py show <stats_file> <model> ...` — prints the last-run summary and per-model history in the compare header.
+- `history.py save <results_file> <stats_file>` — appends the current run to `output/compare-history.json`, keeping the last 10 runs.
+
+#### `output/compare-history.json` — Run + Model Archive
+
+Written by `compare.sh` (via `lib/history.py save`) after each run. Two top-level sections:
 
 - **`runs`** — last 10 full run summaries (timestamp, models, tasks, overall pass/fail, per-model breakdown). Used by the `compare.sh` header to show estimated runtime for the next run.
 - **`model_history`** — dict keyed by model name; each value is a list of that model's last 10 run entries (`timestamp`, `passes`, `total_tasks`, `avg_tok_per_s`, `total_wall_s`, `per_task`). Persists across model set changes — models swapped out of `bench-models.sh` retain their history and appear in the header as "Archived models".
