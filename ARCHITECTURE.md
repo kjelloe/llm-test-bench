@@ -57,6 +57,10 @@ task_data/
   python_expr_eval/       expr_eval.py (baseline), tests/test_expr_eval.py
   python_dijkstra/        dijkstra.py (baseline), tests/test_dijkstra.py
   python_hashmap/         hashmap.py (baseline), tests/test_hashmap.py
+  context_8k/             documents/incident_archive.txt (~5.5k tok, 100 records), answer.txt (baseline), tests/test_answer.py  — num_ctx=8192
+  context_16k/            documents/incident_archive.txt (~11k tok, 200 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=16384
+  context_32k/            documents/incident_archive.txt (~22k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768
+  context_64k/            documents/incident_archive.txt (~44k tok, 800 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=65536
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
@@ -153,7 +157,7 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 
 #### `reporting.py` — Output
 
-- `print_comparison_table(results, task_difficulties)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)/(L4)`. The Skill column and legend are derived dynamically from the current task set's max difficulty.
+- `print_comparison_table(results, task_difficulties, model_timeout)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)/(L4)`. The Skill column and legend are derived dynamically from the current task set's max difficulty. `model_timeout` (optional int) is shown in the table header to provide context for wall times near the limit.
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
 - `write_results(results, path)` — JSON dump.
 
@@ -182,12 +186,13 @@ Written by `compare.sh` (via `lib/history.py save`) after each run. Two top-leve
 | `edit_policy_ok` | bool | |
 | `tests_pass` | bool | |
 | `edited_files` | list[string] | |
-| `error_kind` | string\|null | `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR` |
+| `error_kind` | string\|null | `NO_BLOCKS`, `CTX_TRUNCATED`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR` |
 | `error_detail` | string\|null | truncated, max ~500 chars |
 | `metrics` | object | `num_ctx`, `prompt_eval_count`, `eval_count`, `prompt_eval_duration_ms`, `eval_duration_ms`, `total_duration_ms` |
 | `tok_per_s` | float | |
 | `wall_s` | float | total including setup + model + tests |
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
+| `ctx_truncated` | bool | true if prompt was silently truncated (Ollama capped num_ctx below request); detected when `prompt_eval_count < len(prompt) // 4` |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
 | `gpu_snapshots` | object\|null | see below; null if pynvml unavailable |
 | `kv_cache` | object\|null | see below; null if pynvml unavailable or inference failed |
@@ -225,6 +230,7 @@ END_FILE
 ```
 
 Strictness enforced:
+- `CTX_TRUNCATED` if the prompt was silently truncated by Ollama (takes precedence over `NO_BLOCKS` when detected).
 - `NO_BLOCKS` if `parse_file_blocks` returns empty.
 - `EDITED_NONEDITABLE_FILE` if any path is outside the task's `editable_files`.
 

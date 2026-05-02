@@ -109,6 +109,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - Failures are categorised:
   - `BASELINE_PASSED_INVALID_TASK` — task fixture is broken
   - `NO_BLOCKS` — model produced no parseable edits
+  - `CTX_TRUNCATED` — prompt was silently truncated by Ollama (num_ctx capped below request due to VRAM); detected when `prompt_eval_count < len(prompt) // 4`
   - `EDITED_NONEDITABLE_FILE` — model violated the allow-list
   - `TESTS_STILL_FAIL` — edits applied but tests still fail
   - `TOOL_ERROR` — setup/test runner timeout or crash
@@ -139,6 +140,7 @@ Per model × task run:
 | `tok_per_s` | float | derived from Ollama eval metrics |
 | `wall_s` | float | total elapsed seconds including setup + model call + tests |
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
+| `ctx_truncated` | bool | true if prompt was silently truncated (Ollama capped num_ctx below request) |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
 | `gpu_snapshots` | object\|null | `before_load` (with `dirty` flag), `after_load`, `peak_during_gen`; null if pynvml unavailable |
 | `kv_cache` | object\|null | `vram_before_mb`, `vram_after_mb`, `delta_mb`, `prompt_tokens`, `gen_tokens`, `total_tokens`, `kv_mb_per_1k_tokens`; null if pynvml unavailable or inference failed |
@@ -149,7 +151,7 @@ Per model × task run:
 |---|---|---|
 | `--num-ctx` | 8192 | Default; increase for large prompt tasks |
 | `--num-predict` | 2400 | Thinking models use tokens for reasoning before BEGIN_FILE |
-| `--model-timeout` | 900 | 120B RAM-bound models can take 600–1200s at 1–2 tok/s |
+| `--model-timeout` | 1200 | 120B RAM-bound models can exceed 900s at large context (compare.sh default) |
 | `--think` | off | Thinking tokens consume budget before the code block appears |
 | `--temperature` | 0.0 | Reproducibility |
 
@@ -276,7 +278,7 @@ task_data_reasoning/
 |---|---|---|
 | `--num-ctx` | 32768–131072 | Documents can be large; match to longest document |
 | `--num-predict` | 400–800 | Answers are short; leave budget for long-doc prefill |
-| `--model-timeout` | 900 | Long prefill for large context windows |
+| `--model-timeout` | 1200 | Long prefill for large context windows |
 | `--think` | Test both on/off | Reasoning tokens may help or hurt; worth comparing |
 | `--temperature` | 0.0 | Reproducibility |
 
