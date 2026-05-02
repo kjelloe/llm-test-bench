@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$SCRIPT_DIR/models"
 STATS_FILE="$SCRIPT_DIR/output/compare-history.json"
-MODEL_TIMEOUT=900
+MODEL_TIMEOUT=1200
 NUM_PREDICT=2400
 
 # ── Parse arguments ────────────────────────────────────────────────────────────

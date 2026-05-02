@@ -19,7 +19,7 @@ def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dic
     return "<L1"
 
 
-def print_comparison_table(results: list[dict], task_difficulties: dict[str, int] | None = None) -> None:
+def print_comparison_table(results: list[dict], task_difficulties: dict[str, int] | None = None, model_timeout: int | None = None) -> None:
     models = list(dict.fromkeys(r["model"] for r in results))
     tasks  = list(dict.fromkeys(r["task"]  for r in results))
     idx    = {(r["model"], r["task"]): r for r in results}
@@ -66,9 +66,10 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
     else:
         legend = "L1-L3"
 
+    timeout_note = f"  |  model-timeout: {model_timeout}s" if model_timeout else ""
     print()
     print("=" * len(bar))
-    print(f"COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: {legend})")
+    print(f"COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: {legend}{timeout_note})")
     print("=" * len(bar))
     print(bar)
 

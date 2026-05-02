@@ -53,6 +53,7 @@ def run_one(
         "edit_policy_ok": False,
         "tests_pass": False,
         "response_truncated": False,
+        "ctx_truncated": False,
         "response_snippet": None,
         "edited_files": [],
         "error_kind": None,
@@ -132,6 +133,11 @@ def run_one(
             "total_duration_ms": round(m.total_duration / 1e6, 1),
         }
         record["tok_per_s"] = round(m.tok_per_s, 1)
+        # Detect silent num_ctx downgrade: Ollama may cap the context below our request
+        # when VRAM is insufficient. Actual chars/token for this workload is ~3, so
+        # len(prompt)//4 is a conservative floor. If prompt_eval_count falls below it,
+        # the prompt was truncated and the model likely never saw the target content.
+        record["ctx_truncated"] = m.prompt_eval_count < len(prompt) // 4
 
         total_kv_tokens = m.prompt_eval_count + m.eval_count
         kv_delta_mb: int | None = None
@@ -158,7 +164,7 @@ def run_one(
         edits = parse_file_blocks(resp.content)
         record["edit_parse_ok"] = bool(edits)
         if not edits:
-            record["error_kind"] = "NO_BLOCKS"
+            record["error_kind"] = "CTX_TRUNCATED" if record["ctx_truncated"] else "NO_BLOCKS"
             record["error_detail"] = _no_blocks_detail(resp, effective_num_predict)
             return record
 
@@ -300,7 +306,7 @@ def main() -> None:
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     write_results(results, args.out)
     print(f"\nResults written to {args.out}")
-    print_comparison_table(results, task_difficulties=task_difficulties)
+    print_comparison_table(results, task_difficulties=task_difficulties, model_timeout=args.model_timeout)
     print_summary(results)
 
 
