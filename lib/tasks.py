@@ -231,7 +231,7 @@ PYTHON_LFU_CACHE = Task(
     context_files=["tests/test_lfu_cache.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=12800,  # ~350 tokens output; gpt-oss:20b burns ~5500 tokens reasoning → 4800 is not enough, 12800 gives safe headroom
+    min_predict=16384,  # ~350 tokens output; gpt-oss:20b burns ~13k tokens reasoning → 12800 hit ceiling, 16384 gives safe headroom
 )
 
 PYTHON_LEDGER_BUG = Task(
@@ -289,8 +289,7 @@ PYTHON_EXPR_EVAL = Task(
     context_files=["tests/test_expr_eval.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=4800,  # ~630 tokens to output the full file; thinking models burn 1500-2000 tokens
-                       # on reasoning before writing — 2400 is not enough, 4800 gives safe headroom
+    min_predict=8192,  # ~630 tokens to output the full file; gpt-oss:20b burns ~5k tokens reasoning → 4800 hit ceiling, 8192 gives safe headroom
 )
 
 PYTHON_MULTIFILE_RENAME = Task(
