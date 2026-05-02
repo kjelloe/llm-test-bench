@@ -1,0 +1,3199 @@
+INCIDENT-6244
+Date       : 2022-05-20
+Severity   : P3
+Engineer   : Dana Eriksson
+System     : email-relay
+Resolution : RC-6885
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6210
+Date       : 2023-07-15
+Severity   : P2
+Engineer   : Skyler Osei
+System     : email-relay
+Resolution : RC-3853
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6122
+Date       : 2021-06-14
+Severity   : P3
+Engineer   : Reese Dubois
+System     : message-queue
+Resolution : RC-1927
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6010
+Date       : 2021-01-06
+Severity   : P3
+Engineer   : Taylor Singh
+System     : data-pipeline
+Resolution : RC-5016
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6191
+Date       : 2023-04-06
+Severity   : P4
+Engineer   : Sasha Brennan
+System     : metrics-collector
+Resolution : RC-6016
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6014
+Date       : 2025-12-21
+Severity   : P2
+Engineer   : Laura Kim
+System     : api-gateway
+Resolution : RC-7100
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6173
+Date       : 2024-11-27
+Severity   : P4
+Engineer   : Laura Kim
+System     : email-relay
+Resolution : RC-7867
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6340
+Date       : 2025-04-22
+Severity   : P2
+Engineer   : Laura Kim
+System     : storage-svc
+Resolution : RC-3361
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6184
+Date       : 2025-05-04
+Severity   : P2
+Engineer   : River Okonkwo
+System     : auth-service
+Resolution : RC-8529
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6237
+Date       : 2024-03-06
+Severity   : P3
+Engineer   : Quinn Park
+System     : data-pipeline
+Resolution : RC-6688
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6298
+Date       : 2022-02-04
+Severity   : P4
+Engineer   : Skyler Osei
+System     : auth-service
+Resolution : RC-8550
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6138
+Date       : 2022-06-21
+Severity   : P1
+Engineer   : Tom Nakamura
+System     : auth-service
+Resolution : RC-4956
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6236
+Date       : 2022-04-25
+Severity   : P4
+Engineer   : River Okonkwo
+System     : api-gateway
+Resolution : RC-9205
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6001
+Date       : 2024-03-23
+Severity   : P3
+Engineer   : Yuki Tanaka
+System     : message-queue
+Resolution : RC-3783
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6183
+Date       : 2021-01-11
+Severity   : P4
+Engineer   : Taylor Singh
+System     : message-queue
+Resolution : RC-2614
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6102
+Date       : 2025-03-11
+Severity   : P1
+Engineer   : Morgan Price
+System     : message-queue
+Resolution : RC-2802
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6328
+Date       : 2022-10-18
+Severity   : P1
+Engineer   : Dana Eriksson
+System     : api-gateway
+Resolution : RC-5196
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6270
+Date       : 2021-03-26
+Severity   : P4
+Engineer   : Laura Kim
+System     : api-gateway
+Resolution : RC-6486
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6365
+Date       : 2021-08-08
+Severity   : P3
+Engineer   : Sam Rivera
+System     : event-bus
+Resolution : RC-2245
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6126
+Date       : 2022-06-18
+Severity   : P2
+Engineer   : Dana Eriksson
+System     : data-pipeline
+Resolution : RC-9287
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6264
+Date       : 2021-09-22
+Severity   : P3
+Engineer   : Quinn Park
+System     : email-relay
+Resolution : RC-2482
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6282
+Date       : 2023-05-14
+Severity   : P1
+Engineer   : Avery Johansson
+System     : email-relay
+Resolution : RC-1744
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6273
+Date       : 2023-03-04
+Severity   : P3
+Engineer   : Tom Nakamura
+System     : scheduler
+Resolution : RC-8264
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6027
+Date       : 2024-03-03
+Severity   : P4
+Engineer   : Jordan Blake
+System     : cache-layer
+Resolution : RC-2029
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6202
+Date       : 2023-12-22
+Severity   : P2
+Engineer   : Drew Nakamura
+System     : data-pipeline
+Resolution : RC-6318
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6309
+Date       : 2024-03-28
+Severity   : P4
+Engineer   : Morgan Price
+System     : data-pipeline
+Resolution : RC-4779
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6207
+Date       : 2024-03-19
+Severity   : P1
+Engineer   : Robin Okafor
+System     : scheduler
+Resolution : RC-1977
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6357
+Date       : 2022-05-20
+Severity   : P4
+Engineer   : Laura Kim
+System     : scheduler
+Resolution : RC-7695
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6219
+Date       : 2023-06-18
+Severity   : P1
+Engineer   : Blake Ferris
+System     : scheduler
+Resolution : RC-5513
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6028
+Date       : 2025-09-03
+Severity   : P2
+Engineer   : Jamie Walsh
+System     : metrics-collector
+Resolution : RC-2692
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6020
+Date       : 2022-02-14
+Severity   : P3
+Engineer   : Chloe Martin
+System     : metrics-collector
+Resolution : RC-5000
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6198
+Date       : 2024-03-08
+Severity   : P3
+Engineer   : Morgan Price
+System     : scheduler
+Resolution : RC-2413
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6265
+Date       : 2023-07-24
+Severity   : P3
+Engineer   : Logan Ferreira
+System     : data-pipeline
+Resolution : RC-5775
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6111
+Date       : 2022-03-25
+Severity   : P3
+Engineer   : Mei Lin
+System     : scheduler
+Resolution : RC-6417
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6297
+Date       : 2025-02-03
+Severity   : P1
+Engineer   : Quinn Park
+System     : email-relay
+Resolution : RC-9406
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6181
+Date       : 2023-08-13
+Severity   : P2
+Engineer   : Casey Müller
+System     : storage-svc
+Resolution : RC-8178
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6249
+Date       : 2025-12-07
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : api-gateway
+Resolution : RC-5155
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6231
+Date       : 2023-11-19
+Severity   : P2
+Engineer   : Anya Petrov
+System     : event-bus
+Resolution : RC-9570
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6144
+Date       : 2024-11-28
+Severity   : P1
+Engineer   : River Okonkwo
+System     : metrics-collector
+Resolution : RC-6138
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6049
+Date       : 2024-02-21
+Severity   : P1
+Engineer   : Tom Nakamura
+System     : data-pipeline
+Resolution : RC-5567
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6125
+Date       : 2021-10-13
+Severity   : P3
+Engineer   : Logan Ferreira
+System     : auth-service
+Resolution : RC-8295
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6074
+Date       : 2023-04-17
+Severity   : P2
+Engineer   : Anya Petrov
+System     : message-queue
+Resolution : RC-8115
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6044
+Date       : 2022-02-10
+Severity   : P1
+Engineer   : Sasha Brennan
+System     : message-queue
+Resolution : RC-1434
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6132
+Date       : 2021-05-25
+Severity   : P3
+Engineer   : Reese Dubois
+System     : metrics-collector
+Resolution : RC-3254
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6174
+Date       : 2024-10-13
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : storage-svc
+Resolution : RC-8622
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6343
+Date       : 2024-02-28
+Severity   : P4
+Engineer   : Mei Lin
+System     : metrics-collector
+Resolution : RC-5609
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6178
+Date       : 2023-11-15
+Severity   : P4
+Engineer   : Mei Lin
+System     : cache-layer
+Resolution : RC-9675
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6278
+Date       : 2024-02-15
+Severity   : P4
+Engineer   : Tom Nakamura
+System     : storage-svc
+Resolution : RC-2427
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6379
+Date       : 2021-09-27
+Severity   : P2
+Engineer   : Quinn Park
+System     : metrics-collector
+Resolution : RC-5573
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6311
+Date       : 2024-01-02
+Severity   : P3
+Engineer   : Casey Müller
+System     : email-relay
+Resolution : RC-9797
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6091
+Date       : 2022-11-21
+Severity   : P4
+Engineer   : Robin Okafor
+System     : metrics-collector
+Resolution : RC-9981
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6170
+Date       : 2025-11-14
+Severity   : P1
+Engineer   : Reese Dubois
+System     : data-pipeline
+Resolution : RC-1847
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6024
+Date       : 2025-04-10
+Severity   : P3
+Engineer   : Yuki Tanaka
+System     : email-relay
+Resolution : RC-5254
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6267
+Date       : 2022-09-23
+Severity   : P2
+Engineer   : Mei Lin
+System     : cache-layer
+Resolution : RC-1220
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6068
+Date       : 2021-03-21
+Severity   : P2
+Engineer   : Drew Nakamura
+System     : message-queue
+Resolution : RC-3085
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6307
+Date       : 2022-08-28
+Severity   : P2
+Engineer   : Reese Dubois
+System     : metrics-collector
+Resolution : RC-7656
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6304
+Date       : 2024-06-23
+Severity   : P2
+Engineer   : Yuki Tanaka
+System     : auth-service
+Resolution : RC-8984
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6195
+Date       : 2022-06-19
+Severity   : P1
+Engineer   : Mei Lin
+System     : scheduler
+Resolution : RC-4804
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6168
+Date       : 2025-02-05
+Severity   : P3
+Engineer   : Dana Eriksson
+System     : event-bus
+Resolution : RC-2139
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6160
+Date       : 2021-06-09
+Severity   : P4
+Engineer   : Anya Petrov
+System     : data-pipeline
+Resolution : RC-8807
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-4987
+Date       : 2024-03-09
+Severity   : P1
+Engineer   : Drew Nakamura
+System     : message-queue
+Resolution : RC-7731
+Notes      : Root cause traced to INCIDENT-5000; local service recovered after upstream fix was deployed.
+
+INCIDENT-6197
+Date       : 2024-04-27
+Severity   : P2
+Engineer   : Anya Petrov
+System     : event-bus
+Resolution : RC-1481
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6306
+Date       : 2023-01-06
+Severity   : P3
+Engineer   : Peyton Kovač
+System     : cache-layer
+Resolution : RC-8546
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6158
+Date       : 2021-09-09
+Severity   : P1
+Engineer   : Peyton Kovač
+System     : data-pipeline
+Resolution : RC-8479
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6317
+Date       : 2025-02-23
+Severity   : P3
+Engineer   : Skyler Osei
+System     : cache-layer
+Resolution : RC-5284
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6021
+Date       : 2024-05-12
+Severity   : P3
+Engineer   : Skyler Osei
+System     : scheduler
+Resolution : RC-4402
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6268
+Date       : 2022-10-27
+Severity   : P1
+Engineer   : Anya Petrov
+System     : auth-service
+Resolution : RC-5472
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6026
+Date       : 2022-09-14
+Severity   : P4
+Engineer   : Jordan Blake
+System     : auth-service
+Resolution : RC-5523
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6095
+Date       : 2023-07-18
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : data-pipeline
+Resolution : RC-2736
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6117
+Date       : 2024-10-19
+Severity   : P3
+Engineer   : Avery Johansson
+System     : api-gateway
+Resolution : RC-9445
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6022
+Date       : 2024-07-11
+Severity   : P3
+Engineer   : Avery Johansson
+System     : metrics-collector
+Resolution : RC-4372
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6150
+Date       : 2022-04-08
+Severity   : P3
+Engineer   : Mei Lin
+System     : message-queue
+Resolution : RC-8195
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6229
+Date       : 2023-07-19
+Severity   : P3
+Engineer   : Taylor Singh
+System     : scheduler
+Resolution : RC-8281
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6113
+Date       : 2022-06-03
+Severity   : P1
+Engineer   : Tom Nakamura
+System     : cache-layer
+Resolution : RC-5013
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6243
+Date       : 2023-04-26
+Severity   : P4
+Engineer   : Taylor Singh
+System     : metrics-collector
+Resolution : RC-5520
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6089
+Date       : 2023-02-13
+Severity   : P4
+Engineer   : Laura Kim
+System     : event-bus
+Resolution : RC-4133
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6009
+Date       : 2025-04-21
+Severity   : P3
+Engineer   : Reese Dubois
+System     : auth-service
+Resolution : RC-9868
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6262
+Date       : 2024-04-11
+Severity   : P2
+Engineer   : Laura Kim
+System     : metrics-collector
+Resolution : RC-1493
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6239
+Date       : 2022-09-25
+Severity   : P2
+Engineer   : Alex Chen
+System     : auth-service
+Resolution : RC-2670
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6006
+Date       : 2025-04-20
+Severity   : P2
+Engineer   : Logan Ferreira
+System     : api-gateway
+Resolution : RC-8135
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6280
+Date       : 2025-09-08
+Severity   : P3
+Engineer   : Alex Chen
+System     : api-gateway
+Resolution : RC-9445
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6085
+Date       : 2023-09-26
+Severity   : P4
+Engineer   : Logan Ferreira
+System     : data-pipeline
+Resolution : RC-8857
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6285
+Date       : 2022-06-06
+Severity   : P3
+Engineer   : Alex Chen
+System     : data-pipeline
+Resolution : RC-8740
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6036
+Date       : 2022-03-26
+Severity   : P4
+Engineer   : Jamie Walsh
+System     : event-bus
+Resolution : RC-5400
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6293
+Date       : 2023-05-17
+Severity   : P4
+Engineer   : Jordan Blake
+System     : event-bus
+Resolution : RC-4311
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6147
+Date       : 2022-02-02
+Severity   : P2
+Engineer   : Mei Lin
+System     : metrics-collector
+Resolution : RC-2816
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6002
+Date       : 2025-11-23
+Severity   : P2
+Engineer   : Skyler Osei
+System     : event-bus
+Resolution : RC-5930
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6154
+Date       : 2022-04-17
+Severity   : P2
+Engineer   : Jordan Blake
+System     : email-relay
+Resolution : RC-1239
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6342
+Date       : 2022-05-27
+Severity   : P1
+Engineer   : Anya Petrov
+System     : api-gateway
+Resolution : RC-1399
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6211
+Date       : 2024-03-26
+Severity   : P2
+Engineer   : Skyler Osei
+System     : storage-svc
+Resolution : RC-4672
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6322
+Date       : 2025-08-01
+Severity   : P4
+Engineer   : Casey Müller
+System     : metrics-collector
+Resolution : RC-6720
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6135
+Date       : 2024-11-04
+Severity   : P1
+Engineer   : Mei Lin
+System     : auth-service
+Resolution : RC-7275
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6269
+Date       : 2023-08-28
+Severity   : P2
+Engineer   : Mei Lin
+System     : storage-svc
+Resolution : RC-5830
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6310
+Date       : 2023-05-21
+Severity   : P3
+Engineer   : Robin Okafor
+System     : storage-svc
+Resolution : RC-3660
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6146
+Date       : 2025-10-28
+Severity   : P4
+Engineer   : Yuki Tanaka
+System     : scheduler
+Resolution : RC-4008
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6329
+Date       : 2024-12-26
+Severity   : P4
+Engineer   : Dana Eriksson
+System     : api-gateway
+Resolution : RC-5526
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6233
+Date       : 2023-09-16
+Severity   : P4
+Engineer   : Chloe Martin
+System     : event-bus
+Resolution : RC-3084
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6224
+Date       : 2023-05-06
+Severity   : P1
+Engineer   : Quinn Park
+System     : data-pipeline
+Resolution : RC-9141
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6201
+Date       : 2023-11-10
+Severity   : P1
+Engineer   : River Okonkwo
+System     : metrics-collector
+Resolution : RC-7919
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6141
+Date       : 2025-09-14
+Severity   : P2
+Engineer   : Taylor Singh
+System     : data-pipeline
+Resolution : RC-3479
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6350
+Date       : 2024-06-21
+Severity   : P2
+Engineer   : Reese Dubois
+System     : cache-layer
+Resolution : RC-1081
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6378
+Date       : 2024-01-15
+Severity   : P4
+Engineer   : Drew Nakamura
+System     : data-pipeline
+Resolution : RC-2721
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6344
+Date       : 2025-11-28
+Severity   : P2
+Engineer   : Mei Lin
+System     : auth-service
+Resolution : RC-9119
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6332
+Date       : 2025-11-14
+Severity   : P4
+Engineer   : Jamie Walsh
+System     : message-queue
+Resolution : RC-4230
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6324
+Date       : 2024-11-07
+Severity   : P2
+Engineer   : Casey Müller
+System     : auth-service
+Resolution : RC-7584
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6172
+Date       : 2024-04-02
+Severity   : P4
+Engineer   : Jamie Walsh
+System     : event-bus
+Resolution : RC-4820
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6258
+Date       : 2022-11-25
+Severity   : P3
+Engineer   : Chloe Martin
+System     : metrics-collector
+Resolution : RC-5223
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6177
+Date       : 2025-02-02
+Severity   : P4
+Engineer   : Sam Rivera
+System     : metrics-collector
+Resolution : RC-5018
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6303
+Date       : 2024-09-20
+Severity   : P1
+Engineer   : Alex Chen
+System     : api-gateway
+Resolution : RC-3118
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6235
+Date       : 2025-02-15
+Severity   : P4
+Engineer   : Yuki Tanaka
+System     : data-pipeline
+Resolution : RC-7041
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6228
+Date       : 2021-03-19
+Severity   : P2
+Engineer   : Jamie Walsh
+System     : event-bus
+Resolution : RC-2073
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6104
+Date       : 2025-01-22
+Severity   : P2
+Engineer   : Jamie Walsh
+System     : data-pipeline
+Resolution : RC-7008
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6377
+Date       : 2024-04-28
+Severity   : P1
+Engineer   : Quinn Park
+System     : api-gateway
+Resolution : RC-3685
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6347
+Date       : 2025-03-25
+Severity   : P1
+Engineer   : Skyler Osei
+System     : cache-layer
+Resolution : RC-3124
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6047
+Date       : 2021-08-02
+Severity   : P4
+Engineer   : Casey Müller
+System     : message-queue
+Resolution : RC-3115
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6128
+Date       : 2021-12-06
+Severity   : P4
+Engineer   : Tom Nakamura
+System     : api-gateway
+Resolution : RC-1668
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6059
+Date       : 2025-02-02
+Severity   : P3
+Engineer   : Quinn Park
+System     : auth-service
+Resolution : RC-5468
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6025
+Date       : 2023-10-17
+Severity   : P4
+Engineer   : Alex Chen
+System     : data-pipeline
+Resolution : RC-9468
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6069
+Date       : 2021-09-06
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : scheduler
+Resolution : RC-9060
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6116
+Date       : 2024-07-23
+Severity   : P4
+Engineer   : Quinn Park
+System     : event-bus
+Resolution : RC-7603
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6131
+Date       : 2025-05-05
+Severity   : P4
+Engineer   : Dana Eriksson
+System     : auth-service
+Resolution : RC-4006
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6057
+Date       : 2024-07-13
+Severity   : P3
+Engineer   : Blake Ferris
+System     : api-gateway
+Resolution : RC-4252
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6292
+Date       : 2025-03-01
+Severity   : P3
+Engineer   : Quinn Park
+System     : scheduler
+Resolution : RC-6919
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6046
+Date       : 2022-04-19
+Severity   : P4
+Engineer   : Mei Lin
+System     : message-queue
+Resolution : RC-4558
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6077
+Date       : 2023-04-08
+Severity   : P1
+Engineer   : Sasha Brennan
+System     : api-gateway
+Resolution : RC-6437
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6196
+Date       : 2024-03-28
+Severity   : P3
+Engineer   : Laura Kim
+System     : event-bus
+Resolution : RC-7123
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6189
+Date       : 2022-11-20
+Severity   : P3
+Engineer   : Robin Okafor
+System     : cache-layer
+Resolution : RC-8347
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6008
+Date       : 2024-05-06
+Severity   : P2
+Engineer   : Sasha Brennan
+System     : storage-svc
+Resolution : RC-2739
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6368
+Date       : 2025-07-16
+Severity   : P3
+Engineer   : Yuki Tanaka
+System     : message-queue
+Resolution : RC-8760
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6345
+Date       : 2024-08-10
+Severity   : P3
+Engineer   : Blake Ferris
+System     : storage-svc
+Resolution : RC-5763
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6383
+Date       : 2023-04-19
+Severity   : P1
+Engineer   : Dana Eriksson
+System     : api-gateway
+Resolution : RC-7490
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6139
+Date       : 2024-01-26
+Severity   : P1
+Engineer   : Blake Ferris
+System     : event-bus
+Resolution : RC-2497
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6185
+Date       : 2021-03-16
+Severity   : P3
+Engineer   : Dana Eriksson
+System     : storage-svc
+Resolution : RC-3755
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6277
+Date       : 2024-05-26
+Severity   : P1
+Engineer   : Peyton Kovač
+System     : cache-layer
+Resolution : RC-9079
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6348
+Date       : 2023-03-11
+Severity   : P1
+Engineer   : Alex Chen
+System     : metrics-collector
+Resolution : RC-5027
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6222
+Date       : 2022-11-19
+Severity   : P4
+Engineer   : Anya Petrov
+System     : event-bus
+Resolution : RC-5065
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6296
+Date       : 2025-03-23
+Severity   : P4
+Engineer   : Logan Ferreira
+System     : event-bus
+Resolution : RC-5332
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6003
+Date       : 2022-02-25
+Severity   : P1
+Engineer   : Taylor Singh
+System     : event-bus
+Resolution : RC-8355
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6321
+Date       : 2025-12-14
+Severity   : P4
+Engineer   : Jordan Blake
+System     : message-queue
+Resolution : RC-2165
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6163
+Date       : 2022-09-28
+Severity   : P2
+Engineer   : Taylor Singh
+System     : scheduler
+Resolution : RC-9790
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-4963
+Date       : 2021-06-05
+Severity   : P3
+Engineer   : Sam Rivera
+System     : message-queue
+Resolution : RC-4492
+Notes      : See INCIDENT-5000 for primary root cause; this ticket tracks secondary impact on the billing system.
+
+INCIDENT-6316
+Date       : 2021-11-25
+Severity   : P4
+Engineer   : Tom Nakamura
+System     : metrics-collector
+Resolution : RC-2627
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6274
+Date       : 2022-12-24
+Severity   : P3
+Engineer   : Avery Johansson
+System     : email-relay
+Resolution : RC-8769
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6218
+Date       : 2022-09-24
+Severity   : P3
+Engineer   : Jordan Blake
+System     : cache-layer
+Resolution : RC-6361
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6151
+Date       : 2021-03-22
+Severity   : P2
+Engineer   : Laura Kim
+System     : metrics-collector
+Resolution : RC-4118
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6031
+Date       : 2022-03-20
+Severity   : P4
+Engineer   : Mei Lin
+System     : auth-service
+Resolution : RC-5243
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6134
+Date       : 2022-03-24
+Severity   : P3
+Engineer   : Quinn Park
+System     : message-queue
+Resolution : RC-6632
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6040
+Date       : 2023-05-27
+Severity   : P3
+Engineer   : Robin Okafor
+System     : event-bus
+Resolution : RC-1768
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6005
+Date       : 2025-11-12
+Severity   : P2
+Engineer   : Robin Okafor
+System     : storage-svc
+Resolution : RC-8951
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6217
+Date       : 2024-08-16
+Severity   : P2
+Engineer   : Peyton Kovač
+System     : api-gateway
+Resolution : RC-9282
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6362
+Date       : 2023-08-03
+Severity   : P4
+Engineer   : Tom Nakamura
+System     : storage-svc
+Resolution : RC-5584
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6336
+Date       : 2025-08-07
+Severity   : P4
+Engineer   : Skyler Osei
+System     : api-gateway
+Resolution : RC-7072
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6374
+Date       : 2025-02-01
+Severity   : P4
+Engineer   : Logan Ferreira
+System     : metrics-collector
+Resolution : RC-7132
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6299
+Date       : 2022-09-25
+Severity   : P1
+Engineer   : Jamie Walsh
+System     : event-bus
+Resolution : RC-6924
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6188
+Date       : 2022-11-19
+Severity   : P4
+Engineer   : Sam Rivera
+System     : email-relay
+Resolution : RC-7378
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6216
+Date       : 2025-12-17
+Severity   : P1
+Engineer   : Casey Müller
+System     : scheduler
+Resolution : RC-2190
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6199
+Date       : 2022-01-19
+Severity   : P1
+Engineer   : Laura Kim
+System     : cache-layer
+Resolution : RC-1976
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6238
+Date       : 2023-01-28
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : scheduler
+Resolution : RC-7168
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6110
+Date       : 2023-03-15
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : message-queue
+Resolution : RC-5985
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6056
+Date       : 2023-06-25
+Severity   : P1
+Engineer   : Chloe Martin
+System     : email-relay
+Resolution : RC-9946
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6050
+Date       : 2023-08-01
+Severity   : P3
+Engineer   : Jordan Blake
+System     : auth-service
+Resolution : RC-5477
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6319
+Date       : 2022-03-16
+Severity   : P1
+Engineer   : Skyler Osei
+System     : email-relay
+Resolution : RC-4676
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6000
+Date       : 2021-08-11
+Severity   : P3
+Engineer   : Logan Ferreira
+System     : email-relay
+Resolution : RC-6566
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6206
+Date       : 2021-09-14
+Severity   : P3
+Engineer   : Yuki Tanaka
+System     : metrics-collector
+Resolution : RC-3027
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6071
+Date       : 2025-12-28
+Severity   : P1
+Engineer   : River Okonkwo
+System     : storage-svc
+Resolution : RC-7823
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6352
+Date       : 2021-06-25
+Severity   : P4
+Engineer   : Sam Rivera
+System     : metrics-collector
+Resolution : RC-2902
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6391
+Date       : 2023-02-01
+Severity   : P1
+Engineer   : Taylor Singh
+System     : event-bus
+Resolution : RC-4270
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6314
+Date       : 2024-05-20
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : event-bus
+Resolution : RC-2499
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6101
+Date       : 2023-01-12
+Severity   : P1
+Engineer   : Skyler Osei
+System     : email-relay
+Resolution : RC-9148
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6308
+Date       : 2021-02-11
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : event-bus
+Resolution : RC-9694
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6242
+Date       : 2022-11-08
+Severity   : P2
+Engineer   : Avery Johansson
+System     : data-pipeline
+Resolution : RC-7918
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6295
+Date       : 2025-07-04
+Severity   : P3
+Engineer   : Quinn Park
+System     : message-queue
+Resolution : RC-5039
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6096
+Date       : 2022-11-07
+Severity   : P1
+Engineer   : Casey Müller
+System     : auth-service
+Resolution : RC-3941
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6388
+Date       : 2021-08-23
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : message-queue
+Resolution : RC-8472
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6370
+Date       : 2024-05-27
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : storage-svc
+Resolution : RC-6983
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6109
+Date       : 2025-02-16
+Severity   : P2
+Engineer   : Drew Nakamura
+System     : metrics-collector
+Resolution : RC-8494
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6156
+Date       : 2021-01-25
+Severity   : P2
+Engineer   : Peyton Kovač
+System     : cache-layer
+Resolution : RC-1598
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6194
+Date       : 2021-03-18
+Severity   : P3
+Engineer   : Tom Nakamura
+System     : event-bus
+Resolution : RC-7636
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6394
+Date       : 2025-10-24
+Severity   : P1
+Engineer   : Laura Kim
+System     : cache-layer
+Resolution : RC-8149
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6192
+Date       : 2025-02-02
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : storage-svc
+Resolution : RC-4888
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6099
+Date       : 2021-06-09
+Severity   : P4
+Engineer   : Drew Nakamura
+System     : email-relay
+Resolution : RC-1676
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6175
+Date       : 2021-11-03
+Severity   : P3
+Engineer   : Jordan Blake
+System     : data-pipeline
+Resolution : RC-9210
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6018
+Date       : 2024-01-27
+Severity   : P1
+Engineer   : Sam Rivera
+System     : event-bus
+Resolution : RC-8130
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6137
+Date       : 2023-05-02
+Severity   : P1
+Engineer   : Peyton Kovač
+System     : message-queue
+Resolution : RC-3478
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6062
+Date       : 2023-12-27
+Severity   : P2
+Engineer   : Taylor Singh
+System     : metrics-collector
+Resolution : RC-3591
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6284
+Date       : 2022-02-07
+Severity   : P2
+Engineer   : Alex Chen
+System     : data-pipeline
+Resolution : RC-5114
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6372
+Date       : 2023-02-25
+Severity   : P3
+Engineer   : Anya Petrov
+System     : data-pipeline
+Resolution : RC-1209
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6225
+Date       : 2025-10-08
+Severity   : P4
+Engineer   : Skyler Osei
+System     : auth-service
+Resolution : RC-4570
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6213
+Date       : 2023-05-03
+Severity   : P3
+Engineer   : Chloe Martin
+System     : metrics-collector
+Resolution : RC-2709
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6260
+Date       : 2024-02-22
+Severity   : P4
+Engineer   : Dana Eriksson
+System     : auth-service
+Resolution : RC-7135
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6100
+Date       : 2023-09-13
+Severity   : P2
+Engineer   : Mei Lin
+System     : scheduler
+Resolution : RC-3549
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6119
+Date       : 2021-04-11
+Severity   : P1
+Engineer   : Anya Petrov
+System     : auth-service
+Resolution : RC-9029
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6263
+Date       : 2023-10-15
+Severity   : P1
+Engineer   : Jamie Walsh
+System     : cache-layer
+Resolution : RC-1082
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6190
+Date       : 2022-10-02
+Severity   : P2
+Engineer   : Peyton Kovač
+System     : data-pipeline
+Resolution : RC-2941
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6023
+Date       : 2023-03-25
+Severity   : P2
+Engineer   : Dana Eriksson
+System     : data-pipeline
+Resolution : RC-1862
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6107
+Date       : 2022-01-13
+Severity   : P4
+Engineer   : Drew Nakamura
+System     : auth-service
+Resolution : RC-1368
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6337
+Date       : 2022-06-22
+Severity   : P3
+Engineer   : Sam Rivera
+System     : cache-layer
+Resolution : RC-4754
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6092
+Date       : 2023-06-08
+Severity   : P2
+Engineer   : Avery Johansson
+System     : message-queue
+Resolution : RC-9506
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6035
+Date       : 2025-08-13
+Severity   : P3
+Engineer   : Alex Chen
+System     : event-bus
+Resolution : RC-4603
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6080
+Date       : 2023-10-02
+Severity   : P4
+Engineer   : Anya Petrov
+System     : email-relay
+Resolution : RC-6776
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-5000
+Date       : 2024-09-14
+Severity   : P1
+Engineer   : Quinn Park
+System     : scheduler
+Resolution : RC-3847
+Notes      : Auth token cache invalidation failure caused mass logout event; cleared cache and deployed fix.
+
+INCIDENT-6330
+Date       : 2025-06-13
+Severity   : P2
+Engineer   : Blake Ferris
+System     : auth-service
+Resolution : RC-6070
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6034
+Date       : 2025-05-05
+Severity   : P1
+Engineer   : Taylor Singh
+System     : message-queue
+Resolution : RC-7726
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6227
+Date       : 2022-05-16
+Severity   : P3
+Engineer   : Quinn Park
+System     : data-pipeline
+Resolution : RC-7612
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6011
+Date       : 2021-09-02
+Severity   : P1
+Engineer   : River Okonkwo
+System     : auth-service
+Resolution : RC-1844
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6208
+Date       : 2025-05-13
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : email-relay
+Resolution : RC-7943
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6326
+Date       : 2024-09-11
+Severity   : P4
+Engineer   : River Okonkwo
+System     : data-pipeline
+Resolution : RC-9796
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6395
+Date       : 2023-06-27
+Severity   : P1
+Engineer   : Jordan Blake
+System     : metrics-collector
+Resolution : RC-3884
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6250
+Date       : 2024-02-08
+Severity   : P1
+Engineer   : Alex Chen
+System     : storage-svc
+Resolution : RC-5661
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6063
+Date       : 2025-10-28
+Severity   : P4
+Engineer   : Morgan Price
+System     : metrics-collector
+Resolution : RC-4522
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6381
+Date       : 2021-02-02
+Severity   : P1
+Engineer   : Jamie Walsh
+System     : data-pipeline
+Resolution : RC-4154
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6389
+Date       : 2025-12-19
+Severity   : P2
+Engineer   : Sam Rivera
+System     : scheduler
+Resolution : RC-5661
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6124
+Date       : 2024-04-06
+Severity   : P2
+Engineer   : Anya Petrov
+System     : api-gateway
+Resolution : RC-2912
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6220
+Date       : 2022-02-22
+Severity   : P1
+Engineer   : Taylor Singh
+System     : api-gateway
+Resolution : RC-2435
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6012
+Date       : 2022-03-09
+Severity   : P4
+Engineer   : Anya Petrov
+System     : email-relay
+Resolution : RC-6808
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6335
+Date       : 2025-08-24
+Severity   : P3
+Engineer   : Blake Ferris
+System     : cache-layer
+Resolution : RC-2005
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6019
+Date       : 2025-07-10
+Severity   : P4
+Engineer   : Casey Müller
+System     : cache-layer
+Resolution : RC-1088
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6165
+Date       : 2024-02-26
+Severity   : P2
+Engineer   : Yuki Tanaka
+System     : scheduler
+Resolution : RC-8286
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6037
+Date       : 2021-12-25
+Severity   : P2
+Engineer   : Dana Eriksson
+System     : data-pipeline
+Resolution : RC-4663
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6120
+Date       : 2021-03-26
+Severity   : P2
+Engineer   : Avery Johansson
+System     : data-pipeline
+Resolution : RC-4184
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6373
+Date       : 2021-01-17
+Severity   : P4
+Engineer   : Robin Okafor
+System     : cache-layer
+Resolution : RC-9566
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6067
+Date       : 2025-03-23
+Severity   : P1
+Engineer   : Robin Okafor
+System     : message-queue
+Resolution : RC-4743
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6193
+Date       : 2025-11-01
+Severity   : P3
+Engineer   : Mei Lin
+System     : metrics-collector
+Resolution : RC-8295
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6171
+Date       : 2021-05-25
+Severity   : P4
+Engineer   : Chloe Martin
+System     : data-pipeline
+Resolution : RC-6750
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6045
+Date       : 2023-09-01
+Severity   : P1
+Engineer   : Yuki Tanaka
+System     : storage-svc
+Resolution : RC-8566
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6255
+Date       : 2025-02-20
+Severity   : P4
+Engineer   : Reese Dubois
+System     : auth-service
+Resolution : RC-6278
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6215
+Date       : 2022-02-06
+Severity   : P3
+Engineer   : Jordan Blake
+System     : auth-service
+Resolution : RC-2429
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6053
+Date       : 2025-02-19
+Severity   : P3
+Engineer   : Laura Kim
+System     : scheduler
+Resolution : RC-5473
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6289
+Date       : 2024-02-12
+Severity   : P2
+Engineer   : Sam Rivera
+System     : scheduler
+Resolution : RC-9044
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6204
+Date       : 2023-11-25
+Severity   : P2
+Engineer   : Reese Dubois
+System     : email-relay
+Resolution : RC-6209
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6187
+Date       : 2023-07-14
+Severity   : P3
+Engineer   : Tom Nakamura
+System     : message-queue
+Resolution : RC-3916
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6261
+Date       : 2022-01-17
+Severity   : P3
+Engineer   : Jordan Blake
+System     : event-bus
+Resolution : RC-8163
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6115
+Date       : 2021-11-06
+Severity   : P1
+Engineer   : Chloe Martin
+System     : cache-layer
+Resolution : RC-5929
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6152
+Date       : 2025-05-21
+Severity   : P1
+Engineer   : Logan Ferreira
+System     : auth-service
+Resolution : RC-5250
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6257
+Date       : 2022-03-26
+Severity   : P1
+Engineer   : Robin Okafor
+System     : message-queue
+Resolution : RC-1780
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6325
+Date       : 2025-05-18
+Severity   : P3
+Engineer   : Logan Ferreira
+System     : scheduler
+Resolution : RC-2188
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6169
+Date       : 2022-07-03
+Severity   : P2
+Engineer   : Casey Müller
+System     : email-relay
+Resolution : RC-1159
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6182
+Date       : 2021-04-13
+Severity   : P4
+Engineer   : Tom Nakamura
+System     : auth-service
+Resolution : RC-5860
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6369
+Date       : 2025-12-08
+Severity   : P3
+Engineer   : Chloe Martin
+System     : scheduler
+Resolution : RC-7858
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6360
+Date       : 2023-04-07
+Severity   : P2
+Engineer   : Mei Lin
+System     : storage-svc
+Resolution : RC-7542
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6097
+Date       : 2023-07-15
+Severity   : P1
+Engineer   : Avery Johansson
+System     : cache-layer
+Resolution : RC-7220
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6351
+Date       : 2022-02-11
+Severity   : P4
+Engineer   : Laura Kim
+System     : scheduler
+Resolution : RC-6429
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6279
+Date       : 2025-10-20
+Severity   : P1
+Engineer   : Reese Dubois
+System     : cache-layer
+Resolution : RC-1791
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6051
+Date       : 2025-09-19
+Severity   : P1
+Engineer   : Morgan Price
+System     : scheduler
+Resolution : RC-3974
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6318
+Date       : 2025-09-01
+Severity   : P4
+Engineer   : Sasha Brennan
+System     : auth-service
+Resolution : RC-6505
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6054
+Date       : 2022-02-14
+Severity   : P1
+Engineer   : Drew Nakamura
+System     : event-bus
+Resolution : RC-9681
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6013
+Date       : 2021-08-13
+Severity   : P4
+Engineer   : Mei Lin
+System     : data-pipeline
+Resolution : RC-8452
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6367
+Date       : 2022-07-24
+Severity   : P1
+Engineer   : Chloe Martin
+System     : metrics-collector
+Resolution : RC-9656
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6355
+Date       : 2021-01-24
+Severity   : P4
+Engineer   : Yuki Tanaka
+System     : email-relay
+Resolution : RC-4616
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6214
+Date       : 2023-03-23
+Severity   : P1
+Engineer   : Blake Ferris
+System     : message-queue
+Resolution : RC-3989
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6364
+Date       : 2023-08-13
+Severity   : P4
+Engineer   : Alex Chen
+System     : message-queue
+Resolution : RC-5597
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6149
+Date       : 2025-05-26
+Severity   : P2
+Engineer   : Laura Kim
+System     : api-gateway
+Resolution : RC-6366
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6032
+Date       : 2024-09-24
+Severity   : P1
+Engineer   : Anya Petrov
+System     : cache-layer
+Resolution : RC-1569
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6301
+Date       : 2021-03-14
+Severity   : P4
+Engineer   : Mei Lin
+System     : data-pipeline
+Resolution : RC-1425
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6384
+Date       : 2023-08-05
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : api-gateway
+Resolution : RC-8913
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6108
+Date       : 2022-07-17
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : api-gateway
+Resolution : RC-5280
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6212
+Date       : 2024-10-18
+Severity   : P2
+Engineer   : Jamie Walsh
+System     : event-bus
+Resolution : RC-6412
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6048
+Date       : 2025-04-24
+Severity   : P1
+Engineer   : Anya Petrov
+System     : event-bus
+Resolution : RC-5945
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6123
+Date       : 2021-06-16
+Severity   : P2
+Engineer   : Chloe Martin
+System     : email-relay
+Resolution : RC-4621
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6041
+Date       : 2024-01-26
+Severity   : P3
+Engineer   : Logan Ferreira
+System     : metrics-collector
+Resolution : RC-6743
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6103
+Date       : 2022-10-02
+Severity   : P4
+Engineer   : River Okonkwo
+System     : api-gateway
+Resolution : RC-1257
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6065
+Date       : 2021-01-27
+Severity   : P4
+Engineer   : Casey Müller
+System     : email-relay
+Resolution : RC-6844
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6043
+Date       : 2023-06-06
+Severity   : P4
+Engineer   : Yuki Tanaka
+System     : metrics-collector
+Resolution : RC-1408
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6176
+Date       : 2025-02-01
+Severity   : P3
+Engineer   : Chloe Martin
+System     : email-relay
+Resolution : RC-3822
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6241
+Date       : 2023-04-10
+Severity   : P3
+Engineer   : Chloe Martin
+System     : event-bus
+Resolution : RC-9544
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6223
+Date       : 2024-03-26
+Severity   : P2
+Engineer   : Sam Rivera
+System     : cache-layer
+Resolution : RC-3233
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6162
+Date       : 2021-10-09
+Severity   : P1
+Engineer   : River Okonkwo
+System     : message-queue
+Resolution : RC-8061
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6015
+Date       : 2021-02-15
+Severity   : P1
+Engineer   : Mei Lin
+System     : data-pipeline
+Resolution : RC-8899
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6338
+Date       : 2025-01-24
+Severity   : P1
+Engineer   : Dana Eriksson
+System     : api-gateway
+Resolution : RC-4005
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6058
+Date       : 2023-12-17
+Severity   : P3
+Engineer   : Mei Lin
+System     : api-gateway
+Resolution : RC-5162
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6205
+Date       : 2023-07-02
+Severity   : P4
+Engineer   : River Okonkwo
+System     : event-bus
+Resolution : RC-1933
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6375
+Date       : 2022-02-20
+Severity   : P1
+Engineer   : Jordan Blake
+System     : metrics-collector
+Resolution : RC-6850
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6186
+Date       : 2025-10-01
+Severity   : P4
+Engineer   : Blake Ferris
+System     : metrics-collector
+Resolution : RC-6606
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6387
+Date       : 2022-09-04
+Severity   : P4
+Engineer   : Mei Lin
+System     : message-queue
+Resolution : RC-9327
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6221
+Date       : 2025-03-16
+Severity   : P3
+Engineer   : Skyler Osei
+System     : metrics-collector
+Resolution : RC-6568
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6118
+Date       : 2022-10-03
+Severity   : P2
+Engineer   : Sasha Brennan
+System     : api-gateway
+Resolution : RC-3677
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6167
+Date       : 2025-03-16
+Severity   : P3
+Engineer   : Peyton Kovač
+System     : storage-svc
+Resolution : RC-3544
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6287
+Date       : 2021-06-07
+Severity   : P2
+Engineer   : Tom Nakamura
+System     : email-relay
+Resolution : RC-5555
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6078
+Date       : 2022-06-19
+Severity   : P4
+Engineer   : Reese Dubois
+System     : data-pipeline
+Resolution : RC-2680
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6159
+Date       : 2022-09-01
+Severity   : P3
+Engineer   : Chloe Martin
+System     : storage-svc
+Resolution : RC-3541
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-5041
+Date       : 2025-10-14
+Severity   : P1
+Engineer   : Alex Chen
+System     : event-bus
+Resolution : RC-6158
+Notes      : Follow-up to INCIDENT-5000; extended monitoring confirmed no recurrence after the patch was applied.
+
+INCIDENT-6392
+Date       : 2022-09-19
+Severity   : P3
+Engineer   : Taylor Singh
+System     : email-relay
+Resolution : RC-2885
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6245
+Date       : 2024-04-05
+Severity   : P4
+Engineer   : Chloe Martin
+System     : message-queue
+Resolution : RC-5404
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6114
+Date       : 2022-03-11
+Severity   : P1
+Engineer   : Logan Ferreira
+System     : scheduler
+Resolution : RC-4612
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6161
+Date       : 2021-10-12
+Severity   : P2
+Engineer   : Reese Dubois
+System     : data-pipeline
+Resolution : RC-7766
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6248
+Date       : 2025-04-19
+Severity   : P1
+Engineer   : Sasha Brennan
+System     : email-relay
+Resolution : RC-1862
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6230
+Date       : 2021-01-23
+Severity   : P1
+Engineer   : Jamie Walsh
+System     : scheduler
+Resolution : RC-9814
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6313
+Date       : 2021-03-10
+Severity   : P2
+Engineer   : Skyler Osei
+System     : scheduler
+Resolution : RC-4931
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6346
+Date       : 2021-06-14
+Severity   : P4
+Engineer   : Sasha Brennan
+System     : storage-svc
+Resolution : RC-7907
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6333
+Date       : 2025-09-27
+Severity   : P4
+Engineer   : Avery Johansson
+System     : metrics-collector
+Resolution : RC-4435
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6300
+Date       : 2022-01-22
+Severity   : P4
+Engineer   : Alex Chen
+System     : data-pipeline
+Resolution : RC-1177
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6038
+Date       : 2024-03-17
+Severity   : P3
+Engineer   : Avery Johansson
+System     : data-pipeline
+Resolution : RC-1080
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6256
+Date       : 2022-09-23
+Severity   : P4
+Engineer   : Casey Müller
+System     : api-gateway
+Resolution : RC-2106
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6203
+Date       : 2023-05-17
+Severity   : P2
+Engineer   : Robin Okafor
+System     : api-gateway
+Resolution : RC-5923
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6016
+Date       : 2023-07-21
+Severity   : P3
+Engineer   : Dana Eriksson
+System     : event-bus
+Resolution : RC-1065
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6082
+Date       : 2024-06-22
+Severity   : P4
+Engineer   : Anya Petrov
+System     : metrics-collector
+Resolution : RC-1464
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6029
+Date       : 2022-10-02
+Severity   : P3
+Engineer   : Peyton Kovač
+System     : data-pipeline
+Resolution : RC-1427
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6179
+Date       : 2022-08-05
+Severity   : P4
+Engineer   : Quinn Park
+System     : storage-svc
+Resolution : RC-6295
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6363
+Date       : 2025-05-04
+Severity   : P2
+Engineer   : Anya Petrov
+System     : cache-layer
+Resolution : RC-2618
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6087
+Date       : 2021-11-28
+Severity   : P3
+Engineer   : Tom Nakamura
+System     : email-relay
+Resolution : RC-4525
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6246
+Date       : 2022-06-14
+Severity   : P4
+Engineer   : Sam Rivera
+System     : scheduler
+Resolution : RC-3607
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6090
+Date       : 2023-03-16
+Severity   : P1
+Engineer   : Sasha Brennan
+System     : cache-layer
+Resolution : RC-5912
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6076
+Date       : 2021-04-25
+Severity   : P2
+Engineer   : Blake Ferris
+System     : api-gateway
+Resolution : RC-2388
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6361
+Date       : 2021-08-24
+Severity   : P3
+Engineer   : Peyton Kovač
+System     : auth-service
+Resolution : RC-2132
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6142
+Date       : 2021-10-16
+Severity   : P1
+Engineer   : Skyler Osei
+System     : scheduler
+Resolution : RC-4547
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6356
+Date       : 2025-04-14
+Severity   : P2
+Engineer   : Avery Johansson
+System     : cache-layer
+Resolution : RC-5768
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6272
+Date       : 2025-02-18
+Severity   : P4
+Engineer   : Avery Johansson
+System     : scheduler
+Resolution : RC-4443
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6070
+Date       : 2021-05-28
+Severity   : P2
+Engineer   : Avery Johansson
+System     : cache-layer
+Resolution : RC-3377
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6281
+Date       : 2024-01-10
+Severity   : P3
+Engineer   : Casey Müller
+System     : cache-layer
+Resolution : RC-9992
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6359
+Date       : 2021-01-16
+Severity   : P3
+Engineer   : Robin Okafor
+System     : data-pipeline
+Resolution : RC-9960
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6004
+Date       : 2024-01-11
+Severity   : P2
+Engineer   : Yuki Tanaka
+System     : storage-svc
+Resolution : RC-9233
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6376
+Date       : 2021-04-04
+Severity   : P3
+Engineer   : River Okonkwo
+System     : storage-svc
+Resolution : RC-2718
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6232
+Date       : 2024-02-03
+Severity   : P4
+Engineer   : Jamie Walsh
+System     : api-gateway
+Resolution : RC-1933
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6157
+Date       : 2022-12-17
+Severity   : P4
+Engineer   : River Okonkwo
+System     : message-queue
+Resolution : RC-7316
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6130
+Date       : 2022-08-23
+Severity   : P1
+Engineer   : Avery Johansson
+System     : message-queue
+Resolution : RC-3790
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6052
+Date       : 2021-04-13
+Severity   : P2
+Engineer   : Morgan Price
+System     : scheduler
+Resolution : RC-7925
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6226
+Date       : 2022-08-27
+Severity   : P4
+Engineer   : Casey Müller
+System     : event-bus
+Resolution : RC-7867
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6083
+Date       : 2025-08-15
+Severity   : P1
+Engineer   : Casey Müller
+System     : metrics-collector
+Resolution : RC-9965
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6153
+Date       : 2022-12-25
+Severity   : P3
+Engineer   : Tom Nakamura
+System     : message-queue
+Resolution : RC-7620
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6164
+Date       : 2023-04-19
+Severity   : P2
+Engineer   : Morgan Price
+System     : scheduler
+Resolution : RC-1530
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6341
+Date       : 2023-11-02
+Severity   : P4
+Engineer   : Taylor Singh
+System     : event-bus
+Resolution : RC-1180
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6081
+Date       : 2022-05-01
+Severity   : P2
+Engineer   : Mei Lin
+System     : metrics-collector
+Resolution : RC-3750
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6042
+Date       : 2022-09-28
+Severity   : P1
+Engineer   : Casey Müller
+System     : data-pipeline
+Resolution : RC-8255
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6061
+Date       : 2024-01-10
+Severity   : P1
+Engineer   : Jamie Walsh
+System     : auth-service
+Resolution : RC-2417
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6305
+Date       : 2022-11-13
+Severity   : P2
+Engineer   : Peyton Kovač
+System     : auth-service
+Resolution : RC-9240
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6283
+Date       : 2023-08-13
+Severity   : P2
+Engineer   : Sasha Brennan
+System     : api-gateway
+Resolution : RC-1688
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6064
+Date       : 2021-09-01
+Severity   : P4
+Engineer   : Taylor Singh
+System     : storage-svc
+Resolution : RC-9172
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6140
+Date       : 2025-10-19
+Severity   : P1
+Engineer   : Sasha Brennan
+System     : message-queue
+Resolution : RC-2432
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6209
+Date       : 2022-03-07
+Severity   : P1
+Engineer   : Reese Dubois
+System     : event-bus
+Resolution : RC-3581
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6073
+Date       : 2021-09-11
+Severity   : P2
+Engineer   : Sasha Brennan
+System     : email-relay
+Resolution : RC-7743
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6105
+Date       : 2025-10-23
+Severity   : P4
+Engineer   : Quinn Park
+System     : auth-service
+Resolution : RC-6092
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6276
+Date       : 2024-02-02
+Severity   : P1
+Engineer   : Taylor Singh
+System     : api-gateway
+Resolution : RC-7851
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6247
+Date       : 2022-11-08
+Severity   : P3
+Engineer   : Peyton Kovač
+System     : message-queue
+Resolution : RC-3058
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6039
+Date       : 2025-07-13
+Severity   : P4
+Engineer   : Mei Lin
+System     : auth-service
+Resolution : RC-8464
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6385
+Date       : 2025-07-20
+Severity   : P2
+Engineer   : Taylor Singh
+System     : storage-svc
+Resolution : RC-6934
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6060
+Date       : 2023-10-13
+Severity   : P4
+Engineer   : Jamie Walsh
+System     : scheduler
+Resolution : RC-8399
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6072
+Date       : 2022-08-08
+Severity   : P2
+Engineer   : Alex Chen
+System     : data-pipeline
+Resolution : RC-6613
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6386
+Date       : 2025-02-01
+Severity   : P1
+Engineer   : Robin Okafor
+System     : event-bus
+Resolution : RC-8882
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6390
+Date       : 2025-08-09
+Severity   : P3
+Engineer   : Casey Müller
+System     : cache-layer
+Resolution : RC-5383
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6291
+Date       : 2023-08-16
+Severity   : P4
+Engineer   : Morgan Price
+System     : scheduler
+Resolution : RC-6406
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6259
+Date       : 2022-05-15
+Severity   : P1
+Engineer   : Casey Müller
+System     : cache-layer
+Resolution : RC-4621
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6327
+Date       : 2024-06-24
+Severity   : P3
+Engineer   : Logan Ferreira
+System     : scheduler
+Resolution : RC-3489
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6129
+Date       : 2025-11-23
+Severity   : P3
+Engineer   : River Okonkwo
+System     : api-gateway
+Resolution : RC-3643
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6055
+Date       : 2023-01-03
+Severity   : P4
+Engineer   : Avery Johansson
+System     : scheduler
+Resolution : RC-7040
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6148
+Date       : 2024-09-05
+Severity   : P3
+Engineer   : Laura Kim
+System     : metrics-collector
+Resolution : RC-8092
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6271
+Date       : 2023-09-16
+Severity   : P4
+Engineer   : Quinn Park
+System     : email-relay
+Resolution : RC-6188
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6253
+Date       : 2024-08-20
+Severity   : P3
+Engineer   : Jamie Walsh
+System     : event-bus
+Resolution : RC-9093
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6166
+Date       : 2025-07-02
+Severity   : P4
+Engineer   : Skyler Osei
+System     : metrics-collector
+Resolution : RC-2096
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6084
+Date       : 2023-04-23
+Severity   : P4
+Engineer   : Casey Müller
+System     : cache-layer
+Resolution : RC-5351
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6106
+Date       : 2024-11-04
+Severity   : P1
+Engineer   : Jordan Blake
+System     : email-relay
+Resolution : RC-1241
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6320
+Date       : 2022-01-18
+Severity   : P4
+Engineer   : Drew Nakamura
+System     : storage-svc
+Resolution : RC-3987
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6033
+Date       : 2025-06-20
+Severity   : P1
+Engineer   : Laura Kim
+System     : message-queue
+Resolution : RC-5661
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6286
+Date       : 2021-09-04
+Severity   : P1
+Engineer   : River Okonkwo
+System     : data-pipeline
+Resolution : RC-8870
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6334
+Date       : 2024-05-11
+Severity   : P2
+Engineer   : Dana Eriksson
+System     : auth-service
+Resolution : RC-6706
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6331
+Date       : 2025-10-08
+Severity   : P4
+Engineer   : Jordan Blake
+System     : message-queue
+Resolution : RC-9834
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6302
+Date       : 2022-04-08
+Severity   : P1
+Engineer   : Alex Chen
+System     : cache-layer
+Resolution : RC-8310
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6079
+Date       : 2022-04-10
+Severity   : P1
+Engineer   : Dana Eriksson
+System     : auth-service
+Resolution : RC-6289
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6254
+Date       : 2021-09-27
+Severity   : P1
+Engineer   : Blake Ferris
+System     : cache-layer
+Resolution : RC-5998
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6371
+Date       : 2024-02-04
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : cache-layer
+Resolution : RC-1591
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6127
+Date       : 2021-11-16
+Severity   : P3
+Engineer   : Chloe Martin
+System     : metrics-collector
+Resolution : RC-9405
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6143
+Date       : 2021-03-18
+Severity   : P4
+Engineer   : Jamie Walsh
+System     : scheduler
+Resolution : RC-7991
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6251
+Date       : 2023-08-28
+Severity   : P3
+Engineer   : Morgan Price
+System     : data-pipeline
+Resolution : RC-8245
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6180
+Date       : 2021-08-24
+Severity   : P4
+Engineer   : Tom Nakamura
+System     : scheduler
+Resolution : RC-2119
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6017
+Date       : 2024-09-12
+Severity   : P4
+Engineer   : Taylor Singh
+System     : cache-layer
+Resolution : RC-2289
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6275
+Date       : 2021-10-25
+Severity   : P2
+Engineer   : Blake Ferris
+System     : scheduler
+Resolution : RC-6563
+Notes      : Rate limiter misconfigured after deploy; rolled back config and re-applied correctly.
+
+INCIDENT-6288
+Date       : 2024-09-06
+Severity   : P4
+Engineer   : Yuki Tanaka
+System     : cache-layer
+Resolution : RC-8584
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6066
+Date       : 2022-09-24
+Severity   : P3
+Engineer   : Morgan Price
+System     : auth-service
+Resolution : RC-9935
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6075
+Date       : 2021-05-20
+Severity   : P3
+Engineer   : Laura Kim
+System     : event-bus
+Resolution : RC-5321
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6007
+Date       : 2021-08-24
+Severity   : P3
+Engineer   : Jordan Blake
+System     : scheduler
+Resolution : RC-2303
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6136
+Date       : 2024-05-14
+Severity   : P1
+Engineer   : Quinn Park
+System     : auth-service
+Resolution : RC-3330
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6121
+Date       : 2025-07-25
+Severity   : P1
+Engineer   : Laura Kim
+System     : storage-svc
+Resolution : RC-1507
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6133
+Date       : 2021-07-10
+Severity   : P1
+Engineer   : Dana Eriksson
+System     : event-bus
+Resolution : RC-4619
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6112
+Date       : 2024-10-23
+Severity   : P3
+Engineer   : River Okonkwo
+System     : scheduler
+Resolution : RC-4993
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6252
+Date       : 2023-03-09
+Severity   : P3
+Engineer   : Peyton Kovač
+System     : email-relay
+Resolution : RC-4411
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6312
+Date       : 2022-06-16
+Severity   : P1
+Engineer   : Sasha Brennan
+System     : data-pipeline
+Resolution : RC-1389
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6234
+Date       : 2022-11-15
+Severity   : P1
+Engineer   : Chloe Martin
+System     : email-relay
+Resolution : RC-7904
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6349
+Date       : 2022-04-10
+Severity   : P1
+Engineer   : Reese Dubois
+System     : storage-svc
+Resolution : RC-4895
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6353
+Date       : 2025-12-06
+Severity   : P4
+Engineer   : River Okonkwo
+System     : cache-layer
+Resolution : RC-3168
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6030
+Date       : 2021-10-25
+Severity   : P3
+Engineer   : River Okonkwo
+System     : message-queue
+Resolution : RC-8153
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6382
+Date       : 2024-11-03
+Severity   : P2
+Engineer   : Chloe Martin
+System     : api-gateway
+Resolution : RC-4746
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6358
+Date       : 2023-04-11
+Severity   : P4
+Engineer   : Morgan Price
+System     : email-relay
+Resolution : RC-1781
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6098
+Date       : 2025-04-27
+Severity   : P3
+Engineer   : Alex Chen
+System     : api-gateway
+Resolution : RC-7440
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6354
+Date       : 2021-06-28
+Severity   : P3
+Engineer   : Taylor Singh
+System     : auth-service
+Resolution : RC-5796
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6155
+Date       : 2023-01-11
+Severity   : P3
+Engineer   : Drew Nakamura
+System     : storage-svc
+Resolution : RC-7170
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6393
+Date       : 2022-07-13
+Severity   : P1
+Engineer   : Logan Ferreira
+System     : event-bus
+Resolution : RC-9086
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6240
+Date       : 2025-11-01
+Severity   : P2
+Engineer   : Reese Dubois
+System     : event-bus
+Resolution : RC-9685
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.
+
+INCIDENT-6094
+Date       : 2025-07-27
+Severity   : P1
+Engineer   : Mei Lin
+System     : storage-svc
+Resolution : RC-9118
+Notes      : Config map missing after namespace migration; restored from backup and validated.
+
+INCIDENT-6086
+Date       : 2025-06-16
+Severity   : P2
+Engineer   : Alex Chen
+System     : metrics-collector
+Resolution : RC-3362
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6315
+Date       : 2024-03-11
+Severity   : P4
+Engineer   : Mei Lin
+System     : storage-svc
+Resolution : RC-4762
+Notes      : Disk quota reached on primary node; cleaned up stale logs and expanded volume.
+
+INCIDENT-6380
+Date       : 2022-11-25
+Severity   : P4
+Engineer   : Robin Okafor
+System     : event-bus
+Resolution : RC-1979
+Notes      : Memory leak in connection pool under sustained load; patched and restarted service.
+
+INCIDENT-6366
+Date       : 2021-04-06
+Severity   : P2
+Engineer   : Quinn Park
+System     : metrics-collector
+Resolution : RC-5726
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6088
+Date       : 2025-12-27
+Severity   : P2
+Engineer   : Yuki Tanaka
+System     : api-gateway
+Resolution : RC-4513
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6266
+Date       : 2021-02-22
+Severity   : P1
+Engineer   : Logan Ferreira
+System     : event-bus
+Resolution : RC-6133
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6145
+Date       : 2024-06-11
+Severity   : P4
+Engineer   : Jordan Blake
+System     : message-queue
+Resolution : RC-2601
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6339
+Date       : 2021-01-25
+Severity   : P1
+Engineer   : Reese Dubois
+System     : scheduler
+Resolution : RC-6361
+Notes      : TLS certificate expired; renewed and redeployed across all load balancers.
+
+INCIDENT-6323
+Date       : 2022-01-01
+Severity   : P1
+Engineer   : Morgan Price
+System     : api-gateway
+Resolution : RC-5641
+Notes      : Replication lag spiked during batch job; throttled writes and resumed normal ops.
+
+INCIDENT-6200
+Date       : 2022-10-02
+Severity   : P2
+Engineer   : Mei Lin
+System     : event-bus
+Resolution : RC-9659
+Notes      : Null pointer in request handler triggered 500s; added guard and deployed hotfix.
+
+INCIDENT-6290
+Date       : 2023-06-02
+Severity   : P4
+Engineer   : Jordan Blake
+System     : auth-service
+Resolution : RC-9566
+Notes      : Session store TTL too short; premature eviction of active sessions; extended TTL.
+
+INCIDENT-6294
+Date       : 2022-09-19
+Severity   : P1
+Engineer   : Jamie Walsh
+System     : storage-svc
+Resolution : RC-3248
+Notes      : Liveness probe too aggressive; pods restarted under load; raised delay threshold.
+
+INCIDENT-6093
+Date       : 2024-09-24
+Severity   : P3
+Engineer   : Chloe Martin
+System     : message-queue
+Resolution : RC-6728
+Notes      : DNS cache returned stale entry after migration; flushed resolver on all hosts.

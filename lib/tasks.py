@@ -442,6 +442,23 @@ MULTIHOP_REVERSE = Task(
     min_predict=8192,  # thinking models burn tokens scanning for the cross-reference
 )
 
+DISTRACTOR_NOTES = Task(
+    id="distractor_notes",
+    difficulty=2,
+    description=(
+        "An incident archive (~400 reports, ~30k tokens) is provided as context. "
+        "Each report has an incident ID, date, severity, engineer, system, resolution code, and notes. "
+        "Find the resolution code for incident INCIDENT-5000 and write it — and nothing else — to answer.txt."
+    ),
+    subdir="distractor_notes",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=32768,
+    min_predict=20,
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -462,5 +479,6 @@ BUILTIN_TASKS: list[Task] = [
     CONTEXT_64K,
     MULTIHOP_FORWARD,
     MULTIHOP_REVERSE,
+    DISTRACTOR_NOTES,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
