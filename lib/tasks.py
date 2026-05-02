@@ -343,6 +343,64 @@ PYTHON_HASHMAP = Task(
     min_predict=8192,
 )
 
+_CONTEXT_PERF_DESC = (
+    "An incident archive is provided as context. "
+    "Each report has an incident ID, date, severity, engineer, system, resolution code, and notes. "
+    "Find the resolution code for incident INCIDENT-5000 and write it — and nothing else — to answer.txt."
+)
+
+CONTEXT_8K = Task(
+    id="context_8k",
+    difficulty=1,
+    description=_CONTEXT_PERF_DESC + " Archive: ~100 reports (~5.5k tokens). num_ctx=8192.",
+    subdir="context_8k",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=8192,
+    min_predict=20,
+)
+
+CONTEXT_16K = Task(
+    id="context_16k",
+    difficulty=1,
+    description=_CONTEXT_PERF_DESC + " Archive: ~200 reports (~11k tokens). num_ctx=16384.",
+    subdir="context_16k",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=16384,
+    min_predict=20,
+)
+
+CONTEXT_32K = Task(
+    id="context_32k",
+    difficulty=1,
+    description=_CONTEXT_PERF_DESC + " Archive: ~400 reports (~22k tokens). num_ctx=32768.",
+    subdir="context_32k",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=32768,
+    min_predict=20,
+)
+
+CONTEXT_64K = Task(
+    id="context_64k",
+    difficulty=1,
+    description=_CONTEXT_PERF_DESC + " Archive: ~800 reports (~44k tokens). num_ctx=65536.",
+    subdir="context_64k",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=65536,
+    min_predict=20,
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -357,5 +415,9 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_EXPR_EVAL,
     PYTHON_DIJKSTRA,
     PYTHON_HASHMAP,
+    CONTEXT_8K,
+    CONTEXT_16K,
+    CONTEXT_32K,
+    CONTEXT_64K,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
