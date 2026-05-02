@@ -401,6 +401,47 @@ CONTEXT_64K = Task(
     min_predict=20,
 )
 
+_MULTIHOP_DESC = (
+    "An incident archive (~400 reports, ~30k tokens) is provided as context. "
+    "Each report has an incident ID, date, severity, engineer, system, resolution code, and notes. "
+    "Engineer K. Vasquez appears in exactly two incidents in this archive. "
+    "Write the resolution code of the OTHER incident handled by K. Vasquez — and nothing else — to answer.txt."
+)
+
+MULTIHOP_FORWARD = Task(
+    id="multihop_forward",
+    difficulty=3,
+    description=(
+        _MULTIHOP_DESC +
+        " The named anchor incident is INCIDENT-2000 (engineer K. Vasquez, located ~20% into the archive)."
+        " The other K. Vasquez incident is located ~75% into the archive."
+    ),
+    subdir="multihop_forward",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=32768,
+    min_predict=8192,  # thinking models burn tokens scanning for the cross-reference
+)
+
+MULTIHOP_REVERSE = Task(
+    id="multihop_reverse",
+    difficulty=3,
+    description=(
+        _MULTIHOP_DESC +
+        " The named anchor incident is INCIDENT-3000 (engineer K. Vasquez, located ~75% into the archive)."
+        " The other K. Vasquez incident is located ~20% into the archive — before the anchor."
+    ),
+    subdir="multihop_reverse",
+    editable_files=["answer.txt"],
+    context_files=["documents/incident_archive.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=32768,
+    min_predict=8192,  # thinking models burn tokens scanning for the cross-reference
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -419,5 +460,7 @@ BUILTIN_TASKS: list[Task] = [
     CONTEXT_16K,
     CONTEXT_32K,
     CONTEXT_64K,
+    MULTIHOP_FORWARD,
+    MULTIHOP_REVERSE,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

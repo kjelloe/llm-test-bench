@@ -65,7 +65,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (13 total, difficulty L1–L5):
+- Built-in tasks (19 total, difficulty L1–L5):
+
+  **Coding tasks (13):**
   - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
   - `dotnet_sas` (L1) — Azure SAS expiry is 10 min in the past; fix to 60 min future; `xUnit`
   - `node_slugify` (L2) — ESM `src/slug.js`; fix punctuation stripping + hyphen collapsing; `node --test`
@@ -79,6 +81,11 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `python_expr_eval` (L4) — `Parser.expr()` loops on `*`/`/` and `Parser.term()` loops on `+`/`-`, inverting arithmetic precedence; fix by swapping the operator sets so `expr` handles `+`/`-` and `term` handles `*`/`/`; `pytest`
   - `python_dijkstra` (L5) — `dijkstra()` marks nodes visited when enqueued instead of dequeued; shorter paths discovered later are silently ignored; fix by moving `seen.add()` to the dequeue point; `pytest`
   - `python_hashmap` (L5) — `HashMap.delete()` clears slots directly instead of writing a tombstone; breaks linear-probe chains causing `get()` to miss keys inserted after a colliding deletion; `pytest`
+
+  **Context & retrieval tasks (6):**
+  - `context_8k` / `context_16k` / `context_32k` / `context_64k` (L1) — incident archive at 4 sizes (100/200/400/800 records); model finds a specific resolution code at 50% depth; primary metric is tok/s collapse as KV cache fills VRAM. `context_64k` may show `CTX_TRUNCATED` on models where Ollama silently caps `num_ctx` below 65536.
+  - `multihop_forward` (L3) — 400-record archive (~30k tokens); engineer K. Vasquez appears in exactly two incidents; anchor (INCIDENT-2000) at ~20%, answer at ~75%; model must carry the engineer name from hop 1 to locate hop 2.
+  - `multihop_reverse` (L3) — same mechanic, reversed: answer incident at ~20% (before the anchor at ~75%); harder for non-thinking models to reason about, but easier for thinking models that scan forward and flag all K. Vasquez occurrences. Known: gpt-oss:20b passes reverse but fails forward — its thinking loop expands indefinitely scanning forward through a 30k-token document, exhausting even 8192 reasoning tokens; gpt-oss:120b handles both correctly.
 - Each task must:
   - fail baseline tests deterministically (verified before the model call)
   - specify an editable allow-list (one file by default; two for cross-module tasks)

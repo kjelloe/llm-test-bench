@@ -3,10 +3,11 @@
 This repo contains a local, reproducible benchmark harness for evaluating LLMs served by **Ollama** (running locally, typically in WSL) across three capability dimensions:
 
 - **Coding (v1 — implemented):** fix broken code so deterministic tests pass.
-- **Reasoning (v2 — designed):** read documents and answer structured questions.
+- **Context & retrieval (v1 — implemented):** find information in long documents; profile tok/s collapse at different context sizes; multi-hop cross-reference retrieval across document positions.
+- **Structured reasoning (v2 — planned):** structured Q&A across multiple documents with match-type grading.
 - **Agent tasks (v3 — early design):** use tools to accomplish goals in a real environment.
 
-Each type runs as a separate benchmark. This document covers the implemented architecture (v1) and the planned architecture (v2, v3).
+All implemented tasks share the same harness (`bench.py`), protocol (`BEGIN_FILE/END_FILE` into `answer.txt`), and comparison table. This document covers the implemented architecture and the planned extensions.
 
 For the coding benchmark specifically, the harness scores models on:
 
@@ -57,10 +58,12 @@ task_data/
   python_expr_eval/       expr_eval.py (baseline), tests/test_expr_eval.py
   python_dijkstra/        dijkstra.py (baseline), tests/test_dijkstra.py
   python_hashmap/         hashmap.py (baseline), tests/test_hashmap.py
-  context_8k/             documents/incident_archive.txt (~5.5k tok, 100 records), answer.txt (baseline), tests/test_answer.py  — num_ctx=8192
-  context_16k/            documents/incident_archive.txt (~11k tok, 200 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=16384
-  context_32k/            documents/incident_archive.txt (~22k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768
-  context_64k/            documents/incident_archive.txt (~44k tok, 800 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=65536
+  context_8k/             documents/incident_archive.txt (~5.5k tok, 100 records), answer.txt (baseline), tests/test_answer.py  — num_ctx=8192   [tok/s profiler]
+  context_16k/            documents/incident_archive.txt (~11k tok, 200 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=16384  [tok/s profiler]
+  context_32k/            documents/incident_archive.txt (~22k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [tok/s profiler]
+  context_64k/            documents/incident_archive.txt (~44k tok, 800 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=65536  [tok/s profiler]
+  multihop_forward/       documents/incident_archive.txt (~30k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [multi-hop: anchor @20%, answer @75%]
+  multihop_reverse/       documents/incident_archive.txt (~30k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [multi-hop: answer @20%, anchor @75%]
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
@@ -290,7 +293,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
-- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` (16384), `python_minheap` (12800), and `python_expr_eval` (8192) all carry elevated budgets because gpt-oss:20b burns thousands of reasoning tokens before emitting output.
+- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` (16384), `python_minheap` (12800), `python_expr_eval` (8192), and `multihop_*` (8192) all carry elevated budgets because gpt-oss:20b burns thousands of reasoning tokens before emitting output. Note: gpt-oss:20b fails `multihop_forward` even at 8192 tokens — its thinking loop expands indefinitely when scanning forward through long documents, exhausting all budget. This is a valid capability signal, not a budget misconfiguration; gpt-oss:120b handles the same task correctly.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 - GPU monitoring requires `nvidia-ml-py` and an NVIDIA GPU. Without it, `gpu_snapshots` and `kv_cache` fields are `null`; the benchmark otherwise runs identically.
