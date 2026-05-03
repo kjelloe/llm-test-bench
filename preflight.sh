@@ -113,14 +113,6 @@ else
   fail "dotnet not found — https://dotnet.microsoft.com/download"
 fi
 
-# ── 7. Aider (optional) ───────────────────────────────────────────────────────
-section "Aider (optional — not used by benchmark)"
-if command -v aider &>/dev/null; then
-  ok "aider $(aider --version 2>&1 | head -1)"
-else
-  warn "aider not found — not required"
-fi
-
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo
 echo -e "${BOLD}════════════════════════════════════════${NC}"
