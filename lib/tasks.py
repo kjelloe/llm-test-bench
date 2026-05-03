@@ -459,6 +459,24 @@ DISTRACTOR_NOTES = Task(
     min_predict=20,
 )
 
+PYTHON_TOKENIZER = Task(
+    id="python_tokenizer",
+    difficulty=4,
+    description=(
+        "The tokenizer has a bug: after processing an escape sequence inside a string, "
+        "it transitions back to the wrong state instead of remaining inside the string. "
+        "This causes characters following any escape sequence to be tokenized as WORD or UNKNOWN "
+        "tokens outside the string rather than being included in the STRING token. "
+        "Fix tokenizer.py so all tests pass."
+    ),
+    subdir="python_tokenizer",
+    editable_files=["tokenizer.py"],
+    context_files=["tests/test_tokenizer.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=4096,  # thinking models need budget to reason + output the full file
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -473,6 +491,7 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_EXPR_EVAL,
     PYTHON_DIJKSTRA,
     PYTHON_HASHMAP,
+    PYTHON_TOKENIZER,
     CONTEXT_8K,
     CONTEXT_16K,
     CONTEXT_32K,

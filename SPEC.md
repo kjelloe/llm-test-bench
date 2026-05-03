@@ -60,12 +60,12 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
-- `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 2400 --model-timeout 900`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`.
+- `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 2400 --model-timeout 1200`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models from `models/default.txt`, Python, Node, .NET).
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (20 total, difficulty L1–L5):
+- Built-in tasks (21 total, difficulty L1–L5):
 
   **Coding tasks (13):**
   - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
@@ -79,6 +79,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `node_memoize_bug` (L3) — `memoize()` key uses only `String(args[0])`; must use `JSON.stringify(args)` to avoid stale cache on multi-arg calls; `node --test`
   - `python_ledger_bug` (L4) — `Ledger.transfer()` credits the destination before checking the source balance; a failed transfer corrupts the destination; fix by reordering check → debit → credit → log; `pytest`
   - `python_expr_eval` (L4) — `Parser.expr()` loops on `*`/`/` and `Parser.term()` loops on `+`/`-`, inverting arithmetic precedence; fix by swapping the operator sets so `expr` handles `+`/`-` and `term` handles `*`/`/`; `pytest`
+  - `python_tokenizer` (L4) — character-by-character state machine tokeniser; `ESCAPE` state transitions back to `INIT` instead of `STRING`, so characters after any escape sequence leak out of the string as `WORD`/`UNKNOWN` tokens; fix is one word: `INIT` → `STRING`. Discriminator: qwen2.5-coder:14b changes the buffer accumulation line too (wrong fix); gpt-oss:20b identifies the fix conceptually but its thinking loop exhausts the 4096-token budget without emitting output. `min_predict=4096` (thinking models need budget for reasoning + full-file output). `pytest`
   - `python_dijkstra` (L5) — `dijkstra()` marks nodes visited when enqueued instead of dequeued; shorter paths discovered later are silently ignored; fix by moving `seen.add()` to the dequeue point; `pytest`
   - `python_hashmap` (L5) — `HashMap.delete()` clears slots directly instead of writing a tombstone; breaks linear-probe chains causing `get()` to miss keys inserted after a colliding deletion; `pytest`
 
@@ -117,7 +118,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - Failures are categorised:
   - `BASELINE_PASSED_INVALID_TASK` — task fixture is broken
   - `NO_BLOCKS` — model produced no parseable edits
-  - `CTX_TRUNCATED` — prompt was silently truncated by Ollama (num_ctx capped below request due to VRAM); detected when `prompt_eval_count < len(prompt) // 4`
+  - `CTX_TRUNCATED` — prompt was silently truncated by Ollama (num_ctx capped below request due to VRAM); detected when `prompt_eval_count < len(prompt) // 5`
   - `EDITED_NONEDITABLE_FILE` — model violated the allow-list
   - `TESTS_STILL_FAIL` — edits applied but tests still fail
   - `TOOL_ERROR` — setup/test runner timeout or crash

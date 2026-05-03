@@ -134,10 +134,10 @@ def run_one(
         }
         record["tok_per_s"] = round(m.tok_per_s, 1)
         # Detect silent num_ctx downgrade: Ollama may cap the context below our request
-        # when VRAM is insufficient. Actual chars/token for this workload is ~3, so
-        # len(prompt)//4 is a conservative floor. If prompt_eval_count falls below it,
-        # the prompt was truncated and the model likely never saw the target content.
-        record["ctx_truncated"] = m.prompt_eval_count < len(prompt) // 4
+        # when VRAM is insufficient. Actual chars/token for this workload is ~3-4, so
+        # len(prompt)//5 is a conservative floor. Using //4 caused false positives on
+        # small code prompts where the actual ratio is ~4.1 chars/token.
+        record["ctx_truncated"] = m.prompt_eval_count < len(prompt) // 5
 
         total_kv_tokens = m.prompt_eval_count + m.eval_count
         kv_delta_mb: int | None = None
