@@ -19,9 +19,9 @@ class Task:
     setup_cmd: list[str] | None = None
     setup_timeout: int = 120
     difficulty: int = 1  # 1=Easy  2=Medium  3=Hard
-    num_ctx: int | None = None      # override global --num-ctx for this task (None = use global)
-    min_predict: int | None = None  # floor on --num-predict for this task; useful when the output
-                                    # file is large and thinking models need extra token budget
+    num_ctx: int | None = None          # override global --num-ctx for this task (None = use global)
+    min_predict: int | None = None      # floor on --num-predict for this task
+    model_timeout: int | None = None    # override global --model-timeout for this task (seconds)
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -231,7 +231,7 @@ PYTHON_LFU_CACHE = Task(
     context_files=["tests/test_lfu_cache.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=16384,  # ~350 tokens output; gpt-oss:20b burns ~13k tokens reasoning → 12800 hit ceiling, 16384 gives safe headroom
+    min_predict=2048,   # gpt-oss:120b uses ~1090 tokens; gpt-oss:20b always exhausts any budget (thinking runaway, not a token count issue)
 )
 
 PYTHON_LEDGER_BUG = Task(
@@ -477,6 +477,41 @@ PYTHON_TOKENIZER = Task(
     min_predict=4096,  # thinking models need budget to reason + output the full file
 )
 
+_CODE_ARCHIVE_DESC = (
+    "A Python source archive is provided as context. "
+    "It contains concatenated Python standard library modules. "
+    "One module defines a constant named BENCHMARK_SENTINEL_VALUE. "
+    "Find its value and write it — and nothing else — to answer.txt."
+)
+
+CONTEXT_128K = Task(
+    id="context_128k",
+    difficulty=1,
+    description=_CODE_ARCHIVE_DESC + " Archive: ~440 KB (~110k tokens). num_ctx=131072.",
+    subdir="context_128k",
+    editable_files=["answer.txt"],
+    context_files=["documents/code_archive.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=131072,
+    min_predict=4096,   # thinking models burn tokens before outputting at large context sizes
+    model_timeout=3600,  # prompt eval at 128k tokens can take 20-30 min on RAM-bound models
+)
+
+CONTEXT_256K = Task(
+    id="context_256k",
+    difficulty=1,
+    description=_CODE_ARCHIVE_DESC + " Archive: ~880 KB (~220k tokens). num_ctx=262144.",
+    subdir="context_256k",
+    editable_files=["answer.txt"],
+    context_files=["documents/code_archive.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=262144,
+    min_predict=4096,   # thinking models burn tokens before outputting at large context sizes
+    model_timeout=7200,  # prompt eval at 256k tokens can take 60+ min on RAM-bound models
+)
+
 BUILTIN_TASKS: list[Task] = [
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
@@ -499,5 +534,7 @@ BUILTIN_TASKS: list[Task] = [
     MULTIHOP_FORWARD,
     MULTIHOP_REVERSE,
     DISTRACTOR_NOTES,
+    CONTEXT_128K,
+    CONTEXT_256K,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}

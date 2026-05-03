@@ -87,6 +87,7 @@ def run_one(
         prompt = build_prompt(task, workdir)
         effective_num_ctx = max(num_ctx, task.num_ctx) if task.num_ctx else num_ctx
         effective_num_predict = max(num_predict, task.min_predict) if task.min_predict else num_predict
+        effective_timeout = task.model_timeout if task.model_timeout else model_timeout
         vram_pre = get_gpu_snapshot()   # before prompt eval — weights loaded, no KV cache yet
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
@@ -102,7 +103,7 @@ def run_one(
                 temperature=temperature,
                 seed=seed,
                 num_predict=effective_num_predict,
-                timeout=model_timeout,
+                timeout=effective_timeout,
                 think=think,
                 num_thread=num_thread,
             )
