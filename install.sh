@@ -91,8 +91,38 @@ if python3 -m pytest --version &>/dev/null 2>&1; then
   ok "pytest $(python3 -m pytest --version 2>&1 | awk '{print $NF}')"
 else
   fail "pytest not installed"
-  if ask "Install pytest via pip?"; then
-    run_cmd "pytest" python3 -m pip install --user pytest
+
+  # Ensure pip is available before trying to use it
+  if ! python3 -m pip --version &>/dev/null 2>&1; then
+    warn "pip not found — attempting to install it first"
+    PIP_INSTALLED=false
+    case "$PLATFORM-$PKG_MGR" in
+      linux-apt)    run_cmd "python3-pip" sudo apt-get install -y python3-pip && PIP_INSTALLED=true ;;
+      linux-dnf)    run_cmd "python3-pip" sudo dnf install -y python3-pip && PIP_INSTALLED=true ;;
+      linux-pacman) run_cmd "python-pip"  sudo pacman -S --noconfirm python-pip && PIP_INSTALLED=true ;;
+      *)
+        info "Trying ensurepip as fallback…"
+        if python3 -m ensurepip --upgrade &>/dev/null 2>&1; then
+          ok "pip bootstrapped via ensurepip"
+          PIP_INSTALLED=true
+        else
+          fail "Could not install pip automatically — install it manually and re-run"
+        fi ;;
+    esac
+    # ensurepip fallback for apt/dnf/pacman if the package install failed
+    if [[ "$PIP_INSTALLED" == "false" ]] && python3 -m ensurepip --upgrade &>/dev/null 2>&1; then
+      ok "pip bootstrapped via ensurepip"
+      PIP_INSTALLED=true
+    fi
+  fi
+
+  if python3 -m pip --version &>/dev/null 2>&1; then
+    if ask "Install pytest via pip?"; then
+      run_cmd "pytest" python3 -m pip install --user pytest
+    fi
+  else
+    fail "pip still unavailable — cannot install pytest automatically"
+    info "Install pip manually, then run: python3 -m pip install --user pytest"
   fi
 fi
 
