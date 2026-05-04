@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from lib.gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
+from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError, chat, unload_model
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
@@ -235,6 +236,8 @@ def main() -> None:
     else:
         tasks_to_run = BUILTIN_TASKS
 
+    hw = get_hw_snapshot()
+
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     total = len(pairs)
     results = []
@@ -305,9 +308,9 @@ def main() -> None:
     task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    write_results(results, args.out)
+    write_results(results, args.out, hardware=hw)
     print(f"\nResults written to {args.out}")
-    print_comparison_table(results, task_difficulties=task_difficulties, model_timeout=args.model_timeout)
+    print_comparison_table(results, task_difficulties=task_difficulties, model_timeout=args.model_timeout, hardware=hw)
     print_summary(results)
 
 

@@ -61,11 +61,12 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
 - `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 2400 --model-timeout 1200`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`.
+- `install.sh`: interactive installer; checks each dependency (Python, pytest, Node.js 20+, .NET 8, Ollama, models) and offers to install anything missing. Platform-aware: supports apt, dnf, pacman, brew.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models from `models/default.txt`, Python, Node, .NET).
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (21 total, difficulty L1–L5):
+- Built-in tasks (23 total, difficulty L1–L5):
 
   **Coding tasks (13):**
   - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
@@ -85,6 +86,8 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
   **Context & retrieval tasks (6):**
   - `context_8k` / `context_16k` / `context_32k` / `context_64k` (L1) — incident archive at 4 sizes (100/200/400/800 records); model finds a specific resolution code at 50% depth; primary metric is tok/s collapse as KV cache fills VRAM. `context_64k` may show `CTX_TRUNCATED` on models where Ollama silently caps `num_ctx` below 65536.
+  - `context_128k` (L1) — 440 KB Python stdlib code archive (~110k tokens); BENCHMARK_SENTINEL_VALUE at 50% depth; num_ctx=131072, model_timeout=3600s.
+  - `context_256k` (L1) — 880 KB Python stdlib code archive (~220k tokens); BENCHMARK_SENTINEL_VALUE at 50% depth; num_ctx=262144, model_timeout=7200s. Models with insufficient VRAM/RAM will produce CTX_TRUNCATED.
   - `multihop_forward` (L3) — 400-record archive (~30k tokens); engineer K. Vasquez appears in exactly two incidents; anchor (INCIDENT-2000) at ~20%, answer at ~75%; model must carry the engineer name from hop 1 to locate hop 2.
   - `multihop_reverse` (L3) — same mechanic, reversed: answer incident at ~20% (before the anchor at ~75%); harder for non-thinking models to reason about, but easier for thinking models that scan forward and flag all K. Vasquez occurrences. Known: gpt-oss:20b passes reverse but fails forward — its thinking loop expands indefinitely scanning forward through a 30k-token document, exhausting even 8192 reasoning tokens; gpt-oss:120b handles both correctly.
   - `distractor_notes` (L2) — 400-record archive (~30k tokens); target is INCIDENT-5000 (header record at ~50%, RC-3847); three other records mention INCIDENT-5000 in their Notes field with distinct decoy RCs at ~15%, ~35%, ~70%. Model must read the record header field, not note-body text. Known: gpt-oss:20b fails with recency bias (anchors on the last notes mention at ~70%); all other models pass correctly.
@@ -124,12 +127,14 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `TOOL_ERROR` — setup/test runner timeout or crash
 
 7) Outputs
-- `output/results.json` (or the path passed to `--out`): list of records (one per model × task).
-- Console comparison table: rows = models, columns = tasks + summary; each cell shows `PASS/FAIL`, `tok/s`, `wall_s`; `Spd` column shows assumed speed rank (1 = fastest, by model set order).
+- `output/results.json` (or the path passed to `--out`): JSON object `{"hardware": {...}, "results": [...]}` where `hardware` is the snapshot from `hw_snapshot.get_hw_snapshot()` (GPU list, CPU string, RAM, platform). Old flat-list format still readable via `load_results()`.
+- Console comparison table: paginated (one or more `[1/N]` … `[N/N]` sub-tables when task count exceeds terminal width); rows = models, columns = tasks + summary; `Spd` column = assumed speed rank (1 = fastest); `Skill` column = highest L-tier where model passes all tasks at that level and below, with `CTX_TRUNCATED` excluded (hardware constraint, not capability failure).
 - Console failure detail: error kind counts + one-line sample per category.
-- `output/compare-history.json`: last 10 run summaries with per-model/per-task breakdown; used to show estimated runtime in the compare header.
+- `output/compare-history.json`: last 10 run summaries with per-model/per-task breakdown and hardware metadata; used to show estimated runtime in the compare header.
 
 ### Result Record Schema
+
+Results file top-level: `{"hardware": {"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str}, "results": [...]}`.
 
 Per model × task run:
 

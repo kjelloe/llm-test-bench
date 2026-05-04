@@ -13,7 +13,13 @@ Benchmarks local Ollama-served LLMs on coding tasks. Each model is given a broke
 - .NET 8 SDK
 - The models you want to test pulled (`ollama pull <model>`)
 
-Run the preflight check to verify everything is in order:
+Run the interactive installer to set up any missing dependencies:
+
+```bash
+./install.sh
+```
+
+Then run the preflight check to verify everything is in order:
 
 ```bash
 ./preflight.sh
@@ -61,7 +67,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all thirteen tasks. Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all twenty-three tasks. Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (8 models)
 
@@ -95,25 +101,28 @@ The header printed before each run shows estimated runtime from the previous run
 
 ## Output
 
-At the end of every run a comparison table is printed:
+At the end of every run a comparison table is printed. When the full table would exceed the terminal width it automatically paginates, printing `[1/N]`, `[2/N]`, … headers:
 
 ```
-COMPARISON TABLE  (Spd: assumed rank 1=fastest  |  Skill: L1:2  L2:3  L3:4  L4:2  L5:2)
+COMPARISON TABLE [1/3]  (Spd: assumed rank 1=fastest  |  Skill: L1:6  L2:4  L3:5  L4:3  L5:2)
+Hardware: RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 GB RAM
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
-| Model              | Spd | Skill | python_safe_div          | node_slugify             |   …     | node_memoize_bug         | pass  avg tok/s   tot s   |
-|                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L4) ok  tok/s  wall     |                           |
+| Model              | Spd | Skill | python_safe_div          | node_slugify             |   …     | context_128k             | pass  avg tok/s   tot s   |
+|                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L1) ok  tok/s  wall     |                           |
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
-| gpt-oss:20b        |  1  |  L2   | PASS    82.1t/s     8.3s | PASS    81.7t/s    23.4s |   …     | PASS    82.8t/s    16.3s | 7/9    82.0t/s     …s     |
-| qwen3-coder:30b    |  3  |  L3   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS    43.5t/s    14.1s | 9/9    39.5t/s     …s     |
+| gpt-oss:20b        |  1  |  L3   | PASS    82.1t/s     8.3s | PASS    81.7t/s    23.4s |   …     | PASS  1574.0t/s    18.5s | 19/23   82.0t/s     …s    |
+| qwen3-coder:30b    |  3  |  L3   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS   404.0t/s    62.0s | 21/23   39.5t/s     …s    |
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 
 FAILURE DETAIL
   Model: gpt-oss:20b
     NO_BLOCKS: 2
       e.g. [thinking: We need to fix _promote to update min_freq … all 2400 tokens used for thinking]
+    CTX_TRUNCATED: 2
+      e.g. context_256k — Ollama capped num_ctx below 262144 (insufficient VRAM/RAM)
 ```
 
-The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below.
+The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below. `CTX_TRUNCATED` failures (Ollama capping the context window due to VRAM/RAM limits) are treated as hardware constraints and excluded from the skill rating — they do not reduce a model's tier.
 
 Results are also written to JSON (default: `output/results.json`; `output/results-compare.json` for `compare.sh`; `output/results-extended.json` for `compare.sh extended`).
 
@@ -147,6 +156,15 @@ Tasks are tagged with a difficulty level (L1–L5) used to compute the **Skill**
 | `python_expr_eval` | L4 | Python / pytest | `Parser.expr()` and `Parser.term()` have their operator sets swapped — `*`/`/` are treated as low-precedence and `+`/`-` as high-precedence, inverting standard arithmetic precedence |
 | `python_dijkstra` | L5 | Python / pytest | `dijkstra()` in `dijkstra.py` marks nodes visited when enqueued instead of when dequeued — shorter paths discovered later are silently ignored, producing wrong distances and paths |
 | `python_hashmap` | L5 | Python / pytest | `HashMap.delete()` in `hashmap.py` clears slots directly instead of writing a tombstone — breaks linear-probe chains, causing `get()` to miss keys inserted after a colliding deletion |
+| `context_8k` | L1 | Python / pytest | Find a sentinel value (`BENCHMARK_SENTINEL_VALUE`) at 50% depth in a ~5.5k-token Python stdlib archive; primary metric is prompt-eval tok/s at this context size |
+| `context_16k` | L1 | Python / pytest | Same as context_8k at ~11k tokens |
+| `context_32k` | L1 | Python / pytest | Same as context_8k at ~22k tokens |
+| `context_64k` | L1 | Python / pytest | Same as context_8k at ~44k tokens |
+| `context_128k` | L1 | Python / pytest | Same as context_8k at ~110k tokens (~440 KB real stdlib code); num_ctx=131072 |
+| `context_256k` | L1 | Python / pytest | Same as context_8k at ~220k tokens (~880 KB real stdlib code); num_ctx=262144 — may CTX_TRUNCATE on models with insufficient VRAM/RAM |
+| `multihop_forward` | L3 | Python / pytest | Two-hop retrieval: find engineer K. Vasquez in the archive (anchor at ~20%), carry name forward to locate a second incident at ~75% |
+| `multihop_reverse` | L3 | Python / pytest | Same mechanic reversed: answer at ~20%, anchor at ~75% |
+| `distractor_notes` | L2 | Python / pytest | Find INCIDENT-5000 header at ~50%; three decoy mentions in note bodies at ~15%, ~35%, ~70% — model must read the header field, not the notes |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
 
@@ -163,6 +181,8 @@ The **Skill** column in the results table shows the highest difficulty tier wher
 | `L1` | Passes L1 only, fails at least one L2 task |
 | `<L1` | Fails at least one L1 task |
 
+`CTX_TRUNCATED` failures are excluded from this calculation — a model that could not process a large-context task due to VRAM/RAM limits is not penalised in its tier rating.
+
 ---
 
 ## All CLI options
@@ -172,12 +192,16 @@ python3 bench.py --help
 
   --models MODEL [MODEL ...]   Ollama model names (required)
   --tasks TASK_ID [...]        Subset of tasks (default: all)
-                               Choices: node_slugify, python_safe_div, dotnet_sas,
-                                        node_csv_parser, python_lru_cache,
-                                        python_lfu_cache, python_minheap,
-                                        python_multifile_rename, node_memoize_bug,
+                               Choices: python_safe_div, dotnet_sas, node_slugify,
+                                        python_lru_cache, python_multifile_rename,
+                                        node_csv_parser, python_lfu_cache,
+                                        python_minheap, node_memoize_bug,
                                         python_ledger_bug, python_expr_eval,
-                                        python_dijkstra, python_hashmap
+                                        python_tokenizer, python_dijkstra,
+                                        python_hashmap, context_8k, context_16k,
+                                        context_32k, context_64k, context_128k,
+                                        context_256k, multihop_forward,
+                                        multihop_reverse, distractor_notes
   --ollama-url URL             Default: http://localhost:11434
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx

@@ -23,6 +23,10 @@ def cmd_show(stats_file: str, current_models: list[str]) -> None:
         passed, pairs = o.get("passes", "?"), o.get("pairs", "?")
         m, s = int(w // 60), int(w % 60)
         print(f"  Last run    : {ts}  {passed}/{pairs} passed  ({m}m {s}s wall)")
+        hw = last.get("hardware")
+        if hw:
+            from lib.hw_snapshot import hw_summary
+            print(f"  Hardware    : {hw_summary(hw)}")
     mh = history.get("model_history", {})
     if mh:
         print("  Model history:")
@@ -46,7 +50,13 @@ def cmd_save(results_file: str, history_file: str) -> None:
     if not results_path.exists():
         return
 
-    results = json.loads(results_path.read_text())
+    raw = json.loads(results_path.read_text())
+    hardware: dict | None = None
+    if isinstance(raw, dict):
+        results = raw["results"]
+        hardware = raw.get("hardware")
+    else:
+        results = raw
     models = list(dict.fromkeys(r["model"] for r in results))
     tasks  = list(dict.fromkeys(r["task"]  for r in results))
     idx    = {(r["model"], r["task"]): r for r in results}
@@ -99,6 +109,7 @@ def cmd_save(results_file: str, history_file: str) -> None:
         "overall":      {"pairs": len(results), "passes": total_passes,
                          "fails": len(results) - total_passes},
         "per_model":    per_model,
+        "hardware":     hardware,
     }
 
     history = (json.loads(history_path.read_text())

@@ -24,6 +24,7 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 # ── Coding benchmark (v1 — implemented) ─────────────────────────────────────
 bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
+install.sh                Interactive installer: checks and installs missing dependencies
 run.sh                    Venv setup + bench.py entrypoint
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; forwards extra args
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
@@ -32,8 +33,9 @@ lib/                      Python support modules (imported by bench.py) and shel
   tasks.py                Task dataclass, built-in task definitions, prompt builder, subprocess helpers
   ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
-  reporting.py            Comparison table, failure detail, JSON writer
+  reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
+  hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi), CPU string, RAM total, platform
   history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
   show-all-models.sh      Runs ollama show on every locally installed model
 output/                   Runtime artifacts — git-ignored, created on first run
@@ -66,6 +68,8 @@ task_data/
   multihop_forward/       documents/incident_archive.txt (~30k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [multi-hop: anchor @20%, answer @75%]
   multihop_reverse/       documents/incident_archive.txt (~30k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [multi-hop: answer @20%, anchor @75%]
   distractor_notes/       documents/incident_archive.txt (~30k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [distractor: 3 note-body cross-refs near true INCIDENT-5000 header @50%]
+  context_128k/           documents/code_archive.py (~440 KB, ~110k tok Python stdlib), answer.txt (baseline), tests/test_answer.py  — num_ctx=131072  model_timeout=3600s
+  context_256k/           documents/code_archive.py (~880 KB, ~220k tok Python stdlib), answer.txt (baseline), tests/test_answer.py  — num_ctx=262144  model_timeout=7200s
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
@@ -131,13 +135,14 @@ For each `(model, task)` pair:
 - If `--warmup`: sends a tiny prompt to each model just before its first task (JIT, not bulk upfront) using `keep_alive=-1` to keep it resident through all its tasks. Captures `gpu_after` snapshot post-warmup.
 - Per task in `run_one()`: takes `vram_pre` snapshot before `chat()`, starts `launch_peak_poller()` thread, calls `chat()`, takes `vram_post` immediately after, stops the poller, stores `peak_during_gen`.
 - Calls `run_one()` per pair; collects result records.
-- On completion: writes results to `--out` path (default `output/results.json`), prints comparison table, prints failure detail.
+- On completion: writes results to `--out` path (default `output/results.json`) with hardware metadata included, prints the (paginated) comparison table, prints failure detail.
+- Hardware snapshot (`hw_snapshot.get_hw_snapshot()`) is taken once at startup and attached to the results JSON and passed to `print_comparison_table` for display.
 
 #### `tasks.py` — Task Library + Prompt Builder
 
 Two responsibilities kept in one module to avoid a thin `prompting.py` abstraction:
 
-- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=L1/2=L2/3=L3/4=L4/5=L5, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`), `min_predict` (optional per-task floor on `--num-predict`; useful when thinking models need extended token budget for reasoning before output).
+- **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=L1/2=L2/3=L3/4=L4/5=L5, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`), `min_predict` (optional per-task floor on `--num-predict`; useful when thinking models need extended token budget for reasoning before output), `model_timeout` (optional per-task override for the Ollama HTTP request timeout; context_128k and context_256k set 3600s/7200s respectively because prompt-eval alone at those sizes can exceed the default 300s).
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
 - **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
@@ -162,9 +167,18 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 
 #### `reporting.py` — Output
 
-- `print_comparison_table(results, task_difficulties, model_timeout)` — ASCII table: rows = models, columns = `Spd` (assumed speed rank) + `Skill` (highest difficulty tier where model passes all tasks) + tasks + summary. Each task cell shows `PASS/FAIL`, `tok/s`, `wall_s`; the sub-header shows the task's difficulty level `(L1)/(L2)/(L3)/(L4)`. The Skill column and legend are derived dynamically from the current task set's max difficulty. `model_timeout` (optional int) is shown in the table header to provide context for wall times near the limit.
+- `print_comparison_table(results, task_difficulties, model_timeout, hardware)` — paginated ASCII table: rows = models, columns = `Spd` + `Skill` + tasks + summary. When the full table would exceed the terminal width (detected via `shutil.get_terminal_size()`), tasks are split into pages printed as `[1/N]`, `[2/N]`, … with the full summary column repeated on each page. `Skill` shows the highest difficulty tier where the model passes all tasks at that level and below; `CTX_TRUNCATED` failures are excluded (hardware constraint, not a capability gap). `hardware` (optional dict from `hw_snapshot.get_hw_snapshot()`) is printed as a one-line summary under the table title.
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
-- `write_results(results, path)` — JSON dump.
+- `write_results(results, path, hardware)` — JSON dump; wraps results as `{"hardware": {...}, "results": [...]}` when hardware is provided.
+- `load_results(path)` — reads both the old flat-list format and the new wrapped format; returns `(results, hardware)`.
+
+#### `lib/hw_snapshot.py` — Hardware Snapshot
+
+Captures a point-in-time hardware description at benchmark start:
+- `get_hw_snapshot() -> dict` — returns `{"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str}`. GPU list from `nvidia-smi --query-gpu=name,memory.total,driver_version`; CPU from `/proc/cpuinfo` (Linux) or `sysctl` (macOS); RAM from `/proc/meminfo` or `sysctl hw.memsize`. Returns empty/0 values gracefully if a query fails.
+- `hw_summary(hw) -> str` — one-line string suitable for display, e.g. `RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 GB RAM`.
+
+The snapshot is saved in `results.json` as a top-level `"hardware"` field and in `compare-history.json` per run entry, allowing results from different machines or GPUs to be compared.
 
 #### `lib/history.py` — Run History Manager
 
@@ -179,7 +193,11 @@ Written by `compare.sh` (via `lib/history.py save`) after each run. Two top-leve
 - **`runs`** — last 10 full run summaries (timestamp, models, tasks, overall pass/fail, per-model breakdown). Used by the `compare.sh` header to show estimated runtime for the next run.
 - **`model_history`** — dict keyed by model name; each value is a list of that model's last 10 run entries (`timestamp`, `passes`, `total_tasks`, `avg_tok_per_s`, `total_wall_s`, `per_task`). Persists across model set changes — models swapped out of `bench-models.sh` retain their history and appear in the header as "Archived models".
 
-### Data Model (Result Record)
+### Data Model
+
+Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. The top-level `"hardware"` field contains the snapshot from `hw_snapshot.get_hw_snapshot()` (gpu list, cpu string, ram_total_gb, platform). The old flat-list format is still readable via `load_results()`.
+
+#### Result Record
 
 | Field | Type | Notes |
 |---|---|---|
@@ -296,6 +314,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
 - Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` (16384), `python_minheap` (12800), `python_expr_eval` (8192), `multihop_*` (8192), and `python_tokenizer` (4096) all carry elevated budgets because gpt-oss:20b burns thousands of reasoning tokens before emitting output. Note: gpt-oss:20b fails `multihop_forward` even at 8192 tokens — its thinking loop expands indefinitely when scanning forward through long documents, exhausting all budget. It similarly exhausts all budget on `python_tokenizer` (correctly identifies the ESCAPE→STRING fix but keeps reconsidering the buffer-handling line indefinitely). It also fails `distractor_notes` (correct answer requires reading the record header, not note-body mentions; gpt-oss:20b anchors on a later note-body occurrence with recency bias). All three are valid capability signals, not budget misconfigurations; gpt-oss:120b handles all correctly.
+- `CTX_TRUNCATED` failures are excluded from the `Skill` rating in the comparison table — a model that cannot fill a 256k context due to VRAM/RAM limits is not penalised in its tier. Only genuine capability failures (`TESTS_STILL_FAIL`, `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`) count against the skill score.
 - `CTX_TRUNCATED` detection uses `prompt_eval_count < len(prompt) // 5` rather than `// 4`. The `// 4` threshold produced false positives on small code prompts (Python code tokenises at ~4.1 chars/token rather than 4.0, putting genuine full-context runs 24 tokens below the floor). The `// 5` floor still reliably catches real truncation events such as Ollama capping a 65k-token context request at 32768 tokens.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.

@@ -26,9 +26,11 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 - `--warmup` sends a 5-token dummy prompt to each model before the benchmark loop to force
   model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
   (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.
-- Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 900`
+- Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 1200`
   because large RAM-bound models (gpt-oss:120b) at ~1–2 tok/s need up to
   ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.
+  Individual tasks may override with `model_timeout` on the Task dataclass (e.g. context_128k
+  uses 3600s and context_256k uses 7200s because prompt-eval alone can exceed 1200s).
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement
@@ -52,28 +54,37 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 
 ```
 bench.py            CLI runner
-tasks.py            Task definitions, prompt builder, subprocess helpers
-ollama_client.py    Ollama /api/chat client
-parsing.py          BEGIN_FILE/END_FILE parser + allow-list validator
-reporting.py        Comparison table, failure detail, JSON writer
+install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper
-compare.sh          Runs canonical 4-model set
+compare.sh          Runs canonical 6-model set (model-timeout 1200, num-predict 2400)
 preflight.sh        Dependency checker
+lib/
+  tasks.py          Task definitions, prompt builder, subprocess helpers
+  ollama_client.py  Ollama /api/chat client
+  parsing.py        BEGIN_FILE/END_FILE parser + allow-list validator
+  reporting.py      Comparison table (paginated), failure detail, JSON writer
+  hw_snapshot.py    GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
+  gpu_monitor.py    pynvml GPU telemetry
+  history.py        Run history writer and header printer
 tests/
   test_parsing.py   Parser unit tests  →  python3 -m pytest tests/
 task_data/
-  node_slugify/     Node.js ESM task
-  python_safe_div/  Python pytest task
-  dotnet_sas/       .NET xUnit task
+  python_safe_div/  L1 Python pytest task (13 coding tasks total, L1–L5)
+  context_8k/       L1 context retrieval at ~5.5k tokens (6 context tasks total)
+  multihop_forward/ L3 two-hop retrieval (2 multihop tasks)
+  distractor_notes/ L2 decoy-resistant retrieval
 ```
 
 #### How to Run
 
 ```bash
-# Check all dependencies first
+# Install missing dependencies interactively
+./install.sh
+
+# Check all dependencies
 ./preflight.sh
 
-# Full benchmark (4 models × 3 tasks)
+# Full benchmark (6 models × 23 tasks)
 ./compare.sh
 
 # Single model / subset of tasks
