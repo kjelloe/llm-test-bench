@@ -512,7 +512,31 @@ CONTEXT_256K = Task(
     model_timeout=7200,  # prompt eval at 256k tokens can take 60+ min on RAM-bound models
 )
 
+CSV_NORDIC_PROPERTY = Task(
+    id="csv_nordic_property",
+    difficulty=3,
+    description=(
+        "Implement solution.py to process a Norwegian residential property dataset "
+        "(data.csv — 5 000 rows × 103 columns, Nordic semicolon-separated CSV, UTF-8). "
+        "The script must: "
+        "(1) answer 10 data questions and write them to answers.txt, one per line; "
+        "(2) select the bottom-25%% and top-25%% of regions by 2023 total purchase sum and "
+        "write output.csv (Nordic format) containing only the 1992 and 2022 year-columns "
+        "(lowest and highest national totals), sorted ascending by 2023 total. "
+        "See the docstrings in solution.py and the tests in test_solution.py for exact "
+        "specifications. data.csv is present in the working directory but not shown in full — "
+        "use data_sample.csv (title row + header + 5 data rows) to understand the format."
+    ),
+    subdir="csv_nordic_property",
+    editable_files=["solution.py"],
+    context_files=["data_sample.csv", "test_solution.py"],
+    test_cmd=["python3", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
+    test_timeout=120,
+    min_predict=6000,  # gemma4 is verbose and truncated at 4000; thinking-model overhead adds ~1500 tokens
+)
+
 BUILTIN_TASKS: list[Task] = [
+    CSV_NORDIC_PROPERTY,
     NODE_SLUGIFY,
     PYTHON_SAFE_DIV,
     DOTNET_SAS,

@@ -67,7 +67,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all twenty-three tasks. Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all twenty-four tasks. Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (8 models)
 
@@ -141,8 +141,9 @@ The `before_load` snapshot includes a `"dirty": true` flag if VRAM did not drain
 
 Tasks are tagged with a difficulty level (L1–L5) used to compute the **Skill** rating in the results table.
 
-| ID | Level | Language | What the model must fix |
+| ID | Level | Language | What the model must do |
 |----|-------|----------|------------------------|
+| `csv_nordic_property` | L3 | Python / pytest | Implement `solution.py` to answer 10 questions about a 5 000-row Norwegian property dataset (Nordic CSV: `;`-separated, UTF-8, `..` for missing values) and produce a filtered `output.csv` — bottom-25% and top-25% of regions by 2023 purchase sum, with only the 1992 and 2022 year-columns |
 | `python_safe_div` | L1 | Python / pytest | `safe_div()` raises `ZeroDivisionError` instead of `ValueError` |
 | `dotnet_sas` | L1 | .NET 8 / xUnit | Azure SAS token `ExpiresOn` is 10 min in the past instead of 60 min in the future |
 | `node_slugify` | L2 | Node.js / ESM | `slugify()` in `src/slug.js` doesn't strip punctuation or collapse hyphens |
@@ -192,7 +193,8 @@ python3 bench.py --help
 
   --models MODEL [MODEL ...]   Ollama model names (required)
   --tasks TASK_ID [...]        Subset of tasks (default: all)
-                               Choices: python_safe_div, dotnet_sas, node_slugify,
+                               Choices: csv_nordic_property,
+                                        python_safe_div, dotnet_sas, node_slugify,
                                         python_lru_cache, python_multifile_rename,
                                         node_csv_parser, python_lfu_cache,
                                         python_minheap, node_memoize_bug,

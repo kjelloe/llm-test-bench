@@ -136,6 +136,9 @@ def cmd_save(results_file: str, history_file: str) -> None:
 
 
 if __name__ == "__main__":
+    # When invoked as a script, repo root is not on sys.path — add it so
+    # lazy `from lib.X` imports inside functions resolve correctly.
+    sys.path.insert(0, str(Path(__file__).parent.parent))
     if len(sys.argv) < 3 or sys.argv[1] not in ("show", "save"):
         print("Usage: history.py show <stats_file> <model> ... | history.py save <results_file> <stats_file>")
         sys.exit(1)
