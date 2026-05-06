@@ -61,6 +61,7 @@ task_data/
   python_dijkstra/        dijkstra.py (baseline), tests/test_dijkstra.py
   python_hashmap/         hashmap.py (baseline), tests/test_hashmap.py
   python_tokenizer/       tokenizer.py (baseline), tests/test_tokenizer.py   — min_predict=4096  [state machine: ESCAPE→INIT bug; fix is ESCAPE→STRING]
+  csv_nordic_property/    data.csv (5 000 rows × 103 cols, Nordic CSV), data_sample.csv (5-row sample for prompt), solution.py (skeleton), test_solution.py  — min_predict=8000  model_timeout=600  [code-gen from scratch: 10 data questions → answers.txt + quantile transform → output.csv]
   context_8k/             documents/incident_archive.txt (~5.5k tok, 100 records), answer.txt (baseline), tests/test_answer.py  — num_ctx=8192   [tok/s profiler]
   context_16k/            documents/incident_archive.txt (~11k tok, 200 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=16384  [tok/s profiler]
   context_32k/            documents/incident_archive.txt (~22k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [tok/s profiler]

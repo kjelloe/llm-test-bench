@@ -532,7 +532,8 @@ CSV_NORDIC_PROPERTY = Task(
     context_files=["data_sample.csv", "test_solution.py"],
     test_cmd=["python3", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
     test_timeout=120,
-    min_predict=6000,  # gemma4 is verbose and truncated at 4000; thinking-model overhead adds ~1500 tokens
+    min_predict=8000,  # gemma4 writes verbose code and was still truncated at 6000 tokens
+    model_timeout=600, # cold-start + ~8000 token generation exceeds run.sh's 300s default
 )
 
 BUILTIN_TASKS: list[Task] = [

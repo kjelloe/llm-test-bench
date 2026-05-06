@@ -66,7 +66,10 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (23 total, difficulty L1–L5):
+- Built-in tasks (24 total, difficulty L1–L5):
+
+  **Data tasks (1):**
+  - `csv_nordic_property` (L3) — 5 000-row Norwegian residential property dataset (SSB 06726); Nordic CSV (`;`-separated, UTF-8, `..` = missing value), 103 columns (region + 3 metrics × 34 years 1992–2025). Model implements `solution.py` from a skeleton: `answer_questions()` returns 10 scalar answers written to `answers.txt`; `transform()` selects bottom-25% and top-25% of regions by 2023 total purchase sum, outputs a 7-column Nordic CSV (`output.csv`) with only the 1992 and 2022 year-columns, sorted ascending. `min_predict=8000` (gemma4 generates verbose code and truncated at 6000); `model_timeout=600` (cold-start + 8000-token generation exceeds run.sh's 300s default). `pytest`
 
   **Coding tasks (13):**
   - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
