@@ -32,6 +32,8 @@ fetch.sh                  Pulls models by set name, set file path, or bare model
 lib/                      Python support modules (imported by bench.py) and shell utilities
   tasks.py                Task dataclass, built-in task definitions, prompt builder, subprocess helpers
   ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
+  llama_server_client.py  LlamaServerManager (spawn/restart/stop llama-server process) + chat() for OpenAI-compatible /v1/chat/completions; same interface as ollama_client
+  model_config.py         Parses models/*.txt 3-field format (ollama-name gguf-file params) into ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
@@ -148,10 +150,36 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
 - **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
 
-#### `ollama_client.py` — Model Adapter
+#### `ollama_client.py` — Ollama Model Adapter
 
 - `chat(...)` — main inference call. Uses `urllib.request` (stdlib); no third-party HTTP library. Accepts `think: bool` (reasoning tokens), `num_thread: int | None` (CPU cap), `keep_alive: str | int | None` (warmup calls use `-1` to keep model resident). Returns `OllamaResponse(content, thinking, metrics)`.
 - `unload_model(base_url, model, timeout)` — POSTs to `/api/generate` with `keep_alive=0` to immediately evict model weights from VRAM. Fire-and-forget; exceptions swallowed. Called by `bench.py` before each model switch so the VRAM drain wait has something to wait for.
+- Also exports `OllamaMetrics`, `OllamaResponse`, `OllamaError` — shared types re-used by `llama_server_client.py`.
+
+#### `llama_server_client.py` — llama-server Backend Adapter
+
+Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` so `bench.py` can select either backend at startup.
+
+- **`LlamaServerManager`** — manages a single `llama-server` subprocess:
+  - `ensure(cfg, ctx_size, num_threads)` — starts or restarts the server if the model changed or `ctx_size` grew beyond the running instance. Blocks until `/health` returns `{"status":"ok"}` (up to 120s).
+  - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout.
+  - Tracks `_current_model` and `_current_ctx` to minimise unnecessary restarts (never downsizes ctx — a server running at 131072 tokens is fine for an 8192-token task).
+- `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). `tok_per_s` is derived from `completion_tokens / wall_time`.
+- `unload_model(...)` — no-op; lifecycle is managed by `LlamaServerManager.stop()`.
+
+#### `model_config.py` — Model Config Parser
+
+Parses the 3-field space-separated format used in `models/*.txt` files.
+
+- **`ModelConfig`** dataclass: `ollama_name`, `gguf_file` (optional), `params` (dict: `str → str | bool`).
+- `parse_model_line(line)` — parses one non-comment line; returns `None` for blank/comment lines.
+- `load_model_file(path)` — returns a list of `ModelConfig` objects from a `models/*.txt` file.
+
+Line format:
+```
+<ollama-name> [<gguf-file> [<key=val,flag,...>]]
+```
+Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup, underscores become hyphens for CLI flags.
 
 #### `gpu_monitor.py` — GPU Telemetry
 
@@ -320,6 +348,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 - GPU monitoring requires `nvidia-ml-py` and an NVIDIA GPU. Without it, `gpu_snapshots` and `kv_cache` fields are `null`; the benchmark otherwise runs identically.
+- **llama-server backend**: requires `llama-server` binary on `PATH` and `LLAMA_MODELS_DIR` env var pointing to the directory containing GGUF files. Models without a GGUF filename in `models/*.txt` cannot be used and will error immediately. `--think` and `--warmup` are no-ops. `tok_per_s` is wall-time derived (less accurate than Ollama's internal `eval_duration`). Context window is set at server startup; the server restarts automatically when a task requires a larger `num_ctx` than the running instance (never downsizes — a larger-ctx instance serves smaller tasks too). `--num-thread` is passed as `--threads` at startup, not per-request.
 - Ollama keeps the previous model's weights in VRAM after the last request (even when GPU utilisation drops to 0%). `unload_model()` + `wait_for_gpu_idle()` forces a clean drain before each model switch, but if Ollama doesn't evict within 10s the snapshot is marked `dirty: true`.
 - KV cache delta (`kv_cache.delta_mb`) covers both prompt and output tokens since the full KV cache is allocated across the complete inference call. Prompt tokens dominate for typical task prompt sizes (400–700 tokens vs. 50–200 generated).
 

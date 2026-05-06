@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""CLI runner for the Ollama coding benchmark."""
+"""CLI runner for the Ollama / llama-server coding benchmark."""
 
 import argparse
+import os
 import shutil
 import threading
 import time
@@ -9,7 +10,6 @@ from pathlib import Path
 
 from lib.gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
 from lib.hw_snapshot import get_hw_snapshot
-from lib.ollama_client import OllamaError, chat, unload_model
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
 from lib.tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
@@ -33,12 +33,13 @@ def _no_blocks_detail(resp, num_predict: int) -> str:
 def run_one(
     model: str,
     task: Task,
-    ollama_url: str,
+    client_url: str,
     num_ctx: int,
     temperature: float,
     seed: int,
     num_predict: int,
     model_timeout: int,
+    chat_fn,
     think: bool = False,
     keep_workdir: bool = False,
     num_thread: int | None = None,
@@ -93,8 +94,8 @@ def run_one(
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
         try:
-            resp = chat(
-                base_url=ollama_url,
+            resp = chat_fn(
+                base_url=client_url,
                 model=model,
                 messages=[
                     {"role": "system", "content": "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."},
@@ -203,11 +204,20 @@ def run_one(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Benchmark local Ollama LLMs on coding tasks")
+    parser = argparse.ArgumentParser(description="Benchmark local LLMs on coding tasks (Ollama or llama-server)")
     parser.add_argument("--models", nargs="+", required=True, metavar="MODEL")
     parser.add_argument(
         "--tasks", nargs="+", default=None, metavar="TASK_ID",
         help=f"Subset of task IDs (default: all). Choices: {', '.join(TASK_MAP)}",
+    )
+    parser.add_argument(
+        "--backend", default=os.environ.get("BENCH_BACKEND", "ollama"),
+        choices=["ollama", "llama-server"],
+        help="Inference backend (default: ollama; env: BENCH_BACKEND)",
+    )
+    parser.add_argument(
+        "--model-file", default=None, metavar="PATH",
+        help="models/*.txt file for GGUF/param lookup (required for --backend llama-server)",
     )
     parser.add_argument("--ollama-url", default="http://localhost:11434")
     parser.add_argument("--num-ctx", type=int, default=8192)
@@ -216,13 +226,13 @@ def main() -> None:
     parser.add_argument("--num-predict", type=int, default=400,
                         help="Max tokens to generate. Use 1200+ for thinking models (default: 400)")
     parser.add_argument("--model-timeout", type=int, default=300,
-                        help="Ollama HTTP request timeout in seconds (default: 300)")
+                        help="HTTP request timeout in seconds (default: 300)")
     parser.add_argument("--num-thread", type=int, default=10,
-                        help="CPU threads for Ollama inference; 0 = let Ollama decide (default: 10)")
+                        help="CPU threads for inference; 0 = let backend decide (default: 10)")
     parser.add_argument("--think", action="store_true", default=False,
-                        help="Enable thinking/reasoning mode for models that support it (default: off)")
+                        help="Enable thinking/reasoning mode (ollama only; default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
-                        help="Send a tiny prompt to each model just before its first task to force model load (default: off)")
+                        help="Warm up each model before its first task (ollama only; default: off)")
     parser.add_argument("--out", default="output/results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
@@ -236,74 +246,139 @@ def main() -> None:
     else:
         tasks_to_run = BUILTIN_TASKS
 
-    hw = get_hw_snapshot()
+    # ── Backend setup ─────────────────────────────────────────────────────────
+    num_thread_opt = args.num_thread if args.num_thread > 0 else None
+    llama_manager = None
+    model_configs: dict = {}
 
+    if args.backend == "llama-server":
+        from lib.llama_server_client import LlamaServerManager
+        from lib.llama_server_client import chat as _chat_fn
+        from lib.llama_server_client import unload_model as _unload_fn
+        from lib.model_config import load_model_file
+
+        models_dir = os.environ.get("LLAMA_MODELS_DIR", "")
+        if not models_dir:
+            parser.error("LLAMA_MODELS_DIR environment variable must be set for --backend llama-server")
+        if not args.model_file:
+            parser.error("--model-file is required for --backend llama-server")
+
+        cfgs = load_model_file(args.model_file)
+        model_configs = {c.ollama_name: c for c in cfgs}
+        llama_manager = LlamaServerManager(models_dir=models_dir)
+    else:
+        from lib.ollama_client import OllamaError as _OllamaError
+        from lib.ollama_client import chat as _chat_fn
+        from lib.ollama_client import unload_model as _unload_fn
+
+    hw = get_hw_snapshot()
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     total = len(pairs)
     results = []
     current_model: str | None = None
+    current_ctx: int = 0
     gpu_before: dict | None = None
     gpu_after: dict | None = None
 
     startup_snap = get_gpu_snapshot()
     system_baseline_vram_mb: int | None = startup_snap["vram_used_mb"] if startup_snap else None
 
-    for i, (model, task) in enumerate(pairs, 1):
-        if model != current_model:
-            if current_model is not None:
-                print(f"  [gpu] unloading {current_model!r} ...", end=" ", flush=True)
-                unload_model(args.ollama_url, current_model)
-                print("done")
-            gpu_before = wait_for_gpu_idle(baseline_vram_mb=system_baseline_vram_mb)
-            if gpu_before and gpu_before.get("dirty"):
-                print(
-                    f"  [gpu] WARNING: VRAM ({gpu_before['vram_used_mb']} MB) did not drain to "
-                    f"baseline ({system_baseline_vram_mb} MB + 200) within 10s — "
-                    f"before_load snapshot is dirty"
-                )
-            gpu_after = None
-            if args.warmup:
-                print(f"  [warmup] {model!r} ...", end=" ", flush=True)
-                t0 = time.monotonic()
-                try:
-                    chat(
-                        base_url=args.ollama_url,
-                        model=model,
-                        messages=[{"role": "user", "content": "Say OK."}],
-                        num_ctx=512,
-                        temperature=0.0,
-                        seed=1,
-                        num_predict=5,
-                        timeout=args.model_timeout,
-                        think=False,
-                        num_thread=args.num_thread if args.num_thread > 0 else None,
-                        keep_alive=-1,
-                    )
+    try:
+        for i, (model, task) in enumerate(pairs, 1):
+            effective_ctx = max(args.num_ctx, task.num_ctx) if task.num_ctx else args.num_ctx
+
+            if llama_manager is not None:
+                # llama-server: restart when model changes or ctx grows
+                cfg = model_configs.get(model)
+                if cfg is None:
+                    parser.error(f"Model {model!r} not found in {args.model_file}")
+                if llama_manager.needs_restart(cfg, effective_ctx):
+                    if llama_manager._current_model is not None:
+                        print(f"  [llama-server] stopping {llama_manager._current_model!r} ...",
+                              end=" ", flush=True)
+                        llama_manager.stop()
+                        print("done")
+                    gpu_before = wait_for_gpu_idle(baseline_vram_mb=system_baseline_vram_mb)
+                    if gpu_before and gpu_before.get("dirty"):
+                        print(
+                            f"  [gpu] WARNING: VRAM ({gpu_before['vram_used_mb']} MB) did not drain to "
+                            f"baseline ({system_baseline_vram_mb} MB + 200) within 10s — "
+                            f"before_load snapshot is dirty"
+                        )
+                    print(f"  [llama-server] starting {model!r} ctx={effective_ctx} ...",
+                          end=" ", flush=True)
+                    t0 = time.monotonic()
+                    llama_manager.ensure(cfg, effective_ctx, num_threads=num_thread_opt)
                     print(f"done  {time.monotonic() - t0:.1f}s")
-                except OllamaError as exc:
-                    print(f"FAILED ({exc})")
-                gpu_after = get_gpu_snapshot()
-            current_model = model
-        print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
-        record = run_one(
-            model=model,
-            task=task,
-            ollama_url=args.ollama_url,
-            num_ctx=args.num_ctx,
-            temperature=args.temperature,
-            seed=args.seed,
-            num_predict=args.num_predict,
-            model_timeout=args.model_timeout,
-            think=args.think,
-            keep_workdir=args.keep_workdirs,
-            num_thread=args.num_thread if args.num_thread > 0 else None,
-            gpu_before=gpu_before,
-            gpu_after=gpu_after,
-        )
-        status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
-        trunc = " TRUNCATED" if record.get("response_truncated") else ""
-        print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
-        results.append(record)
+                    gpu_after = get_gpu_snapshot()
+                    current_model = model
+                    current_ctx = effective_ctx
+                client_url = llama_manager.base_url
+
+            else:
+                # Ollama: restart on model switch only
+                if model != current_model:
+                    if current_model is not None:
+                        print(f"  [gpu] unloading {current_model!r} ...", end=" ", flush=True)
+                        _unload_fn(args.ollama_url, current_model)
+                        print("done")
+                    gpu_before = wait_for_gpu_idle(baseline_vram_mb=system_baseline_vram_mb)
+                    if gpu_before and gpu_before.get("dirty"):
+                        print(
+                            f"  [gpu] WARNING: VRAM ({gpu_before['vram_used_mb']} MB) did not drain to "
+                            f"baseline ({system_baseline_vram_mb} MB + 200) within 10s — "
+                            f"before_load snapshot is dirty"
+                        )
+                    gpu_after = None
+                    if args.warmup:
+                        print(f"  [warmup] {model!r} ...", end=" ", flush=True)
+                        t0 = time.monotonic()
+                        try:
+                            _chat_fn(
+                                base_url=args.ollama_url,
+                                model=model,
+                                messages=[{"role": "user", "content": "Say OK."}],
+                                num_ctx=512,
+                                temperature=0.0,
+                                seed=1,
+                                num_predict=5,
+                                timeout=args.model_timeout,
+                                think=False,
+                                num_thread=num_thread_opt,
+                                keep_alive=-1,
+                            )
+                            print(f"done  {time.monotonic() - t0:.1f}s")
+                        except Exception as exc:
+                            print(f"FAILED ({exc})")
+                        gpu_after = get_gpu_snapshot()
+                    current_model = model
+                client_url = args.ollama_url
+
+            print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
+            record = run_one(
+                model=model,
+                task=task,
+                client_url=client_url,
+                num_ctx=args.num_ctx,
+                temperature=args.temperature,
+                seed=args.seed,
+                num_predict=args.num_predict,
+                model_timeout=args.model_timeout,
+                chat_fn=_chat_fn,
+                think=args.think,
+                keep_workdir=args.keep_workdirs,
+                num_thread=num_thread_opt,
+                gpu_before=gpu_before,
+                gpu_after=gpu_after,
+            )
+            status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
+            trunc = " TRUNCATED" if record.get("response_truncated") else ""
+            print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
+            results.append(record)
+
+    finally:
+        if llama_manager is not None:
+            llama_manager.stop()
 
     task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
 

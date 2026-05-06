@@ -45,14 +45,16 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - Configurable flags:
   - `--models` (required, one or more)
   - `--tasks` (optional subset; default: all built-in)
-  - `--ollama-url` (default: `http://localhost:11434`)
+  - `--backend ollama|llama-server` (default: `ollama`; env var `BENCH_BACKEND` as fallback)
+  - `--model-file PATH` (path to a `models/*.txt` file for GGUF/param lookup; required when `--backend llama-server`)
+  - `--ollama-url` (default: `http://localhost:11434`; ignored when `--backend llama-server`)
   - `--num-ctx` (default: 8192)
   - `--temperature` (default: 0.0)
   - `--seed` (default: 1)
   - `--num-predict` (default: 400)
   - `--model-timeout` (default: 300, seconds)
-  - `--think` (enable thinking/reasoning mode for supported models)
-  - `--warmup` (send a tiny prompt to each model before the benchmark loop to force model load; eliminates cold-start timing penalty on the first task)
+  - `--think` (enable thinking/reasoning mode for supported models; no-op for llama-server)
+  - `--warmup` (send a tiny prompt to each model before the benchmark loop to force model load; no-op for llama-server — model is loaded during server startup)
   - `--out` (default: `output/results.json`)
   - `--keep-workdirs` (debug: skip temp dir cleanup)
 - Prints live progress (`[i/total] model task ... PASS/FAIL wall_s tok/s`).
@@ -101,11 +103,25 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - define a test command as an argv list with a timeout
 
 4) Model Interaction
-- POST `/api/chat` (non-streaming) with options: `temperature`, `seed`, `num_ctx`, `num_predict`.
+- **Ollama backend (default):** POST `/api/chat` (non-streaming) with options: `temperature`, `seed`, `num_ctx`, `num_predict`. Between models: calls `unload_model()` (POST `/api/generate` with `keep_alive=0`) then polls until VRAM drains to near-baseline. Records Ollama-provided metrics: `prompt_eval_count`, `eval_count`, durations (ns). Derives `tok_per_s` from `eval_count / (eval_duration / 1e9)`.
+- **llama-server backend:** spawns one `llama-server` subprocess per model (or per context-size change). Uses the OpenAI-compatible `/v1/chat/completions` endpoint on `http://127.0.0.1:8080`. GGUF file path and startup params come from the model config file (`models/*.txt`, parsed by `lib/model_config.py`). `--ctx-size` is a startup flag, not per-request; the server is restarted when a task requires a larger context than the running instance. `tok_per_s` is derived from `completion_tokens / wall_time` (llama-server does not return per-duration metrics). `think` and `warmup` are no-ops — llama-server does not support the `think` API and the model is loaded during server startup.
 - Defaults enforce determinism: `temperature=0`, `seed=1`.
-- Records Ollama-provided metrics: `prompt_eval_count`, `eval_count`, durations (ns).
-- Derives `tok_per_s` from `eval_count / (eval_duration / 1e9)`.
-- Between models: calls `unload_model()` (POST `/api/generate` with `keep_alive=0`) then polls until VRAM drains to near-baseline before taking `before_load` snapshot.
+
+4a) Model File Format (`models/*.txt`)
+- Each non-blank, non-comment line defines one model: `<ollama-name> [<gguf-file> [<params>]]`
+- Field 1 (required): Ollama model tag (e.g. `qwen2.5-coder:14b`). Always used for model names passed to bench.py.
+- Field 2 (optional): GGUF filename relative to `$LLAMA_MODELS_DIR`. Required for `--backend llama-server`; if absent, the model cannot be run on llama-server.
+- Field 3 (optional): comma-separated llama-server startup params. Boolean flags: `no_mmap`, `mlock`. Key-value: `n_cpu_moe=35`, `cache_type_k=turbo4`, `ngl=999`. Underscores are converted to hyphens to form CLI flags (e.g. `no_mmap` → `--no-mmap`, `n_cpu_moe=35` → `--n-cpu-moe 35`).
+- `LLAMA_MODELS_DIR` env var must be set to the directory containing GGUF files when using `--backend llama-server`. Not needed for Ollama runs.
+
+Example:
+```
+# ollama-name  [gguf-file  [key=val,...]]
+gpt-oss:20b
+qwen2.5-coder:14b  qwen2.5-coder-14b-Q4_K_M.gguf
+qwen3.5:35b        qwen3.5-35b-A22B-Q4_K_M.gguf    n_cpu_moe=35,no_mmap,mlock,cache_type_k=turbo4,cache_type_v=turbo3
+gemma4:26b         gemma-4-27b-it-Q4_K_M.gguf       n_cpu_moe=18,no_mmap
+```
 
 5) GPU Telemetry (optional; requires `nvidia-ml-py`)
 - Three GPU snapshots per model switch: `before_load` (after idle-wait), `after_load` (after warmup).

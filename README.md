@@ -204,23 +204,57 @@ python3 bench.py --help
                                         context_32k, context_64k, context_128k,
                                         context_256k, multihop_forward,
                                         multihop_reverse, distractor_notes
-  --ollama-url URL             Default: http://localhost:11434
+  --backend ollama|llama-server  Inference backend (default: ollama; env: BENCH_BACKEND)
+  --model-file PATH            models/*.txt file for GGUF/param lookup (required for
+                               llama-server backend; compare.sh passes it automatically)
+  --ollama-url URL             Default: http://localhost:11434 (ollama backend only)
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx
   --temperature FLOAT          Default: 0.0
   --seed INT                   Default: 1
   --num-predict INT            Max output tokens (default: 400)
   --model-timeout INT          Ollama HTTP request timeout in seconds (default: 300)
-  --num-thread INT             CPU threads for Ollama inference; 0 = let Ollama decide
-                               (default: 10 — limits heat without affecting GPU tok/s)
-  --think                      Enable thinking/reasoning mode for supported models
-  --warmup                     Send a tiny prompt to each model just before its first task
-                               to force model load (JIT per model; uses keep_alive=-1 so
-                               the model stays resident through all its own tasks;
-                               enabled by default in compare.sh)
+  --num-thread INT             CPU threads for inference; 0 = let backend decide
+                               (default: 10; passed as --threads to llama-server)
+  --think                      Enable thinking/reasoning mode (ollama only; no-op for
+                               llama-server which does not expose the think API)
+  --warmup                     Send a tiny prompt before the first task to force model
+                               load (ollama only; no-op for llama-server — model loads
+                               during server startup; enabled by default in compare.sh)
   --out FILE                   Results JSON path (default: output/results.json)
   --keep-workdirs              Don't delete temp workdirs (useful for debugging)
 ```
+
+---
+
+## llama-server backend
+
+To benchmark using [llama.cpp](https://github.com/ggerganov/llama.cpp)'s `llama-server` instead of Ollama (useful for MoE-specific parameters like `--n-cpu-moe`):
+
+1. Set `LLAMA_MODELS_DIR` to your GGUF directory:
+   ```bash
+   export LLAMA_MODELS_DIR=/path/to/gguf/models
+   ```
+
+2. Add GGUF filenames (and optional params) to `models/default.txt`:
+   ```
+   # ollama-name  [gguf-file  [key=val,flag,...]]
+   gpt-oss:20b
+   qwen2.5-coder:14b  qwen2.5-coder-14b-Q4_K_M.gguf
+   qwen3.5:35b        qwen3.5-35b-A22B-Q4_K_M.gguf    n_cpu_moe=35,no_mmap,mlock,cache_type_k=turbo4,cache_type_v=turbo3
+   ```
+   Models with no GGUF filename can only run on Ollama; they will error immediately if selected with `--backend llama-server`.
+
+3. Run with the llama-server backend:
+   ```bash
+   ./compare.sh --backend llama-server
+   # or: BENCH_BACKEND=llama-server ./compare.sh
+   ```
+   `compare.sh` automatically passes `--model-file` when reading a named model set.
+
+**Context window handling:** `--ctx-size` is a startup flag for llama-server, not per-request. The harness starts the server at the required context size and restarts it automatically if a subsequent task needs a larger window (e.g. `context_128k` needs 131072 tokens). A server running at a larger context is reused for smaller tasks — it never downsizes mid-model.
+
+**Timing:** `tok_per_s` for llama-server is derived from `completion_tokens / wall_time` (less precise than Ollama's internal `eval_duration`; prompt-eval time is not separated).
 
 Extra flags passed to `compare.sh` or `run.sh` are forwarded to `bench.py`:
 

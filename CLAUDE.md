@@ -59,15 +59,18 @@ run.sh              Venv setup + bench.py wrapper
 compare.sh          Runs canonical 6-model set (model-timeout 1200, num-predict 2400)
 preflight.sh        Dependency checker
 lib/
-  tasks.py          Task definitions, prompt builder, subprocess helpers
-  ollama_client.py  Ollama /api/chat client
-  parsing.py        BEGIN_FILE/END_FILE parser + allow-list validator
-  reporting.py      Comparison table (paginated), failure detail, JSON writer
-  hw_snapshot.py    GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
-  gpu_monitor.py    pynvml GPU telemetry
-  history.py        Run history writer and header printer
+  tasks.py                Task definitions, prompt builder, subprocess helpers
+  ollama_client.py        Ollama /api/chat client
+  llama_server_client.py  LlamaServerManager (spawn/stop llama-server) + chat() for OpenAI-compatible API
+  model_config.py         Parse models/*.txt 3-field format → ModelConfig dataclasses
+  parsing.py              BEGIN_FILE/END_FILE parser + allow-list validator
+  reporting.py            Comparison table (paginated), failure detail, JSON writer
+  hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
+  gpu_monitor.py          pynvml GPU telemetry
+  history.py              Run history writer and header printer
 tests/
-  test_parsing.py   Parser unit tests  →  python3 -m pytest tests/
+  test_parsing.py         Parser unit tests  →  python3 -m pytest tests/
+  test_model_config.py    Model config parser unit tests
 task_data/
   python_safe_div/        L1 Python pytest task (13 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=8000 model_timeout=600

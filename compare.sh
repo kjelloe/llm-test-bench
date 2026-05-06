@@ -73,8 +73,10 @@ if [[ -n "$SET_NAME" ]]; then
     fi
     while IFS= read -r _line || [[ -n "$_line" ]]; do
         _line="${_line%%#*}"           # strip inline comment
-        _line="${_line//[[:space:]]/}" # strip whitespace (model names have none)
-        [[ -n "$_line" ]] && MODELS+=("$_line")
+        _line="${_line#"${_line%%[! ]*}"}"  # strip leading whitespace
+        [[ -z "$_line" ]] && continue
+        _model="${_line%% *}"          # first field only (ollama name; remaining fields are GGUF/params)
+        MODELS+=("$_model")
     done < "$SET_FILE"
     if [[ ${#MODELS[@]} -eq 0 ]]; then
         echo "Error: model set '$SET_NAME' contains no models ($SET_FILE)"
@@ -130,8 +132,17 @@ echo
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 mkdir -p "$SCRIPT_DIR/output"
+
+# Build model-file arg: pass the set file when using a named set so bench.py
+# can resolve GGUF filenames for --backend llama-server.
+_MODEL_FILE_ARGS=()
+if [[ -n "${SET_FILE:-}" ]]; then
+    _MODEL_FILE_ARGS=(--model-file "$SET_FILE")
+fi
+
 "$SCRIPT_DIR/run.sh" \
   --models "${MODELS[@]}" \
+  "${_MODEL_FILE_ARGS[@]+"${_MODEL_FILE_ARGS[@]}"}" \
   --num-predict "$NUM_PREDICT" \
   --model-timeout "$MODEL_TIMEOUT" \
   --warmup \
