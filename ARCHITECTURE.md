@@ -164,7 +164,7 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` s
   - `ensure(cfg, ctx_size, num_threads)` — starts or restarts the server if the model changed or `ctx_size` grew beyond the running instance. Blocks until `/health` returns `{"status":"ok"}` (up to 120s).
   - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout.
   - Tracks `_current_model` and `_current_ctx` to minimise unnecessary restarts (never downsizes ctx — a server running at 131072 tokens is fine for an 8192-token task).
-- `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). `tok_per_s` is derived from `completion_tokens / wall_time`.
+- `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on older builds.
 - `unload_model(...)` — no-op; lifecycle is managed by `LlamaServerManager.stop()`.
 
 #### `model_config.py` — Model Config Parser

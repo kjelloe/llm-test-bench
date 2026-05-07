@@ -162,14 +162,27 @@ def chat(
     prompt_tokens = usage.get("prompt_tokens", 0)
     completion_tokens = usage.get("completion_tokens", 0)
 
+    # llama.cpp adds a non-standard `timings` block with separated prompt/eval durations.
+    # Use it when available so tok/s reflects generation speed, not total wall time.
+    timings = body.get("timings") or {}
+    predicted_ms = timings.get("predicted_ms")   # generation phase only
+    prompt_ms    = timings.get("prompt_ms")       # prompt eval phase only
+    if predicted_ms is not None and predicted_ms > 0:
+        eval_duration_ns        = int(predicted_ms * 1e6)
+        prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
+    else:
+        # Fallback: wall time covers both phases; tok/s will be slightly conservative.
+        eval_duration_ns        = elapsed_ns
+        prompt_eval_duration_ns = 0
+
     return OllamaResponse(
         content=content,
         thinking="",
         metrics=OllamaMetrics(
             prompt_eval_count=prompt_tokens,
             eval_count=completion_tokens,
-            prompt_eval_duration=0,
-            eval_duration=elapsed_ns,   # wall time as proxy; prompt-eval not separated
+            prompt_eval_duration=prompt_eval_duration_ns,
+            eval_duration=eval_duration_ns,
             total_duration=elapsed_ns,
         ),
     )

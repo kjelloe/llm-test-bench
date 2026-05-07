@@ -138,7 +138,8 @@ def main() -> None:
     except ImportError:
         print(
             "Error: huggingface_hub is not installed.\n"
-            "Run:  pip install huggingface_hub",
+            "Use the wrapper:  ./fetch-hf.sh  (activates the project venv automatically)\n"
+            "Or install manually:  source .venv/bin/activate && pip install -r requirements.txt",
             file=sys.stderr,
         )
         sys.exit(1)

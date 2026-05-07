@@ -4,6 +4,26 @@ from collections import defaultdict
 from pathlib import Path
 
 
+def _backend_suffix(backend: str) -> str:
+    return "ls" if backend == "llama-server" else backend
+
+
+def _make_display_key_fn(results: list[dict]):
+    """Return a function r → display_key that appends [backend] only when needed."""
+    backends_by_model: dict[str, set[str]] = defaultdict(set)
+    for r in results:
+        backends_by_model[r["model"]].add(r.get("backend", "ollama"))
+    multi = {m for m, bs in backends_by_model.items() if len(bs) > 1}
+
+    def display_key(r: dict) -> str:
+        m = r["model"]
+        if m not in multi:
+            return m
+        return f"{m} [{_backend_suffix(r.get('backend', 'ollama'))}]"
+
+    return display_key
+
+
 def write_results(results: list[dict], path: str, hardware: dict | None = None) -> None:
     payload: list | dict = (
         {"hardware": hardware, "results": results} if hardware else results
@@ -43,9 +63,10 @@ def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dic
 
 
 def print_comparison_table(results: list[dict], task_difficulties: dict[str, int] | None = None, model_timeout: int | None = None, hardware: dict | None = None) -> None:
-    models = list(dict.fromkeys(r["model"] for r in results))
-    tasks  = list(dict.fromkeys(r["task"]  for r in results))
-    idx    = {(r["model"], r["task"]): r for r in results}
+    dk = _make_display_key_fn(results)
+    models = list(dict.fromkeys(dk(r) for r in results))
+    tasks  = list(dict.fromkeys(r["task"] for r in results))
+    idx    = {(dk(r), r["task"]): r for r in results}
 
     speed_rank = {m: i + 1 for i, m in enumerate(models)}
 
@@ -137,9 +158,10 @@ def print_summary(results: list[dict]) -> None:
     print("FAILURE DETAIL")
     print("=" * 64)
 
+    dk = _make_display_key_fn(results)
     by_model: dict[str, list[dict]] = defaultdict(list)
     for r in results:
-        by_model[r["model"]].append(r)
+        by_model[dk(r)].append(r)
 
     any_failures = False
     for model, recs in by_model.items():

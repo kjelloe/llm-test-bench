@@ -45,9 +45,11 @@ def run_one(
     num_thread: int | None = None,
     gpu_before: dict | None = None,
     gpu_after: dict | None = None,
+    backend: str = "ollama",
 ) -> dict:
     record: dict = {
         "model": model,
+        "backend": backend,
         "task": task.id,
         "baseline_failed": None,
         "baseline_rc": None,
@@ -252,6 +254,7 @@ def main() -> None:
     model_configs: dict = {}
 
     if args.backend == "llama-server":
+        import shutil
         from lib.llama_server_client import LlamaServerManager
         from lib.llama_server_client import chat as _chat_fn
         from lib.llama_server_client import unload_model as _unload_fn
@@ -263,9 +266,17 @@ def main() -> None:
         if not args.model_file:
             parser.error("--model-file is required for --backend llama-server")
 
+        bin_path = os.environ.get("LLAMA_SERVER_BIN") or shutil.which("llama-server") or ""
+        if not bin_path:
+            parser.error(
+                "llama-server binary not found on PATH.\n"
+                "  Install llama.cpp:  https://github.com/ggerganov/llama.cpp/releases\n"
+                "  Or point to the binary:  export LLAMA_SERVER_BIN=/path/to/llama-server"
+            )
+
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
-        llama_manager = LlamaServerManager(models_dir=models_dir)
+        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path)
     else:
         from lib.ollama_client import OllamaError as _OllamaError
         from lib.ollama_client import chat as _chat_fn
@@ -370,6 +381,7 @@ def main() -> None:
                 num_thread=num_thread_opt,
                 gpu_before=gpu_before,
                 gpu_after=gpu_after,
+                backend=args.backend,
             )
             status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
             trunc = " TRUNCATED" if record.get("response_truncated") else ""

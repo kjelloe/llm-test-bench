@@ -104,7 +104,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
 4) Model Interaction
 - **Ollama backend (default):** POST `/api/chat` (non-streaming) with options: `temperature`, `seed`, `num_ctx`, `num_predict`. Between models: calls `unload_model()` (POST `/api/generate` with `keep_alive=0`) then polls until VRAM drains to near-baseline. Records Ollama-provided metrics: `prompt_eval_count`, `eval_count`, durations (ns). Derives `tok_per_s` from `eval_count / (eval_duration / 1e9)`.
-- **llama-server backend:** spawns one `llama-server` subprocess per model (or per context-size change). Uses the OpenAI-compatible `/v1/chat/completions` endpoint on `http://127.0.0.1:8080`. GGUF file path and startup params come from the model config file (`models/*.txt`, parsed by `lib/model_config.py`). `--ctx-size` is a startup flag, not per-request; the server is restarted when a task requires a larger context than the running instance. `tok_per_s` is derived from `completion_tokens / wall_time` (llama-server does not return per-duration metrics). `think` and `warmup` are no-ops — llama-server does not support the `think` API and the model is loaded during server startup.
+- **llama-server backend:** spawns one `llama-server` subprocess per model (or per context-size change). Uses the OpenAI-compatible `/v1/chat/completions` endpoint on `http://127.0.0.1:8080`. GGUF file path and startup params come from the model config file (`models/*.txt`, parsed by `lib/model_config.py`). `--ctx-size` is a startup flag, not per-request; the server is restarted when a task requires a larger context than the running instance. `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on builds that omit `timings`. `think` and `warmup` are no-ops — llama-server does not support the `think` API and the model is loaded during server startup.
 - Defaults enforce determinism: `temperature=0`, `seed=1`.
 
 4a) Model File Format (`models/*.txt`)
@@ -160,6 +160,7 @@ Per model × task run:
 | Field | Type | Notes |
 |---|---|---|
 | `model` | string | |
+| `backend` | string | `"ollama"` or `"llama-server"` |
 | `task` | string | |
 | `baseline_failed` | bool | expected true; false → `BASELINE_PASSED_INVALID_TASK` |
 | `baseline_rc` | int | 0 or 1 |
@@ -170,7 +171,7 @@ Per model × task run:
 | `error_kind` | string\|null | see categories above |
 | `error_detail` | string\|null | truncated output snippet |
 | `metrics` | object | `num_ctx`, `prompt_eval_count`, `eval_count`, `*_duration_ms` |
-| `tok_per_s` | float | derived from Ollama eval metrics |
+| `tok_per_s` | float | generation tok/s; llama-server uses `timings.predicted_ms` when available |
 | `wall_s` | float | total elapsed seconds including setup + model call + tests |
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
 | `ctx_truncated` | bool | true if prompt was silently truncated (Ollama capped num_ctx below request) |

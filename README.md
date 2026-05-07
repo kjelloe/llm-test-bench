@@ -254,7 +254,17 @@ To benchmark using [llama.cpp](https://github.com/ggerganov/llama.cpp)'s `llama-
 
 **Context window handling:** `--ctx-size` is a startup flag for llama-server, not per-request. The harness starts the server at the required context size and restarts it automatically if a subsequent task needs a larger window (e.g. `context_128k` needs 131072 tokens). A server running at a larger context is reused for smaller tasks — it never downsizes mid-model.
 
-**Timing:** `tok_per_s` for llama-server is derived from `completion_tokens / wall_time` (less precise than Ollama's internal `eval_duration`; prompt-eval time is not separated).
+**Timing:** `tok_per_s` for llama-server uses llama.cpp's `timings.predicted_ms` field (generation phase only, same precision as Ollama). Falls back to `completion_tokens / wall_time` on older builds that omit `timings`.
+
+**Comparing backends side by side:** `compare.sh` auto-names output files by backend (`results-compare.json` for ollama, `results-compare-ls.json` for llama-server). Use `compare-results.sh` to merge and compare them:
+
+```bash
+./compare.sh                        # → output/results-compare.json
+./compare.sh --backend llama-server # → output/results-compare-ls.json
+./compare-results.sh output/results-compare.json output/results-compare-ls.json
+```
+
+The comparison prints a speed summary (avg tok/s, total wall time, speedup %) per model per backend, followed by the full per-task table with `model [ollama]` and `model [ls]` as separate rows.
 
 Extra flags passed to `compare.sh` or `run.sh` are forwarded to `bench.py`:
 
@@ -262,6 +272,43 @@ Extra flags passed to `compare.sh` or `run.sh` are forwarded to `bench.py`:
 ./compare.sh --num-ctx 16384 --num-predict 500
 ./compare.sh --tasks node_slugify python_safe_div
 ```
+
+---
+
+## Downloading GGUF models
+
+`fetch-hf.sh` downloads GGUF files from HuggingFace Hub into `$LLAMA_MODELS_DIR`. `search-hf.sh` searches the Hub and suggests the best file and `models/*.txt` line to paste.
+
+Add an `hf:` field to any model line (position-independent after the ollama name):
+
+```
+qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
+gpt-oss:120b       gpt-oss-120b-mxfp4-00001-of-00003.gguf   hf:ggml-org/gpt-oss-120b-GGUF
+```
+
+```bash
+# Search for models not yet configured in models/default.txt
+./search-hf.sh --model-files models/default.txt
+
+# Search for a specific model
+./search-hf.sh "qwen2.5 coder 14b"
+
+# Show top pick per model only in summary (--limit N repos shown, --max-files N files per repo)
+./search-hf.sh --top-only --limit 3
+
+# Download all models with hf: fields (requires $LLAMA_MODELS_DIR to be set)
+./fetch-hf.sh
+
+# Preview without downloading
+./fetch-hf.sh --dry-run
+
+# Download a specific model only
+./fetch-hf.sh --models qwen2.5-coder:14b
+```
+
+Multi-shard models (e.g. `gpt-oss-120b-mxfp4-00001-of-00003.gguf`) are detected automatically — give `fetch-hf.sh` the shard-1 filename and it downloads all parts.
+
+Requires `huggingface_hub` (included in `requirements.txt`; installed when you first run `./run.sh`).
 
 ---
 

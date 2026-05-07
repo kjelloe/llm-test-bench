@@ -86,24 +86,36 @@ if [[ -n "$SET_NAME" ]]; then
 fi
 
 # ── Determine output file ─────────────────────────────────────────────────────
-# Default: results-<set-name>.json, or results-compare.json for ad-hoc.
-# If --out appears in BENCH_ARGS, extract and use it (keeps $OUT consistent for history).
-if [[ -n "$SET_NAME" && "$SET_NAME" != "default" ]]; then
-    OUT="$SCRIPT_DIR/output/results-${SET_NAME}.json"
-else
-    OUT="$SCRIPT_DIR/output/results-compare.json"
-fi
-
+# Default: results-<set-name>[-<backend>].json, or results-compare[-<backend>].json.
+# Extract --backend and --out from BENCH_ARGS so we can use them for naming.
+BACKEND="ollama"
 _clean=()
-_skip=false
+_skip_out=false
+_skip_be=false
 for _arg in "${BENCH_ARGS[@]+"${BENCH_ARGS[@]}"}"; do
-    if $_skip; then OUT="$_arg"; _skip=false
-    elif [[ "$_arg" == "--out" ]]; then _skip=true
+    if   $_skip_out; then OUT_OVERRIDE="$_arg"; _skip_out=false
+    elif $_skip_be;  then BACKEND="$_arg";      _skip_be=false; _clean+=("--backend" "$_arg")
+    elif [[ "$_arg" == "--out"     ]]; then _skip_out=true
+    elif [[ "$_arg" == "--backend" ]]; then _skip_be=true
     else _clean+=("$_arg")
     fi
 done
 BENCH_ARGS=("${_clean[@]+"${_clean[@]}"}")
-unset _clean _skip _arg _line _f _name _count
+unset _clean _skip_out _skip_be _arg _line _f _name _count
+
+# Abbreviate backend for filenames: llama-server → ls
+BACKEND_SUFFIX=""
+if [[ "$BACKEND" != "ollama" ]]; then
+    BACKEND_SUFFIX="-${BACKEND/llama-server/ls}"
+fi
+
+if [[ -n "${OUT_OVERRIDE:-}" ]]; then
+    OUT="$OUT_OVERRIDE"
+elif [[ -n "$SET_NAME" && "$SET_NAME" != "default" ]]; then
+    OUT="$SCRIPT_DIR/output/results-${SET_NAME}${BACKEND_SUFFIX}.json"
+else
+    OUT="$SCRIPT_DIR/output/results-compare${BACKEND_SUFFIX}.json"
+fi
 
 # ── Header ────────────────────────────────────────────────────────────────────
 NUM_MODELS=${#MODELS[@]}

@@ -113,6 +113,23 @@ else
   fail "dotnet not found — https://dotnet.microsoft.com/download"
 fi
 
+# ── 7. llama-server (optional — only needed for --backend llama-server) ───────
+section "llama-server (optional)"
+_ls_bin="${LLAMA_SERVER_BIN:-$(command -v llama-server 2>/dev/null || true)}"
+if [[ -n "$_ls_bin" ]]; then
+  ok "llama-server found: $_ls_bin"
+  if [[ -n "${LLAMA_MODELS_DIR:-}" ]]; then
+    ok "LLAMA_MODELS_DIR=$LLAMA_MODELS_DIR"
+  else
+    warn "LLAMA_MODELS_DIR not set — required for --backend llama-server"
+  fi
+else
+  warn "llama-server not on PATH — needed only for --backend llama-server"
+  warn "  Install: https://github.com/ggerganov/llama.cpp/releases"
+  warn "  Or set:  export LLAMA_SERVER_BIN=/path/to/llama-server"
+fi
+unset _ls_bin
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo
 echo -e "${BOLD}════════════════════════════════════════${NC}"

@@ -6,9 +6,15 @@
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
-gpt-oss:20b          # ~82 tok/s  GPU, thinking
-qwen2.5-coder:14b    # ~40 tok/s  GPU
-qwen3-coder:30b      # ~36 tok/s  GPU
-gemma4:26b           # ~28 tok/s  GPU, partial offload
-qwen3.5:35b          # ~16 tok/s  RAM-partial, thinking
-gpt-oss:120b         # ~11 tok/s  RAM, thinking
+# gpt-oss:20b          # ~82 tok/s  GPU, thinking
+# qwen2.5-coder:14b    # ~40 tok/s  GPU
+# qwen3-coder:30b      # ~36 tok/s  GPU
+# gemma4:26b           # ~28 tok/s  GPU, partial offload
+# qwen3.5:35b          # ~16 tok/s  RAM-partial, thinking
+# gpt-oss:120b         # ~11 tok/s  RAM, thinking
+gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  hf:unsloth/gpt-oss-20b-GGUF
+qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
+qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  hf:unsloth/gemma-4-26B-A4B-it-GGUF
+qwen3.5:35b  Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf  hf:HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive
+gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model — fetch-hf.sh downloads all parts

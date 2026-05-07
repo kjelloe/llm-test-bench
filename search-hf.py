@@ -152,7 +152,8 @@ def _print_repo_results(
     suggested: dict | None,
     ollama_name: str | None,
     max_files: int = _MAX_FILES_SHOWN,
-) -> None:
+) -> str | None:
+    """Print one repo block and return the models/*.txt suggestion line, or None."""
     dl = _fmt_downloads(getattr(repo, "downloads", None))
     # Annotate fine-tune / uncensored variants so they stand out.
     repo_words = set(re.split(r'[\-_/]', repo.id.lower()))
@@ -160,7 +161,7 @@ def _print_repo_results(
     print(f"  {repo.id}  {dl}{finetune_note}")
     if not files:
         print("    (no .gguf files found)")
-        return
+        return None
 
     # Pre-compute total sizes across all shards so we can display a meaningful size.
     shard_total_bytes: dict[str, int] = {}
@@ -207,18 +208,23 @@ def _print_repo_results(
     if hidden_count > 0:
         print(f"       … {hidden_count} more file(s)")
 
-    if suggested:
-        info = _parse_shard(suggested["name"])
-        shard_note = f"  # {info[2]}-part model — fetch-hf.sh downloads all parts" if info else ""
-        if ollama_name:
-            line = f"{ollama_name}  {suggested['name']}  hf:{repo.id}"
-        else:
-            line = f"<ollama-name>  {suggested['name']}  hf:{repo.id}"
-        print(f"\n  → models/*.txt:  {line}{shard_note}")
+    if not suggested:
+        return None
+
+    info = _parse_shard(suggested["name"])
+    shard_note = f"  # {info[2]}-part model — fetch-hf.sh downloads all parts" if info else ""
+    if ollama_name:
+        line = f"{ollama_name}  {suggested['name']}  hf:{repo.id}"
+    else:
+        line = f"<ollama-name>  {suggested['name']}  hf:{repo.id}"
+    print(f"\n  → models/*.txt:  {line}{shard_note}")
+    return line + shard_note
 
 
 def _run_search(api, query: str, ollama_name: str | None,
-                already_downloaded: set[str], limit: int, max_files: int = _MAX_FILES_SHOWN) -> None:
+                already_downloaded: set[str], limit: int,
+                max_files: int = _MAX_FILES_SHOWN) -> list[str]:
+    """Print search results and return all models/*.txt suggestion lines."""
     label = ollama_name or f'"{query}"'
     print(f"\n{'━' * 70}")
     print(f"  {label}  (query: {query!r})")
@@ -227,15 +233,18 @@ def _run_search(api, query: str, ollama_name: str | None,
     repos = _search_repos(api, query, limit)
     if not repos:
         print("  No GGUF repos found.")
-        return
+        return []
 
+    suggestions: list[str] = []
     printed = 0
     for repo in repos:
         files = _get_gguf_files(api, repo.id)
         if not files:
             continue
         suggested = _suggest_file(files)
-        _print_repo_results(repo, files, already_downloaded, suggested, ollama_name, max_files=max_files)
+        line = _print_repo_results(repo, files, already_downloaded, suggested, ollama_name, max_files=max_files)
+        if line:
+            suggestions.append(line)
         printed += 1
         if printed >= limit:
             break
@@ -243,6 +252,20 @@ def _run_search(api, query: str, ollama_name: str | None,
 
     if printed == 0:
         print("  No repos with .gguf files found.")
+    return suggestions
+
+
+# ── summary ───────────────────────────────────────────────────────────────────
+
+def _print_summary(suggestions: list[str]) -> None:
+    if not suggestions:
+        return
+    print(f"\n{'━' * 70}")
+    print("  SUMMARY — paste into models/*.txt")
+    print(f"{'━' * 70}")
+    for line in suggestions:
+        print(f"  {line}")
+    print()
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -275,6 +298,10 @@ def main() -> None:
         help=f"Max files to list per repo (default: {_MAX_FILES_SHOWN}; use 0 for all)",
     )
     parser.add_argument(
+        "--top-only", action="store_true",
+        help="In the summary, show only the top-ranked suggestion per model (not one per repo)",
+    )
+    parser.add_argument(
         "--model-files", nargs="*", metavar="FILE",
         help="models/*.txt files to scan (default: all models/*.txt; ignored when query given)",
     )
@@ -285,7 +312,8 @@ def main() -> None:
     except ImportError:
         print(
             "Error: huggingface_hub is not installed.\n"
-            "Run:  pip install huggingface_hub",
+            "Use the wrapper:  ./search-hf.sh  (activates the project venv automatically)\n"
+            "Or install manually:  source .venv/bin/activate && pip install -r requirements.txt",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -302,8 +330,10 @@ def main() -> None:
 
     # ── Direct query mode ─────────────────────────────────────────────────────
     if args.query:
-        _run_search(api, args.query, ollama_name=None,
-                    already_downloaded=already_downloaded, limit=args.limit, max_files=max_files)
+        suggestions = _run_search(api, args.query, ollama_name=None,
+                                   already_downloaded=already_downloaded,
+                                   limit=args.limit, max_files=max_files)
+        _print_summary(suggestions[:1] if args.top_only else suggestions)
         return
 
     # ── From-models mode ──────────────────────────────────────────────────────
@@ -341,11 +371,14 @@ def main() -> None:
         print("All models in models/*.txt already have GGUF entries.")
         return
 
+    all_suggestions: list[str] = []
     print(f"\nSearching for {len(unconfigured)} unconfigured model(s) …")
     for name in unconfigured:
-        _run_search(api, _ollama_to_query(name), ollama_name=name,
-                    already_downloaded=already_downloaded, limit=args.limit, max_files=max_files)
-    print()
+        results = _run_search(api, _ollama_to_query(name), ollama_name=name,
+                              already_downloaded=already_downloaded,
+                              limit=args.limit, max_files=max_files)
+        all_suggestions += results[:1] if args.top_only else results
+    _print_summary(all_suggestions)
 
 
 if __name__ == "__main__":

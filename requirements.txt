@@ -1,3 +1,3 @@
 pytest>=7.4
 nvidia-ml-py>=12.0       # optional: GPU snapshots via pynvml; bench.py warns and continues without it
-huggingface_hub>=0.23.0  # optional: GGUF downloads via fetch-hf.py; lazy import — not needed for benchmarks
+huggingface_hub>=0.23.0  # fetch-hf.sh / search-hf.sh; not needed for benchmarks themselves

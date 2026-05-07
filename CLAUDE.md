@@ -56,7 +56,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 bench.py            CLI runner
 install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper
-compare.sh          Runs canonical 6-model set (model-timeout 1200, num-predict 2400)
+compare.sh          Runs canonical 6-model set (model-timeout 1200, num-predict 2400); auto-names output by backend (results-compare.json / results-compare-ls.json)
+compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
+fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
+search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
 preflight.sh        Dependency checker
 lib/
   tasks.py                Task definitions, prompt builder, subprocess helpers
