@@ -14,11 +14,31 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from lib.model_config import ModelConfig, load_model_file
+
+_SHARD_RE = re.compile(r'(-\d{5})-of-(\d{5})\.gguf$', re.IGNORECASE)
+
+
+def _all_shard_names(gguf_file: str) -> list[str]:
+    """For a shard-1 file, return all N shard filenames. For single files, return [gguf_file]."""
+    m = _SHARD_RE.search(gguf_file)
+    if not m:
+        return [gguf_file]
+    shard_num = int(m.group(1).lstrip('-'))
+    total = int(m.group(2))
+    if shard_num != 1 or total == 1:
+        return [gguf_file]
+    base = gguf_file[:m.start()]
+    return [f"{base}-{i:05d}-of-{total:05d}.gguf" for i in range(1, total + 1)]
+
+
+def _all_shards_present(cfg: ModelConfig, dest_dir: Path) -> bool:
+    return all((dest_dir / name).exists() for name in _all_shard_names(cfg.gguf_file))
 
 
 def _resolve_model_files(paths: list[str]) -> list[Path]:
@@ -84,14 +104,16 @@ def main() -> None:
         print("  qwen2.5-coder:14b  model.gguf  hf:Qwen/Qwen2.5-Coder-14B-Instruct-GGUF")
         return
 
-    already_present = [c for c in configs if (dest_dir / c.gguf_file).exists()]
-    to_download = [c for c in configs if not (dest_dir / c.gguf_file).exists()]
+    already_present = [c for c in configs if _all_shards_present(c, dest_dir)]
+    to_download = [c for c in configs if not _all_shards_present(c, dest_dir)]
 
     if already_present:
         print(f"Already present ({len(already_present)}):")
         for cfg in already_present:
-            size_mb = (dest_dir / cfg.gguf_file).stat().st_size / 1024 / 1024
-            print(f"  ✓  {cfg.gguf_file}  ({size_mb:,.0f} MB)  [{cfg.ollama_name}]")
+            shards = _all_shard_names(cfg.gguf_file)
+            total_mb = sum((dest_dir / s).stat().st_size for s in shards) / 1024 / 1024
+            parts_note = f"  ({len(shards)} parts)" if len(shards) > 1 else ""
+            print(f"  ✓  {cfg.gguf_file}{parts_note}  ({total_mb:,.0f} MB)  [{cfg.ollama_name}]")
         print()
 
     if not to_download:
@@ -100,10 +122,12 @@ def main() -> None:
 
     print(f"{'Would download' if args.dry_run else 'Downloading'} ({len(to_download)}):")
     for cfg in to_download:
+        shards = _all_shard_names(cfg.gguf_file)
+        parts_note = f"  ({len(shards)} parts)" if len(shards) > 1 else ""
         print(f"  {cfg.ollama_name}")
         print(f"    repo : {cfg.hf_repo}")
-        print(f"    file : {cfg.gguf_file}")
-        print(f"    dest : {dest_dir / cfg.gguf_file}")
+        print(f"    file : {cfg.gguf_file}{parts_note}")
+        print(f"    dest : {dest_dir / cfg.gguf_file}{parts_note}")
 
     if args.dry_run:
         return
@@ -121,15 +145,18 @@ def main() -> None:
 
     failed: list[tuple[ModelConfig, str]] = []
     for cfg in to_download:
-        print(f"[{cfg.ollama_name}]  {cfg.hf_repo} / {cfg.gguf_file}")
+        shards = _all_shard_names(cfg.gguf_file)
+        print(f"[{cfg.ollama_name}]  {cfg.hf_repo} / {cfg.gguf_file}"
+              + (f"  (+{len(shards)-1} more parts)" if len(shards) > 1 else ""))
         try:
-            local_path = hf_hub_download(
-                repo_id=cfg.hf_repo,
-                filename=cfg.gguf_file,
-                local_dir=str(dest_dir),
-            )
-            size_mb = Path(local_path).stat().st_size / 1024 / 1024
-            print(f"  → {local_path}  ({size_mb:,.0f} MB)")
+            for shard_name in shards:
+                local_path = hf_hub_download(
+                    repo_id=cfg.hf_repo,
+                    filename=shard_name,
+                    local_dir=str(dest_dir),
+                )
+                size_mb = Path(local_path).stat().st_size / 1024 / 1024
+                print(f"  → {local_path}  ({size_mb:,.0f} MB)")
         except Exception as exc:
             print(f"  FAILED: {exc}", file=sys.stderr)
             failed.append((cfg, str(exc)))

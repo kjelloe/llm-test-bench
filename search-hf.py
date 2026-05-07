@@ -151,6 +151,7 @@ def _print_repo_results(
     already_downloaded: set[str],
     suggested: dict | None,
     ollama_name: str | None,
+    max_files: int = _MAX_FILES_SHOWN,
 ) -> None:
     dl = _fmt_downloads(getattr(repo, "downloads", None))
     # Annotate fine-tune / uncensored variants so they stand out.
@@ -185,11 +186,11 @@ def _print_repo_results(
             display.append(f)
 
     # Ensure the ★ suggested entry is always in the visible window.
-    visible = display[:_MAX_FILES_SHOWN]
-    hidden_count = len(display) - _MAX_FILES_SHOWN
+    visible = display[:max_files]
+    hidden_count = len(display) - max_files
     if suggested and suggested not in visible:
-        visible = display[:_MAX_FILES_SHOWN - 1] + [suggested]
-        hidden_count = max(0, len(display) - _MAX_FILES_SHOWN)
+        visible = display[:max_files - 1] + [suggested]
+        hidden_count = max(0, len(display) - max_files)
 
     for f in visible:
         star = " ★" if f is suggested else "  "
@@ -217,7 +218,7 @@ def _print_repo_results(
 
 
 def _run_search(api, query: str, ollama_name: str | None,
-                already_downloaded: set[str], limit: int) -> None:
+                already_downloaded: set[str], limit: int, max_files: int = _MAX_FILES_SHOWN) -> None:
     label = ollama_name or f'"{query}"'
     print(f"\n{'━' * 70}")
     print(f"  {label}  (query: {query!r})")
@@ -234,7 +235,7 @@ def _run_search(api, query: str, ollama_name: str | None,
         if not files:
             continue
         suggested = _suggest_file(files)
-        _print_repo_results(repo, files, already_downloaded, suggested, ollama_name)
+        _print_repo_results(repo, files, already_downloaded, suggested, ollama_name, max_files=max_files)
         printed += 1
         if printed >= limit:
             break
@@ -270,6 +271,10 @@ def main() -> None:
         help=f"Max repos to show per model (default: {_MAX_REPOS})",
     )
     parser.add_argument(
+        "--max-files", type=int, default=_MAX_FILES_SHOWN,
+        help=f"Max files to list per repo (default: {_MAX_FILES_SHOWN}; use 0 for all)",
+    )
+    parser.add_argument(
         "--model-files", nargs="*", metavar="FILE",
         help="models/*.txt files to scan (default: all models/*.txt; ignored when query given)",
     )
@@ -287,6 +292,8 @@ def main() -> None:
 
     api = HfApi(token=args.token or None)
 
+    max_files = args.max_files if args.max_files > 0 else 9999
+
     # Figure out which files are already downloaded (optional, for ✓ markers)
     already_downloaded: set[str] = set()
     models_dir = os.environ.get("LLAMA_MODELS_DIR", "")
@@ -296,7 +303,7 @@ def main() -> None:
     # ── Direct query mode ─────────────────────────────────────────────────────
     if args.query:
         _run_search(api, args.query, ollama_name=None,
-                    already_downloaded=already_downloaded, limit=args.limit)
+                    already_downloaded=already_downloaded, limit=args.limit, max_files=max_files)
         return
 
     # ── From-models mode ──────────────────────────────────────────────────────
@@ -337,7 +344,7 @@ def main() -> None:
     print(f"\nSearching for {len(unconfigured)} unconfigured model(s) …")
     for name in unconfigured:
         _run_search(api, _ollama_to_query(name), ollama_name=name,
-                    already_downloaded=already_downloaded, limit=args.limit)
+                    already_downloaded=already_downloaded, limit=args.limit, max_files=max_files)
     print()
 
 
