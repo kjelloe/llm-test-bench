@@ -6,7 +6,7 @@ from lib.model_config import ModelConfig, load_model_file, parse_model_line
 
 def test_ollama_name_only():
     cfg = parse_model_line("gpt-oss:20b")
-    assert cfg == ModelConfig(ollama_name="gpt-oss:20b", gguf_file=None, params={})
+    assert cfg == ModelConfig(ollama_name="gpt-oss:20b", gguf_file=None, params={}, hf_repo=None)
 
 
 def test_with_gguf():
@@ -34,9 +34,36 @@ def test_mixed_params():
     assert cfg.params["no_mmap"] is True
 
 
+def test_hf_repo_after_gguf():
+    cfg = parse_model_line("qwen2.5-coder:14b  model.gguf  hf:Qwen/Qwen2.5-Coder-14B-Instruct-GGUF")
+    assert cfg.gguf_file == "model.gguf"
+    assert cfg.hf_repo == "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF"
+    assert cfg.params == {}
+
+
+def test_hf_repo_after_params():
+    cfg = parse_model_line("qwen3.5:35b  model.gguf  n_cpu_moe=35,no_mmap  hf:bartowski/Qwen3-GGUF")
+    assert cfg.gguf_file == "model.gguf"
+    assert cfg.hf_repo == "bartowski/Qwen3-GGUF"
+    assert cfg.params["n_cpu_moe"] == "35"
+    assert cfg.params["no_mmap"] is True
+
+
+def test_hf_repo_before_params():
+    cfg = parse_model_line("qwen3.5:35b  model.gguf  hf:owner/repo  n_cpu_moe=35")
+    assert cfg.hf_repo == "owner/repo"
+    assert cfg.gguf_file == "model.gguf"
+    assert cfg.params["n_cpu_moe"] == "35"
+
+
+def test_no_hf_repo():
+    cfg = parse_model_line("qwen2.5-coder:14b  model.gguf")
+    assert cfg.hf_repo is None
+
+
 def test_inline_comment_stripped():
     cfg = parse_model_line("gpt-oss:20b  # ~82 tok/s  GPU, thinking")
-    assert cfg == ModelConfig(ollama_name="gpt-oss:20b", gguf_file=None, params={})
+    assert cfg == ModelConfig(ollama_name="gpt-oss:20b", gguf_file=None, params={}, hf_repo=None)
 
 
 def test_gguf_with_inline_comment():

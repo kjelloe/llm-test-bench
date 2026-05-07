@@ -1,5 +1,10 @@
 # Default / canonical model set
 # Order: fastest → slowest by observed avg tok/s (confirmed 2026-04-26)
+#
+# Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
+#   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
+#   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
+#   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
 gpt-oss:20b          # ~82 tok/s  GPU, thinking
 qwen2.5-coder:14b    # ~40 tok/s  GPU
