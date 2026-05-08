@@ -10,6 +10,7 @@ from pathlib import Path
 
 from lib.gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
 from lib.hw_snapshot import get_hw_snapshot
+from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
 from lib.tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
@@ -114,8 +115,15 @@ def run_one(
         except OllamaError as exc:
             stop_poll.set()
             poll_thread.join(timeout=2.0)
-            record["error_kind"] = "TOOL_ERROR"
-            record["error_detail"] = str(exc)[:500]
+            err_str = str(exc)
+            # llama-server returns HTTP 400 with "exceed_context_size_error" when the
+            # server silently capped --ctx-size below our request (e.g. VRAM limit).
+            # Treat this the same as Ollama's silent ctx downgrade.
+            if "exceed_context_size_error" in err_str or "exceeds the available context size" in err_str:
+                record["error_kind"] = "CTX_TRUNCATED"
+            else:
+                record["error_kind"] = "TOOL_ERROR"
+            record["error_detail"] = err_str[:500]
             record["gpu_snapshots"] = {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None}
             return record
         vram_post = get_gpu_snapshot()  # after full inference — weights + KV cache (prompt + output)
@@ -278,7 +286,6 @@ def main() -> None:
         model_configs = {c.ollama_name: c for c in cfgs}
         llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path)
     else:
-        from lib.ollama_client import OllamaError as _OllamaError
         from lib.ollama_client import chat as _chat_fn
         from lib.ollama_client import unload_model as _unload_fn
 
