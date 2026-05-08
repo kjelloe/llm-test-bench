@@ -395,6 +395,14 @@ def main() -> None:
             print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
             results.append(record)
 
+            # llama-server silently caps ctx when VRAM is insufficient; subsequent
+            # requests against the same server process hang or error. Force a clean
+            # restart before the next task so needs_restart() picks it up.
+            if record.get("error_kind") == "CTX_TRUNCATED" and llama_manager is not None:
+                print("  [llama-server] CTX_TRUNCATED — stopping server for fresh restart on next task",
+                      flush=True)
+                llama_manager.stop()
+
     finally:
         if llama_manager is not None:
             llama_manager.stop()
