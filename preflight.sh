@@ -12,14 +12,23 @@ fail()   { echo -e "  ${RED}✗${NC}  $*";              FAIL=$((FAIL + 1)); }
 warn()   { echo -e "  ${YELLOW}~${NC}  $*";           WARN=$((WARN + 1)); }
 section(){ echo; echo -e "${BOLD}── $* ──${NC}"; }
 
-# ── models that compare.sh will benchmark ────────────────────────────────────
-REQUIRED_MODELS=()
-while IFS= read -r _line || [[ -n "$_line" ]]; do
-    _line="${_line%%#*}"
-    _line="${_line//[[:space:]]/}"
-    [[ -n "$_line" ]] && REQUIRED_MODELS+=("$_line")
-done < "$(dirname "$0")/models/default.txt"
-unset _line
+# Parse all models/*.txt via model_config.py — outputs TSV: name\tgguf_file\thf_repo
+# Falls back to empty if Python/lib not available.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_MODELS_TSV=$(python3 - <<PYEOF 2>/dev/null
+import sys
+sys.path.insert(0, '$SCRIPT_DIR')
+from lib.model_config import load_model_file
+from pathlib import Path
+seen = set()
+for f in sorted((Path('$SCRIPT_DIR') / 'models').glob('*.txt')):
+    for cfg in load_model_file(f):
+        if cfg.ollama_name in seen:
+            continue
+        seen.add(cfg.ollama_name)
+        print('\t'.join([cfg.ollama_name, cfg.gguf_file or '', cfg.hf_repo or '']))
+PYEOF
+)
 
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
 
@@ -52,20 +61,68 @@ else
   OLLAMA_UP=false
 fi
 
-# ── 3. Required models ────────────────────────────────────────────────────────
-section "Ollama models"
+# ── 3. Models (ollama + GGUF) ─────────────────────────────────────────────────
+section "Models  (models/*.txt)"
+MODELS_DIR="${LLAMA_MODELS_DIR:-}"
+
 if [[ "$OLLAMA_UP" == "true" ]]; then
-  LOADED_MODELS=$(ollama list 2>/dev/null | awk 'NR>1 {print $1}')
-  for model in "${REQUIRED_MODELS[@]}"; do
-    if echo "$LOADED_MODELS" | grep -qxF "$model"; then
-      ok "$model"
-    else
-      fail "$model  →  ollama pull $model"
-    fi
-  done
+  _OLLAMA_LIST=$(ollama list 2>/dev/null | awk 'NR>1 {print $1}')
 else
-  warn "Skipping model check — Ollama not running"
+  _OLLAMA_LIST=""
 fi
+
+if [[ -z "$_MODELS_TSV" ]]; then
+  warn "Could not parse models/*.txt — is lib/model_config.py present?"
+else
+  while IFS=$'\t' read -r _name _gguf _hf; do
+    [[ -z "$_name" ]] && continue
+
+    # ── ollama status ──
+    if [[ "$OLLAMA_UP" == "true" ]]; then
+      if echo "$_OLLAMA_LIST" | grep -qxF "$_name"; then
+        _ol="${GREEN}ollama ✓${NC}"
+        _ol_ok=1
+      else
+        _ol="${RED}ollama ✗${NC}  (ollama pull $_name)"
+        _ol_ok=0
+      fi
+    else
+      _ol="${YELLOW}ollama ?${NC}  (not running)"
+      _ol_ok=-1
+    fi
+
+    # ── GGUF status ──
+    if [[ -z "$_gguf" ]]; then
+      _gu="${YELLOW}gguf –${NC}  (not configured)"
+      _gu_ok=-1
+    elif [[ -z "$MODELS_DIR" ]]; then
+      _gu="${YELLOW}gguf ?${NC}  (LLAMA_MODELS_DIR not set)"
+      _gu_ok=-1
+    elif [[ -f "$MODELS_DIR/$_gguf" ]]; then
+      _gu="${GREEN}gguf ✓${NC}  $_gguf"
+      _gu_ok=1
+    else
+      _gu="${RED}gguf ✗${NC}  $_gguf not in \$LLAMA_MODELS_DIR"
+      _gu_ok=0
+    fi
+
+    # ── pick indicator based on combined status ──
+    if   [[ $_ol_ok -eq 1  || $_gu_ok -eq 1  ]]; then
+      echo -e "  ${GREEN}✓${NC}  $_name"
+      PASS=$((PASS + 1))
+    elif [[ $_ol_ok -eq 0  && $_gu_ok -ne 1  ]]; then
+      echo -e "  ${RED}✗${NC}  $_name"
+      FAIL=$((FAIL + 1))
+    else
+      echo -e "  ${YELLOW}~${NC}  $_name"
+      WARN=$((WARN + 1))
+    fi
+    echo -e "       $_ol"
+    echo -e "       $_gu"
+
+  done <<< "$_MODELS_TSV"
+fi
+unset _name _gguf _hf _ol _ol_ok _gu _gu_ok _OLLAMA_LIST
 
 # ── 4. Python + pytest ────────────────────────────────────────────────────────
 section "Python"
