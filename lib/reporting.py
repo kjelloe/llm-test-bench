@@ -117,6 +117,20 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
             + "+" + "-" * (SUM_W + 2) + "+"
         )
 
+    # HF repo legend — shown once when any result carries an hf_repo (llama-server runs)
+    hf_by_model: dict[str, str] = {}
+    for r in results:
+        key = dk(r)
+        if key not in hf_by_model and r.get("hf_repo"):
+            hf_by_model[key] = r["hf_repo"]
+    if hf_by_model:
+        name_w = max(len(m) for m in models)
+        print(f"\nModels ({len(models)}):")
+        for i, m in enumerate(models, 1):
+            hf = hf_by_model.get(m, "")
+            hf_str = f"  hf:{hf}" if hf else ""
+            print(f"    {i:2d}. {m:<{name_w}}{hf_str}")
+
     for page in range(total_pages):
         page_tasks = tasks[page * tasks_per_page : (page + 1) * tasks_per_page]
         bar = _bar(len(page_tasks))

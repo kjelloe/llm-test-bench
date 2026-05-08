@@ -390,6 +390,11 @@ def main() -> None:
                 gpu_after=gpu_after,
                 backend=args.backend,
             )
+            if llama_manager is not None:
+                cfg = model_configs.get(model)
+                if cfg and cfg.hf_repo:
+                    record["hf_repo"] = cfg.hf_repo
+
             status = "PASS" if record["tests_pass"] else f"FAIL({record.get('error_kind', '?')})"
             trunc = " TRUNCATED" if record.get("response_truncated") else ""
             print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")

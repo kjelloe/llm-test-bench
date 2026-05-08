@@ -62,6 +62,11 @@ class LlamaServerManager:
         except subprocess.TimeoutExpired:
             self._proc.kill()
             self._proc.wait()
+        if self._proc.stderr:
+            try:
+                self._proc.stderr.close()
+            except Exception:
+                pass
         self._proc = None
         self._current_model = None
         self._current_ctx = 0
@@ -94,16 +99,30 @@ class LlamaServerManager:
             else:
                 cmd.extend([flag, str(val)])
 
-        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         self._current_model = cfg.ollama_name
         self._current_ctx = ctx_size
-        self._wait_ready(startup_timeout)
+        try:
+            self._wait_ready(startup_timeout)
+        except Exception:
+            self._current_model = None
+            self._current_ctx = 0
+            raise
 
     def _wait_ready(self, timeout: int) -> None:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
-                raise RuntimeError("llama-server exited unexpectedly during startup")
+                stderr_out = ""
+                if self._proc.stderr:
+                    try:
+                        stderr_out = self._proc.stderr.read().decode(errors="replace").strip()
+                    except Exception:
+                        pass
+                msg = "llama-server exited unexpectedly during startup"
+                if stderr_out:
+                    msg += f"\n--- stderr ---\n{stderr_out[-2000:]}"
+                raise RuntimeError(msg)
             try:
                 with urllib.request.urlopen(_HEALTH_URL, timeout=2) as r:
                     data = json.loads(r.read())
