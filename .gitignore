@@ -10,3 +10,4 @@ output/
 /task_data/dotnet_sas/tests/*/bin/
 /task_data/dotnet_sas/tests/*/obj/
 *.log
+llama_models

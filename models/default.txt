@@ -12,9 +12,14 @@
 # gemma4:26b           # ~28 tok/s  GPU, partial offload
 # qwen3.5:35b          # ~16 tok/s  RAM-partial, thinking
 # gpt-oss:120b         # ~11 tok/s  RAM, thinking
-gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  hf:unsloth/gpt-oss-20b-GGUF
-qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
-qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
-gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  hf:unsloth/gemma-4-26B-A4B-it-GGUF
-qwen3.5:35b  Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf  hf:HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive
-gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model — fetch-hf.sh downloads all parts
+# fits in 16 GB VRAM — GPU only, KV cache quantised
+gpt-oss:20b        gpt-oss-20b-Q4_K_M.gguf                                 cache_type_k=turbo4,cache_type_v=turbo3                             hf:unsloth/gpt-oss-20b-GGUF
+qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf                 cache_type_k=turbo4,cache_type_v=turbo3                             hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
+
+# MoE, exceed 16 GB — partial GPU + CPU expert offload
+qwen3-coder:30b    Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf               n_cpu_moe=35,cache_type_k=turbo4,cache_type_v=turbo3                hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+gemma4:26b         gemma-4-26B-A4B-it-UD-Q4_K_M.gguf                      n_cpu_moe=35,cache_type_k=turbo4,cache_type_v=turbo3                hf:unsloth/gemma-4-26B-A4B-it-GGUF
+
+# MoE, mostly RAM — full expert offload + lock in RAM
+qwen3.5:35b        Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf  n_cpu_moe=35,no_mmap,mlock,cache_type_k=turbo4,cache_type_v=turbo3  hf:HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive
+gpt-oss:120b       gpt-oss-120b-mxfp4-00001-of-00003.gguf                  n_cpu_moe=35,no_mmap,mlock,cache_type_k=turbo4,cache_type_v=turbo3  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model
