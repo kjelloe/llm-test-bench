@@ -64,7 +64,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
 - `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 4800 --model-timeout 1200 --startup-timeout 600`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`. Prints HF repo names next to each model in the run header.
-- `configure.sh`: prints current env variable state with per-variable set instructions — covers `OLLAMA_URL`, `LLAMA_SERVER_BIN` (auto-detects from PATH), `LLAMA_MODELS_DIR` (shows GGUF count), `BENCH_BACKEND`, `HF_TOKEN` (masked), `LLAMA_SRC_DIR`. Green ✓ for set, yellow ~ for unset, red ✗ for invalid path.
+- `configure.sh`: prints current env variable state with per-variable set instructions — covers `OLLAMA_URL`, `LLAMA_SERVER_BIN` (auto-detects from PATH), `LLAMA_MODELS_DIR` (shows GGUF count), `BENCH_BACKEND`, `HF_TOKEN` (masked), `LLAMA_SRC_DIR`. Green ✓ for set, yellow ~ for unset, red ✗ for invalid path. Interactive wizard (Steps 1–7) collects values and prints a ready-to-paste `export` block. **Step 7** (llama-server only): invokes `lib/optimize_models.py` to suggest hardware-aware params for each GGUF model; adjusts suggestions automatically when hardware changes (e.g. upgrading from 1×16 GB to 2×24 GB will suggest removing `n_cpu_moe` from models that now fit fully in VRAM and adding `split_mode=layer`).
 - `statistics.sh`: aggregates all `output/*.json` result files into a flat dataset. Wraps `statistics.py`. Supports `--format {json,csv,markdown}`, `--out PATH`, `--detail` (one row per task instead of per model), and positional file arguments.
 - `install.sh`: interactive installer; checks each dependency (Python, pytest, Node.js 20+, .NET 8, Ollama, models) and offers to install anything missing. Platform-aware: supports apt, dnf, pacman, brew.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models from `models/default.txt`, Python, Node, .NET).
@@ -153,13 +153,13 @@ gemma4:26b         gemma-4-27b-it-Q4_K_M.gguf       n_cpu_moe=18,no_mmap
 - Console comparison table: paginated (one or more `[1/N]` … `[N/N]` sub-tables when task count exceeds terminal width); rows = models, columns = tasks + summary; `Spd` column = assumed speed rank (1 = fastest); `Skill` column = highest L-tier where model passes all tasks at that level and below, with `CTX_TRUNCATED` excluded (hardware constraint, not capability failure). HF repo names are printed in the model legend above the table for llama-server runs.
 - Console failure detail: error kind counts + one-line sample per category.
 - `output/compare-history.json`: last 10 run summaries with per-model/per-task breakdown and hardware metadata; used to show estimated runtime in the compare header.
-- `statistics.sh` / `statistics.py`: post-run export tool; aggregates multiple result files into a flat dataset (one row per model or per task) in JSON, Nordic CSV (`;`-delimited, `QUOTE_ALL`), or Markdown format.
+- `statistics.sh` / `statistics.py`: post-run export tool; aggregates multiple result files into a flat dataset (one row per model or per task) in JSON, Nordic CSV (`;`-delimited, `QUOTE_ALL`), or Markdown format. Hardware columns include `gpu` (multi-GPU aware: `2× RTX 3090 24GB (48GB total)`), `gpu_count`, `total_vram_gb`, `compute_cap`, plus driver, free VRAM, temperature, power, CPU, RAM, platform, CUDA toolkit, software versions, and storage type. Running `statistics.sh` across result files from different hardware produces a directly comparable dataset — each row carries its full hardware context.
 
 ### Result Record Schema
 
 Results file top-level: `{"hardware": {"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str, "cuda_toolkit": str, "ollama_version": str, "llama_server_version": str, "models_storage": {"device": str, "transport": str}}, "results": [...]}`.
 
-GPU list entries include: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`. The `llama_server_version` field is only present for llama-server runs.
+GPU list entries include: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`, `compute_cap` (float, e.g. `12.0`; absent on older drivers that don't support the field). Multiple GPUs are all recorded. The `llama_server_version` field is only present for llama-server runs.
 
 Per model × task run:
 

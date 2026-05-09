@@ -352,7 +352,7 @@ Requires `huggingface_hub` (included in `requirements.txt`; installed when you f
 
 **Detail mode** (`--detail`) produces one row per `(model, task)` with: all hardware fields, task difficulty, pass/fail, error kind, tok/s, wall_s, prompt tokens, gen tokens, num_ctx, and truncation flags.
 
-Hardware fields exported: GPU name+VRAM, GPU driver, free VRAM at run start, GPU temperature, GPU power limit, CPU, RAM, platform, CUDA toolkit version, llama-server version (if applicable), Ollama version (if applicable), and storage device type.
+Hardware fields exported: GPU label (multi-GPU aware, e.g. `2× RTX 3090 24GB (48GB total)`), GPU count, total VRAM GB, compute capability, GPU driver, free VRAM at run start, GPU temperature, GPU power limit, CPU, RAM, platform, CUDA toolkit version, llama-server version (if applicable), Ollama version (if applicable), and storage device type.
 
 The CSV format uses `;` as delimiter with all cells double-quoted (Nordic CSV — compatible with Excel on Nordic locales).
 

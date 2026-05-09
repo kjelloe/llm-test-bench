@@ -27,9 +27,10 @@ requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it
 install.sh                Interactive installer: checks and installs missing dependencies
 run.sh                    Venv setup + bench.py entrypoint
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 4800; forwards extra args
-configure.sh              Prints current env variable state (OLLAMA_URL, LLAMA_SERVER_BIN, LLAMA_MODELS_DIR, HF_TOKEN, …) with set instructions
+configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
 statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); thin wrapper for statistics.py
 statistics.py             Dataset builder: one row per model (summary) or per task (--detail); exports hardware, pass rates, tok/s, skill breakdown
+lib/optimize_models.py    Hardware-aware llama-server param optimizer: detects GPU count/VRAM/compute, suggests ngl, flash_attn, n_cpu_moe, mlock, split_mode; writes back to models/*.txt
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 fetch.sh                  Pulls models by set name, set file path, or bare model name
 lib/                      Python support modules (imported by bench.py) and shell utilities
@@ -40,7 +41,7 @@ lib/                      Python support modules (imported by bench.py) and shel
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
-  hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi), CPU string, RAM total, platform
+  hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
   history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
   show-all-models.sh      Runs ollama show on every locally installed model
 output/                   Runtime artifacts — git-ignored, created on first run
@@ -209,7 +210,7 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 
 Captures a point-in-time hardware description at benchmark start:
 - `get_hw_snapshot(llama_server_bin=None, models_dir=None) -> dict` — returns a dict with:
-  - `gpu` — list of GPU dicts from a single `nvidia-smi` query: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`
+  - `gpu` — list of GPU dicts queried via `nvidia-smi` (two-pass: tries with `compute_cap` first, falls back without for older drivers): `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`, `compute_cap` (float, e.g. `12.0`; absent on older drivers)
   - `cpu` — model string + logical core count from `/proc/cpuinfo` (Linux) or `sysctl` (macOS)
   - `ram_total_gb` — total system RAM in GB
   - `platform` — `"Linux 6.6.87…"` etc.
@@ -220,6 +221,31 @@ Captures a point-in-time hardware description at benchmark start:
 - `hw_summary(hw) -> str` — one-line string suitable for display, e.g. `RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 GB RAM`.
 
 The snapshot is saved in `results.json` as a top-level `"hardware"` field and in `compare-history.json` per run entry, allowing results from different machines or GPUs to be compared. For Ollama runs, `models_storage` auto-detects via `$OLLAMA_MODELS` or `~/.ollama/models`.
+
+#### `lib/optimize_models.py` — Hardware-aware Model Optimizer
+
+Called by `configure.sh` Step 7. Interactive CLI that reads current GPU/RAM state and suggests optimised llama-server startup params for each model in a `models/*.txt` file, then offers to write them back.
+
+- Detects hardware via `nvidia-smi`: GPU count, per-GPU VRAM, compute capability (Ampere/Ada/Blackwell). Falls back to name-based compute inference if `compute_cap` field is unsupported.
+- Detects RAM via `/proc/meminfo`.
+- For each model with a GGUF file: measures on-disk size (summing multi-part shards).
+- Key decision: **`full_gpu_fit`** = `total_vram_gb ≥ gguf_gb × 1.05`. This single flag drives most suggestions:
+
+  | Condition | Action |
+  |-----------|--------|
+  | `full_gpu_fit` | `ngl=999`; remove `n_cpu_moe` (experts run faster on GPU); remove `mlock` (model is VRAM-resident) |
+  | `n_cpu_moe` set but not `full_gpu_fit` | `ngl=999` (dense layers to GPU, experts to CPU) |
+  | MoE model, no `n_cpu_moe`, not `full_gpu_fit` | add `n_cpu_moe=35` then `ngl=999` |
+  | Large model not fitting any GPU | warn with estimated starting `ngl` value |
+  | Model ≥ 8 GB and RAM ≥ 1.2× | `no_mmap` (avoid mmap overhead on load) |
+  | Model ≥ 16 GB, RAM-resident, RAM ≥ 1.5× | `mlock` (pin in RAM, prevent paging) |
+  | GPU compute ≥ 8.0 (Ampere+) | `flash_attn` (faster attention, lower VRAM at long contexts) |
+  | 2+ GPUs | `split_mode=layer` (distribute transformer layers across GPUs) |
+  | `turbo4`/`turbo3` cache type | replace with `q8_0` (broader build support) |
+
+- Prompts per model: apply / skip / apply-all / skip-all.
+- Backs up the model file (`models/default.txt.bak`) before writing.
+- Preserves `hf:` fields and inline comments when rewriting lines.
 
 #### `lib/history.py` — Run History Manager
 
@@ -236,7 +262,7 @@ Written by `compare.sh` (via `lib/history.py save`) after each run. Two top-leve
 
 ### Data Model
 
-Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. The top-level `"hardware"` field contains the full snapshot from `hw_snapshot.get_hw_snapshot()` (gpu list with driver/thermal/power fields, cpu string, ram_total_gb, platform, cuda_toolkit, ollama_version, llama_server_version, models_storage). The old flat-list format is still readable via `load_results()`.
+Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. The top-level `"hardware"` field contains the full snapshot from `hw_snapshot.get_hw_snapshot()` (gpu list with driver/thermal/power/compute_cap fields for each GPU, cpu string, ram_total_gb, platform, cuda_toolkit, ollama_version, llama_server_version, models_storage). Multiple GPUs are all recorded — `statistics.py` aggregates them into `gpu_count`, `total_vram_gb`, and a human-readable `gpu` label (e.g. `2× RTX 3090 24GB (48GB total)`). The old flat-list format is still readable via `load_results()`.
 
 #### Result Record
 
