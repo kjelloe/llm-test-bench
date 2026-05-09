@@ -230,7 +230,7 @@ def main() -> None:
         help="models/*.txt file for GGUF/param lookup (required for --backend llama-server)",
     )
     parser.add_argument("--ollama-url", default="http://localhost:11434")
-    parser.add_argument("--num-ctx", type=int, default=8192)
+    parser.add_argument("--num-ctx", type=int, default=int(os.environ.get("DEFAULT_CTX", "8192")))
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--num-predict", type=int, default=400,

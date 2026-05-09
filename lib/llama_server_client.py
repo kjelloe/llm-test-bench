@@ -89,7 +89,6 @@ class LlamaServerManager:
             "--ctx-size", str(ctx_size),
             "--port", str(_PORT),
             "--host", "127.0.0.1",
-            "--n-gpu-layers", "999",
         ]
         if num_threads and num_threads > 0:
             cmd.extend(["--threads", str(num_threads)])
@@ -98,7 +97,8 @@ class LlamaServerManager:
             if val is True:
                 cmd.append(flag)
             else:
-                cmd.extend([flag, str(val)])
+                # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
+                cmd.extend([flag, str(val).replace("|", ",")])
 
         self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         self._current_model = cfg.ollama_name

@@ -53,11 +53,11 @@ def _is_moe(ollama_name: str, gguf_file: str | None) -> bool:
 # ── Hardware detection ────────────────────────────────────────────────────────
 
 def get_gpu_info() -> list[dict]:
-    """Query nvidia-smi. Returns list of {name, vram_gb, compute_cap}."""
+    """Query nvidia-smi. Returns list of {name, vram_gb, vram_free_gb, compute_cap}."""
     # Try with compute_cap first; fall back without it if unsupported
     for fields in (
-        'name,memory.total,compute_cap',
-        'name,memory.total',
+        'name,memory.total,memory.free,compute_cap',
+        'name,memory.total,memory.free',
     ):
         try:
             r = subprocess.run(
@@ -69,12 +69,18 @@ def get_gpu_info() -> list[dict]:
             gpus: list[dict] = []
             for line in r.stdout.strip().splitlines():
                 parts = [p.strip() for p in line.split(',')]
-                if len(parts) < 2:
+                if len(parts) < 3:
                     continue
                 try:
-                    vram_gb = int(parts[1]) / 1024
-                    cap = float(parts[2]) if len(parts) >= 3 else _infer_cap(parts[0])
-                    gpus.append({'name': parts[0], 'vram_gb': vram_gb, 'compute_cap': cap})
+                    vram_gb      = int(parts[1]) / 1024
+                    vram_free_gb = int(parts[2]) / 1024
+                    cap = float(parts[3]) if len(parts) >= 4 else _infer_cap(parts[0])
+                    gpus.append({
+                        'name':         parts[0],
+                        'vram_gb':      vram_gb,
+                        'vram_free_gb': vram_free_gb,
+                        'compute_cap':  cap,
+                    })
                 except (ValueError, IndexError):
                     continue
             return gpus
@@ -93,6 +99,22 @@ def _infer_cap(gpu_name: str) -> float:
     if 'H100'   in n:  return 9.0
     if 'RTX 20' in n:  return 7.5    # Turing (no flash-attn)
     return 0.0
+
+
+def _batch_tier(total_vram: float) -> tuple[int, int]:
+    """Return (batch_size, ubatch_size) for prompt-eval throughput based on total VRAM."""
+    if total_vram < 20: return (512, 128)
+    if total_vram < 28: return (1024, 256)
+    if total_vram < 56: return (2048, 512)
+    return (4096, 512)
+
+
+def _suggested_ctx(total_vram: float) -> int:
+    """Suggested DEFAULT_CTX based on total VRAM tier."""
+    if total_vram < 20: return 8192
+    if total_vram < 28: return 16384
+    if total_vram < 56: return 32768
+    return 65536
 
 
 def get_ram_gb() -> float:
@@ -152,20 +174,18 @@ def suggest_params(
     cap        = max((g.get('compute_cap', 0.0) for g in gpus), default=0.0)
     moe        = _is_moe(ollama_name, gguf_file)
 
-    # Does the entire model fit in the available GPU VRAM pool (5 % headroom)?
-    # For multi-GPU this is the combined total, which split_mode=layer can use.
-    full_gpu_fit = gguf_gb > 0 and total_vram >= gguf_gb * 1.05
+    # 85% safety margin: model must fit within 85% of VRAM to be "fully GPU-resident".
+    # Leaves headroom for KV cache, compute buffers, and display use.
+    full_gpu_fit = gguf_gb > 0 and gguf_gb <= total_vram * 0.85
 
     # ── MoE: n_cpu_moe ────────────────────────────────────────────────────────
-    # Must be resolved BEFORE the ngl block so ngl can read the updated sugg.
+    # Resolved BEFORE ngl so ngl can read the updated sugg.
     if moe and gguf_gb > 0:
         if full_gpu_fit:
-            # All layers (including experts) fit in VRAM — CPU routing is overhead
             if 'n_cpu_moe' in sugg:
                 del sugg['n_cpu_moe']
-                reasons.append(('~', f'n_cpu_moe removed: model ({gguf_gb:.1f} GB) fits in VRAM ({total_vram:.0f} GB total) — run all experts on GPU for max speed'))
+                reasons.append(('~', f'n_cpu_moe removed: model ({gguf_gb:.1f} GB) fits in VRAM ({total_vram:.0f} GB, 85% = {total_vram*0.85:.0f} GB) — run all experts on GPU'))
         else:
-            # Model too large for VRAM alone — route experts to CPU
             if 'n_cpu_moe' not in sugg:
                 sugg['n_cpu_moe'] = '35'
                 reasons.append(('+', 'n_cpu_moe=35: MoE model too large for VRAM — route expert layers to CPU'))
@@ -178,29 +198,26 @@ def suggest_params(
                 gpu_desc = f'{num_gpus}× {gpus[0]["vram_gb"]:.0f} GB = {total_vram:.0f} GB total' if num_gpus > 1 else f'{total_vram:.0f} GB'
                 reasons.append(('+', f'ngl=999: model ({gguf_gb:.1f} GB) fits in VRAM ({gpu_desc})'))
         elif 'n_cpu_moe' in sugg:
-            # Experts to CPU — dense layers fit; offload as many layers as possible
             if sugg.get('ngl') != '999':
                 sugg['ngl'] = '999'
                 reasons.append(('+', 'ngl=999: n_cpu_moe set — expert layers go to CPU, dense layers offloaded to GPU'))
         else:
-            # Partial offload — rough estimate; don't auto-set, just warn
             ratio  = total_vram / gguf_gb
-            usable = max(0.0, ratio - 0.20)          # leave 20 % headroom for KV cache
+            usable = max(0.0, ratio - 0.20)
             est    = max(1, min(round(usable * 40), 40))
             if 'ngl' not in sugg:
                 reasons.append(('!', f'ngl not set: model ({gguf_gb:.1f} GB) > VRAM ({total_vram:.0f} GB) — partial offload; starting point: ngl={est}'))
 
     # ── no_mmap ───────────────────────────────────────────────────────────────
-    # Avoids mmap page-table overhead; useful for any large model regardless of
-    # whether it fits in VRAM (the file is still read from disk on first load).
+    # Benchmark-specific: eager full load into anonymous RAM eliminates page-fault
+    # timing variance during generation. For general serving, --mmap + --mlock is
+    # preferred; no_mmap is used here because the harness is a benchmark (see SPEC).
     if gguf_gb >= 8 and 'no_mmap' not in sugg and ram_gb >= gguf_gb * 1.2:
         sugg['no_mmap'] = True
-        reasons.append(('+', f'no_mmap: avoids mmap overhead; model ({gguf_gb:.1f} GB) loaded into RAM ({ram_gb:.0f} GB)'))
+        reasons.append(('+', f'no_mmap: benchmark timing — eager load into RAM ({ram_gb:.0f} GB) avoids page-fault variance; see SPEC for serving alternative'))
 
     # ── mlock ─────────────────────────────────────────────────────────────────
-    # Only valuable when model (or large parts of it) lives in system RAM long-term.
     if full_gpu_fit:
-        # Model is VRAM-resident; mlock on system RAM copy is unnecessary
         if 'mlock' in sugg:
             del sugg['mlock']
             reasons.append(('~', f'mlock removed: model fits in VRAM ({total_vram:.0f} GB) — no need to pin system RAM copy'))
@@ -209,15 +226,22 @@ def suggest_params(
             sugg['mlock'] = True
             reasons.append(('+', f'mlock: model ({gguf_gb:.1f} GB) is RAM-resident; pin to {ram_gb:.0f} GB RAM to prevent paging'))
 
-    # ── cache types ───────────────────────────────────────────────────────────
+    # ── KV cache types ────────────────────────────────────────────────────────
+    # f16 when model is fully GPU-resident (max quality at typical context lengths).
+    # q8_0 otherwise (good quality/memory tradeoff for larger or partially-offloaded models).
+    kv_target = 'f16' if full_gpu_fit else 'q8_0'
     for key in ('cache_type_k', 'cache_type_v'):
         if key not in sugg:
-            sugg[key] = 'q8_0'
-            reasons.append(('+', f'{key}=q8_0: quantised KV cache — good quality/speed tradeoff'))
+            label = 'max quality — model fully GPU-resident' if kv_target == 'f16' else 'quantised KV — saves VRAM for long context'
+            sugg[key] = kv_target
+            reasons.append(('+', f'{key}={kv_target}: {label}'))
         elif sugg[key] in ('turbo4', 'turbo3'):
             old = sugg[key]
-            sugg[key] = 'q8_0'
-            reasons.append(('~', f'{key}: {old} → q8_0 (turbo cache types not supported by all llama.cpp builds)'))
+            sugg[key] = kv_target
+            reasons.append(('~', f'{key}: {old} → {kv_target} (turbo types unsupported by many llama.cpp builds)'))
+        elif sugg[key] == 'q8_0' and kv_target == 'f16':
+            sugg[key] = 'f16'
+            reasons.append(('~', f'{key}: q8_0 → f16 (model fully GPU-resident — f16 gives better quality at no extra VRAM cost)'))
 
     # ── flash attention ───────────────────────────────────────────────────────
     if cap >= 8.0 and 'flash_attn' not in sugg:
@@ -226,11 +250,40 @@ def suggest_params(
         sugg['flash_attn'] = True
         reasons.append(('+', f'flash_attn: GPU compute {cap} ({arch}) — faster attention, lower VRAM for long contexts'))
 
-    # ── multi-GPU: layer split ────────────────────────────────────────────────
-    if num_gpus >= 2 and 'split_mode' not in sugg:
-        sugg['split_mode'] = 'layer'
-        per_gpu = ', '.join(f'{g["vram_gb"]:.0f} GB' for g in gpus)
-        reasons.append(('+', f'split_mode=layer: {num_gpus} GPUs ({per_gpu}) — distribute transformer layers evenly across GPUs'))
+    # ── multi-GPU: split mode and tensor split ────────────────────────────────
+    if num_gpus >= 2:
+        # row is the recommended default for serving; layer may be faster for
+        # single-user token generation on PCIe-connected cards without NVLink.
+        if 'split_mode' not in sugg:
+            sugg['split_mode'] = 'row'
+            per_gpu = ', '.join(f'{g["vram_gb"]:.0f} GB' for g in gpus)
+            reasons.append(('+', f'split_mode=row: {num_gpus} GPUs ({per_gpu}) — recommended default; test layer for single-user PCIe token gen'))
+        elif sugg.get('split_mode') == 'layer':
+            sugg['split_mode'] = 'row'
+            reasons.append(('~', 'split_mode: layer → row (recommended default; revert to layer if single-user PCIe token gen is faster)'))
+
+        # tensor_split: weight by free VRAM when GPUs differ by more than 1 GB
+        # (e.g. GPU 0 driving a display). Use pipe as sub-separator; CLI builder
+        # converts | → , so model files stay comma-safe.
+        if 'tensor_split' not in sugg:
+            free = [g.get('vram_free_gb', g['vram_gb']) for g in gpus]
+            free_rounded = [round(v) for v in free]
+            if len(free) >= 2 and abs(free[0] - free[1]) > 1.0:
+                ts_val = '|'.join(str(v) for v in free_rounded[:2])
+                reasons.append(('+', f'tensor_split={free_rounded[0]},{free_rounded[1]}: GPU 0 has {free[0]:.0f} GB free vs GPU 1 {free[1]:.0f} GB — weighted (GPU 0 may drive a display)'))
+            else:
+                ts_val = '1|1'
+                reasons.append(('+', f'tensor_split=1,1: equal GPU memory ({free_rounded[0]} GB free each) — balanced split'))
+            sugg['tensor_split'] = ts_val
+
+    # ── batch and micro-batch sizes ───────────────────────────────────────────
+    batch, ubatch = _batch_tier(total_vram)
+    if 'batch_size' not in sugg:
+        sugg['batch_size'] = str(batch)
+        reasons.append(('+', f'batch_size={batch}: prompt-eval throughput for {total_vram:.0f} GB VRAM'))
+    if 'ubatch_size' not in sugg:
+        sugg['ubatch_size'] = str(ubatch)
+        reasons.append(('+', f'ubatch_size={ubatch}: micro-batch for {total_vram:.0f} GB VRAM (reduce to 128 if OOM during prompt eval)'))
 
     return sugg, reasons
 
@@ -238,7 +291,7 @@ def suggest_params(
 # ── Param serialisation ───────────────────────────────────────────────────────
 
 _PARAM_ORDER = [
-    'ngl', 'split_mode', 'main_gpu', 'n_cpu_moe',
+    'ngl', 'split_mode', 'tensor_split', 'main_gpu', 'n_cpu_moe',
     'no_mmap', 'mlock',
     'cache_type_k', 'cache_type_v',
     'flash_attn',
@@ -322,7 +375,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Hardware-aware model param optimizer')
     parser.add_argument('model_file', nargs='?', help='models/*.txt file to optimize')
     parser.add_argument('--models-dir', default=os.environ.get('LLAMA_MODELS_DIR', ''))
+    parser.add_argument('--suggest-ctx', action='store_true',
+                        help='Print suggested DEFAULT_CTX integer based on GPU and exit')
     args = parser.parse_args()
+
+    if args.suggest_ctx:
+        gpus = get_gpu_info()
+        total_vram = sum(g['vram_gb'] for g in gpus) if gpus else 0.0
+        print(_suggested_ctx(total_vram))
+        sys.exit(0)
 
     # ── Hardware ──────────────────────────────────────────────────────────────
     gpus   = get_gpu_info()
@@ -332,9 +393,12 @@ def main() -> None:
     if gpus:
         total_vram = sum(g['vram_gb'] for g in gpus)
         for i, g in enumerate(gpus):
-            cap_str = f'  compute {g["compute_cap"]}' if g['compute_cap'] else ''
-            print(f'  GPU {i}: {_c(g["name"])}  {g["vram_gb"]:.0f} GB{cap_str}')
+            cap_str  = f'  compute {g["compute_cap"]}' if g.get('compute_cap') else ''
+            free_str = f'  ({g["vram_free_gb"]:.0f} GB free)' if 'vram_free_gb' in g else ''
+            print(f'  GPU {i}: {_c(g["name"])}  {g["vram_gb"]:.0f} GB{free_str}{cap_str}')
         print(f'  Total VRAM : {_b(f"{total_vram:.0f} GB")}  ({len(gpus)} GPU{"s" if len(gpus) > 1 else ""})')
+        ctx = _suggested_ctx(total_vram)
+        print(f'  Suggested  : {_c(f"DEFAULT_CTX={ctx}")}  {_d(f"({total_vram:.0f} GB VRAM tier)")}')
     else:
         print(f'  {_y("No NVIDIA GPU detected or nvidia-smi unavailable")}')
     if ram_gb:

@@ -30,7 +30,7 @@ compare.sh                Runs a model set (default/extended/full); reads models
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
 statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); thin wrapper for statistics.py
 statistics.py             Dataset builder: one row per model (summary) or per task (--detail); exports hardware, pass rates, tok/s, skill breakdown
-lib/optimize_models.py    Hardware-aware llama-server param optimizer: detects GPU count/VRAM/compute, suggests ngl, flash_attn, n_cpu_moe, mlock, split_mode; writes back to models/*.txt
+lib/optimize_models.py    Hardware-aware llama-server param optimizer: detects GPU/VRAM/compute, suggests ngl, split_mode, tensor_split, flash_attn, n_cpu_moe, KV cache type, batch sizes; writes back to models/*.txt; --suggest-ctx prints DEFAULT_CTX for configure.sh
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 fetch.sh                  Pulls models by set name, set file path, or bare model name
 lib/                      Python support modules (imported by bench.py) and shell utilities
@@ -184,7 +184,7 @@ Line format:
 ```
 <ollama-name> [<gguf-file> [<key=val,flag,...>]]
 ```
-Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup, underscores become hyphens for CLI flags.
+Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup, underscores become hyphens for CLI flags, and `|` in values is replaced with `,` (used by `tensor_split=1|1` to survive the comma-delimited params field: stored as `"1|1"`, emitted as `--tensor-split 1,1`). `ngl` in model params controls GPU layer offload; the harness no longer injects a hardcoded `--n-gpu-layers` — models without `ngl` get llama-server's own default (full offload).
 
 #### `gpu_monitor.py` — GPU Telemetry
 
@@ -226,22 +226,24 @@ The snapshot is saved in `results.json` as a top-level `"hardware"` field and in
 
 Called by `configure.sh` Step 7. Interactive CLI that reads current GPU/RAM state and suggests optimised llama-server startup params for each model in a `models/*.txt` file, then offers to write them back.
 
-- Detects hardware via `nvidia-smi`: GPU count, per-GPU VRAM, compute capability (Ampere/Ada/Blackwell). Falls back to name-based compute inference if `compute_cap` field is unsupported.
+- Detects hardware via `nvidia-smi`: GPU count, per-GPU total and free VRAM, compute capability (Ampere/Ada/Blackwell). Falls back to name-based compute inference if `compute_cap` field is unsupported by the driver.
 - Detects RAM via `/proc/meminfo`.
 - For each model with a GGUF file: measures on-disk size (summing multi-part shards).
-- Key decision: **`full_gpu_fit`** = `total_vram_gb ≥ gguf_gb × 1.05`. This single flag drives most suggestions:
+- Supports `--suggest-ctx` flag: prints the VRAM-tier recommended `DEFAULT_CTX` integer and exits (used by `configure.sh` to populate the export block without running the interactive optimizer).
+- Key decision: **`full_gpu_fit`** = `gguf_gb ≤ total_vram × 0.85` (85% safety margin leaves headroom for KV cache, compute buffers, and display use). This flag drives most suggestions:
 
   | Condition | Action |
   |-----------|--------|
-  | `full_gpu_fit` | `ngl=999`; remove `n_cpu_moe` (experts run faster on GPU); remove `mlock` (model is VRAM-resident) |
-  | `n_cpu_moe` set but not `full_gpu_fit` | `ngl=999` (dense layers to GPU, experts to CPU) |
-  | MoE model, no `n_cpu_moe`, not `full_gpu_fit` | add `n_cpu_moe=35` then `ngl=999` |
+  | `full_gpu_fit` | `ngl=999`; remove `n_cpu_moe` (experts faster on GPU); remove `mlock`; `cache_type_k/v=f16` (max quality) |
+  | `n_cpu_moe` set but not `full_gpu_fit` | `ngl=999` (dense layers to GPU, experts to CPU); `cache_type_k/v=q8_0` |
+  | MoE model, no `n_cpu_moe`, not `full_gpu_fit` | add `n_cpu_moe=35` then `ngl=999`; `cache_type_k/v=q8_0` |
   | Large model not fitting any GPU | warn with estimated starting `ngl` value |
-  | Model ≥ 8 GB and RAM ≥ 1.2× | `no_mmap` (avoid mmap overhead on load) |
+  | Model ≥ 8 GB and RAM ≥ 1.2× | `no_mmap` (benchmark timing: eager load, no page-fault variance; see SPEC) |
   | Model ≥ 16 GB, RAM-resident, RAM ≥ 1.5× | `mlock` (pin in RAM, prevent paging) |
   | GPU compute ≥ 8.0 (Ampere+) | `flash_attn` (faster attention, lower VRAM at long contexts) |
-  | 2+ GPUs | `split_mode=layer` (distribute transformer layers across GPUs) |
-  | `turbo4`/`turbo3` cache type | replace with `q8_0` (broader build support) |
+  | 2+ GPUs | `split_mode=row` (recommended default; `layer` may be faster for single-user PCIe token gen); `tensor_split=N|M` (weighted by free VRAM if GPUs differ by >1 GB, else `1|1`; `|` is sub-separator — CLI builder converts to `,`) |
+  | All models | `batch_size` / `ubatch_size` tiered by total VRAM (16 GB: 512/128; 24 GB: 1024/256; 32 GB: 2048/512; 64 GB+: 4096/512) |
+  | `turbo4`/`turbo3` cache type | replace with target KV type (`f16` or `q8_0`) |
 
 - Prompts per model: apply / skip / apply-all / skip-all.
 - Backs up the model file (`models/default.txt.bak`) before writing.

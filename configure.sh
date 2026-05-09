@@ -147,6 +147,7 @@ _out_llama_bin=""
 _out_llama_dir=""
 _out_backend=""
 _out_hf_token=""
+_out_default_ctx=""
 
 # ── Step 1: Choose backend ────────────────────────────────────────────────────
 echo -e "${BOLD}Step 1 — Which backend will you use?${NC}"
@@ -274,13 +275,22 @@ fi
 if [[ "$_configure_ls" -eq 1 ]]; then
     echo
     echo -e "${BOLD}Step 7 — Hardware-aware model parameter optimization${NC}"
-    echo -e "  ${DIM}Suggests ngl, flash_attn, n_cpu_moe, split_mode, etc. based on your GPU and RAM.${NC}"
+    echo -e "  ${DIM}Suggests ngl, flash_attn, n_cpu_moe, split_mode, tensor_split, batch sizes, etc.${NC}"
     echo
 
     if ! command -v nvidia-smi &>/dev/null; then
         echo -e "  ${YELLOW}~${NC}  nvidia-smi not found — skipping optimization step"
     else
-        read -r -p "$(echo -e "  Run optimizer? [Y/n]: ")" _run_opt
+        # Always detect DEFAULT_CTX suggestion regardless of whether the interactive
+        # optimizer runs — it only needs nvidia-smi, not the model files.
+        _suggested_ctx_val=$(python3 "$SCRIPT_DIR/lib/optimize_models.py" --suggest-ctx 2>/dev/null || echo "")
+        if [[ -n "$_suggested_ctx_val" ]]; then
+            _out_default_ctx="$_suggested_ctx_val"
+            echo -e "  ${GREEN}→${NC}  Suggested ${BOLD}DEFAULT_CTX${NC}=${CYAN}${_suggested_ctx_val}${NC}  ${DIM}(hardware-tier default context size for llama-server)${NC}"
+            echo
+        fi
+
+        read -r -p "$(echo -e "  Run model param optimizer? [Y/n]: ")" _run_opt
         if [[ -z "$_run_opt" || "$_run_opt" =~ ^[Yy]$ ]]; then
             _models_dir="${_out_llama_dir:-${LLAMA_MODELS_DIR:-}}"
             _opt_args=()
@@ -307,11 +317,12 @@ _print_export() {
     _any=1
 }
 
-[[ -n "$_out_ollama_url"  ]] && _print_export "OLLAMA_URL"       "$_out_ollama_url"
-[[ -n "$_out_backend"     ]] && _print_export "BENCH_BACKEND"    "$_out_backend"
-[[ -n "$_out_llama_bin"   ]] && _print_export "LLAMA_SERVER_BIN" "$_out_llama_bin"
-[[ -n "$_out_llama_dir"   ]] && _print_export "LLAMA_MODELS_DIR" "$_out_llama_dir"
-[[ -n "$_out_hf_token"    ]] && _print_export "HF_TOKEN"         "$_out_hf_token"
+[[ -n "$_out_ollama_url"   ]] && _print_export "OLLAMA_URL"       "$_out_ollama_url"
+[[ -n "$_out_backend"      ]] && _print_export "BENCH_BACKEND"    "$_out_backend"
+[[ -n "$_out_llama_bin"    ]] && _print_export "LLAMA_SERVER_BIN" "$_out_llama_bin"
+[[ -n "$_out_llama_dir"    ]] && _print_export "LLAMA_MODELS_DIR" "$_out_llama_dir"
+[[ -n "$_out_default_ctx"  ]] && _print_export "DEFAULT_CTX"      "$_out_default_ctx"
+[[ -n "$_out_hf_token"     ]] && _print_export "HF_TOKEN"         "$_out_hf_token"
 
 if [[ "$_any" -eq 0 ]]; then
     echo -e "  ${DIM}(nothing to export — all values were skipped)${NC}"
@@ -326,13 +337,14 @@ echo
 if [[ "$_configure_ls" -eq 1 ]]; then
     echo -e "${BOLD}llama-server params reference${NC}  ${DIM}(add to models/*.txt params field)${NC}"
     echo
-    echo -e "${GREEN}  Covered — set in models/*.txt or suggested by optimizer:${NC}"
-    echo -e "  ${DIM}cache_type_k=q8_0  cache_type_v=q8_0  ngl=999  no_mmap  mlock  n_cpu_moe=35${NC}"
-    echo -e "  ${DIM}flash_attn  split_mode=layer  main_gpu=N${NC}"
+    echo -e "${GREEN}  Covered — auto-suggested by optimizer or set in models/*.txt:${NC}"
+    echo -e "  ${DIM}ngl=999  flash_attn  split_mode=row  tensor_split=1|1  n_cpu_moe=35${NC}"
+    echo -e "  ${DIM}cache_type_k=f16/q8_0  cache_type_v=f16/q8_0  no_mmap  mlock${NC}"
+    echo -e "  ${DIM}main_gpu=N  batch_size=N  ubatch_size=N${NC}"
+    echo -e "  ${DIM}Note: tensor_split uses | as sub-separator (e.g. tensor_split=1|1 → --tensor-split 1,1)${NC}"
+    echo -e "  ${DIM}Note: -np (parallel slots) defaults to 1 in llama-server — not set in model files${NC}"
     echo
-    echo -e "${YELLOW}  Supported by model file but not auto-suggested — set manually if needed:${NC}"
-    printf "  %-28s %s\n" "batch_size=N"         "Prompt-eval batch size (default 2048; reduce for low VRAM)"
-    printf "  %-28s %s\n" "ubatch_size=N"        "Micro-batch size for chunked prompt eval"
+    echo -e "${YELLOW}  Supported but not auto-suggested — set manually if needed:${NC}"
     printf "  %-28s %s\n" "threads_batch=N"      "CPU threads for the batch/prompt-eval phase"
     printf "  %-28s %s\n" "rope_freq_base=N"     "RoPE base frequency override (context extension)"
     printf "  %-28s %s\n" "rope_scaling=yarn"    "RoPE scaling method for context extension"
@@ -340,7 +352,9 @@ if [[ "$_configure_ls" -eq 1 ]]; then
     printf "  %-28s %s\n" "defrag_thold=0.1"     "KV cache defragmentation threshold (0–1)"
     echo
     echo -e "${RED}  Require harness changes — not passable via params field today:${NC}"
-    printf "  %-28s %s\n" "--ctx-size N"         "Handled by --num-ctx CLI flag (set per run, not per model)"
     printf "  %-28s %s\n" "--threads N"          "Handled by --num-thread CLI flag"
+    echo
+    echo -e "  ${DIM}Context size: set DEFAULT_CTX env var (suggested above) as harness fallback.${NC}"
+    echo -e "  ${DIM}Task definitions always take precedence over DEFAULT_CTX.${NC}"
     echo
 fi
