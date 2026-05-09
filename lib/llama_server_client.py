@@ -18,6 +18,17 @@ from pathlib import Path
 from lib.model_config import ModelConfig
 from lib.ollama_client import OllamaError, OllamaMetrics, OllamaResponse
 
+# model file uses short/intuitive names; map to actual llama-server CLI flag names
+_PARAM_NAME_MAP: dict[str, str] = {
+    "ngl": "n-gpu-layers",
+}
+
+# flags stored as boolean True in model files but requiring an explicit value in newer
+# llama-server builds (e.g. --flash-attn on instead of bare --flash-attn)
+_BOOL_EMIT_VALUE: dict[str, str] = {
+    "flash-attn": "on",
+}
+
 _PORT = 8080
 _BASE_URL = f"http://127.0.0.1:{_PORT}"
 _HEALTH_URL = f"{_BASE_URL}/health"
@@ -93,9 +104,13 @@ class LlamaServerManager:
         if num_threads and num_threads > 0:
             cmd.extend(["--threads", str(num_threads)])
         for key, val in cfg.params.items():
-            flag = "--" + key.replace("_", "-")
+            cli_key = _PARAM_NAME_MAP.get(key, key.replace("_", "-"))
+            flag = "--" + cli_key
             if val is True:
-                cmd.append(flag)
+                if cli_key in _BOOL_EMIT_VALUE:
+                    cmd.extend([flag, _BOOL_EMIT_VALUE[cli_key]])
+                else:
+                    cmd.append(flag)
             else:
                 # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
                 cmd.extend([flag, str(val).replace("|", ",")])

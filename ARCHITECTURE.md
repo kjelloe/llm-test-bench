@@ -188,7 +188,7 @@ Line format:
 ```
 <ollama-name> [<gguf-file> [<key=val,flag,...>]]
 ```
-Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup, underscores become hyphens for CLI flags, and `|` in values is replaced with `,` (used by `tensor_split=1|1` to survive the comma-delimited params field: stored as `"1|1"`, emitted as `--tensor-split 1,1`). `ngl` in model params controls GPU layer offload; the harness no longer injects a hardcoded `--n-gpu-layers` — models without `ngl` get llama-server's own default (full offload). `max_ctx=N` is parsed out and stored in `ModelConfig.max_ctx`; it is **not** added to `params` and is never forwarded to llama-server. It is used by `bench.py` to skip tasks whose `effective_ctx` exceeds the model's architecture limit, recording `SKIPPED_CTX`.
+Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup in `llama_server_client.py`, param names are mapped to CLI flags via `_PARAM_NAME_MAP` (e.g. `ngl` → `--n-gpu-layers`) before applying the generic underscore→hyphen rule; `|` in values is replaced with `,` (used by `tensor_split=1|1` to survive the comma-delimited params field: stored as `"1|1"`, emitted as `--tensor-split 1,1`). Boolean params listed in `_BOOL_EMIT_VALUE` emit `--flag value` instead of bare `--flag` — currently `flash_attn` → `--flash-attn on` (newer llama-server builds changed `--flash-attn` from a bare flag to an `on|off|auto` optional-value flag; bare `--flash-attn` would consume the next argument as its value and crash). `ngl` in model params controls GPU layer offload; the harness no longer injects a hardcoded `--n-gpu-layers` — models without `ngl` get llama-server's own default (full offload). `max_ctx=N` is parsed out and stored in `ModelConfig.max_ctx`; it is **not** added to `params` and is never forwarded to llama-server. It is used by `bench.py` to skip tasks whose `effective_ctx` exceeds the model's architecture limit, recording `SKIPPED_CTX`.
 
 #### `gpu_monitor.py` — GPU Telemetry
 
@@ -244,7 +244,7 @@ Called by `configure.sh` Step 7. Interactive CLI that reads current GPU/RAM stat
   | Large model not fitting any GPU | warn with estimated starting `ngl` value |
   | Model ≥ 8 GB and RAM ≥ 1.2× | `no_mmap` (benchmark timing: eager load, no page-fault variance; see SPEC) |
   | Model ≥ 16 GB, RAM-resident, RAM ≥ 1.5× | `mlock` (pin in RAM, prevent paging) |
-  | GPU compute ≥ 8.0 (Ampere+) | `flash_attn` (faster attention, lower VRAM at long contexts) |
+  | GPU compute ≥ 8.0 (Ampere+) | `flash_attn` (emitted as `--flash-attn on`; faster attention, lower VRAM at long contexts) |
   | 2+ GPUs | `split_mode=row` (recommended default; `layer` may be faster for single-user PCIe token gen); `tensor_split=N|M` (weighted by free VRAM if GPUs differ by >1 GB, else `1|1`; `|` is sub-separator — CLI builder converts to `,`) |
   | All models | `batch_size` / `ubatch_size` tiered by total VRAM (16 GB: 512/128; 24 GB: 1024/256; 32 GB: 2048/512; 64 GB+: 4096/512) |
   | `turbo4`/`turbo3` cache type | replace with target KV type (`f16` or `q8_0`) |
