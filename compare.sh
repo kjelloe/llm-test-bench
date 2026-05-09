@@ -16,7 +16,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$SCRIPT_DIR/models"
 STATS_FILE="$SCRIPT_DIR/output/compare-history.json"
 MODEL_TIMEOUT=1200
-NUM_PREDICT=2400
+NUM_PREDICT=4800
+STARTUP_TIMEOUT=600
 
 # ── Parse arguments ────────────────────────────────────────────────────────────
 MODELS=()
@@ -130,9 +131,30 @@ echo "════════════════════════�
 echo "  ollama-code-bench — $SET_LABEL  (${NUM_MODELS} models × ${NUM_TASKS} tasks)"
 echo "════════════════════════════════════════════════════════════"
 printf "  Models (%d):\n" "$NUM_MODELS"
+# Look up HF repos from the model file when available
+_hf_lookup=""
+if [[ -n "${SET_FILE:-}" ]]; then
+  _hf_lookup=$(python3 - <<PYEOF 2>/dev/null
+import sys
+sys.path.insert(0, '$SCRIPT_DIR')
+from lib.model_config import load_model_file
+for c in load_model_file('$SET_FILE'):
+    print(f"{c.ollama_name}\t{c.hf_repo or ''}")
+PYEOF
+)
+fi
+_name_w=0
+for _m in "${MODELS[@]}"; do [[ ${#_m} -gt $_name_w ]] && _name_w=${#_m}; done
 for i in "${!MODELS[@]}"; do
-  printf "    %d. %s\n" "$((i+1))" "${MODELS[$i]}"
+  _name="${MODELS[$i]}"
+  _hf=$(printf '%s' "$_hf_lookup" | awk -F'\t' -v n="$_name" '$1==n{print $2; exit}')
+  if [[ -n "$_hf" ]]; then
+    printf "    %d. %-*s  hf:%s\n" "$((i+1))" "$_name_w" "$_name" "$_hf"
+  else
+    printf "    %d. %s\n" "$((i+1))" "$_name"
+  fi
 done
+unset _hf_lookup _name_w _name _hf _m
 printf "  Tasks       : %d\n" "$NUM_TASKS"
 printf "  Output      : %s\n" "$(basename "$OUT")"
 printf "  Max runtime : %ds  (%ds timeout × %d models × %d tasks)\n" \
@@ -157,6 +179,7 @@ fi
   "${_MODEL_FILE_ARGS[@]+"${_MODEL_FILE_ARGS[@]}"}" \
   --num-predict "$NUM_PREDICT" \
   --model-timeout "$MODEL_TIMEOUT" \
+  --startup-timeout "$STARTUP_TIMEOUT" \
   --warmup \
   --out "$OUT" \
   "${BENCH_ARGS[@]+"${BENCH_ARGS[@]}"}"

@@ -237,6 +237,8 @@ def main() -> None:
                         help="Max tokens to generate. Use 1200+ for thinking models (default: 400)")
     parser.add_argument("--model-timeout", type=int, default=300,
                         help="HTTP request timeout in seconds (default: 300)")
+    parser.add_argument("--startup-timeout", type=int, default=600,
+                        help="Seconds to wait for llama-server to become ready (default: 600; large mlock models may need 300+)")
     parser.add_argument("--num-thread", type=int, default=10,
                         help="CPU threads for inference; 0 = let backend decide (default: 10)")
     parser.add_argument("--think", action="store_true", default=False,
@@ -301,6 +303,9 @@ def main() -> None:
     startup_snap = get_gpu_snapshot()
     system_baseline_vram_mb: int | None = startup_snap["vram_used_mb"] if startup_snap else None
 
+    task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+
     try:
         for i, (model, task) in enumerate(pairs, 1):
             effective_ctx = max(args.num_ctx, task.num_ctx) if task.num_ctx else args.num_ctx
@@ -326,7 +331,8 @@ def main() -> None:
                     print(f"  [llama-server] starting {model!r} ctx={effective_ctx} ...",
                           end=" ", flush=True)
                     t0 = time.monotonic()
-                    llama_manager.ensure(cfg, effective_ctx, num_threads=num_thread_opt)
+                    llama_manager.ensure(cfg, effective_ctx, num_threads=num_thread_opt,
+                                         startup_timeout=args.startup_timeout)
                     print(f"done  {time.monotonic() - t0:.1f}s")
                     gpu_after = get_gpu_snapshot()
                     current_model = model
@@ -411,14 +417,11 @@ def main() -> None:
     finally:
         if llama_manager is not None:
             llama_manager.stop()
-
-    task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
-
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    write_results(results, args.out, hardware=hw)
-    print(f"\nResults written to {args.out}")
-    print_comparison_table(results, task_difficulties=task_difficulties, model_timeout=args.model_timeout, hardware=hw)
-    print_summary(results)
+        if results:
+            write_results(results, args.out, hardware=hw)
+            print(f"\nResults written to {args.out}")
+            print_comparison_table(results, task_difficulties=task_difficulties, model_timeout=args.model_timeout, hardware=hw)
+            print_summary(results)
 
 
 if __name__ == "__main__":

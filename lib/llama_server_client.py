@@ -45,12 +45,13 @@ class LlamaServerManager:
             or ctx_size > self._current_ctx
         )
 
-    def ensure(self, cfg: ModelConfig, ctx_size: int, num_threads: int | None = None) -> None:
+    def ensure(self, cfg: ModelConfig, ctx_size: int,
+               num_threads: int | None = None, startup_timeout: int = 600) -> None:
         """Start or restart the server if model changed or ctx grew. No-op if already suitable."""
         if not self.needs_restart(cfg, ctx_size):
             return
         self.stop()
-        self._start(cfg, ctx_size, num_threads=num_threads)
+        self._start(cfg, ctx_size, num_threads=num_threads, startup_timeout=startup_timeout)
 
     def stop(self) -> None:
         """Terminate the running server. No-op if not running."""
@@ -72,7 +73,7 @@ class LlamaServerManager:
         self._current_ctx = 0
 
     def _start(self, cfg: ModelConfig, ctx_size: int,
-               num_threads: int | None = None, startup_timeout: int = 120) -> None:
+               num_threads: int | None = None, startup_timeout: int = 600) -> None:
         if not cfg.gguf_file:
             raise ValueError(
                 f"Model {cfg.ollama_name!r} has no GGUF file configured — "
