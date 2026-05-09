@@ -49,51 +49,65 @@ def hw_summary(hw: dict) -> str:
 # ── GPU ───────────────────────────────────────────────────────────────────────
 
 def _gpu_info() -> list[dict]:
-    """GPU list via nvidia-smi, including thermal and power state."""
-    try:
-        fields = (
+    """GPU list via nvidia-smi, including thermal, power, and compute capability."""
+    # Try with compute_cap first; older drivers may not support that field.
+    for fields, has_cap in (
+        (
             "name,memory.total,memory.free,driver_version,"
             "temperature.gpu,power.draw,power.limit,"
-            "clocks.gr,clocks.max.gr"
-        )
-        r = subprocess.run(
-            ["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if r.returncode != 0:
-            return []
-        gpus = []
-        for line in r.stdout.strip().splitlines():
-            p = [x.strip() for x in line.split(",")]
-            if len(p) < 9:
+            "clocks.gr,clocks.max.gr,compute_cap",
+            True,
+        ),
+        (
+            "name,memory.total,memory.free,driver_version,"
+            "temperature.gpu,power.draw,power.limit,"
+            "clocks.gr,clocks.max.gr",
+            False,
+        ),
+    ):
+        try:
+            r = subprocess.run(
+                ["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode != 0:
                 continue
+            gpus = []
+            for line in r.stdout.strip().splitlines():
+                p = [x.strip() for x in line.split(",")]
+                if len(p) < 9:
+                    continue
 
-            def _int(s: str) -> int | None:
-                try:
-                    return int(float(s))
-                except (ValueError, TypeError):
-                    return None
+                def _int(s: str) -> int | None:
+                    try:
+                        return int(float(s))
+                    except (ValueError, TypeError):
+                        return None
 
-            def _float(s: str) -> float | None:
-                try:
-                    return round(float(s), 1)
-                except (ValueError, TypeError):
-                    return None
+                def _float(s: str) -> float | None:
+                    try:
+                        return round(float(s), 1)
+                    except (ValueError, TypeError):
+                        return None
 
-            gpus.append({
-                "name":           p[0],
-                "vram_total_mb":  _int(p[1]),
-                "vram_free_mb":   _int(p[2]),
-                "driver":         p[3],
-                "temp_c":         _int(p[4]),
-                "power_draw_w":   _float(p[5]),
-                "power_limit_w":  _float(p[6]),
-                "clock_mhz":      _int(p[7]),
-                "clock_max_mhz":  _int(p[8]),
-            })
-        return gpus
-    except Exception:
-        return []
+                entry = {
+                    "name":           p[0],
+                    "vram_total_mb":  _int(p[1]),
+                    "vram_free_mb":   _int(p[2]),
+                    "driver":         p[3],
+                    "temp_c":         _int(p[4]),
+                    "power_draw_w":   _float(p[5]),
+                    "power_limit_w":  _float(p[6]),
+                    "clock_mhz":      _int(p[7]),
+                    "clock_max_mhz":  _int(p[8]),
+                }
+                if has_cap and len(p) >= 10:
+                    entry["compute_cap"] = _float(p[9])
+                gpus.append(entry)
+            return gpus
+        except Exception:
+            continue
+    return []
 
 
 # ── CPU ───────────────────────────────────────────────────────────────────────

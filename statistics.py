@@ -57,15 +57,39 @@ def load_file(path: Path) -> tuple[list[dict], dict | None]:
 # ── Hardware helpers ──────────────────────────────────────────────────────────
 
 def _hw_gpu(hw: dict | None) -> str:
-    """'RTX 5060 Ti 16GB' or ''."""
-    if not hw:
-        return ""
-    gpus = hw.get("gpu") or []
+    """'2× RTX 3090 24GB (48GB total)' for multi-GPU, 'RTX 5060 Ti 16GB' for single."""
+    gpus = (hw or {}).get("gpu") or []
     if not gpus:
         return ""
-    g = gpus[0]
-    vram = round(g.get("vram_total_mb", 0) / 1024)
-    return f"{g.get('name', '')} {vram}GB".strip()
+    total_vram = sum(round(g.get("vram_total_mb", 0) / 1024) for g in gpus)
+    if len(gpus) == 1:
+        g = gpus[0]
+        return f"{g.get('name', '')} {round(g.get('vram_total_mb', 0) / 1024)}GB".strip()
+    names = [g.get("name", "") for g in gpus]
+    vrams = [round(g.get("vram_total_mb", 0) / 1024) for g in gpus]
+    if len(set(names)) == 1:
+        return f"{len(gpus)}× {names[0]} {vrams[0]}GB ({total_vram}GB total)"
+    parts = [f"{n} {v}GB" for n, v in zip(names, vrams)]
+    return " + ".join(parts) + f" ({total_vram}GB total)"
+
+
+def _hw_gpu_count(hw: dict | None) -> int | str:
+    gpus = (hw or {}).get("gpu") or []
+    return len(gpus) if gpus else ""
+
+
+def _hw_total_vram_gb(hw: dict | None) -> int | str:
+    gpus = (hw or {}).get("gpu") or []
+    if not gpus:
+        return ""
+    return sum(round(g.get("vram_total_mb", 0) / 1024) for g in gpus)
+
+
+def _hw_compute_cap(hw: dict | None) -> float | str:
+    gpus = (hw or {}).get("gpu") or []
+    if not gpus:
+        return ""
+    return gpus[0].get("compute_cap") or ""
 
 
 def _hw_cpu(hw: dict | None) -> str:
@@ -125,6 +149,9 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
         key = (r["model"], r.get("backend", "ollama"))
         groups.setdefault(key, []).append(r)
 
+    gpu_count         = _hw_gpu_count(hw)
+    total_vram_gb     = _hw_total_vram_gb(hw)
+    compute_cap       = _hw_compute_cap(hw)
     gpu_driver        = _hw_gpu_field(hw, "driver")
     vram_free_mb      = _hw_gpu_field(hw, "vram_free_mb")
     gpu_temp_c        = _hw_gpu_field(hw, "temp_c")
@@ -153,6 +180,9 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
             "source_file":        path.name,
             "run_date":           run_date,
             "gpu":                gpu,
+            "gpu_count":          gpu_count,
+            "total_vram_gb":      total_vram_gb,
+            "compute_cap":        compute_cap,
             "gpu_driver":         gpu_driver,
             "vram_free_mb":       vram_free_mb,
             "gpu_temp_c":         gpu_temp_c,
@@ -183,19 +213,22 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
 
 def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
     """One row per task record."""
-    run_date         = _run_date(path)
-    gpu              = _hw_gpu(hw)
-    gpu_driver       = _hw_gpu_field(hw, "driver")
-    vram_free_mb     = _hw_gpu_field(hw, "vram_free_mb")
-    gpu_temp_c       = _hw_gpu_field(hw, "temp_c")
+    run_date          = _run_date(path)
+    gpu               = _hw_gpu(hw)
+    gpu_count         = _hw_gpu_count(hw)
+    total_vram_gb     = _hw_total_vram_gb(hw)
+    compute_cap       = _hw_compute_cap(hw)
+    gpu_driver        = _hw_gpu_field(hw, "driver")
+    vram_free_mb      = _hw_gpu_field(hw, "vram_free_mb")
+    gpu_temp_c        = _hw_gpu_field(hw, "temp_c")
     gpu_power_limit_w = _hw_gpu_field(hw, "power_limit_w")
-    cpu              = _hw_cpu(hw)
-    ram_gb           = _hw_ram(hw)
-    platform         = _hw_platform(hw)
-    cuda_toolkit     = _hw_str(hw, "cuda_toolkit")
-    llama_server_ver = _hw_str(hw, "llama_server_version")
-    ollama_ver       = _hw_str(hw, "ollama_version")
-    storage          = ((hw or {}).get("models_storage") or {}).get("transport", "")
+    cpu               = _hw_cpu(hw)
+    ram_gb            = _hw_ram(hw)
+    platform          = _hw_platform(hw)
+    cuda_toolkit      = _hw_str(hw, "cuda_toolkit")
+    llama_server_ver  = _hw_str(hw, "llama_server_version")
+    ollama_ver        = _hw_str(hw, "ollama_version")
+    storage           = ((hw or {}).get("models_storage") or {}).get("transport", "")
 
     rows = []
     for r in results:
@@ -204,6 +237,9 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
             "source_file":        path.name,
             "run_date":           run_date,
             "gpu":                gpu,
+            "gpu_count":          gpu_count,
+            "total_vram_gb":      total_vram_gb,
+            "compute_cap":        compute_cap,
             "gpu_driver":         gpu_driver,
             "vram_free_mb":       vram_free_mb,
             "gpu_temp_c":         gpu_temp_c,
