@@ -39,11 +39,14 @@ def load_results(path: str) -> tuple[list[dict], dict | None]:
     return data["results"], data.get("hardware")
 
 
+_INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM"})
+
+
 def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dict[str, int]) -> str:
     """Return highest difficulty tier N where the model passes ALL tasks at levels 1..N.
 
-    CTX_TRUNCATED failures are hardware constraints (insufficient VRAM/RAM), not capability
-    failures — they are excluded from the skill calculation.
+    Infrastructure failures (hardware limits, setup errors, skipped tasks) are excluded
+    from the skill calculation — only genuine capability failures count against a model.
     """
     if not task_difficulties:
         return "?"
@@ -54,8 +57,8 @@ def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dic
             r = idx.get((model, t), {})
             if r.get("tests_pass"):
                 return True
-            if r.get("error_kind") == "CTX_TRUNCATED":
-                return True  # hardware limit, not a capability gap
+            if r.get("error_kind") in _INFRA_ERROR_KINDS:
+                return True  # hardware / infra limit, not a capability gap
             return False
         if all(_counts_as_pass(model, t) for t in tasks_up_to):
             return f"L{level}"

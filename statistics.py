@@ -120,10 +120,19 @@ def _run_date(path: Path) -> str:
     return datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%d")
 
 
+_INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM"})
+
+
 def _difficulty_summary(recs: list[dict]) -> str:
-    """'L1:6/6 L2:4/5 L3:2/3' — skip levels with no tasks."""
+    """'L1:6/6 L2:4/5 L3:2/3' — skip levels with no tasks.
+
+    Infrastructure failures (TOOL_ERROR, SKIPPED_CTX, SKIPPED_VRAM, CTX_TRUNCATED)
+    are excluded from the count so hardware limits don't penalise capability scores.
+    """
     by_level: dict[int, list[bool]] = {}
     for r in recs:
+        if r.get("error_kind") in _INFRA_ERROR_KINDS:
+            continue
         lvl = DIFFICULTIES.get(r["task"], 0)
         if lvl:
             by_level.setdefault(lvl, []).append(r["tests_pass"])

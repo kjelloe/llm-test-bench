@@ -22,6 +22,7 @@ class Task:
     num_ctx: int | None = None          # override global --num-ctx for this task (None = use global)
     min_predict: int | None = None      # floor on --num-predict for this task
     model_timeout: int | None = None    # override global --model-timeout for this task (seconds)
+    min_vram_gb: int = 0                # skip task on hardware with less total VRAM (0 = no guard)
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -231,7 +232,7 @@ PYTHON_LFU_CACHE = Task(
     context_files=["tests/test_lfu_cache.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=2048,   # gpt-oss:120b uses ~1090 tokens; gpt-oss:20b always exhausts any budget (thinking runaway, not a token count issue)
+    min_predict=6400,   # qwen3.5:35b TRUNCATED at 5060 tokens; bump to give thinking models room to output
 )
 
 PYTHON_LEDGER_BUG = Task(
@@ -289,7 +290,7 @@ PYTHON_EXPR_EVAL = Task(
     context_files=["tests/test_expr_eval.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=8192,  # ~630 tokens to output the full file; gpt-oss:20b burns ~5k tokens reasoning → 4800 hit ceiling, 8192 gives safe headroom
+    min_predict=9600,  # gpt-oss:20b TRUNCATED at ~8600 tokens; 9600 gives headroom for thinking models
 )
 
 PYTHON_MULTIFILE_RENAME = Task(
@@ -325,7 +326,7 @@ PYTHON_DIJKSTRA = Task(
     context_files=["tests/test_dijkstra.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=12800,
+    min_predict=16000,  # gpt-oss:20b TRUNCATED at ~13200 tokens; L5 task needs max budget for thinking models
 )
 
 PYTHON_HASHMAP = Task(
@@ -474,7 +475,7 @@ PYTHON_TOKENIZER = Task(
     context_files=["tests/test_tokenizer.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=4096,  # thinking models need budget to reason + output the full file
+    min_predict=6400,   # gpt-oss:20b TRUNCATED at ~5250 tokens; bump for thinking models
 )
 
 _CODE_ARCHIVE_DESC = (
@@ -510,6 +511,7 @@ CONTEXT_256K = Task(
     num_ctx=262144,
     min_predict=4096,   # thinking models burn tokens before outputting at large context sizes
     model_timeout=7200,  # prompt eval at 256k tokens can take 60+ min on RAM-bound models
+    min_vram_gb=24,     # 256K KV cache requires ~24 GB VRAM minimum; skip on 16 GB cards
 )
 
 CSV_NORDIC_PROPERTY = Task(
@@ -532,8 +534,8 @@ CSV_NORDIC_PROPERTY = Task(
     context_files=["data_sample.csv", "test_solution.py"],
     test_cmd=["python3", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
     test_timeout=120,
-    min_predict=8000,  # gemma4 writes verbose code and was still truncated at 6000 tokens
-    model_timeout=600, # cold-start + ~8000 token generation exceeds run.sh's 300s default
+    min_predict=12000,  # thinking models exhaust 8000 mid-output; all 6 models still failed at 8000
+    model_timeout=600,  # cold-start + ~12000 token generation exceeds run.sh's 300s default
 )
 
 BUILTIN_TASKS: list[Task] = [

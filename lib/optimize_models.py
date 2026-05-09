@@ -410,6 +410,7 @@ def main() -> None:
         sys.exit(0)
 
     # ── Choose model file ─────────────────────────────────────────────────────
+    sys.path.insert(0, str(SCRIPT_DIR))
     model_file_path: Path | None = None
     if args.model_file:
         model_file_path = Path(args.model_file)
@@ -444,7 +445,6 @@ def main() -> None:
                 print('  Please enter a valid number.')
 
     # ── Load model configs ────────────────────────────────────────────────────
-    sys.path.insert(0, str(SCRIPT_DIR))
     try:
         from lib.model_config import load_model_file  # type: ignore
         configs = load_model_file(model_file_path)

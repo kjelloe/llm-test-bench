@@ -295,6 +295,10 @@ def main() -> None:
         llama_server_bin=bin_path if args.backend == "llama-server" else None,
         models_dir=models_dir if args.backend == "llama-server" else None,
     )
+    total_vram_gb: float = sum(
+        g.get("vram_total_mb", 0) for g in (hw.get("gpu") or [])
+    ) / 1024.0
+
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     total = len(pairs)
     results = []
@@ -380,6 +384,35 @@ def main() -> None:
                         gpu_after = get_gpu_snapshot()
                     current_model = model
                 client_url = args.ollama_url
+
+            # ── Pre-flight skips ───────────────────────────────────────────────
+            def _skip_record(kind: str, detail: str) -> dict:
+                return {
+                    "model": model, "backend": args.backend, "task": task.id,
+                    "baseline_failed": None, "baseline_rc": None,
+                    "edit_parse_ok": False, "edit_policy_ok": False,
+                    "tests_pass": False, "response_truncated": False,
+                    "ctx_truncated": False, "response_snippet": None,
+                    "edited_files": [], "error_kind": kind, "error_detail": detail,
+                    "metrics": {}, "tok_per_s": 0.0, "wall_s": 0.0, "kv_cache": None,
+                    "gpu_snapshots": {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None},
+                }
+
+            if task.min_vram_gb > 0 and total_vram_gb > 0 and total_vram_gb < task.min_vram_gb:
+                print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_VRAM) "
+                      f"need {task.min_vram_gb} GB, have {total_vram_gb:.0f} GB")
+                results.append(_skip_record("SKIPPED_VRAM",
+                    f"task requires {task.min_vram_gb} GB VRAM; hardware has {total_vram_gb:.0f} GB"))
+                continue
+
+            if llama_manager is not None:
+                cfg = model_configs.get(model)
+                if cfg and cfg.max_ctx and effective_ctx > cfg.max_ctx:
+                    print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_CTX) "
+                          f"need ctx={effective_ctx}, model max={cfg.max_ctx}")
+                    results.append(_skip_record("SKIPPED_CTX",
+                        f"task needs ctx={effective_ctx}; model architecture limit is {cfg.max_ctx}"))
+                    continue
 
             print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
             record = run_one(

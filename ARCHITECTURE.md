@@ -176,7 +176,7 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` s
 
 Parses the 3-field space-separated format used in `models/*.txt` files.
 
-- **`ModelConfig`** dataclass: `ollama_name`, `gguf_file` (optional), `params` (dict: `str → str | bool`).
+- **`ModelConfig`** dataclass: `ollama_name`, `gguf_file` (optional), `params` (dict: `str → str | bool`), `hf_repo` (optional), `max_ctx` (optional int — harness-only architecture limit, not forwarded to llama-server).
 - `parse_model_line(line)` — parses one non-comment line; returns `None` for blank/comment lines.
 - `load_model_file(path)` — returns a list of `ModelConfig` objects from a `models/*.txt` file.
 
@@ -184,7 +184,7 @@ Line format:
 ```
 <ollama-name> [<gguf-file> [<key=val,flag,...>]]
 ```
-Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup, underscores become hyphens for CLI flags, and `|` in values is replaced with `,` (used by `tensor_split=1|1` to survive the comma-delimited params field: stored as `"1|1"`, emitted as `--tensor-split 1,1`). `ngl` in model params controls GPU layer offload; the harness no longer injects a hardcoded `--n-gpu-layers` — models without `ngl` get llama-server's own default (full offload).
+Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value params (e.g. `n_cpu_moe=35`) store the string value. During server startup, underscores become hyphens for CLI flags, and `|` in values is replaced with `,` (used by `tensor_split=1|1` to survive the comma-delimited params field: stored as `"1|1"`, emitted as `--tensor-split 1,1`). `ngl` in model params controls GPU layer offload; the harness no longer injects a hardcoded `--n-gpu-layers` — models without `ngl` get llama-server's own default (full offload). `max_ctx=N` is parsed out and stored in `ModelConfig.max_ctx`; it is **not** added to `params` and is never forwarded to llama-server. It is used by `bench.py` to skip tasks whose `effective_ctx` exceeds the model's architecture limit, recording `SKIPPED_CTX`.
 
 #### `gpu_monitor.py` — GPU Telemetry
 
@@ -201,7 +201,7 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 
 #### `reporting.py` — Output
 
-- `print_comparison_table(results, task_difficulties, model_timeout, hardware)` — paginated ASCII table: rows = models, columns = `Spd` + `Skill` + tasks + summary. When the full table would exceed the terminal width (detected via `shutil.get_terminal_size()`), tasks are split into pages printed as `[1/N]`, `[2/N]`, … with the full summary column repeated on each page. `Skill` shows the highest difficulty tier where the model passes all tasks at that level and below; `CTX_TRUNCATED` failures are excluded (hardware constraint, not a capability gap). `hardware` (optional dict from `hw_snapshot.get_hw_snapshot()`) is printed as a one-line summary under the table title.
+- `print_comparison_table(results, task_difficulties, model_timeout, hardware)` — paginated ASCII table: rows = models, columns = `Spd` + `Skill` + tasks + summary. When the full table would exceed the terminal width (detected via `shutil.get_terminal_size()`), tasks are split into pages printed as `[1/N]`, `[2/N]`, … with the full summary column repeated on each page. `Skill` shows the highest difficulty tier where the model passes all tasks at that level and below; `CTX_TRUNCATED`, `TOOL_ERROR`, `SKIPPED_CTX`, and `SKIPPED_VRAM` are excluded (infrastructure/hardware constraints, not capability gaps). `hardware` (optional dict from `hw_snapshot.get_hw_snapshot()`) is printed as a one-line summary under the table title.
 - `print_summary(results)` — failure detail: error kind counts + one-line sample per category.
 - `write_results(results, path, hardware)` — JSON dump; wraps results as `{"hardware": {...}, "results": [...]}` when hardware is provided.
 - `load_results(path)` — reads both the old flat-list format and the new wrapped format; returns `(results, hardware)`.
@@ -280,7 +280,7 @@ Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. Th
 | `edit_policy_ok` | bool | |
 | `tests_pass` | bool | |
 | `edited_files` | list[string] | |
-| `error_kind` | string\|null | `NO_BLOCKS`, `CTX_TRUNCATED`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR` |
+| `error_kind` | string\|null | `NO_BLOCKS`, `CTX_TRUNCATED`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR`, `SKIPPED_VRAM`, `SKIPPED_CTX` |
 | `error_detail` | string\|null | truncated, max ~500 chars |
 | `metrics` | object | `num_ctx`, `prompt_eval_count`, `eval_count`, `prompt_eval_duration_ms`, `eval_duration_ms`, `total_duration_ms` |
 | `tok_per_s` | float | |
@@ -385,7 +385,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
 - Thinking models (gpt-oss:20b, gpt-oss:120b, gemma4:26b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 4800` is required for complex tasks (`compare.sh` sets this explicitly; 2400 was insufficient — gpt-oss:120b ran out mid-reasoning on CSV tasks and gemma4:26b/qwen3.5:35b failed basic tasks like `node_slugify` at 23–32 tok/s within ~100s). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` (16384), `python_minheap` (12800), `python_expr_eval` (8192), `multihop_*` (8192), and `python_tokenizer` (4096) all carry elevated budgets because gpt-oss:20b burns thousands of reasoning tokens before emitting output. Note: gpt-oss:20b fails `multihop_forward` even at 8192 tokens — its thinking loop expands indefinitely when scanning forward through long documents, exhausting all budget. It similarly exhausts all budget on `python_tokenizer` (correctly identifies the ESCAPE→STRING fix but keeps reconsidering the buffer-handling line indefinitely). It also fails `distractor_notes` (correct answer requires reading the record header, not note-body mentions; gpt-oss:20b anchors on a later note-body occurrence with recency bias). All three are valid capability signals, not budget misconfigurations; gpt-oss:120b handles all correctly.
-- `CTX_TRUNCATED` failures are excluded from the `Skill` rating in the comparison table — a model that cannot fill a 256k context due to VRAM/RAM limits is not penalised in its tier. Only genuine capability failures (`TESTS_STILL_FAIL`, `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`) count against the skill score.
+- Infrastructure failures are excluded from the `Skill` rating in the comparison table: `CTX_TRUNCATED`, `TOOL_ERROR`, `SKIPPED_CTX`, `SKIPPED_VRAM`. Only genuine capability failures (`TESTS_STILL_FAIL`, `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`) count against the skill score.
 - `CTX_TRUNCATED` detection uses `prompt_eval_count < len(prompt) // 5` rather than `// 4`. The `// 4` threshold produced false positives on small code prompts (Python code tokenises at ~4.1 chars/token rather than 4.0, putting genuine full-context runs 24 tokens below the floor). The `// 5` floor still reliably catches real truncation events such as Ollama capping a 65k-token context request at 32768 tokens.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.

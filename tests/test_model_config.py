@@ -72,6 +72,20 @@ def test_gguf_with_inline_comment():
     assert cfg.params == {}
 
 
+def test_max_ctx_parsed_and_not_in_params():
+    line = "gpt-oss:20b  gpt-oss-20b.gguf  ngl=999,no_mmap,max_ctx=131072"
+    cfg = parse_model_line(line)
+    assert cfg.max_ctx == 131072
+    assert "max_ctx" not in cfg.params  # harness-only field; must not reach llama-server
+    assert cfg.params["ngl"] == "999"
+    assert cfg.params["no_mmap"] is True
+
+
+def test_max_ctx_absent_is_none():
+    cfg = parse_model_line("qwen2.5-coder:14b  model.gguf  ngl=999")
+    assert cfg.max_ctx is None
+
+
 def test_blank_line_returns_none():
     assert parse_model_line("") is None
     assert parse_model_line("   ") is None
