@@ -51,8 +51,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `--num-ctx` (default: 8192)
   - `--temperature` (default: 0.0)
   - `--seed` (default: 1)
-  - `--num-predict` (default: 400)
+  - `--num-predict` (default: 400; compare.sh sets 4800 for thinking models)
   - `--model-timeout` (default: 300, seconds)
+  - `--startup-timeout` (default: 600, seconds; time to wait for llama-server to become ready)
   - `--think` (enable thinking/reasoning mode for supported models; no-op for llama-server)
   - `--warmup` (send a tiny prompt to each model before the benchmark loop to force model load; no-op for llama-server — model is loaded during server startup)
   - `--out` (default: `output/results.json`)
@@ -62,7 +63,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
 2) Shell scripts
 - `run.sh`: creates/activates a venv, installs `requirements.txt`, forwards all args to `bench.py`.
-- `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 2400 --model-timeout 1200`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`.
+- `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 4800 --model-timeout 1200 --startup-timeout 600`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`. Prints HF repo names next to each model in the run header.
+- `configure.sh`: prints current env variable state with per-variable set instructions — covers `OLLAMA_URL`, `LLAMA_SERVER_BIN` (auto-detects from PATH), `LLAMA_MODELS_DIR` (shows GGUF count), `BENCH_BACKEND`, `HF_TOKEN` (masked), `LLAMA_SRC_DIR`. Green ✓ for set, yellow ~ for unset, red ✗ for invalid path.
+- `statistics.sh`: aggregates all `output/*.json` result files into a flat dataset. Wraps `statistics.py`. Supports `--format {json,csv,markdown}`, `--out PATH`, `--detail` (one row per task instead of per model), and positional file arguments.
 - `install.sh`: interactive installer; checks each dependency (Python, pytest, Node.js 20+, .NET 8, Ollama, models) and offers to install anything missing. Platform-aware: supports apt, dnf, pacman, brew.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models from `models/default.txt`, Python, Node, .NET).
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
@@ -104,14 +107,14 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 
 4) Model Interaction
 - **Ollama backend (default):** POST `/api/chat` (non-streaming) with options: `temperature`, `seed`, `num_ctx`, `num_predict`. Between models: calls `unload_model()` (POST `/api/generate` with `keep_alive=0`) then polls until VRAM drains to near-baseline. Records Ollama-provided metrics: `prompt_eval_count`, `eval_count`, durations (ns). Derives `tok_per_s` from `eval_count / (eval_duration / 1e9)`.
-- **llama-server backend:** spawns one `llama-server` subprocess per model (or per context-size change). Uses the OpenAI-compatible `/v1/chat/completions` endpoint on `http://127.0.0.1:8080`. GGUF file path and startup params come from the model config file (`models/*.txt`, parsed by `lib/model_config.py`). `--ctx-size` is a startup flag, not per-request; the server is restarted when a task requires a larger context than the running instance. `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on builds that omit `timings`. `think` and `warmup` are no-ops — llama-server does not support the `think` API and the model is loaded during server startup.
+- **llama-server backend:** spawns one `llama-server` subprocess per model (or per context-size change). Uses the OpenAI-compatible `/v1/chat/completions` endpoint on `http://127.0.0.1:8080`. GGUF file path and startup params come from the model config file (`models/*.txt`, parsed by `lib/model_config.py`). `--ctx-size` is a startup flag, not per-request; the server is restarted when a task requires a larger context than the running instance. `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on builds that omit `timings`. `think` and `warmup` are no-ops — llama-server does not support the `think` API and the model is loaded during server startup. The harness waits up to `--startup-timeout` seconds (default 600) for the server to become ready; if it exits early, the full stderr is included in the error message. After any `CTX_TRUNCATED` result, the server is stopped immediately so the next task gets a clean restart.
 - Defaults enforce determinism: `temperature=0`, `seed=1`.
 
 4a) Model File Format (`models/*.txt`)
 - Each non-blank, non-comment line defines one model: `<ollama-name> [<gguf-file> [<params>]]`
 - Field 1 (required): Ollama model tag (e.g. `qwen2.5-coder:14b`). Always used for model names passed to bench.py.
 - Field 2 (optional): GGUF filename relative to `$LLAMA_MODELS_DIR`. Required for `--backend llama-server`; if absent, the model cannot be run on llama-server.
-- Field 3 (optional): comma-separated llama-server startup params. Boolean flags: `no_mmap`, `mlock`. Key-value: `n_cpu_moe=35`, `cache_type_k=turbo4`, `ngl=999`. Underscores are converted to hyphens to form CLI flags (e.g. `no_mmap` → `--no-mmap`, `n_cpu_moe=35` → `--n-cpu-moe 35`).
+- Field 3 (optional): comma-separated llama-server startup params. Boolean flags: `no_mmap`, `mlock`. Key-value: `n_cpu_moe=35`, `cache_type_k=q8_0`, `ngl=999`. Underscores are converted to hyphens to form CLI flags (e.g. `no_mmap` → `--no-mmap`, `n_cpu_moe=35` → `--n-cpu-moe 35`). Note: `cache_type_k=turbo4`/`cache_type_v=turbo3` are not supported by all llama.cpp builds; use `q8_0` for broad compatibility.
 - `LLAMA_MODELS_DIR` env var must be set to the directory containing GGUF files when using `--backend llama-server`. Not needed for Ollama runs.
 
 Example:
@@ -119,7 +122,7 @@ Example:
 # ollama-name  [gguf-file  [key=val,...]]
 gpt-oss:20b
 qwen2.5-coder:14b  qwen2.5-coder-14b-Q4_K_M.gguf
-qwen3.5:35b        qwen3.5-35b-A22B-Q4_K_M.gguf    n_cpu_moe=35,no_mmap,mlock,cache_type_k=turbo4,cache_type_v=turbo3
+qwen3.5:35b        qwen3.5-35b-A22B-Q4_K_M.gguf    n_cpu_moe=35,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0
 gemma4:26b         gemma-4-27b-it-Q4_K_M.gguf       n_cpu_moe=18,no_mmap
 ```
 
@@ -146,14 +149,17 @@ gemma4:26b         gemma-4-27b-it-Q4_K_M.gguf       n_cpu_moe=18,no_mmap
   - `TOOL_ERROR` — setup/test runner timeout or crash
 
 7) Outputs
-- `output/results.json` (or the path passed to `--out`): JSON object `{"hardware": {...}, "results": [...]}` where `hardware` is the snapshot from `hw_snapshot.get_hw_snapshot()` (GPU list, CPU string, RAM, platform). Old flat-list format still readable via `load_results()`.
-- Console comparison table: paginated (one or more `[1/N]` … `[N/N]` sub-tables when task count exceeds terminal width); rows = models, columns = tasks + summary; `Spd` column = assumed speed rank (1 = fastest); `Skill` column = highest L-tier where model passes all tasks at that level and below, with `CTX_TRUNCATED` excluded (hardware constraint, not capability failure).
+- `output/results.json` (or the path passed to `--out`): JSON object `{"hardware": {...}, "results": [...]}` where `hardware` is the full snapshot from `hw_snapshot.get_hw_snapshot()` (GPU list with thermal/power/driver fields, CPU string, RAM, platform, CUDA toolkit version, Ollama/llama-server versions, storage device type). Old flat-list format still readable via `load_results()`. Partial results are written to this file even if the run is interrupted mid-way (written in a `finally` block).
+- Console comparison table: paginated (one or more `[1/N]` … `[N/N]` sub-tables when task count exceeds terminal width); rows = models, columns = tasks + summary; `Spd` column = assumed speed rank (1 = fastest); `Skill` column = highest L-tier where model passes all tasks at that level and below, with `CTX_TRUNCATED` excluded (hardware constraint, not capability failure). HF repo names are printed in the model legend above the table for llama-server runs.
 - Console failure detail: error kind counts + one-line sample per category.
 - `output/compare-history.json`: last 10 run summaries with per-model/per-task breakdown and hardware metadata; used to show estimated runtime in the compare header.
+- `statistics.sh` / `statistics.py`: post-run export tool; aggregates multiple result files into a flat dataset (one row per model or per task) in JSON, Nordic CSV (`;`-delimited, `QUOTE_ALL`), or Markdown format.
 
 ### Result Record Schema
 
-Results file top-level: `{"hardware": {"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str}, "results": [...]}`.
+Results file top-level: `{"hardware": {"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str, "cuda_toolkit": str, "ollama_version": str, "llama_server_version": str, "models_storage": {"device": str, "transport": str}}, "results": [...]}`.
+
+GPU list entries include: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`. The `llama_server_version` field is only present for llama-server runs.
 
 Per model × task run:
 
@@ -161,6 +167,7 @@ Per model × task run:
 |---|---|---|
 | `model` | string | |
 | `backend` | string | `"ollama"` or `"llama-server"` |
+| `hf_repo` | string | HuggingFace repo; populated for llama-server runs when `hf:` field present in models/*.txt |
 | `task` | string | |
 | `baseline_failed` | bool | expected true; false → `BASELINE_PASSED_INVALID_TASK` |
 | `baseline_rc` | int | 0 or 1 |
@@ -184,8 +191,9 @@ Per model × task run:
 | Setting | Value | Notes |
 |---|---|---|
 | `--num-ctx` | 8192 | Default; increase for large prompt tasks |
-| `--num-predict` | 2400 | Thinking models use tokens for reasoning before BEGIN_FILE |
+| `--num-predict` | 4800 | Thinking models (gpt-oss, gemma4:26b, qwen3.5:35b) consume 2000–4000 tokens on reasoning before BEGIN_FILE; 2400 was insufficient |
 | `--model-timeout` | 1200 | 120B RAM-bound models can exceed 900s at large context (compare.sh default) |
+| `--startup-timeout` | 600 | llama-server with mlock loads ~70 GB from disk; 120s default caused spurious timeouts |
 | `--think` | off | Thinking tokens consume budget before the code block appears |
 | `--temperature` | 0.0 | Reproducibility |
 

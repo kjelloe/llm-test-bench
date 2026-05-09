@@ -26,7 +26,10 @@ bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 install.sh                Interactive installer: checks and installs missing dependencies
 run.sh                    Venv setup + bench.py entrypoint
-compare.sh                Runs a model set (default/extended/full); reads models/*.txt; forwards extra args
+compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 4800; forwards extra args
+configure.sh              Prints current env variable state (OLLAMA_URL, LLAMA_SERVER_BIN, LLAMA_MODELS_DIR, HF_TOKEN, …) with set instructions
+statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); thin wrapper for statistics.py
+statistics.py             Dataset builder: one row per model (summary) or per task (--detail); exports hardware, pass rates, tok/s, skill breakdown
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 fetch.sh                  Pulls models by set name, set file path, or bare model name
 lib/                      Python support modules (imported by bench.py) and shell utilities
@@ -161,9 +164,10 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` so `bench.py` can select either backend at startup.
 
 - **`LlamaServerManager`** — manages a single `llama-server` subprocess:
-  - `ensure(cfg, ctx_size, num_threads)` — starts or restarts the server if the model changed or `ctx_size` grew beyond the running instance. Blocks until `/health` returns `{"status":"ok"}` (up to 120s).
-  - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout.
+  - `ensure(cfg, ctx_size, num_threads, startup_timeout=600)` — starts or restarts the server if the model changed or `ctx_size` grew beyond the running instance. Blocks until `/health` returns `{"status":"ok"}` (up to `startup_timeout` seconds, default 600; large RAM-bound models with `mlock` may take 300–600s). If the server exits before becoming ready, its full stderr output is captured and included in the raised `RuntimeError` for diagnosis.
+  - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; closes the stderr pipe.
   - Tracks `_current_model` and `_current_ctx` to minimise unnecessary restarts (never downsizes ctx — a server running at 131072 tokens is fine for an 8192-token task).
+- **CTX_TRUNCATED recovery:** After any `CTX_TRUNCATED` result, `bench.py` calls `llama_manager.stop()` before the next task. This forces a clean server restart rather than leaving subsequent tasks to hang against an undersized context window.
 - `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on older builds.
 - `unload_model(...)` — no-op; lifecycle is managed by `LlamaServerManager.stop()`.
 
@@ -204,10 +208,18 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 #### `lib/hw_snapshot.py` — Hardware Snapshot
 
 Captures a point-in-time hardware description at benchmark start:
-- `get_hw_snapshot() -> dict` — returns `{"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str}`. GPU list from `nvidia-smi --query-gpu=name,memory.total,driver_version`; CPU from `/proc/cpuinfo` (Linux) or `sysctl` (macOS); RAM from `/proc/meminfo` or `sysctl hw.memsize`. Returns empty/0 values gracefully if a query fails.
+- `get_hw_snapshot(llama_server_bin=None, models_dir=None) -> dict` — returns a dict with:
+  - `gpu` — list of GPU dicts from a single `nvidia-smi` query: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`
+  - `cpu` — model string + logical core count from `/proc/cpuinfo` (Linux) or `sysctl` (macOS)
+  - `ram_total_gb` — total system RAM in GB
+  - `platform` — `"Linux 6.6.87…"` etc.
+  - `cuda_toolkit` — CUDA toolkit version from `nvcc --version` or version files; `""` if not found
+  - `ollama_version` — from `ollama --version`; `""` if Ollama not installed
+  - `llama_server_version` — from `llama-server --version`; only present when `llama_server_bin` is passed
+  - `models_storage` — `{"device": str, "transport": str}` for the GGUF/Ollama model directory; transport is one of `nvme`, `ssd`, `hdd`, `windows-drive`, `network-or-virtual`, or a raw fs type
 - `hw_summary(hw) -> str` — one-line string suitable for display, e.g. `RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 GB RAM`.
 
-The snapshot is saved in `results.json` as a top-level `"hardware"` field and in `compare-history.json` per run entry, allowing results from different machines or GPUs to be compared.
+The snapshot is saved in `results.json` as a top-level `"hardware"` field and in `compare-history.json` per run entry, allowing results from different machines or GPUs to be compared. For Ollama runs, `models_storage` auto-detects via `$OLLAMA_MODELS` or `~/.ollama/models`.
 
 #### `lib/history.py` — Run History Manager
 
@@ -224,13 +236,15 @@ Written by `compare.sh` (via `lib/history.py save`) after each run. Two top-leve
 
 ### Data Model
 
-Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. The top-level `"hardware"` field contains the snapshot from `hw_snapshot.get_hw_snapshot()` (gpu list, cpu string, ram_total_gb, platform). The old flat-list format is still readable via `load_results()`.
+Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. The top-level `"hardware"` field contains the full snapshot from `hw_snapshot.get_hw_snapshot()` (gpu list with driver/thermal/power fields, cpu string, ram_total_gb, platform, cuda_toolkit, ollama_version, llama_server_version, models_storage). The old flat-list format is still readable via `load_results()`.
 
 #### Result Record
 
 | Field | Type | Notes |
 |---|---|---|
 | `model` | string | |
+| `backend` | string | `"ollama"` or `"llama-server"` |
+| `hf_repo` | string | HuggingFace repo (e.g. `bartowski/Qwen2.5-Coder-14B-Instruct-GGUF`); populated for llama-server runs when the model file includes an `hf:` field |
 | `task` | string | |
 | `baseline_failed` | bool | |
 | `baseline_rc` | int | |
@@ -342,7 +356,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - First run of `npm install` / `dotnet restore` fetches packages from the internet; subsequent runs use the local cache.
 - Models that violate the output format produce `NO_BLOCKS`; the harness does not attempt a repair pass.
 - Large context windows increase KV cache pressure; speed varies by model quantization and VRAM. Per-task `num_ctx` overrides let individual tasks request more headroom without raising the global default.
-- Thinking models (gpt-oss:20b, gpt-oss:120b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 2400` is the minimum for complex tasks (`compare.sh` sets this explicitly). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` (16384), `python_minheap` (12800), `python_expr_eval` (8192), `multihop_*` (8192), and `python_tokenizer` (4096) all carry elevated budgets because gpt-oss:20b burns thousands of reasoning tokens before emitting output. Note: gpt-oss:20b fails `multihop_forward` even at 8192 tokens — its thinking loop expands indefinitely when scanning forward through long documents, exhausting all budget. It similarly exhausts all budget on `python_tokenizer` (correctly identifies the ESCAPE→STRING fix but keeps reconsidering the buffer-handling line indefinitely). It also fails `distractor_notes` (correct answer requires reading the record header, not note-body mentions; gpt-oss:20b anchors on a later note-body occurrence with recency bias). All three are valid capability signals, not budget misconfigurations; gpt-oss:120b handles all correctly.
+- Thinking models (gpt-oss:20b, gpt-oss:120b, gemma4:26b, qwen3.5:35b) consume generation tokens for reasoning before emitting `BEGIN_FILE`; `--num-predict 4800` is required for complex tasks (`compare.sh` sets this explicitly; 2400 was insufficient — gpt-oss:120b ran out mid-reasoning on CSV tasks and gemma4:26b/qwen3.5:35b failed basic tasks like `node_slugify` at 23–32 tok/s within ~100s). Per-task `min_predict` overrides handle tasks where reasoning alone can exceed the default budget — e.g. `python_lfu_cache` (16384), `python_minheap` (12800), `python_expr_eval` (8192), `multihop_*` (8192), and `python_tokenizer` (4096) all carry elevated budgets because gpt-oss:20b burns thousands of reasoning tokens before emitting output. Note: gpt-oss:20b fails `multihop_forward` even at 8192 tokens — its thinking loop expands indefinitely when scanning forward through long documents, exhausting all budget. It similarly exhausts all budget on `python_tokenizer` (correctly identifies the ESCAPE→STRING fix but keeps reconsidering the buffer-handling line indefinitely). It also fails `distractor_notes` (correct answer requires reading the record header, not note-body mentions; gpt-oss:20b anchors on a later note-body occurrence with recency bias). All three are valid capability signals, not budget misconfigurations; gpt-oss:120b handles all correctly.
 - `CTX_TRUNCATED` failures are excluded from the `Skill` rating in the comparison table — a model that cannot fill a 256k context due to VRAM/RAM limits is not penalised in its tier. Only genuine capability failures (`TESTS_STILL_FAIL`, `NO_BLOCKS`, `EDITED_NONEDITABLE_FILE`) count against the skill score.
 - `CTX_TRUNCATED` detection uses `prompt_eval_count < len(prompt) // 5` rather than `// 4`. The `// 4` threshold produced false positives on small code prompts (Python code tokenises at ~4.1 chars/token rather than 4.0, putting genuine full-context runs 24 tokens below the floor). The `// 5` floor still reliably catches real truncation events such as Ollama capping a 65k-token context request at 32768 tokens.
 - Warmup is JIT per model: each model is warmed up immediately before its first task, not all at the start. Calls use `keep_alive=-1` so the model stays resident through all its tasks; memory-pressure eviction still applies.

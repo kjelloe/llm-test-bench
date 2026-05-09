@@ -183,10 +183,19 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
 
 def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
     """One row per task record."""
-    run_date = _run_date(path)
-    gpu = _hw_gpu(hw)
-    cpu = _hw_cpu(hw)
-    ram_gb = _hw_ram(hw)
+    run_date         = _run_date(path)
+    gpu              = _hw_gpu(hw)
+    gpu_driver       = _hw_gpu_field(hw, "driver")
+    vram_free_mb     = _hw_gpu_field(hw, "vram_free_mb")
+    gpu_temp_c       = _hw_gpu_field(hw, "temp_c")
+    gpu_power_limit_w = _hw_gpu_field(hw, "power_limit_w")
+    cpu              = _hw_cpu(hw)
+    ram_gb           = _hw_ram(hw)
+    platform         = _hw_platform(hw)
+    cuda_toolkit     = _hw_str(hw, "cuda_toolkit")
+    llama_server_ver = _hw_str(hw, "llama_server_version")
+    ollama_ver       = _hw_str(hw, "ollama_version")
+    storage          = ((hw or {}).get("models_storage") or {}).get("transport", "")
 
     rows = []
     for r in results:
@@ -195,8 +204,17 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
             "source_file":        path.name,
             "run_date":           run_date,
             "gpu":                gpu,
+            "gpu_driver":         gpu_driver,
+            "vram_free_mb":       vram_free_mb,
+            "gpu_temp_c":         gpu_temp_c,
+            "gpu_power_limit_w":  gpu_power_limit_w,
             "cpu":                cpu,
             "ram_gb":             ram_gb,
+            "platform":           platform,
+            "cuda_toolkit":       cuda_toolkit,
+            "llama_server_ver":   llama_server_ver,
+            "ollama_ver":         ollama_ver,
+            "models_storage":     storage,
             "model":              r["model"],
             "backend":            r.get("backend", "ollama"),
             "hf_repo":            r.get("hf_repo", ""),

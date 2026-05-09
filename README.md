@@ -25,6 +25,12 @@ Then run the preflight check to verify everything is in order:
 ./preflight.sh
 ```
 
+To see which environment variables are set (Ollama URL, llama-server binary, GGUF directory, HF token, etc.) and how to configure them:
+
+```bash
+./configure.sh
+```
+
 Example output:
 
 ```
@@ -212,8 +218,11 @@ python3 bench.py --help
                                may specify a higher minimum via Task.num_ctx
   --temperature FLOAT          Default: 0.0
   --seed INT                   Default: 1
-  --num-predict INT            Max output tokens (default: 400)
+  --num-predict INT            Max output tokens (default: 400; compare.sh sets 4800 for
+                               thinking models that burn tokens on reasoning before BEGIN_FILE)
   --model-timeout INT          Ollama HTTP request timeout in seconds (default: 300)
+  --startup-timeout INT        Seconds to wait for llama-server to become ready (default: 600;
+                               large RAM-bound models like gpt-oss:120b with mlock take 300–600s)
   --num-thread INT             CPU threads for inference; 0 = let backend decide
                                (default: 10; passed as --threads to llama-server)
   --think                      Enable thinking/reasoning mode (ollama only; no-op for
@@ -241,9 +250,11 @@ To benchmark using [llama.cpp](https://github.com/ggerganov/llama.cpp)'s `llama-
    # ollama-name  [gguf-file  [key=val,flag,...]]
    gpt-oss:20b
    qwen2.5-coder:14b  qwen2.5-coder-14b-Q4_K_M.gguf
-   qwen3.5:35b        qwen3.5-35b-A22B-Q4_K_M.gguf    n_cpu_moe=35,no_mmap,mlock,cache_type_k=turbo4,cache_type_v=turbo3
+   qwen3.5:35b        qwen3.5-35b-A22B-Q4_K_M.gguf    n_cpu_moe=35,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0
    ```
    Models with no GGUF filename can only run on Ollama; they will error immediately if selected with `--backend llama-server`.
+
+   > **Note on KV cache types:** `turbo4`/`turbo3` are not supported by all llama.cpp builds. Use `q8_0` for broad compatibility.
 
 3. Run with the llama-server backend:
    ```bash
@@ -252,7 +263,11 @@ To benchmark using [llama.cpp](https://github.com/ggerganov/llama.cpp)'s `llama-
    ```
    `compare.sh` automatically passes `--model-file` when reading a named model set.
 
+**Startup timeout:** Large RAM-bound models (e.g. `gpt-oss:120b` with `mlock`) can take 300–600 seconds to load from disk. The harness waits up to `--startup-timeout` seconds (default 600) for `/health` to return `{"status":"ok"}`. If the server exits before that, its full stderr is printed for diagnosis.
+
 **Context window handling:** `--ctx-size` is a startup flag for llama-server, not per-request. The harness starts the server at the required context size and restarts it automatically if a subsequent task needs a larger window (e.g. `context_128k` needs 131072 tokens). A server running at a larger context is reused for smaller tasks — it never downsizes mid-model.
+
+**CTX_TRUNCATED recovery:** If a task returns `CTX_TRUNCATED` (server silently capped the context because VRAM was insufficient), the harness stops the llama-server immediately so the next task gets a clean restart rather than hanging against an undersized server.
 
 **Timing:** `tok_per_s` for llama-server uses llama.cpp's `timings.predicted_ms` field (generation phase only, same precision as Ollama). Falls back to `completion_tokens / wall_time` on older builds that omit `timings`.
 
@@ -309,6 +324,37 @@ gpt-oss:120b       gpt-oss-120b-mxfp4-00001-of-00003.gguf   hf:ggml-org/gpt-oss-
 Multi-shard models (e.g. `gpt-oss-120b-mxfp4-00001-of-00003.gguf`) are detected automatically — give `fetch-hf.sh` the shard-1 filename and it downloads all parts.
 
 Requires `huggingface_hub` (included in `requirements.txt`; installed when you first run `./run.sh`).
+
+---
+
+## Exporting results
+
+`statistics.sh` aggregates all `output/*.json` result files into a flat dataset for comparison across hardware or model versions.
+
+```bash
+# Markdown table to stdout (default)
+./statistics.sh
+
+# One row per model (summary — pass rate, avg tok/s, skill breakdown)
+./statistics.sh --format markdown
+
+# One row per task (detailed)
+./statistics.sh --detail --format csv --out stats.csv
+
+# JSON array for programmatic processing
+./statistics.sh --format json --out stats.json
+
+# Process a specific file only
+./statistics.sh output/results-compare-ls.json --format markdown
+```
+
+**Summary mode** (default) produces one row per `(model, backend)` with: hardware identifiers, pass rate, avg tok/s, total wall time, per-level skill breakdown (e.g. `L1:6/6  L2:4/5  L3:3/3`), and error kind counts.
+
+**Detail mode** (`--detail`) produces one row per `(model, task)` with: all hardware fields, task difficulty, pass/fail, error kind, tok/s, wall_s, prompt tokens, gen tokens, num_ctx, and truncation flags.
+
+Hardware fields exported: GPU name+VRAM, GPU driver, free VRAM at run start, GPU temperature, GPU power limit, CPU, RAM, platform, CUDA toolkit version, llama-server version (if applicable), Ollama version (if applicable), and storage device type.
+
+The CSV format uses `;` as delimiter with all cells double-quoted (Nordic CSV — compatible with Excel on Nordic locales).
 
 ---
 
