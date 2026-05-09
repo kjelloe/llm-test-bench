@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# statistics.sh — Aggregate benchmark results into a sharable dataset.
+#
+# Usage:
+#   ./statistics.sh                              markdown summary to stdout
+#   ./statistics.sh --format csv --out stats.csv
+#   ./statistics.sh --format json
+#   ./statistics.sh --detail                     one row per task
+#   ./statistics.sh output/results-compare.json  specific file(s)
+#
+# Formats:
+#   markdown   GitHub-flavoured markdown table (default)
+#   csv        Semicolon-separated, all cells quoted (Nordic CSV)
+#   json       JSON array of objects
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec python3 "$SCRIPT_DIR/statistics.py" "$@"
