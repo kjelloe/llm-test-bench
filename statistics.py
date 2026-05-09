@@ -80,6 +80,15 @@ def _hw_platform(hw: dict | None) -> str:
     return (hw or {}).get("platform") or ""
 
 
+def _hw_gpu_field(hw: dict | None, field: str, default="") -> str | int | float:
+    gpus = (hw or {}).get("gpu") or []
+    return gpus[0].get(field, default) if gpus else default
+
+
+def _hw_str(hw: dict | None, field: str) -> str:
+    return str((hw or {}).get(field) or "")
+
+
 # ── Row builders ──────────────────────────────────────────────────────────────
 
 def _run_date(path: Path) -> str:
@@ -116,6 +125,15 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
         key = (r["model"], r.get("backend", "ollama"))
         groups.setdefault(key, []).append(r)
 
+    gpu_driver        = _hw_gpu_field(hw, "driver")
+    vram_free_mb      = _hw_gpu_field(hw, "vram_free_mb")
+    gpu_temp_c        = _hw_gpu_field(hw, "temp_c")
+    gpu_power_limit_w = _hw_gpu_field(hw, "power_limit_w")
+    cuda_toolkit      = _hw_str(hw, "cuda_toolkit")
+    llama_server_ver  = _hw_str(hw, "llama_server_version")
+    ollama_ver        = _hw_str(hw, "ollama_version")
+    storage           = ((hw or {}).get("models_storage") or {}).get("transport", "")
+
     rows = []
     for (model, backend), recs in groups.items():
         passed = sum(1 for r in recs if r["tests_pass"])
@@ -132,25 +150,33 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
                 err_counts[k] = err_counts.get(k, 0) + 1
 
         rows.append({
-            "source_file":      path.name,
-            "run_date":         run_date,
-            "gpu":              gpu,
-            "cpu":              cpu,
-            "ram_gb":           ram_gb,
-            "platform":         platform,
-            "model":            model,
-            "backend":          backend,
-            "hf_repo":          hf_repo,
-            "tasks_passed":     passed,
-            "tasks_total":      total,
-            "pass_pct":         round(passed / total * 100, 1) if total else 0.0,
-            "avg_tok_per_s":    avg_tok,
-            "total_wall_s":     total_wall,
-            "skill":            _difficulty_summary(recs),
-            "ctx_truncated":    err_counts.get("CTX_TRUNCATED", 0),
-            "no_blocks":        err_counts.get("NO_BLOCKS", 0),
-            "tests_still_fail": err_counts.get("TESTS_STILL_FAIL", 0),
-            "tool_error":       err_counts.get("TOOL_ERROR", 0),
+            "source_file":        path.name,
+            "run_date":           run_date,
+            "gpu":                gpu,
+            "gpu_driver":         gpu_driver,
+            "vram_free_mb":       vram_free_mb,
+            "gpu_temp_c":         gpu_temp_c,
+            "gpu_power_limit_w":  gpu_power_limit_w,
+            "cpu":                cpu,
+            "ram_gb":             ram_gb,
+            "platform":           platform,
+            "cuda_toolkit":       cuda_toolkit,
+            "llama_server_ver":   llama_server_ver,
+            "ollama_ver":         ollama_ver,
+            "models_storage":     storage,
+            "model":              model,
+            "backend":            backend,
+            "hf_repo":            hf_repo,
+            "tasks_passed":       passed,
+            "tasks_total":        total,
+            "pass_pct":           round(passed / total * 100, 1) if total else 0.0,
+            "avg_tok_per_s":      avg_tok,
+            "total_wall_s":       total_wall,
+            "skill":              _difficulty_summary(recs),
+            "ctx_truncated":      err_counts.get("CTX_TRUNCATED", 0),
+            "no_blocks":          err_counts.get("NO_BLOCKS", 0),
+            "tests_still_fail":   err_counts.get("TESTS_STILL_FAIL", 0),
+            "tool_error":         err_counts.get("TOOL_ERROR", 0),
         })
     return rows
 

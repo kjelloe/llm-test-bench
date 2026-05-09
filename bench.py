@@ -291,7 +291,10 @@ def main() -> None:
         from lib.ollama_client import chat as _chat_fn
         from lib.ollama_client import unload_model as _unload_fn
 
-    hw = get_hw_snapshot()
+    hw = get_hw_snapshot(
+        llama_server_bin=bin_path if args.backend == "llama-server" else None,
+        models_dir=models_dir if args.backend == "llama-server" else None,
+    )
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     total = len(pairs)
     results = []
