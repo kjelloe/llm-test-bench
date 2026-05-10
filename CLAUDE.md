@@ -20,10 +20,11 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 
 - Default `temperature=0` and `seed=1`.
 - `num_predict` default is 400 for simple/instruct models. Use 4800+ for thinking models
-  (gpt-oss, qwen3.5, gemma4, deepseek-r1, etc.) — their reasoning tokens consume the budget
+  (qwen3.5, gpt-oss:120b, deepseek-r1, etc.) — their reasoning tokens consume the budget
   before the answer. `compare.sh` sets `--num-predict 4800` explicitly; 2400 was too few for
-  gemma4:26b and qwen3.5:35b on basic tasks (node_slugify, dotnet_sas hit the wall at ~104s);
-  1200 was too few for gpt-oss:120b on complex tasks (CSV parser ran out mid-reasoning).
+  qwen3.5:35b on basic tasks; 1200 was too few for gpt-oss:120b on complex tasks (CSV parser
+  ran out mid-reasoning). Note: gpt-oss:20b and gemma4:26b are NOT thinking models — do not
+  mark them `thinking` in model files; the "After your reasoning" prefix causes planning loops.
 - `--warmup` sends a 5-token dummy prompt to each model before the benchmark loop to force
   model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
   (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.

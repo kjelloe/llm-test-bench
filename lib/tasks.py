@@ -538,6 +538,7 @@ CSV_NORDIC_PROPERTY = Task(
     context_files=["data_sample.csv", "test_solution.py"],
     test_cmd=["python3", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
     test_timeout=120,
+    num_ctx=16384,      # prompt alone is ~6400 tokens; 8192 default leaves only ~1700 for generation
     min_predict=12000,  # thinking models exhaust 8000 mid-output; all 6 models still failed at 8000
     model_timeout=600,  # cold-start + ~12000 token generation exceeds run.sh's 300s default
 )

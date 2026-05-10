@@ -86,6 +86,19 @@ def test_max_ctx_absent_is_none():
     assert cfg.max_ctx is None
 
 
+def test_thinking_flag_parsed_and_not_in_params():
+    line = "qwen3.5:35b  model.gguf  ngl=999,no_mmap,thinking,max_ctx=131072"
+    cfg = parse_model_line(line)
+    assert cfg.is_thinking is True
+    assert "thinking" not in cfg.params  # harness-only field; must not reach llama-server
+    assert cfg.params["ngl"] == "999"
+
+
+def test_thinking_flag_absent_defaults_false():
+    cfg = parse_model_line("qwen2.5-coder:14b  model.gguf  ngl=999,no_mmap")
+    assert cfg.is_thinking is False
+
+
 def test_blank_line_returns_none():
     assert parse_model_line("") is None
     assert parse_model_line("   ") is None

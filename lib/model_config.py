@@ -29,7 +29,8 @@ class ModelConfig:
     gguf_file: str | None = None
     params: dict[str, str | bool] = field(default_factory=dict)
     hf_repo: str | None = None
-    max_ctx: int | None = None  # architecture context limit; harness skips tasks requiring more
+    max_ctx: int | None = None      # architecture context limit; harness skips tasks requiring more
+    is_thinking: bool = False       # True → "After your reasoning, output ONLY..." system message
 
 
 def parse_model_line(line: str) -> ModelConfig | None:
@@ -53,12 +54,15 @@ def parse_model_line(line: str) -> ModelConfig | None:
     gguf_file = positional[0] if positional else None
     params: dict[str, str | bool] = {}
     max_ctx: int | None = None
+    is_thinking = False
     if len(positional) > 1:
         for token in positional[1].split(","):
             token = token.strip()
             if not token:
                 continue
-            if "=" in token:
+            if token == "thinking":
+                is_thinking = True  # harness-only — not forwarded to llama-server
+            elif "=" in token:
                 k, v = token.split("=", 1)
                 k, v = k.strip(), v.strip()
                 if k == "max_ctx":
@@ -68,7 +72,8 @@ def parse_model_line(line: str) -> ModelConfig | None:
             else:
                 params[token] = True
 
-    return ModelConfig(ollama_name=ollama_name, gguf_file=gguf_file, params=params, hf_repo=hf_repo, max_ctx=max_ctx)
+    return ModelConfig(ollama_name=ollama_name, gguf_file=gguf_file, params=params, hf_repo=hf_repo,
+                       max_ctx=max_ctx, is_thinking=is_thinking)
 
 
 def load_model_file(path: str | Path) -> list[ModelConfig]:

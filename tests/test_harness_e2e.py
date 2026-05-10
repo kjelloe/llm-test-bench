@@ -251,8 +251,8 @@ def _capture_chat_fn(store: dict):
     return chat_fn
 
 
-def test_llama_server_system_message_starts_with_after_reasoning():
-    """llama-server backend uses the 'After your reasoning,' system message."""
+def test_is_thinking_true_uses_after_reasoning_message():
+    """is_thinking=True → 'After your reasoning,' system message regardless of backend."""
     captured: dict = {}
     run_one(
         model="mock-model",
@@ -265,26 +265,29 @@ def test_llama_server_system_message_starts_with_after_reasoning():
         model_timeout=60,
         chat_fn=_capture_chat_fn(captured),
         backend="llama-server",
+        is_thinking=True,
     )
     sys_msg = captured["messages"][0]["content"]
     assert sys_msg.startswith("After your reasoning,"), repr(sys_msg)
 
 
-def test_ollama_system_message_does_not_mention_reasoning():
-    """Ollama backend uses the original system message (no 'After your reasoning,' prefix)."""
-    captured: dict = {}
-    run_one(
-        model="mock-model",
-        task=TASK,
-        client_url="http://unused",
-        num_ctx=4096,
-        temperature=0.0,
-        seed=1,
-        num_predict=400,
-        model_timeout=60,
-        chat_fn=_capture_chat_fn(captured),
-        backend="ollama",
-    )
-    sys_msg = captured["messages"][0]["content"]
-    assert not sys_msg.startswith("After your reasoning,"), repr(sys_msg)
-    assert "BEGIN_FILE" in sys_msg
+def test_is_thinking_false_uses_plain_message():
+    """is_thinking=False → plain 'Output ONLY' system message regardless of backend."""
+    for backend in ("ollama", "llama-server"):
+        captured: dict = {}
+        run_one(
+            model="mock-model",
+            task=TASK,
+            client_url="http://unused",
+            num_ctx=4096,
+            temperature=0.0,
+            seed=1,
+            num_predict=400,
+            model_timeout=60,
+            chat_fn=_capture_chat_fn(captured),
+            backend=backend,
+            is_thinking=False,
+        )
+        sys_msg = captured["messages"][0]["content"]
+        assert not sys_msg.startswith("After your reasoning,"), repr(sys_msg)
+        assert "BEGIN_FILE" in sys_msg

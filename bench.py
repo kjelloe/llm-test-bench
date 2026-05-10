@@ -47,6 +47,7 @@ def run_one(
     gpu_before: dict | None = None,
     gpu_after: dict | None = None,
     backend: str = "ollama",
+    is_thinking: bool = False,
 ) -> dict:
     record: dict = {
         "model": model,
@@ -101,7 +102,7 @@ def run_one(
             _system_msg = (
                 "After your reasoning, output ONLY BEGIN_FILE/END_FILE blocks. "
                 "No markdown, no prose, no explanation."
-                if backend == "llama-server" else
+                if is_thinking else
                 "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."
             )
             resp = chat_fn(
@@ -326,6 +327,7 @@ def main() -> None:
     try:
         for i, (model, task) in enumerate(pairs, 1):
             effective_ctx = max(args.num_ctx, task.num_ctx) if task.num_ctx else args.num_ctx
+            cfg = None  # set in llama-server path; may inform _is_thinking
 
             # ── Pre-flight skips (evaluated BEFORE server restart) ─────────────
             def _skip_record(kind: str, detail: str) -> dict:
@@ -423,6 +425,9 @@ def main() -> None:
                     current_model = model
                 client_url = args.ollama_url
 
+            _is_thinking = (
+                cfg.is_thinking if (llama_manager is not None and cfg is not None) else args.think
+            )
             print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
             record = run_one(
                 model=model,
@@ -440,6 +445,7 @@ def main() -> None:
                 gpu_before=gpu_before,
                 gpu_after=gpu_after,
                 backend=args.backend,
+                is_thinking=_is_thinking,
             )
             if llama_manager is not None:
                 cfg = model_configs.get(model)
