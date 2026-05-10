@@ -51,9 +51,10 @@ output/                   Runtime artifacts — git-ignored, created on first ru
   compare-history.json    Run summaries + per-model history archive
 tests/
   conftest.py             sys.path shim
-  test_parsing.py         Unit tests for the BEGIN_FILE/END_FILE parser
-  test_model_config.py    Unit tests for the models/*.txt parser (ModelConfig, max_ctx, hf: field)
-  test_harness_e2e.py     End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic; no Ollama or llama-server required
+  test_parsing.py             Unit tests for the BEGIN_FILE/END_FILE parser
+  test_model_config.py        Unit tests for the models/*.txt parser (ModelConfig, max_ctx, hf: field)
+  test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split)
+  test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
   python_safe_div/        calc.py (baseline), conftest.py, tests/test_calc.py
@@ -173,7 +174,8 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` s
   - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; closes the stderr pipe.
   - Tracks `_current_model` and `_current_ctx` to minimise unnecessary restarts (never downsizes ctx — a server running at 131072 tokens is fine for an 8192-token task).
 - **CTX_TRUNCATED recovery:** After any `CTX_TRUNCATED` result, `bench.py` calls `llama_manager.stop()` before the next task. This forces a clean server restart rather than leaving subsequent tasks to hang against an undersized context window.
-- `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on older builds.
+- `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). Response body is parsed by `_parse_body(body, elapsed_ns)`. `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on older builds.
+- **`_parse_body(body, elapsed_ns)`** — standalone helper that extracts `content`, `thinking`, and metrics from a `/v1/chat/completions` response dict. Reads `message.content` for the answer and `message.reasoning_content` for thinking (the field llama.cpp uses for reasoning models). **Fallback:** when `content` is empty but `reasoning_content` is non-empty, `reasoning_content` is promoted to `content` — this recovers cases where thinking models (gpt-oss, gemma4, qwen3.5) exhaust their token budget inside the `<think>` phase and produce nothing in the non-reasoning section. Separated from `chat()` so it can be unit-tested without HTTP mocking.
 - `unload_model(...)` — no-op; lifecycle is managed by `LlamaServerManager.stop()`.
 
 #### `model_config.py` — Model Config Parser
