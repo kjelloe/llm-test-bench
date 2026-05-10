@@ -59,6 +59,7 @@ def run_one(
         "tests_pass": False,
         "response_truncated": False,
         "ctx_truncated": False,
+        "finish_reason": "",
         "response_snippet": None,
         "edited_files": [],
         "error_kind": None,
@@ -175,6 +176,7 @@ def run_one(
             "kv_mb_per_1k_tokens": kv_mb_per_1k,
         }
         record["response_truncated"] = m.eval_count >= effective_num_predict - 5
+        record["finish_reason"] = resp.finish_reason
         # Save a snippet of the raw model output for post-hoc debugging
         raw = resp.content
         record["response_snippet"] = (raw[:300] if len(raw) <= 300 else raw[:150] + "\n…\n" + raw[-150:])
@@ -398,7 +400,8 @@ def main() -> None:
                     "baseline_failed": None, "baseline_rc": None,
                     "edit_parse_ok": False, "edit_policy_ok": False,
                     "tests_pass": False, "response_truncated": False,
-                    "ctx_truncated": False, "response_snippet": None,
+                    "ctx_truncated": False, "finish_reason": "",
+                    "response_snippet": None,
                     "edited_files": [], "error_kind": kind, "error_detail": detail,
                     "metrics": {}, "tok_per_s": 0.0, "wall_s": 0.0, "kv_cache": None,
                     "gpu_snapshots": {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None},

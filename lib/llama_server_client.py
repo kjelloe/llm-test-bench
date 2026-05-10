@@ -155,8 +155,9 @@ def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
     """Parse an OpenAI-compatible /v1/chat/completions response dict."""
     choice = (body.get("choices") or [{}])[0]
     msg = choice.get("message") or {}
-    content  = msg.get("content")           or ""
-    thinking = msg.get("reasoning_content") or ""
+    content       = msg.get("content")           or ""
+    thinking      = msg.get("reasoning_content") or ""
+    finish_reason = choice.get("finish_reason")  or ""
     # Thinking models on llama-server return reasoning in reasoning_content and
     # the actual answer in content. When the model exhausts its token budget
     # inside the reasoning phase, content arrives empty. Fall back so that
@@ -169,7 +170,7 @@ def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
     prompt_tokens      = usage.get("prompt_tokens", 0)
     completion_tokens  = usage.get("completion_tokens", 0)
 
-    timings     = body.get("timings") or {}
+    timings      = body.get("timings") or {}
     predicted_ms = timings.get("predicted_ms")
     prompt_ms    = timings.get("prompt_ms")
     if predicted_ms is not None and predicted_ms > 0:
@@ -182,6 +183,7 @@ def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
     return OllamaResponse(
         content=content,
         thinking=thinking,
+        finish_reason=finish_reason,
         metrics=OllamaMetrics(
             prompt_eval_count=prompt_tokens,
             eval_count=completion_tokens,
@@ -212,6 +214,11 @@ def chat(
         "seed": seed,
         "max_tokens": num_predict,
         "stream": False,
+        # Explicit deterministic sampling — do not rely on llama-server defaults
+        # matching Ollama's defaults (they differ in top_k and repeat_penalty).
+        "top_p": 1.0,
+        "top_k": 1,
+        "repeat_penalty": 1.0,
     }
     req = urllib.request.Request(
         url,

@@ -41,6 +41,23 @@ def test_both_empty():
     assert resp.thinking == ""
 
 
+def test_finish_reason_captured():
+    """finish_reason is read from choices[0].finish_reason."""
+    body = {
+        "choices": [{"finish_reason": "length", "message": {"content": "x"}}],
+        "usage": {},
+    }
+    resp = _parse_body(body, _ELAPSED)
+    assert resp.finish_reason == "length"
+
+
+def test_finish_reason_absent_is_empty():
+    """finish_reason defaults to empty string when not present."""
+    body = {"choices": [{"message": {"content": "x"}}], "usage": {}}
+    resp = _parse_body(body, _ELAPSED)
+    assert resp.finish_reason == ""
+
+
 def test_timings_used_when_present():
     """predicted_ms timing is preferred over wall time for eval_duration."""
     body = {

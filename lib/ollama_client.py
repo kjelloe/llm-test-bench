@@ -24,6 +24,7 @@ class OllamaResponse:
     content: str
     thinking: str          # non-empty for models with thinking mode (deepseek-r1, gemma4, etc.)
     metrics: OllamaMetrics
+    finish_reason: str = ""  # "stop" | "length" | "eos" | "" if unavailable
 
 
 class OllamaError(Exception):
@@ -98,6 +99,7 @@ def chat(
     return OllamaResponse(
         content=msg.get("content", ""),
         thinking=msg.get("thinking", ""),
+        finish_reason=body.get("done_reason", ""),
         metrics=OllamaMetrics(
             prompt_eval_count=body.get("prompt_eval_count", 0),
             eval_count=body.get("eval_count", 0),
