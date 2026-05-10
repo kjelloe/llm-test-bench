@@ -120,6 +120,7 @@ NODE_SLUGIFY = Task(
     test_timeout=30,
     setup_cmd=["npm", "install", "--prefer-offline"],
     setup_timeout=120,
+    min_predict=8000,   # gpt-oss:20b, qwen3.5:35b TRUNCATED at ~4800 default; thinking models need room
 )
 
 PYTHON_SAFE_DIV = Task(
@@ -175,6 +176,7 @@ NODE_CSV_PARSER = Task(
     context_files=["tests/csv.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/csv.test.js"],
     test_timeout=30,
+    min_predict=8000,   # gemma4:26b, qwen3.5:35b TRUNCATED at ~4800 default
 )
 
 PYTHON_LRU_CACHE = Task(
@@ -193,6 +195,7 @@ PYTHON_LRU_CACHE = Task(
     context_files=["tests/test_lru_cache.py"],
     test_cmd=["python", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=8000,   # gpt-oss:20b TRUNCATED at ~4800 default
 )
 
 PYTHON_MINHEAP = Task(
@@ -232,7 +235,7 @@ PYTHON_LFU_CACHE = Task(
     context_files=["tests/test_lfu_cache.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=6400,   # qwen3.5:35b TRUNCATED at 5060 tokens; bump to give thinking models room to output
+    min_predict=12000,  # gpt-oss:20b TRUNCATED at 6400; raised from 6400
 )
 
 PYTHON_LEDGER_BUG = Task(
@@ -272,6 +275,7 @@ NODE_MEMOIZE_BUG = Task(
     context_files=["src/pricing.js", "tests/pricing.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/pricing.test.js"],
     test_timeout=30,
+    min_predict=8000,   # gpt-oss:20b TRUNCATED at ~4800 default
 )
 
 PYTHON_EXPR_EVAL = Task(
@@ -290,7 +294,7 @@ PYTHON_EXPR_EVAL = Task(
     context_files=["tests/test_expr_eval.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=9600,  # gpt-oss:20b TRUNCATED at ~8600 tokens; 9600 gives headroom for thinking models
+    min_predict=16000,  # gemma4:26b TRUNCATED at 9600; raised from 9600
 )
 
 PYTHON_MULTIFILE_RENAME = Task(
@@ -341,7 +345,7 @@ PYTHON_HASHMAP = Task(
     context_files=["tests/test_hashmap.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=8192,
+    min_predict=16000,  # gpt-oss:20b TRUNCATED at 8192; raised from 8192
 )
 
 _CONTEXT_PERF_DESC = (
@@ -440,7 +444,7 @@ MULTIHOP_REVERSE = Task(
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=15,
     num_ctx=32768,
-    min_predict=8192,  # thinking models burn tokens scanning for the cross-reference
+    min_predict=12000,  # gemma4:26b TRUNCATED at 8192; raised from 8192
 )
 
 DISTRACTOR_NOTES = Task(
@@ -475,7 +479,7 @@ PYTHON_TOKENIZER = Task(
     context_files=["tests/test_tokenizer.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=6400,   # gpt-oss:20b TRUNCATED at ~5250 tokens; bump for thinking models
+    min_predict=12000,  # gpt-oss:20b TRUNCATED at ~5250; raised from 6400 for thinking models
 )
 
 _CODE_ARCHIVE_DESC = (
