@@ -151,6 +151,47 @@ class LlamaServerManager:
         raise TimeoutError(f"llama-server did not become ready within {timeout}s")
 
 
+def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
+    """Parse an OpenAI-compatible /v1/chat/completions response dict."""
+    choice = (body.get("choices") or [{}])[0]
+    msg = choice.get("message") or {}
+    content  = msg.get("content")           or ""
+    thinking = msg.get("reasoning_content") or ""
+    # Thinking models on llama-server return reasoning in reasoning_content and
+    # the actual answer in content. When the model exhausts its token budget
+    # inside the reasoning phase, content arrives empty. Fall back so that
+    # BEGIN_FILE blocks produced during reasoning are not silently discarded.
+    if not content and thinking:
+        content  = thinking
+        thinking = ""
+
+    usage = body.get("usage") or {}
+    prompt_tokens      = usage.get("prompt_tokens", 0)
+    completion_tokens  = usage.get("completion_tokens", 0)
+
+    timings     = body.get("timings") or {}
+    predicted_ms = timings.get("predicted_ms")
+    prompt_ms    = timings.get("prompt_ms")
+    if predicted_ms is not None and predicted_ms > 0:
+        eval_duration_ns        = int(predicted_ms * 1e6)
+        prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
+    else:
+        eval_duration_ns        = elapsed_ns
+        prompt_eval_duration_ns = 0
+
+    return OllamaResponse(
+        content=content,
+        thinking=thinking,
+        metrics=OllamaMetrics(
+            prompt_eval_count=prompt_tokens,
+            eval_count=completion_tokens,
+            prompt_eval_duration=prompt_eval_duration_ns,
+            eval_duration=eval_duration_ns,
+            total_duration=elapsed_ns,
+        ),
+    )
+
+
 def chat(
     base_url: str,
     model: str,                   # unused: llama-server is single-model per process
@@ -190,46 +231,7 @@ def chat(
         raise OllamaError(f"Timed out after {timeout}s") from exc
 
     elapsed_ns = int((time.monotonic() - t_start) * 1e9)
-
-    choice = (body.get("choices") or [{}])[0]
-    msg = choice.get("message") or {}
-    content  = msg.get("content")          or ""
-    thinking = msg.get("reasoning_content") or ""
-    # Thinking models on llama-server return reasoning in reasoning_content and
-    # the actual answer in content. When the model exhausts its token budget
-    # inside the reasoning phase, content arrives empty. Fall back so that
-    # BEGIN_FILE blocks produced during reasoning are not silently discarded.
-    if not content and thinking:
-        content  = thinking
-        thinking = ""
-    usage = body.get("usage") or {}
-    prompt_tokens = usage.get("prompt_tokens", 0)
-    completion_tokens = usage.get("completion_tokens", 0)
-
-    # llama.cpp adds a non-standard `timings` block with separated prompt/eval durations.
-    # Use it when available so tok/s reflects generation speed, not total wall time.
-    timings = body.get("timings") or {}
-    predicted_ms = timings.get("predicted_ms")   # generation phase only
-    prompt_ms    = timings.get("prompt_ms")       # prompt eval phase only
-    if predicted_ms is not None and predicted_ms > 0:
-        eval_duration_ns        = int(predicted_ms * 1e6)
-        prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
-    else:
-        # Fallback: wall time covers both phases; tok/s will be slightly conservative.
-        eval_duration_ns        = elapsed_ns
-        prompt_eval_duration_ns = 0
-
-    return OllamaResponse(
-        content=content,
-        thinking=thinking,
-        metrics=OllamaMetrics(
-            prompt_eval_count=prompt_tokens,
-            eval_count=completion_tokens,
-            prompt_eval_duration=prompt_eval_duration_ns,
-            eval_duration=eval_duration_ns,
-            total_duration=elapsed_ns,
-        ),
-    )
+    return _parse_body(body, elapsed_ns)
 
 
 def unload_model(base_url: str, model: str, timeout: int = 30) -> None:
