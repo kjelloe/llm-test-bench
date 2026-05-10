@@ -108,7 +108,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 4) Model Interaction
 - **Ollama backend (default):** POST `/api/chat` (non-streaming) with options: `temperature`, `seed`, `num_ctx`, `num_predict`. Between models: calls `unload_model()` (POST `/api/generate` with `keep_alive=0`) then polls until VRAM drains to near-baseline. Records Ollama-provided metrics: `prompt_eval_count`, `eval_count`, durations (ns). Derives `tok_per_s` from `eval_count / (eval_duration / 1e9)`.
 - **llama-server backend:** spawns one `llama-server` subprocess per model (or per context-size change). Uses the OpenAI-compatible `/v1/chat/completions` endpoint on `http://127.0.0.1:8080`. GGUF file path and startup params come from the model config file (`models/*.txt`, parsed by `lib/model_config.py`). `--ctx-size` is a startup flag, not per-request; the server is restarted when a task requires a larger context than the running instance. `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on builds that omit `timings`. `think` and `warmup` are no-ops — llama-server does not support the `think` API and the model is loaded during server startup. The harness waits up to `--startup-timeout` seconds (default 600) for the server to become ready; if it exits early, the full stderr is included in the error message. After any `CTX_TRUNCATED` result, the server is stopped immediately so the next task gets a clean restart. **Thinking model handling:** llama-server returns reasoning-model output in `message.reasoning_content` (separate from `message.content`); when `content` is empty the harness falls back to `reasoning_content` so BEGIN_FILE blocks generated during the thinking phase are not lost. The llama-server system prompt is prefixed with `"After your reasoning,"` to encourage thinking models to emit the answer in the non-reasoning section rather than stopping after `</think>`.
-- Defaults enforce determinism: `temperature=0`, `seed=1`.
+- Defaults enforce determinism: `temperature=0`, `seed=1`. The llama-server payload additionally sets `top_p=1.0`, `top_k=1`, `repeat_penalty=1.0` explicitly — llama-server defaults for these differ from Ollama's, so they must be fixed to ensure equivalent decoding across backends.
 
 4a) Model File Format (`models/*.txt`)
 - Each non-blank, non-comment line defines one model: `<ollama-name> [<gguf-file> [<params>]]`
@@ -184,6 +184,7 @@ Per model × task run:
 | `tok_per_s` | float | generation tok/s; llama-server uses `timings.predicted_ms` when available |
 | `wall_s` | float | total elapsed seconds including setup + model call + tests |
 | `response_truncated` | bool | true if `eval_count >= num_predict - 5` |
+| `finish_reason` | string | `"stop"` (clean EOS), `"length"` (hit max_tokens), `""` (unavailable); from Ollama `done_reason` / llama-server `choices[0].finish_reason` |
 | `ctx_truncated` | bool | true if prompt was silently truncated (Ollama capped num_ctx below request) |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
 | `gpu_snapshots` | object\|null | `before_load` (with `dirty` flag), `after_load`, `peak_during_gen`; null if pynvml unavailable |
