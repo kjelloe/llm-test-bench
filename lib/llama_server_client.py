@@ -192,7 +192,16 @@ def chat(
     elapsed_ns = int((time.monotonic() - t_start) * 1e9)
 
     choice = (body.get("choices") or [{}])[0]
-    content = (choice.get("message") or {}).get("content", "")
+    msg = choice.get("message") or {}
+    content  = msg.get("content")          or ""
+    thinking = msg.get("reasoning_content") or ""
+    # Thinking models on llama-server return reasoning in reasoning_content and
+    # the actual answer in content. When the model exhausts its token budget
+    # inside the reasoning phase, content arrives empty. Fall back so that
+    # BEGIN_FILE blocks produced during reasoning are not silently discarded.
+    if not content and thinking:
+        content  = thinking
+        thinking = ""
     usage = body.get("usage") or {}
     prompt_tokens = usage.get("prompt_tokens", 0)
     completion_tokens = usage.get("completion_tokens", 0)
@@ -212,7 +221,7 @@ def chat(
 
     return OllamaResponse(
         content=content,
-        thinking="",
+        thinking=thinking,
         metrics=OllamaMetrics(
             prompt_eval_count=prompt_tokens,
             eval_count=completion_tokens,

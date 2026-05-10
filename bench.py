@@ -97,11 +97,17 @@ def run_one(
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
         try:
+            _system_msg = (
+                "After your reasoning, output ONLY BEGIN_FILE/END_FILE blocks. "
+                "No markdown, no prose, no explanation."
+                if backend == "llama-server" else
+                "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."
+            )
             resp = chat_fn(
                 base_url=client_url,
                 model=model,
                 messages=[
-                    {"role": "system", "content": "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."},
+                    {"role": "system", "content": _system_msg},
                     {"role": "user", "content": prompt},
                 ],
                 num_ctx=effective_num_ctx,
