@@ -327,11 +327,39 @@ def main() -> None:
         for i, (model, task) in enumerate(pairs, 1):
             effective_ctx = max(args.num_ctx, task.num_ctx) if task.num_ctx else args.num_ctx
 
+            # ── Pre-flight skips (evaluated BEFORE server restart) ─────────────
+            def _skip_record(kind: str, detail: str) -> dict:
+                return {
+                    "model": model, "backend": args.backend, "task": task.id,
+                    "baseline_failed": None, "baseline_rc": None,
+                    "edit_parse_ok": False, "edit_policy_ok": False,
+                    "tests_pass": False, "response_truncated": False,
+                    "ctx_truncated": False, "finish_reason": "",
+                    "response_snippet": None,
+                    "edited_files": [], "error_kind": kind, "error_detail": detail,
+                    "metrics": {}, "tok_per_s": 0.0, "wall_s": 0.0, "kv_cache": None,
+                    "gpu_snapshots": {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None},
+                }
+
+            if task.min_vram_gb > 0 and total_vram_gb > 0 and total_vram_gb < task.min_vram_gb:
+                print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_VRAM) "
+                      f"need {task.min_vram_gb} GB, have {total_vram_gb:.0f} GB")
+                results.append(_skip_record("SKIPPED_VRAM",
+                    f"task requires {task.min_vram_gb} GB VRAM; hardware has {total_vram_gb:.0f} GB"))
+                continue
+
             if llama_manager is not None:
-                # llama-server: restart when model changes or ctx grows
                 cfg = model_configs.get(model)
                 if cfg is None:
                     parser.error(f"Model {model!r} not found in {args.model_file}")
+                # Check ctx limit BEFORE starting the server; prevents an oversized KV
+                # cache from being allocated and left running for subsequent tasks.
+                if cfg.max_ctx and effective_ctx > cfg.max_ctx:
+                    print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_CTX) "
+                          f"need ctx={effective_ctx}, model max={cfg.max_ctx}")
+                    results.append(_skip_record("SKIPPED_CTX",
+                        f"task needs ctx={effective_ctx}; model architecture limit is {cfg.max_ctx}"))
+                    continue
                 if llama_manager.needs_restart(cfg, effective_ctx):
                     if llama_manager._current_model is not None:
                         print(f"  [llama-server] stopping {llama_manager._current_model!r} ...",
@@ -394,36 +422,6 @@ def main() -> None:
                         gpu_after = get_gpu_snapshot()
                     current_model = model
                 client_url = args.ollama_url
-
-            # ── Pre-flight skips ───────────────────────────────────────────────
-            def _skip_record(kind: str, detail: str) -> dict:
-                return {
-                    "model": model, "backend": args.backend, "task": task.id,
-                    "baseline_failed": None, "baseline_rc": None,
-                    "edit_parse_ok": False, "edit_policy_ok": False,
-                    "tests_pass": False, "response_truncated": False,
-                    "ctx_truncated": False, "finish_reason": "",
-                    "response_snippet": None,
-                    "edited_files": [], "error_kind": kind, "error_detail": detail,
-                    "metrics": {}, "tok_per_s": 0.0, "wall_s": 0.0, "kv_cache": None,
-                    "gpu_snapshots": {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None},
-                }
-
-            if task.min_vram_gb > 0 and total_vram_gb > 0 and total_vram_gb < task.min_vram_gb:
-                print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_VRAM) "
-                      f"need {task.min_vram_gb} GB, have {total_vram_gb:.0f} GB")
-                results.append(_skip_record("SKIPPED_VRAM",
-                    f"task requires {task.min_vram_gb} GB VRAM; hardware has {total_vram_gb:.0f} GB"))
-                continue
-
-            if llama_manager is not None:
-                cfg = model_configs.get(model)
-                if cfg and cfg.max_ctx and effective_ctx > cfg.max_ctx:
-                    print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_CTX) "
-                          f"need ctx={effective_ctx}, model max={cfg.max_ctx}")
-                    results.append(_skip_record("SKIPPED_CTX",
-                        f"task needs ctx={effective_ctx}; model architecture limit is {cfg.max_ctx}"))
-                    continue
 
             print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
             record = run_one(
