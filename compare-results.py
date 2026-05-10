@@ -23,7 +23,7 @@ def _speed_summary(results: list[dict]) -> None:
     from collections import defaultdict
 
     # Group by (base_model, backend)
-    stats: dict[tuple[str, str], dict] = defaultdict(lambda: {"toks": [], "walls": [], "passed": 0, "total": 0})
+    stats: dict[tuple[str, str], dict] = defaultdict(lambda: {"toks": [], "walls": [], "gpu_utils": [], "passed": 0, "total": 0})
     for r in results:
         key = (r["model"], r.get("backend", "ollama"))
         s = stats[key]
@@ -33,6 +33,9 @@ def _speed_summary(results: list[dict]) -> None:
         if r.get("tok_per_s", 0) > 0:
             s["toks"].append(r["tok_per_s"])
         s["walls"].append(r.get("wall_s", 0))
+        gpu_util = (r.get("kv_cache") or {}).get("gpu_util_peak")
+        if gpu_util is not None:
+            s["gpu_utils"].append(gpu_util)
 
     # Find base models that appear in more than one backend
     backends_per_model: dict[str, set[str]] = defaultdict(set)
@@ -51,7 +54,7 @@ def _speed_summary(results: list[dict]) -> None:
 
     col_w = max(len(m) for m in comparable)
     be_w  = max(len(b) for b in all_backends)
-    HDR   = f"{'Model':<{col_w}}  {'Backend':<{be_w}}  {'pass':>4}  {'avg tok/s':>9}  {'tot wall':>8}"
+    HDR   = f"{'Model':<{col_w}}  {'Backend':<{be_w}}  {'pass':>4}  {'avg tok/s':>9}  {'avg gpu%':>8}  {'tot wall':>8}"
 
     print()
     print("=" * len(HDR))
@@ -67,18 +70,20 @@ def _speed_summary(results: list[dict]) -> None:
             if s is None:
                 continue
             avg_toks = sum(s["toks"]) / len(s["toks"]) if s["toks"] else 0.0
+            avg_gpu  = sum(s["gpu_utils"]) / len(s["gpu_utils"]) if s["gpu_utils"] else None
             tot_wall = sum(s["walls"])
-            rows.append((backend, s["passed"], s["total"], avg_toks, tot_wall))
+            rows.append((backend, s["passed"], s["total"], avg_toks, avg_gpu, tot_wall))
 
-        for i, (backend, passed, total, avg_toks, tot_wall) in enumerate(rows):
+        for i, (backend, passed, total, avg_toks, avg_gpu, tot_wall) in enumerate(rows):
             tok_str  = f"{avg_toks:9.1f}" if avg_toks > 0 else "        -"
+            gpu_str  = f"{avg_gpu:7.0f}%" if avg_gpu is not None else "       -"
             wall_str = f"{tot_wall:7.1f}s"
-            print(f"{'  ' if i else ''}{model if i == 0 else '':<{col_w}}  {backend:<{be_w}}  {passed:>2}/{total:<2}  {tok_str}  {wall_str}")
+            print(f"{'  ' if i else ''}{model if i == 0 else '':<{col_w}}  {backend:<{be_w}}  {passed:>2}/{total:<2}  {tok_str}  {gpu_str}  {wall_str}")
 
         # Print speedup line when exactly two backends
         if len(rows) == 2:
-            _, _, _, toks_a, wall_a = rows[0]
-            _, _, _, toks_b, wall_b = rows[1]
+            _, _, _, toks_a, _, wall_a = rows[0]
+            _, _, _, toks_b, _, wall_b = rows[1]
             if toks_a > 0 and toks_b > 0:
                 ratio = toks_b / toks_a
                 sign  = "+" if ratio >= 1 else ""

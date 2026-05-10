@@ -174,6 +174,8 @@ def run_one(
             "gen_tokens": m.eval_count,
             "total_tokens": total_kv_tokens,
             "kv_mb_per_1k_tokens": kv_mb_per_1k,
+            "gpu_util_peak": peak_snap["gpu_util"] if peak_snap else None,
+            "mem_bw_util_peak": peak_snap["mem_bandwidth_util"] if peak_snap else None,
         }
         record["response_truncated"] = m.eval_count >= effective_num_predict - 5
         record["finish_reason"] = resp.finish_reason
