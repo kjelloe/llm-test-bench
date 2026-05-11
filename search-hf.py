@@ -118,14 +118,13 @@ def _ollama_to_query(ollama_name: str) -> str:
 
 # ── HF API calls ──────────────────────────────────────────────────────────────
 
-def _search_repos(api, query: str, limit: int) -> list:
+def _search_repos(api, query: str, limit: int, author: str | None = None) -> list:
     # Fetch more than needed so sorting by downloads locally gives better results.
     # filter="gguf" restricts to repos tagged with the gguf library.
-    results = list(api.list_models(
-        search=query,
-        filter="gguf",
-        limit=max(limit * 4, 20),
-    ))
+    kwargs: dict = {"search": query, "filter": "gguf", "limit": max(limit * 4, 20)}
+    if author:
+        kwargs["author"] = author
+    results = list(api.list_models(**kwargs))
     results.sort(key=lambda m: getattr(m, "downloads", 0) or 0, reverse=True)
     return results[:limit]
 
@@ -223,14 +222,16 @@ def _print_repo_results(
 
 def _run_search(api, query: str, ollama_name: str | None,
                 already_downloaded: set[str], limit: int,
-                max_files: int = _MAX_FILES_SHOWN) -> list[str]:
+                max_files: int = _MAX_FILES_SHOWN,
+                author: str | None = None) -> list[str]:
     """Print search results and return all models/*.txt suggestion lines."""
     label = ollama_name or f'"{query}"'
     print(f"\n{'━' * 70}")
-    print(f"  {label}  (query: {query!r})")
+    author_note = f"  author:{author}" if author else ""
+    print(f"  {label}  (query: {query!r}{author_note})")
     print(f"{'━' * 70}")
 
-    repos = _search_repos(api, query, limit)
+    repos = _search_repos(api, query, limit, author=author)
     if not repos:
         print("  No GGUF repos found.")
         return []
@@ -302,6 +303,10 @@ def main() -> None:
         help="In the summary, show only the top-ranked suggestion per model (not one per repo)",
     )
     parser.add_argument(
+        "--author",
+        help="Filter results to a specific HuggingFace author/org (e.g. bartowski, unsloth)",
+    )
+    parser.add_argument(
         "--model-files", nargs="*", metavar="FILE",
         help="models/*.txt files to scan (default: all models/*.txt; ignored when query given)",
     )
@@ -332,7 +337,8 @@ def main() -> None:
     if args.query:
         suggestions = _run_search(api, args.query, ollama_name=None,
                                    already_downloaded=already_downloaded,
-                                   limit=args.limit, max_files=max_files)
+                                   limit=args.limit, max_files=max_files,
+                                   author=args.author)
         _print_summary(suggestions[:1] if args.top_only else suggestions)
         return
 
@@ -376,7 +382,8 @@ def main() -> None:
     for name in unconfigured:
         results = _run_search(api, _ollama_to_query(name), ollama_name=name,
                               already_downloaded=already_downloaded,
-                              limit=args.limit, max_files=max_files)
+                              limit=args.limit, max_files=max_files,
+                              author=args.author)
         all_suggestions += results[:1] if args.top_only else results
     _print_summary(all_suggestions)
 

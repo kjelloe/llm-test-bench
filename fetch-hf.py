@@ -94,7 +94,10 @@ def main() -> None:
             seen.add(cfg.ollama_name)
             if not cfg.hf_repo or not cfg.gguf_file:
                 continue
-            if args.models and cfg.ollama_name not in args.models:
+            if args.models and not any(
+                cfg.ollama_name == m or cfg.ollama_name.startswith(m + ":") or cfg.ollama_name.startswith(m)
+                for m in args.models
+            ):
                 continue
             configs.append(cfg)
 
