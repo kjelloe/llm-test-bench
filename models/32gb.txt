@@ -1,12 +1,15 @@
 # 32 GB VRAM model set — RTX 6000 Ada / A6000 / similar
-# NOT BENCHMARKED on 32 GB hardware — sizing estimates only
-# Confirmed entries copied from models/default.txt (RTX 3090 24 GB, 2026-05-11)
-# New 32B entries are sizing estimates: verify GGUF filenames with ./search-hf.sh
+# 24 GB confirmed entries copied from models/default.txt (RTX 3090 24 GB, 2026-05-11)
+# 32B entries: qwen2.5-coder:32b benchmarked on 24 GB (2026-05-12); qwq/deepseek-r1 sizing estimates only
 #
 # Usable VRAM budget: ~27 GB (85% rule)
 # All 24 GB models carry over unchanged at the same quant.
-# 32B models at Q4_K_M (~20 GB) or Q5_K_M (~22 GB) fit with headroom.
+# 32B models at Q4_K_M (~20 GB) fit; Q5_K_M (~22 GB) also fits with less headroom.
 # gpt-oss:120b remains hybrid (RAM+GPU); n_cpu_moe=35 may be reducible — try 20 if VRAM allows.
+#
+# qwen2.5-coder:32b on 24 GB: 15/15 coding tasks PASS at ~36 tok/s; ctx≥32k causes TOOL_ERROR
+#   timeout — Q4_K_M weights (~20 GB) leave only ~4 GB for KV cache, insufficient at ctx=32768.
+#   Ideal for coding tasks on 24 GB; large-context tasks need a true 32 GB card.
 #
 # Does NOT fit on single 32 GB:
 #   32B models at Q8_0  ~34 GB — use 2×24 GB instead
@@ -18,12 +21,12 @@
 #   params     comma-separated llama-server flags
 #   hf:        HuggingFace repo for fetch-hf.sh download helper
 
-# Speed index — confirmed (24 GB benchmark) and estimated (32B models, no data yet):
+# Speed index — confirmed (24 GB benchmark) and estimated (32B thinking models, no data yet):
 # gpt-oss:20b          # ~206 tok/s   ~12 GB   confirmed 24 GB
 # qwen3-coder:30b      # ~165 tok/s   ~20 GB   confirmed 24 GB (same quant)
 # qwen3.5:35b          # ~156 tok/s   ~22 GB   confirmed 24 GB (same quant; Q5_K_M also fits)
 # gemma4:26b           # ~115 tok/s   ~18 GB   confirmed 24 GB (same quant)
-# qwen2.5-coder:32b    # speed TBD    ~22 GB   sizing estimate — not benchmarked
+# qwen2.5-coder:32b    #  ~36 tok/s   ~20 GB   confirmed 24 GB — coding only; ctx≥32k times out
 # qwq:32b              # speed TBD    ~22 GB   sizing estimate — thinking model
 # deepseek-r1:32b      # speed TBD    ~20 GB   sizing estimate — thinking model
 # qwen2.5-coder:14b    #  ~73 tok/s   ~10 GB   confirmed 24 GB (same quant)
@@ -37,7 +40,9 @@ qwen3.5:35b  Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf  ngl=999
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,n_cpu_moe=35,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model; try n_cpu_moe=20 if 32 GB has headroom
 
+# ── Benchmarked on 24 GB (coding tasks only; ctx≥32k needs true 32 GB) ──────
+qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
+
 # ── Sizing estimate — not benchmarked; verify GGUF filenames with ./search-hf.sh ─
-qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
 qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
 deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF

@@ -47,6 +47,11 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Note: qwen3-coder:30b at context_128k (ctx=131072) on RTX 3090 24GB ran at 3.8 tok/s for
   1870s — KV cache for a 30B model at 131072 ctx fills ~24GB and partially spills. Within
   the 3600s per-task timeout but adds 31 minutes to the compare run.
+  devstral-small-2 (24B dense) similarly spills at ~4.0 tok/s (480s) at ctx=131072 on 24GB
+  — wall_time_budget_s=300 flags it as PASS_BUT_SLOW.
+  qwen2.5-coder:32b Q4_K_M (~20 GB weights) leaves only ~4 GB for KV on 24 GB — ctx=32768
+  causes TOOL_ERROR timeout (300s) on context_32k and multihop tasks; 15/15 coding tasks
+  pass cleanly at ~36 tok/s. Large-context tasks require a true 32 GB card.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement
