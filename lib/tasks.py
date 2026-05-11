@@ -23,6 +23,7 @@ class Task:
     min_predict: int | None = None      # floor on --num-predict for this task
     model_timeout: int | None = None    # override global --model-timeout for this task (seconds)
     min_vram_gb: int = 0                # skip task on hardware with less total VRAM (0 = no guard)
+    wall_time_budget_s: int | None = None  # PASS_BUT_SLOW threshold; None = no limit
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -501,6 +502,7 @@ CONTEXT_128K = Task(
     num_ctx=131072,
     min_predict=4096,   # thinking models burn tokens before outputting at large context sizes
     model_timeout=3600,  # prompt eval at 128k tokens can take 20-30 min on RAM-bound models
+    wall_time_budget_s=300,  # >300s = PASS_BUT_SLOW (qwen3-coder:30b KV spills to RAM at ~3.8 tok/s)
 )
 
 CONTEXT_256K = Task(

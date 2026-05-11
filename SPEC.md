@@ -187,6 +187,8 @@ Per model × task run:
 | `finish_reason` | string | `"stop"` (clean EOS), `"length"` (hit max_tokens), `""` (unavailable); from Ollama `done_reason` / llama-server `choices[0].finish_reason` |
 | `ctx_truncated` | bool | true if prompt was silently truncated (Ollama capped num_ctx below request) |
 | `response_snippet` | string\|null | first/last 150 chars of raw model output for debugging |
+| `response_tail` | string\|null | last 500 chars of raw output; `null` when output ≤500 chars; shown in failure detail when `response_truncated` |
+| `slow` | bool | true when `tests_pass` and `wall_s > task.wall_time_budget_s`; shown as `SLOW` in comparison table (counts as pass for skill/pass rate) |
 | `gpu_snapshots` | object\|null | `before_load` (with `dirty` flag), `after_load`, `peak_during_gen`; null if pynvml unavailable |
 | `kv_cache` | object\|null | `vram_before_mb`, `vram_after_mb`, `delta_mb`, `prompt_tokens`, `gen_tokens`, `total_tokens`, `kv_mb_per_1k_tokens`; null if pynvml unavailable or inference failed |
 

@@ -87,7 +87,10 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
     def cell(r: dict | None) -> str:
         if r is None:
             return " " * CELL_W
-        ok  = "PASS" if r["tests_pass"] else "FAIL"
+        if r["tests_pass"]:
+            ok = "SLOW" if r.get("slow") else "PASS"
+        else:
+            ok = "FAIL"
         tok = f"{r['tok_per_s']:6.1f}t/s" if r.get("tok_per_s", 0) > 0 else "     -   "
         s   = f"{r['wall_s']:6.1f}s"
         return f"{ok}  {tok}  {s}"
@@ -171,14 +174,39 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
 
 
 def print_summary(results: list[dict]) -> None:
-    print("\n" + "=" * 64)
-    print("FAILURE DETAIL")
-    print("=" * 64)
-
     dk = _make_display_key_fn(results)
     by_model: dict[str, list[dict]] = defaultdict(list)
     for r in results:
         by_model[dk(r)].append(r)
+
+    # ── Token efficiency block ────────────────────────────────────────────────
+    print("\n" + "=" * 64)
+    print("TOKEN EFFICIENCY  (pass tok/s | fail tok/s | total_k gen | p/k)")
+    print("=" * 64)
+    name_w = max((len(m) for m in by_model), default=10)
+    for model, recs in by_model.items():
+        pass_recs = [r for r in recs if r.get("tests_pass")]
+        fail_recs = [r for r in recs if not r.get("tests_pass")]
+        pass_toks  = [r["tok_per_s"] for r in pass_recs if r.get("tok_per_s", 0) > 0]
+        fail_toks  = [r["tok_per_s"] for r in fail_recs if r.get("tok_per_s", 0) > 0]
+        total_gen  = sum(r.get("metrics", {}).get("eval_count", 0) for r in recs)
+        total_k    = total_gen / 1000.0
+        p_tok_s    = sum(pass_toks) / len(pass_toks) if pass_toks else 0.0
+        f_tok_s    = sum(fail_toks) / len(fail_toks) if fail_toks else 0.0
+        efficiency = len(pass_recs) / total_k if total_k > 0 else 0.0
+        print(f"  {model:<{name_w}}  {p_tok_s:6.1f} | {f_tok_s:6.1f} | {total_k:7.1f}k | {efficiency:.3f} p/k")
+
+    # ── Slow passes ───────────────────────────────────────────────────────────
+    slow_recs = [r for r in results if r.get("slow")]
+    if slow_recs:
+        print(f"\nSLOW passes (exceeded wall_time_budget_s):")
+        for r in slow_recs:
+            print(f"  {dk(r):<{name_w}}  {r['task']}  {r['wall_s']:.0f}s")
+
+    # ── Failure detail ────────────────────────────────────────────────────────
+    print("\n" + "=" * 64)
+    print("FAILURE DETAIL")
+    print("=" * 64)
 
     any_failures = False
     for model, recs in by_model.items():
@@ -197,6 +225,9 @@ def print_summary(results: list[dict]) -> None:
                 detail = (s.get("error_detail") or "")[:120].replace("\n", " ")
                 if detail:
                     print(f"    e.g. {detail}")
+                if s.get("response_truncated") and s.get("response_tail"):
+                    tail = s["response_tail"][-200:].replace("\n", " ")
+                    print(f"    tail: …{tail}")
 
     if not any_failures:
         print("\nAll tasks passed.")

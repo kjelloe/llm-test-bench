@@ -43,6 +43,9 @@ def hw_summary(hw: dict) -> str:
     ram = hw.get("ram_total_gb") or 0
     if ram:
         parts.append(f"{ram} GB RAM")
+    lsv = hw.get("llama_server_version")
+    if lsv:
+        parts.append(f"llama-server {lsv}")
     return "  |  ".join(parts) if parts else "unknown hardware"
 
 

@@ -62,6 +62,8 @@ def run_one(
         "ctx_truncated": False,
         "finish_reason": "",
         "response_snippet": None,
+        "response_tail": None,
+        "slow": False,
         "edited_files": [],
         "error_kind": None,
         "error_detail": None,
@@ -183,6 +185,7 @@ def run_one(
         # Save a snippet of the raw model output for post-hoc debugging
         raw = resp.content
         record["response_snippet"] = (raw[:300] if len(raw) <= 300 else raw[:150] + "\n…\n" + raw[-150:])
+        record["response_tail"] = raw[-500:] if len(raw) > 500 else None
 
         # --- parse edits ---
         edits = parse_file_blocks(resp.content)
@@ -216,6 +219,8 @@ def run_one(
 
     finally:
         record["wall_s"] = round(time.monotonic() - wall_start, 2)
+        if task.wall_time_budget_s and record.get("tests_pass") and record["wall_s"] > task.wall_time_budget_s:
+            record["slow"] = True
         if keep_workdir:
             print(f"  workdir kept: {workdir}")
         else:
@@ -341,7 +346,7 @@ def main() -> None:
                     "edit_parse_ok": False, "edit_policy_ok": False,
                     "tests_pass": False, "response_truncated": False,
                     "ctx_truncated": False, "finish_reason": "",
-                    "response_snippet": None,
+                    "response_snippet": None, "response_tail": None, "slow": False,
                     "edited_files": [], "error_kind": kind, "error_detail": detail,
                     "metrics": {}, "tok_per_s": 0.0, "wall_s": 0.0, "kv_cache": None,
                     "gpu_snapshots": {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None},
