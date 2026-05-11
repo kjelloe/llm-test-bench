@@ -294,7 +294,7 @@ PYTHON_EXPR_EVAL = Task(
     context_files=["tests/test_expr_eval.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
-    min_predict=16000,  # gemma4:26b TRUNCATED at 9600; raised from 9600
+    min_predict=24000,  # qwen3.5:35b exhausts 16000 reasoning tokens; raised from 16000
 )
 
 PYTHON_MULTIFILE_RENAME = Task(
@@ -540,7 +540,7 @@ CSV_NORDIC_PROPERTY = Task(
     test_cmd=["python3", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
     test_timeout=120,
     num_ctx=16384,      # prompt alone is ~6400 tokens; 8192 default leaves only ~1700 for generation
-    min_predict=12000,  # thinking models exhaust 8000 mid-output; all 6 models still failed at 8000
+    min_predict=20000,  # qwen3.5:35b exhausts 12000 reasoning tokens; raised from 12000
     model_timeout=600,  # cold-start + ~12000 token generation exceeds run.sh's 300s default
 )
 

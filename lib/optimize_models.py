@@ -333,7 +333,20 @@ def rewrite_model_file(path: Path, updates: dict[str, dict]) -> None:
         positional  = [p for p in parts[1:] if not p.startswith('hf:')]
         gguf_file   = positional[0] if positional else None
 
+        # Collect harness-only tokens from the original params string so they
+        # survive the rewrite.  These are parsed into separate ModelConfig fields
+        # (is_thinking, max_ctx) and are never present in cfg.params.
+        harness_tokens: list[str] = []
+        if len(positional) > 1:
+            for tok in positional[1].split(','):
+                tok = tok.strip()
+                if tok == 'thinking' or tok.startswith('max_ctx='):
+                    harness_tokens.append(tok)
+
         new_params_str = params_to_str(updates[name])
+        if harness_tokens:
+            suffix = ','.join(harness_tokens)
+            new_params_str = f"{new_params_str},{suffix}" if new_params_str else suffix
 
         # Preserve trailing inline comment
         comment = ''

@@ -108,3 +108,10 @@ def test_validate_all_forbidden():
     violations = validate_edits(edits, ["src/foo.py"])
     assert len(violations) == 1
     assert "secret.py" in violations[0]
+
+
+def test_backtick_stripped_from_filename():
+    """Thinking models sometimes append a markdown backtick after the filename."""
+    text = "BEGIN_FILE answer.txt`\nhello\nEND_FILE"
+    edits = parse_file_blocks(text)
+    assert edits[0].path == "answer.txt"

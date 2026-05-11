@@ -25,6 +25,17 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   qwen3.5:35b on basic tasks; 1200 was too few for gpt-oss:120b on complex tasks (CSV parser
   ran out mid-reasoning). Note: gpt-oss:20b and gemma4:26b are NOT thinking models — do not
   mark them `thinking` in model files; the "After your reasoning" prefix causes planning loops.
+  - **gpt-oss:20b "semi-thinking"**: generates verbose reasoning in plain text output (not
+    `reasoning_content`) on L2+ tasks; exhausts 4800 token budget before BEGIN_FILE on
+    python_lru_cache, python_lfu_cache, python_expr_eval. Needs 8000+ for those tasks.
+    Adding `thinking` does NOT help — it causes a different planning loop. It is correctly
+    left without the `thinking` flag.
+  - **gemma4:26b verbose preamble**: generates a long task description + approach summary
+    before BEGIN_FILE regardless of the system prompt; exhausts 4800 tokens on complex tasks
+    (node_csv_parser, python_lru_cache, python_tokenizer, multihop_forward, csv_nordic_property).
+    Needs 8000+ for L2+ tasks.
+  - **qwen3.5:35b over-reasoning**: even python_hashmap at min_predict=16000 is exhausted
+    by reasoning alone (wall 100s × 158 tok/s ≈ all 16000 tokens); consider 24000 for that task.
 - `--warmup` sends a 5-token dummy prompt to each model before the benchmark loop to force
   model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
   (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.
@@ -33,6 +44,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.
   Individual tasks may override with `model_timeout` on the Task dataclass (e.g. context_128k
   uses 3600s and context_256k uses 7200s because prompt-eval alone can exceed 1200s).
+  Note: qwen3-coder:30b at context_128k (ctx=131072) on RTX 3090 24GB ran at 3.8 tok/s for
+  1870s — KV cache for a 30B model at 131072 ctx fills ~24GB and partially spills. Within
+  the 3600s per-task timeout but adds 31 minutes to the compare run.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement

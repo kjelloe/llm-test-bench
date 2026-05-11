@@ -13,7 +13,7 @@ def parse_file_blocks(text: str) -> list[FileEdit]:
     """Extract every BEGIN_FILE/END_FILE block from model output."""
     pattern = re.compile(r'BEGIN_FILE[ \t]+(\S+)[ \t]*\n(.*?)END_FILE', re.DOTALL)
     return [
-        FileEdit(path=m.group(1).strip(), content=textwrap.dedent(m.group(2)))
+        FileEdit(path=m.group(1).strip().strip('`'), content=textwrap.dedent(m.group(2)))
         for m in pattern.finditer(text)
     ]
 
