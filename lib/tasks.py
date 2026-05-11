@@ -515,7 +515,8 @@ CONTEXT_256K = Task(
     num_ctx=262144,
     min_predict=4096,   # thinking models burn tokens before outputting at large context sizes
     model_timeout=7200,  # prompt eval at 256k tokens can take 60+ min on RAM-bound models
-    min_vram_gb=24,     # 256K KV cache requires ~24 GB VRAM minimum; skip on 16 GB cards
+    min_vram_gb=48,     # MoE models with CPU expert offload time out (>2h pp at 220k tokens);
+                        # raise to 48 until a fully GPU-resident 256k model is available
 )
 
 CSV_NORDIC_PROPERTY = Task(

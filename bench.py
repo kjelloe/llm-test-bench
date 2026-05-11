@@ -237,8 +237,8 @@ def main() -> None:
         help="Inference backend (default: ollama; env: BENCH_BACKEND)",
     )
     parser.add_argument(
-        "--model-file", default=None, metavar="PATH",
-        help="models/*.txt file for GGUF/param lookup (required for --backend llama-server)",
+        "--model-file", default=os.environ.get("BENCH_MODEL_FILE"), metavar="PATH",
+        help="models/*.txt file for GGUF/param lookup (required for --backend llama-server; env: BENCH_MODEL_FILE)",
     )
     parser.add_argument("--ollama-url", default="http://localhost:11434")
     parser.add_argument("--num-ctx", type=int, default=int(os.environ.get("DEFAULT_CTX", "8192")))
@@ -285,7 +285,11 @@ def main() -> None:
         if not models_dir:
             parser.error("LLAMA_MODELS_DIR environment variable must be set for --backend llama-server")
         if not args.model_file:
-            parser.error("--model-file is required for --backend llama-server")
+            parser.error(
+                "--model-file is required for --backend llama-server.\n"
+                "  Pass it explicitly:  --model-file models/default.txt\n"
+                "  Or set the env var:  export BENCH_MODEL_FILE=models/default.txt"
+            )
 
         bin_path = os.environ.get("LLAMA_SERVER_BIN") or shutil.which("llama-server") or ""
         if not bin_path:

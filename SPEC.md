@@ -46,7 +46,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `--models` (required, one or more)
   - `--tasks` (optional subset; default: all built-in)
   - `--backend ollama|llama-server` (default: `ollama`; env var `BENCH_BACKEND` as fallback)
-  - `--model-file PATH` (path to a `models/*.txt` file for GGUF/param lookup; required when `--backend llama-server`)
+  - `--model-file PATH` (path to a `models/*.txt` file for GGUF/param lookup; required when `--backend llama-server`; env var `BENCH_MODEL_FILE` as fallback)
   - `--ollama-url` (default: `http://localhost:11434`; ignored when `--backend llama-server`)
   - `--num-ctx` (default: 8192; overridden by `DEFAULT_CTX` env var if set — see §4a)
   - `--temperature` (default: 0.0)
@@ -95,7 +95,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   **Context & retrieval tasks (6):**
   - `context_8k` / `context_16k` / `context_32k` / `context_64k` (L1) — incident archive at 4 sizes (100/200/400/800 records); model finds a specific resolution code at 50% depth; primary metric is tok/s collapse as KV cache fills VRAM. `context_64k` may show `CTX_TRUNCATED` on models where Ollama silently caps `num_ctx` below 65536.
   - `context_128k` (L1) — 440 KB Python stdlib code archive (~110k tokens); BENCHMARK_SENTINEL_VALUE at 50% depth; num_ctx=131072, model_timeout=3600s.
-  - `context_256k` (L1) — 880 KB Python stdlib code archive (~220k tokens); BENCHMARK_SENTINEL_VALUE at 50% depth; num_ctx=262144, model_timeout=7200s, `min_vram_gb=24` (256K KV cache requires ≥24 GB VRAM; skipped with `SKIPPED_VRAM` on 16 GB cards). Models with insufficient RAM will produce `CTX_TRUNCATED`.
+  - `context_256k` (L1) — 880 KB Python stdlib code archive (~220k tokens); BENCHMARK_SENTINEL_VALUE at 50% depth; num_ctx=262144, model_timeout=7200s, `min_vram_gb=48` (effectively disabled: MoE models with CPU expert offload time out at >2h prompt eval for 220k tokens; raise to 48 until a fully GPU-resident 256k model is available). Models with insufficient RAM will produce `CTX_TRUNCATED`.
   - `multihop_forward` (L3) — 400-record archive (~30k tokens); engineer K. Vasquez appears in exactly two incidents; anchor (INCIDENT-2000) at ~20%, answer at ~75%; model must carry the engineer name from hop 1 to locate hop 2.
   - `multihop_reverse` (L3) — same mechanic, reversed: answer incident at ~20% (before the anchor at ~75%); harder for non-thinking models to reason about, but easier for thinking models that scan forward and flag all K. Vasquez occurrences. Known: gpt-oss:20b passes reverse but fails forward — its thinking loop expands indefinitely scanning forward through a 30k-token document, exhausting even 12000 reasoning tokens; gpt-oss:120b handles both correctly.
   - `distractor_notes` (L2) — 400-record archive (~30k tokens); target is INCIDENT-5000 (header record at ~50%, RC-3847); three other records mention INCIDENT-5000 in their Notes field with distinct decoy RCs at ~15%, ~35%, ~70%. Model must read the record header field, not note-body text. Known: gpt-oss:20b fails with recency bias (anchors on the last notes mention at ~70%); all other models pass correctly.
