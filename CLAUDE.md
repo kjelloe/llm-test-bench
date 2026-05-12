@@ -52,6 +52,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   qwen2.5-coder:32b Q4_K_M (~20 GB weights) leaves only ~4 GB for KV on 24 GB — ctx=32768
   causes TOOL_ERROR timeout (300s) on context_32k and multihop tasks; 15/15 coding tasks
   pass cleanly at ~36 tok/s. Large-context tasks require a true 32 GB card.
+  deepseek-r1:32b Q4_K_M (~20 GB): same KV-pressure pattern; 16/24 on 24 GB at ~32 tok/s;
+  coding tasks pass, ctx≥32k fails. Viable for coding-only on 24 GB; true 32 GB needed for
+  large-context tasks.
+  qwq:32b Q5_K_M (~22 GB): effectively unusable on 24 GB — KV thrashing reduces throughput
+  to ~6 tok/s; 11/24 tasks pass. Server silently caps max_ctx=65536 → 32768 when VRAM is
+  exhausted. Needs true 32 GB to be useful. Use `max_ctx=32768` in model config to avoid
+  CTX_TRUNCATED errors on 24 GB.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement
