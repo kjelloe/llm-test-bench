@@ -36,7 +36,12 @@ def hw_summary(hw: dict) -> str:
     parts = []
     for g in hw.get("gpu") or []:
         vram = round(g.get("vram_total_mb", 0) / 1024)
-        parts.append(f"{g['name']} {vram}GB")
+        pl = g.get("power_limit_w")
+        pl_max = g.get("power_limit_max_w")
+        label = f"{g['name']} {vram}GB"
+        if pl is not None and pl_max is not None and pl < pl_max:
+            label += f" [{pl:.0f}/{pl_max:.0f}W]"
+        parts.append(label)
     cpu = hw.get("cpu") or ""
     if cpu and cpu != "unknown":
         parts.append(cpu)
@@ -57,13 +62,13 @@ def _gpu_info() -> list[dict]:
     for fields, has_cap in (
         (
             "name,memory.total,memory.free,driver_version,"
-            "temperature.gpu,power.draw,power.limit,"
+            "temperature.gpu,power.draw,power.limit,power.max_limit,"
             "clocks.gr,clocks.max.gr,compute_cap",
             True,
         ),
         (
             "name,memory.total,memory.free,driver_version,"
-            "temperature.gpu,power.draw,power.limit,"
+            "temperature.gpu,power.draw,power.limit,power.max_limit,"
             "clocks.gr,clocks.max.gr",
             False,
         ),
@@ -78,7 +83,7 @@ def _gpu_info() -> list[dict]:
             gpus = []
             for line in r.stdout.strip().splitlines():
                 p = [x.strip() for x in line.split(",")]
-                if len(p) < 9:
+                if len(p) < 10:
                     continue
 
                 def _int(s: str) -> int | None:
@@ -94,18 +99,19 @@ def _gpu_info() -> list[dict]:
                         return None
 
                 entry = {
-                    "name":           p[0],
-                    "vram_total_mb":  _int(p[1]),
-                    "vram_free_mb":   _int(p[2]),
-                    "driver":         p[3],
-                    "temp_c":         _int(p[4]),
-                    "power_draw_w":   _float(p[5]),
-                    "power_limit_w":  _float(p[6]),
-                    "clock_mhz":      _int(p[7]),
-                    "clock_max_mhz":  _int(p[8]),
+                    "name":              p[0],
+                    "vram_total_mb":     _int(p[1]),
+                    "vram_free_mb":      _int(p[2]),
+                    "driver":            p[3],
+                    "temp_c":            _int(p[4]),
+                    "power_draw_w":      _float(p[5]),
+                    "power_limit_w":     _float(p[6]),
+                    "power_limit_max_w": _float(p[7]),
+                    "clock_mhz":         _int(p[8]),
+                    "clock_max_mhz":     _int(p[9]),
                 }
-                if has_cap and len(p) >= 10:
-                    entry["compute_cap"] = _float(p[9])
+                if has_cap and len(p) >= 11:
+                    entry["compute_cap"] = _float(p[10])
                 gpus.append(entry)
             return gpus
         except Exception:

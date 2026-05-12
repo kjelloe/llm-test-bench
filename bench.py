@@ -261,6 +261,8 @@ def main() -> None:
                         help="Enable thinking/reasoning mode (ollama only; default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
                         help="Warm up each model before its first task (ollama only; default: off)")
+    parser.add_argument("--set-power-limit", type=int, default=None, metavar="WATTS",
+                        help="Set GPU power limit via 'sudo nvidia-smi -pl WATTS' before benchmarking")
     parser.add_argument("--out", default="output/results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
@@ -310,6 +312,26 @@ def main() -> None:
     else:
         from lib.ollama_client import chat as _chat_fn
         from lib.ollama_client import unload_model as _unload_fn
+
+    if args.set_power_limit is not None:
+        import subprocess as _sp
+        print(f"Setting GPU power limit to {args.set_power_limit} W ... ", end="", flush=True)
+        try:
+            r = _sp.run(
+                ["sudo", "nvidia-smi", "-pl", str(args.set_power_limit)],
+                capture_output=True, text=True, timeout=15,
+            )
+            if r.returncode == 0:
+                print("done")
+            else:
+                msg = (r.stderr or r.stdout).strip().splitlines()[0] if (r.stderr or r.stdout) else "unknown error"
+                print(f"WARNING: failed ({msg})")
+                if "Insufficient Permissions" in (r.stderr + r.stdout):
+                    print("  WSL2 note: GPU power management requires Windows-side admin access.")
+                    print(f"  Run in an elevated PowerShell/CMD: nvidia-smi -pl {args.set_power_limit}")
+                print("  Continuing without power limit change.")
+        except Exception as exc:
+            print(f"WARNING: could not run nvidia-smi ({exc}); continuing.")
 
     hw = get_hw_snapshot(
         llama_server_bin=bin_path if args.backend == "llama-server" else None,

@@ -392,6 +392,7 @@ CONTEXT_32K = Task(
     test_timeout=15,
     num_ctx=32768,
     min_predict=20,
+    wall_time_budget_s=120,  # fast models <30s; >120s indicates KV pressure
 )
 
 CONTEXT_64K = Task(
@@ -405,6 +406,7 @@ CONTEXT_64K = Task(
     test_timeout=15,
     num_ctx=65536,
     min_predict=20,
+    wall_time_budget_s=300,  # fast models <60s; >300s indicates KV pressure (same threshold as 128k)
 )
 
 _MULTIHOP_DESC = (

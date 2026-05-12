@@ -11,13 +11,20 @@ set -euo pipefail
 #   ./compare.sh extended --num-ctx 16384
 #   ./compare.sh --models qwen2.5-coder:14b --tasks python_safe_div
 #   ./compare.sh full --tasks node_slugify python_safe_div
+#   ./compare.sh --set-power-limit 350    enforce GPU wattage cap before benchmarking
+#
+# GPU power limit:
+#   Power limits reset on reboot. Set POWER_LIMIT below to enforce a cap at the
+#   start of every run (requires sudo). Leave empty to leave the limit unchanged.
+#   Alternatively pass --set-power-limit WATTS on the command line.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$SCRIPT_DIR/models"
 STATS_FILE="$SCRIPT_DIR/output/compare-history.json"
 MODEL_TIMEOUT=1200
-NUM_PREDICT=4800
+NUM_PREDICT=8000
 STARTUP_TIMEOUT=600
+POWER_LIMIT=350  # set GPU power limit (W) before run; requires sudo; empty = no change
 
 # ── Parse arguments ────────────────────────────────────────────────────────────
 MODELS=()
@@ -89,7 +96,7 @@ fi
 # ── Determine output file ─────────────────────────────────────────────────────
 # Default: results-<set-name>[-<backend>].json, or results-compare[-<backend>].json.
 # Extract --backend and --out from BENCH_ARGS so we can use them for naming.
-BACKEND="ollama"
+BACKEND="${BENCH_BACKEND:-ollama}"
 _clean=()
 _skip_out=false
 _skip_be=false
@@ -174,6 +181,9 @@ if [[ -n "${SET_FILE:-}" ]]; then
     _MODEL_FILE_ARGS=(--model-file "$SET_FILE")
 fi
 
+_POWER_ARGS=()
+[[ -n "$POWER_LIMIT" ]] && _POWER_ARGS=(--set-power-limit "$POWER_LIMIT")
+
 "$SCRIPT_DIR/run.sh" \
   --models "${MODELS[@]}" \
   "${_MODEL_FILE_ARGS[@]+"${_MODEL_FILE_ARGS[@]}"}" \
@@ -182,6 +192,7 @@ fi
   --startup-timeout "$STARTUP_TIMEOUT" \
   --warmup \
   --out "$OUT" \
+  "${_POWER_ARGS[@]+"${_POWER_ARGS[@]}"}" \
   "${BENCH_ARGS[@]+"${BENCH_ARGS[@]}"}"
 
 # ── Save run to history file ──────────────────────────────────────────────────

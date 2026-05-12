@@ -19,23 +19,29 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 #### Safety & Determinism
 
 - Default `temperature=0` and `seed=1`.
-- `num_predict` default is 400 for simple/instruct models. Use 4800+ for thinking models
+- `num_predict` default is 400 for simple/instruct models. Use 8000+ for thinking models
   (qwen3.5, gpt-oss:120b, deepseek-r1, etc.) — their reasoning tokens consume the budget
-  before the answer. `compare.sh` sets `--num-predict 4800` explicitly; 2400 was too few for
+  before the answer. `compare.sh` sets `--num-predict 8000` explicitly; 4800 was insufficient
+  for gemma4:26b verbose preamble tasks and gpt-oss:20b complex tasks; 2400 was too few for
   qwen3.5:35b on basic tasks; 1200 was too few for gpt-oss:120b on complex tasks (CSV parser
   ran out mid-reasoning). Note: gpt-oss:20b and gemma4:26b are NOT thinking models — do not
   mark them `thinking` in model files; the "After your reasoning" prefix causes planning loops.
   - **gpt-oss:20b "semi-thinking"**: generates verbose reasoning in plain text output (not
     `reasoning_content`) on L2+ tasks; exhausts 4800 token budget before BEGIN_FILE on
-    python_lru_cache, python_lfu_cache, python_expr_eval. Needs 8000+ for those tasks.
+    python_expr_eval and python_tokenizer; needs 8000+ for those tasks (compare.sh now uses
+    8000). Also fails context_64k with a wrong answer (TESTS_STILL_FAIL — retrieves RC-5000
+    instead of correct value; passes at context_32k and context_128k; appears to be a
+    retrieval failure specific to that context depth, not a token budget issue).
     Adding `thinking` does NOT help — it causes a different planning loop. It is correctly
     left without the `thinking` flag.
   - **gemma4:26b verbose preamble**: generates a long task description + approach summary
     before BEGIN_FILE regardless of the system prompt; exhausts 4800 tokens on complex tasks
     (node_csv_parser, python_lru_cache, python_tokenizer, multihop_forward, csv_nordic_property).
-    Needs 8000+ for L2+ tasks.
+    Needs 8000+ for L2+ tasks; compare.sh now uses 8000 which should fix these.
   - **qwen3.5:35b over-reasoning**: even python_hashmap at min_predict=16000 is exhausted
     by reasoning alone (wall 100s × 158 tok/s ≈ all 16000 tokens); consider 24000 for that task.
+    Also fails context_128k at 8000 num_predict — thinking budget exhausted before BEGIN_FILE
+    at 131k context (response_truncated, outputs plain-text reasoning instead of code block).
 - `--warmup` sends a 5-token dummy prompt to each model before the benchmark loop to force
   model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
   (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.
@@ -47,8 +53,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Note: qwen3-coder:30b at context_128k (ctx=131072) on RTX 3090 24GB ran at 3.8 tok/s for
   1870s — KV cache for a 30B model at 131072 ctx fills ~24GB and partially spills. Within
   the 3600s per-task timeout but adds 31 minutes to the compare run.
-  devstral-small-2 (24B dense) similarly spills at ~4.0 tok/s (480s) at ctx=131072 on 24GB
-  — wall_time_budget_s=300 flags it as PASS_BUT_SLOW.
+  devstral-small-2 (24B dense) similarly spills at ~5.2 tok/s (819s) at ctx=131072 on 24GB
+  — wall_time_budget_s=300 flags it as PASS_BUT_SLOW. Speed on llama-server: ~45 tok/s
+  (2.6× faster than ollama's ~17 tok/s for the same model at normal context sizes).
   qwen2.5-coder:32b Q4_K_M (~20 GB weights) leaves only ~4 GB for KV on 24 GB — ctx=32768
   causes TOOL_ERROR timeout (300s) on context_32k and multihop tasks; 15/15 coding tasks
   pass cleanly at ~36 tok/s. Large-context tasks require a true 32 GB card.
@@ -59,6 +66,18 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   to ~6 tok/s; 11/24 tasks pass. Server silently caps max_ctx=65536 → 32768 when VRAM is
   exhausted. Needs true 32 GB to be useful. Use `max_ctx=32768` in model config to avoid
   CTX_TRUNCATED errors on 24 GB.
+  codestral:22b (dense 22B, ~14 GB): ~50 tok/s, 15/24. Hard architecture limit of 32k
+  tokens (Codestral v0.1) — CTX_TRUNCATED on context_64k, context_128k, multihop, and
+  distractor tasks. No workaround; limit is baked into the weights.
+  phi4-reasoning-plus:14b (thinking, ~9 GB): ~58 tok/s but INCOMPATIBLE with this benchmark.
+  Loops in a reasoning planning phase ("I'll produce the file content with the modifications"
+  repeated indefinitely) and never emits BEGIN_FILE regardless of num_predict — confirmed at
+  both 4800 and 12000 tokens (0/13 on targeted re-run at 12k). Format compliance issue: the
+  model was trained to emit answers inline, not in structured file blocks. Do not benchmark.
+  llama4-scout:17b (MoE 17B active / 109B total, ~60 GB hybrid): ~3.3 tok/s — fully
+  CPU-bound on 24 GB VRAM; 109 GB weights live in RAM. Quality is high (19/24) but throughput
+  is impractical. csv_nordic_property times out (model_timeout=600s at 3.3 tok/s ≈ 2000 max
+  tokens). context_128k passes SLOW (1216s). Needs 64 GB+ VRAM to be GPU-resident and fast.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 
 #### Edit Protocol Enforcement
@@ -84,7 +103,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 bench.py            CLI runner
 install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper
-compare.sh          Runs canonical 6-model set (model-timeout 1200, num-predict 2400); auto-names output by backend (results-compare.json / results-compare-ls.json)
+compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json)
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
