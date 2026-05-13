@@ -18,7 +18,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 _PREFERRED_QUANTS = ["Q4_K_M", "Q5_K_M", "Q4_K_S", "Q4_K", "Q8_0", "Q6_K"]
 _MAX_REPOS = 5

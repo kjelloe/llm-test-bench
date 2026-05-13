@@ -15,4 +15,4 @@ if [[ ! -d "$VENV" ]]; then
 fi
 
 source "$VENV/bin/activate"
-python3 "$SCRIPT_DIR/compare-results.py" "$@"
+python3 "$SCRIPT_DIR/lib/compare_results.py" "$@"

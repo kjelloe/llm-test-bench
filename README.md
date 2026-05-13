@@ -67,21 +67,21 @@ Example output:
 
 ## Quick start
 
-### Run the canonical benchmark (6 models)
+### Run the canonical benchmark (7 models)
 
 ```bash
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`) against all twenty-four tasks. Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all twenty-four tasks. Writes results to `output/results-compare.json`.
 
-### Run the extended benchmark (8 models)
+### Run the extended benchmark (10 models)
 
 ```bash
 ./compare.sh extended
 ```
 
-Runs all eight models evaluated to date (adds `codestral:22b` and `devstral-small-2`). Writes results to `output/results-extended.json`. Estimated runtime: 2.5–4 hours.
+Runs the 7 default models plus `codestral:22b`, `phi4-reasoning-plus:14b`, and `llama4-scout:17b`. Note: `phi4-reasoning-plus` is incompatible (loops in reasoning planning phase and never emits BEGIN_FILE regardless of token budget); `llama4-scout` runs at ~3.3 tok/s (CPU-bound on 24 GB). Writes results to `output/results-extended.json`.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 

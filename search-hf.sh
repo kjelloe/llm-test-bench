@@ -23,4 +23,4 @@ if [[ ! -d "$VENV" ]]; then
 fi
 
 source "$VENV/bin/activate"
-python3 "$SCRIPT_DIR/search-hf.py" "$@"
+python3 "$SCRIPT_DIR/lib/search_hf.py" "$@"

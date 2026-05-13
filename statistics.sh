@@ -13,4 +13,4 @@
 #   csv        Semicolon-separated, all cells quoted (Nordic CSV)
 #   json       JSON array of objects
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec python3 "$SCRIPT_DIR/statistics.py" "$@"
+exec python3 "$SCRIPT_DIR/lib/statistics.py" "$@"
