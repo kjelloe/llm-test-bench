@@ -125,6 +125,40 @@ else
     OUT="$SCRIPT_DIR/output/results-compare${BACKEND_SUFFIX}.json"
 fi
 
+# ── Resume check ─────────────────────────────────────────────────────────────
+# Checkpoint dir is named after the output file (backend suffix included), so
+# ollama and llama-server checkpoints never collide.
+CHECKPOINT_DIR="$SCRIPT_DIR/output/.resume/$(basename "$OUT" .json)"
+CHECKPOINT_ARGS=(--checkpoint-dir "$CHECKPOINT_DIR")
+
+if [[ -d "$CHECKPOINT_DIR" ]]; then
+    _ckpt_files=("$CHECKPOINT_DIR"/*.json)
+    # bash glob returns the literal pattern when no files match
+    if [[ -f "${_ckpt_files[0]:-}" ]]; then
+        _ckpt_count=${#_ckpt_files[@]}
+        echo "  Checkpoint found — $_ckpt_count model(s) already completed:"
+        for _f in "${_ckpt_files[@]}"; do
+            _mname=$(python3 -c "
+import json, sys
+try:
+    d=json.load(open('$_f')); print(d[0]['model'] if d else '?')
+except: print('?')
+" 2>/dev/null)
+            printf "    [done] %s\n" "$_mname"
+        done
+        printf "  Resume from checkpoint? [Y/n] "
+        read -r _resume_answer </dev/tty || _resume_answer="y"
+        if [[ "${_resume_answer:-y}" =~ ^[Nn] ]]; then
+            echo "  Starting fresh — removing checkpoint."
+            rm -rf "$CHECKPOINT_DIR"
+        else
+            echo "  Resuming."
+        fi
+        unset _resume_answer _mname _f _ckpt_count
+    fi
+    unset _ckpt_files
+fi
+
 # ── Header ────────────────────────────────────────────────────────────────────
 NUM_MODELS=${#MODELS[@]}
 NUM_TASKS=$(python3 -c "
@@ -192,8 +226,12 @@ _POWER_ARGS=()
   --startup-timeout "$STARTUP_TIMEOUT" \
   --warmup \
   --out "$OUT" \
+  "${CHECKPOINT_ARGS[@]}" \
   "${_POWER_ARGS[@]+"${_POWER_ARGS[@]}"}" \
   "${BENCH_ARGS[@]+"${BENCH_ARGS[@]}"}"
+
+# ── Clean up checkpoint on successful completion ───────────────────────────────
+[[ -d "$CHECKPOINT_DIR" ]] && rm -rf "$CHECKPOINT_DIR"
 
 # ── Save run to history file ──────────────────────────────────────────────────
 python3 "$SCRIPT_DIR/lib/history.py" save "$OUT" "$STATS_FILE"

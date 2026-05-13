@@ -2,6 +2,7 @@
 """CLI runner for the Ollama / llama-server coding benchmark."""
 
 import argparse
+import json
 import os
 import shutil
 import threading
@@ -14,6 +15,20 @@ from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
 from lib.tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
+
+
+def _safe_model_name(model: str) -> str:
+    return model.replace(":", "_").replace("/", "_").replace(" ", "_")
+
+
+def _write_model_checkpoint(checkpoint_dir: Path, model: str, records: list[dict]) -> None:
+    path = checkpoint_dir / f"{_safe_model_name(model)}.json"
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(records, f)
+        print(f"  [checkpoint] {model!r} saved ({len(records)} records) → {path.name}")
+    except Exception as exc:
+        print(f"  [checkpoint] WARNING: could not save {model!r}: {exc}")
 
 
 def _no_blocks_detail(resp, num_predict: int) -> str:
@@ -266,6 +281,8 @@ def main() -> None:
     parser.add_argument("--out", default="output/results.json")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
+    parser.add_argument("--checkpoint-dir", default=None, metavar="PATH",
+                        help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
 
     if args.tasks:
@@ -342,8 +359,31 @@ def main() -> None:
     ) / 1024.0
 
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
+    results: list[dict] = []
+    completed_models: set[str] = set()
+    checkpoint_dir_path: Path | None = None
+
+    if args.checkpoint_dir:
+        checkpoint_dir_path = Path(args.checkpoint_dir)
+        checkpoint_dir_path.mkdir(parents=True, exist_ok=True)
+        ckpt_files = sorted(checkpoint_dir_path.glob("*.json"))
+        if ckpt_files:
+            print(f"  [resume] Loading {len(ckpt_files)} checkpoint(s) from {checkpoint_dir_path}")
+            for ckpt_file in ckpt_files:
+                try:
+                    with open(ckpt_file, encoding="utf-8") as f:
+                        ckpt_records = json.load(f)
+                    if ckpt_records:
+                        m_name = ckpt_records[0]["model"]
+                        completed_models.add(m_name)
+                        results.extend(ckpt_records)
+                        print(f"    loaded {m_name!r}: {len(ckpt_records)} records")
+                except Exception as exc:
+                    print(f"    WARNING: could not load {ckpt_file.name}: {exc}")
+            pairs = [(m, tk) for m, tk in pairs if m not in completed_models]
+            print(f"  [resume] {len(completed_models)} model(s) skipped, {len(pairs)} task(s) remaining")
+
     total = len(pairs)
-    results = []
     current_model: str | None = None
     current_ctx: int = 0
     gpu_before: dict | None = None
@@ -355,8 +395,19 @@ def main() -> None:
     task_difficulties = {t.id: t.difficulty for t in tasks_to_run}
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
 
+    _ckpt_model: str | None = None
+    _ckpt_buf: list[dict] = []
+    _loop_complete = False
+
     try:
         for i, (model, task) in enumerate(pairs, 1):
+            # Checkpoint the previous model when the model name changes
+            if checkpoint_dir_path is not None:
+                if _ckpt_model is not None and model != _ckpt_model:
+                    _write_model_checkpoint(checkpoint_dir_path, _ckpt_model, _ckpt_buf)
+                    _ckpt_buf = []
+                _ckpt_model = model
+
             effective_ctx = max(args.num_ctx, task.num_ctx) if task.num_ctx else args.num_ctx
             cfg = None  # set in llama-server path; may inform _is_thinking
 
@@ -377,8 +428,11 @@ def main() -> None:
             if task.min_vram_gb > 0 and total_vram_gb > 0 and total_vram_gb < task.min_vram_gb:
                 print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_VRAM) "
                       f"need {task.min_vram_gb} GB, have {total_vram_gb:.0f} GB")
-                results.append(_skip_record("SKIPPED_VRAM",
-                    f"task requires {task.min_vram_gb} GB VRAM; hardware has {total_vram_gb:.0f} GB"))
+                _r = _skip_record("SKIPPED_VRAM",
+                    f"task requires {task.min_vram_gb} GB VRAM; hardware has {total_vram_gb:.0f} GB")
+                results.append(_r)
+                if checkpoint_dir_path is not None:
+                    _ckpt_buf.append(_r)
                 continue
 
             if llama_manager is not None:
@@ -390,8 +444,11 @@ def main() -> None:
                 if cfg.max_ctx and effective_ctx > cfg.max_ctx:
                     print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_CTX) "
                           f"need ctx={effective_ctx}, model max={cfg.max_ctx}")
-                    results.append(_skip_record("SKIPPED_CTX",
-                        f"task needs ctx={effective_ctx}; model architecture limit is {cfg.max_ctx}"))
+                    _r = _skip_record("SKIPPED_CTX",
+                        f"task needs ctx={effective_ctx}; model architecture limit is {cfg.max_ctx}")
+                    results.append(_r)
+                    if checkpoint_dir_path is not None:
+                        _ckpt_buf.append(_r)
                     continue
                 if llama_manager.needs_restart(cfg, effective_ctx):
                     if llama_manager._current_model is not None:
@@ -487,6 +544,8 @@ def main() -> None:
             trunc = " TRUNCATED" if record.get("response_truncated") else ""
             print(f"{status}{trunc}  {record['wall_s']}s  {record['tok_per_s']} tok/s")
             results.append(record)
+            if checkpoint_dir_path is not None:
+                _ckpt_buf.append(record)
 
             # llama-server silently caps ctx when VRAM is insufficient; subsequent
             # requests against the same server process hang or error. Force a clean
@@ -496,9 +555,15 @@ def main() -> None:
                       flush=True)
                 llama_manager.stop()
 
+        _loop_complete = True
+
     finally:
         if llama_manager is not None:
             llama_manager.stop()
+        # Write the last model's checkpoint only when the loop ran to completion;
+        # a crash mid-model leaves _loop_complete=False so we don't save partial data.
+        if checkpoint_dir_path is not None and _loop_complete and _ckpt_model and _ckpt_buf:
+            _write_model_checkpoint(checkpoint_dir_path, _ckpt_model, _ckpt_buf)
         if results:
             write_results(results, args.out, hardware=hw)
             print(f"\nResults written to {args.out}")
