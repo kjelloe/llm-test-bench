@@ -218,8 +218,10 @@ python3 bench.py --help
                                may specify a higher minimum via Task.num_ctx
   --temperature FLOAT          Default: 0.0
   --seed INT                   Default: 1
-  --num-predict INT            Max output tokens (default: 400; compare.sh sets 4800 for
-                               thinking models that burn tokens on reasoning before BEGIN_FILE)
+  --num-predict INT            Max output tokens (default: 400; compare.sh sets 8000 for
+                               thinking models that exhaust token budgets during reasoning, and
+                               verbose non-thinking models like gemma4:26b and gpt-oss:20b that
+                               emit long preambles before BEGIN_FILE)
   --model-timeout INT          Ollama HTTP request timeout in seconds (default: 300)
   --startup-timeout INT        Seconds to wait for llama-server to become ready (default: 600;
                                large RAM-bound models like gpt-oss:120b with mlock take 300–600s)
