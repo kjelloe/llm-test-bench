@@ -1,0 +1,36 @@
+# Dual 24 GB VRAM model set — 2× RTX 3090 / 3× RTX 4090 etc. (48 GB total)
+# All models use tensor_split=1|1 (equal layer distribution across both GPUs).
+#
+# Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
+#   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
+#   params     comma-separated llama-server flags
+#   hf:        HuggingFace repo for fetch-hf.sh download helper
+#
+# IMPORTANT: speeds below are estimates — not yet benchmarked on dual-GPU hardware.
+# Single-24GB confirmed numbers are carried over where applicable.
+# NVLink vs PCIe between GPUs significantly affects 70B tensor-parallel throughput.
+
+# Speed index (est. unless noted):
+# qwen3-coder:30b      # ~165 tok/s  MoE; confirmed single 24 GB — no weight change, KV headroom gained
+# qwen2.5-coder:32b    #  ~35 tok/s  dense 32B Q5_K_M; confirmed Q4_K_M coding-only at ~36 tok/s single 24 GB
+# deepseek-r1:32b      #  ~30 tok/s  dense 32B Q5_K_M thinking; confirmed Q4_K_M coding-only at ~32 tok/s single 24 GB
+# qwq:32b              #  ~30 tok/s  dense 32B Q5_K_M thinking; UNUSABLE on single 24 GB (KV thrashing ~6 tok/s)
+# llama3.3:70b         #  ~20 tok/s  dense 70B Q4_K_S; NOT benchmarked; NVLink preferred
+
+# ── Proven single-24GB model — tensor_split removes 128k KV spill ────────────────
+# qwen3-coder:30b: KV cache for 30B at ctx=131072 partially spills on single 24 GB (→ 3.8 tok/s, 1734s SLOW).
+# On 48 GB the full KV fits; should pass context_128k cleanly at normal speed.
+qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+
+# ── 32B models — ctx≥32k was KV-limited on single 24 GB; 48 GB removes that cap ──
+# qwen2.5-coder:32b: Q5_K_M (~26 GB); confirmed coding-only at Q4_K_M; 64k context now feasible on 48 GB
+qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
+# deepseek-r1:32b: Q5_K_M (~26 GB) thinking; 64k context now feasible on 48 GB
+deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF
+# qwq:32b: Q5_K_M (~22 GB) thinking; KV thrashing killed it on single 24 GB; 48 GB provides clean headroom
+qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
+
+# ── 70B model — new tier, not yet benchmarked ────────────────────────────────────
+# llama3.3:70b: Q4_K_S (~37 GB); ~11 GB left for KV across both cards — keep ctx ≤16k.
+# NVLink between GPUs preferred; PCIe will bottleneck inter-GPU tensor transfer.
+llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_S.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
