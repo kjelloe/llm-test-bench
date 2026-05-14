@@ -135,26 +135,26 @@ if [[ -d "$CHECKPOINT_DIR" ]]; then
     _ckpt_files=("$CHECKPOINT_DIR"/*.json)
     # bash glob returns the literal pattern when no files match
     if [[ -f "${_ckpt_files[0]:-}" ]]; then
-        _ckpt_count=${#_ckpt_files[@]}
-        echo "  Checkpoint found — $_ckpt_count model(s) already completed:"
-        for _f in "${_ckpt_files[@]}"; do
-            _mname=$(python3 -c "
-import json, sys
-try:
-    d=json.load(open('$_f')); print(d[0]['model'] if d else '?')
-except: print('?')
-" 2>/dev/null)
-            printf "    [done] %s\n" "$_mname"
-        done
-        printf "  Resume from checkpoint? [Y/n] "
+        echo "  Checkpoint found from a previous run (${#_ckpt_files[@]} file(s)):"
+        python3 - "$CHECKPOINT_DIR" <<'PYEOF' 2>/dev/null
+import json, sys, pathlib
+for f in sorted(pathlib.Path(sys.argv[1]).glob("*.json")):
+    try:
+        d = json.loads(f.read_text())
+        name = d[0]["model"] if d else f.stem
+        print(f"    - {name}  ({len(d)} tasks)")
+    except Exception:
+        print(f"    - {f.stem}")
+PYEOF
+        printf "  Resume? [Y/n] "
         read -r _resume_answer </dev/tty || _resume_answer="y"
         if [[ "${_resume_answer:-y}" =~ ^[Nn] ]]; then
             echo "  Starting fresh — removing checkpoint."
             rm -rf "$CHECKPOINT_DIR"
         else
-            echo "  Resuming."
+            echo "  Resuming — bench.py will report complete/partial status per model."
         fi
-        unset _resume_answer _mname _f _ckpt_count
+        unset _resume_answer
     fi
     unset _ckpt_files
 fi

@@ -332,23 +332,52 @@ def main() -> None:
 
     if args.set_power_limit is not None:
         import subprocess as _sp
-        print(f"Setting GPU power limit to {args.set_power_limit} W ... ", end="", flush=True)
+        _watts = str(args.set_power_limit)
+        # Detect WSL2: sudo nvidia-smi -pl is blocked; use powershell.exe instead.
+        _is_wsl = False
         try:
-            r = _sp.run(
-                ["sudo", "nvidia-smi", "-pl", str(args.set_power_limit)],
-                capture_output=True, text=True, timeout=15,
-            )
+            with open("/proc/version") as _pv:
+                _is_wsl = "microsoft" in _pv.read().lower()
+        except OSError:
+            pass
+        print(f"Setting GPU power limit to {_watts} W ... ", end="", flush=True)
+        try:
+            if _is_wsl:
+                # Step 1: try direct call (works when Windows user is local admin with UAC off).
+                r = _sp.run(
+                    ["powershell.exe", "-NoProfile", "-Command", f"nvidia-smi -pl {_watts}"],
+                    capture_output=True, text=True, timeout=15,
+                )
+                if r.returncode != 0 and (
+                    "Insufficient" in (r.stderr + r.stdout)
+                    or "requires elevated" in (r.stderr + r.stdout).lower()
+                    or r.returncode == 1
+                ):
+                    # Step 2: UAC elevation via Start-Process -Verb RunAs -Wait.
+                    # A UAC dialog will appear on the Windows desktop; approve it promptly.
+                    print("(UAC prompt) ", end="", flush=True)
+                    r = _sp.run(
+                        ["powershell.exe", "-NoProfile", "-Command",
+                         f"Start-Process nvidia-smi -ArgumentList '-pl {_watts}' -Verb RunAs -Wait"],
+                        capture_output=True, text=True, timeout=30,
+                    )
+            else:
+                r = _sp.run(
+                    ["sudo", "nvidia-smi", "-pl", _watts],
+                    capture_output=True, text=True, timeout=15,
+                )
             if r.returncode == 0:
                 print("done")
             else:
                 msg = (r.stderr or r.stdout).strip().splitlines()[0] if (r.stderr or r.stdout) else "unknown error"
                 print(f"WARNING: failed ({msg})")
-                if "Insufficient Permissions" in (r.stderr + r.stdout):
-                    print("  WSL2 note: GPU power management requires Windows-side admin access.")
-                    print(f"  Run in an elevated PowerShell/CMD: nvidia-smi -pl {args.set_power_limit}")
+                if _is_wsl:
+                    print(f"  Run in an elevated PowerShell: nvidia-smi -pl {_watts}")
+                else:
+                    print("  Ensure you have sudo rights and nvidia-smi is on PATH.")
                 print("  Continuing without power limit change.")
         except Exception as exc:
-            print(f"WARNING: could not run nvidia-smi ({exc}); continuing.")
+            print(f"WARNING: could not set power limit ({exc}); continuing.")
 
     hw = get_hw_snapshot(
         llama_server_bin=bin_path if args.backend == "llama-server" else None,
@@ -361,6 +390,8 @@ def main() -> None:
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     results: list[dict] = []
     completed_models: set[str] = set()
+    partial_model_records: dict[str, list[dict]] = {}   # model → already-done records
+    completed_pairs: set[tuple[str, str]] = set()       # (model, task_id) already done
     checkpoint_dir_path: Path | None = None
 
     if args.checkpoint_dir:
@@ -368,20 +399,35 @@ def main() -> None:
         checkpoint_dir_path.mkdir(parents=True, exist_ok=True)
         ckpt_files = sorted(checkpoint_dir_path.glob("*.json"))
         if ckpt_files:
-            print(f"  [resume] Loading {len(ckpt_files)} checkpoint(s) from {checkpoint_dir_path}")
+            print(f"  [resume] Scanning {len(ckpt_files)} checkpoint file(s):")
             for ckpt_file in ckpt_files:
                 try:
                     with open(ckpt_file, encoding="utf-8") as f:
                         ckpt_records = json.load(f)
-                    if ckpt_records:
-                        m_name = ckpt_records[0]["model"]
+                    if not ckpt_records:
+                        ckpt_file.unlink(missing_ok=True)
+                        continue
+                    m_name = ckpt_records[0]["model"]
+                    results.extend(ckpt_records)
+                    if len(ckpt_records) == len(tasks_to_run):
                         completed_models.add(m_name)
-                        results.extend(ckpt_records)
-                        print(f"    loaded {m_name!r}: {len(ckpt_records)} records")
+                        print(f"    complete : {m_name!r}  ({len(ckpt_records)} tasks) — skipping")
+                    else:
+                        partial_model_records[m_name] = ckpt_records
+                        for r in ckpt_records:
+                            completed_pairs.add((r["model"], r["task"]))
+                        print(f"    partial  : {m_name!r}  ({len(ckpt_records)}/{len(tasks_to_run)} tasks) — resuming from task {len(ckpt_records) + 1}")
                 except Exception as exc:
                     print(f"    WARNING: could not load {ckpt_file.name}: {exc}")
-            pairs = [(m, tk) for m, tk in pairs if m not in completed_models]
-            print(f"  [resume] {len(completed_models)} model(s) skipped, {len(pairs)} task(s) remaining")
+            pairs = [(m, tk) for m, tk in pairs
+                     if m not in completed_models and (m, tk.id) not in completed_pairs]
+            parts = []
+            if completed_models:
+                parts.append(f"{len(completed_models)} model(s) complete")
+            if partial_model_records:
+                n_done = sum(len(v) for v in partial_model_records.values())
+                parts.append(f"{len(partial_model_records)} partial ({n_done} tasks already done)")
+            print(f"  [resume] {', '.join(parts) or 'nothing to skip'} — {len(pairs)} task(s) remaining")
 
     total = len(pairs)
     current_model: str | None = None
@@ -397,15 +443,13 @@ def main() -> None:
 
     _ckpt_model: str | None = None
     _ckpt_buf: list[dict] = []
-    _loop_complete = False
 
     try:
         for i, (model, task) in enumerate(pairs, 1):
-            # Checkpoint the previous model when the model name changes
-            if checkpoint_dir_path is not None:
-                if _ckpt_model is not None and model != _ckpt_model:
-                    _write_model_checkpoint(checkpoint_dir_path, _ckpt_model, _ckpt_buf)
-                    _ckpt_buf = []
+            # Reset per-model buffer when the model changes; pre-populate with any
+            # already-completed records so the checkpoint file stays consistent.
+            if checkpoint_dir_path is not None and model != _ckpt_model:
+                _ckpt_buf = partial_model_records.pop(model, [])
                 _ckpt_model = model
 
             effective_ctx = max(args.num_ctx, task.num_ctx) if task.num_ctx else args.num_ctx
@@ -433,6 +477,7 @@ def main() -> None:
                 results.append(_r)
                 if checkpoint_dir_path is not None:
                     _ckpt_buf.append(_r)
+                    _write_model_checkpoint(checkpoint_dir_path, model, _ckpt_buf)
                 continue
 
             if llama_manager is not None:
@@ -449,6 +494,7 @@ def main() -> None:
                     results.append(_r)
                     if checkpoint_dir_path is not None:
                         _ckpt_buf.append(_r)
+                        _write_model_checkpoint(checkpoint_dir_path, model, _ckpt_buf)
                     continue
                 if llama_manager.needs_restart(cfg, effective_ctx):
                     if llama_manager._current_model is not None:
@@ -546,6 +592,7 @@ def main() -> None:
             results.append(record)
             if checkpoint_dir_path is not None:
                 _ckpt_buf.append(record)
+                _write_model_checkpoint(checkpoint_dir_path, model, _ckpt_buf)
 
             # llama-server silently caps ctx when VRAM is insufficient; subsequent
             # requests against the same server process hang or error. Force a clean
@@ -555,15 +602,9 @@ def main() -> None:
                       flush=True)
                 llama_manager.stop()
 
-        _loop_complete = True
-
     finally:
         if llama_manager is not None:
             llama_manager.stop()
-        # Write the last model's checkpoint only when the loop ran to completion;
-        # a crash mid-model leaves _loop_complete=False so we don't save partial data.
-        if checkpoint_dir_path is not None and _loop_complete and _ckpt_model and _ckpt_buf:
-            _write_model_checkpoint(checkpoint_dir_path, _ckpt_model, _ckpt_buf)
         if results:
             write_results(results, args.out, hardware=hw)
             print(f"\nResults written to {args.out}")
