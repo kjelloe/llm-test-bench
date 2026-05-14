@@ -113,6 +113,59 @@ def _hw_str(hw: dict | None, field: str) -> str:
     return str((hw or {}).get(field) or "")
 
 
+# ── HF scout enrichment ───────────────────────────────────────────────────────
+
+def _load_scout_state(script_dir: Path) -> dict[str, dict]:
+    """Return {repo_id: repo_record} from output/hf-scout-state.json, or {}."""
+    path = script_dir / "output" / "hf-scout-state.json"
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data.get("repos", {})
+    except Exception:
+        return {}
+
+
+def _scout_downloads(scout: dict[str, dict], hf_repo: str) -> int | str:
+    if not hf_repo or hf_repo not in scout:
+        return ""
+    return scout[hf_repo].get("downloads") or ""
+
+
+def _scout_gguf_gb(scout: dict[str, dict], hf_repo: str) -> float | str:
+    """Size (GB) of the suggested GGUF file from the scout state."""
+    if not hf_repo or hf_repo not in scout:
+        return ""
+    rec = scout[hf_repo]
+    sug = rec.get("suggested_file")
+    if not sug:
+        return ""
+    size = next((f["size"] for f in rec.get("files", []) if f["name"] == sug), None)
+    if not size:
+        return ""
+    return round(size / 1024 ** 3, 1)
+
+
+# ── Context summary helpers ───────────────────────────────────────────────────
+
+_CONTEXT_TASKS = [
+    "context_8k", "context_32k", "context_64k", "context_128k", "context_256k",
+]
+_CTX_COL = {t: t.replace("context_", "ctx_") for t in _CONTEXT_TASKS}
+
+_SHORT_ERROR: dict[str, str] = {
+    "CTX_TRUNCATED":                "TRUNC",
+    "SKIPPED_CTX":                  "SKIP_CTX",
+    "SKIPPED_VRAM":                 "SKIP_VRAM",
+    "TOOL_ERROR":                   "T/O",
+    "NO_BLOCKS":                    "FAIL",
+    "TESTS_STILL_FAIL":             "FAIL",
+    "EDITED_NONEDITABLE_FILE":      "FAIL",
+    "BASELINE_PASSED_INVALID_TASK": "FAIL",
+}
+
+
 # ── Row builders ──────────────────────────────────────────────────────────────
 
 def _run_date(path: Path) -> str:
@@ -144,7 +197,8 @@ def _difficulty_summary(recs: list[dict]) -> str:
     return "  ".join(parts)
 
 
-def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
+def summary_rows(path: Path, results: list[dict], hw: dict | None,
+                 scout: dict[str, dict] | None = None) -> list[dict]:
     """One row per (model, backend) pair."""
     run_date = _run_date(path)
     gpu = _hw_gpu(hw)
@@ -185,6 +239,7 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
             if k:
                 err_counts[k] = err_counts.get(k, 0) + 1
 
+        _scout = scout or {}
         rows.append({
             "source_file":        path.name,
             "run_date":           run_date,
@@ -206,13 +261,18 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
             "model":              model,
             "backend":            backend,
             "hf_repo":            hf_repo,
+            "hf_downloads":       _scout_downloads(_scout, hf_repo),
+            "hf_gguf_gb":         _scout_gguf_gb(_scout, hf_repo),
             "tasks_passed":       passed,
             "tasks_total":        total,
             "pass_pct":           round(passed / total * 100, 1) if total else 0.0,
             "avg_tok_per_s":      avg_tok,
             "total_wall_s":       total_wall,
             "skill":              _difficulty_summary(recs),
+            "slow":               sum(1 for r in recs if r.get("slow")),
             "ctx_truncated":      err_counts.get("CTX_TRUNCATED", 0),
+            "skipped_vram":       err_counts.get("SKIPPED_VRAM", 0),
+            "skipped_ctx":        err_counts.get("SKIPPED_CTX", 0),
             "no_blocks":          err_counts.get("NO_BLOCKS", 0),
             "tests_still_fail":   err_counts.get("TESTS_STILL_FAIL", 0),
             "tool_error":         err_counts.get("TOOL_ERROR", 0),
@@ -220,7 +280,8 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]
     return rows
 
 
-def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
+def detail_rows(path: Path, results: list[dict], hw: dict | None,
+                scout: dict[str, dict] | None = None) -> list[dict]:
     """One row per task record."""
     run_date          = _run_date(path)
     gpu               = _hw_gpu(hw)
@@ -239,9 +300,11 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
     ollama_ver        = _hw_str(hw, "ollama_version")
     storage           = ((hw or {}).get("models_storage") or {}).get("transport", "")
 
+    _scout = scout or {}
     rows = []
     for r in results:
         m = r.get("metrics") or {}
+        hf_repo = r.get("hf_repo", "")
         rows.append({
             "source_file":        path.name,
             "run_date":           run_date,
@@ -262,10 +325,13 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
             "models_storage":     storage,
             "model":              r["model"],
             "backend":            r.get("backend", "ollama"),
-            "hf_repo":            r.get("hf_repo", ""),
+            "hf_repo":            hf_repo,
+            "hf_downloads":       _scout_downloads(_scout, hf_repo),
+            "hf_gguf_gb":         _scout_gguf_gb(_scout, hf_repo),
             "task":               r["task"],
             "difficulty":         DIFFICULTIES.get(r["task"], ""),
             "pass":               r["tests_pass"],
+            "slow":               r.get("slow", False),
             "error_kind":         r.get("error_kind") or "",
             "tok_per_s":          r.get("tok_per_s", 0.0),
             "wall_s":             r.get("wall_s", 0.0),
@@ -275,6 +341,53 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
             "ctx_truncated":      r.get("ctx_truncated", False),
             "response_truncated": r.get("response_truncated", False),
         })
+    return rows
+
+
+def context_summary_rows(path: Path, results: list[dict], hw: dict | None) -> list[dict]:
+    """One condensed row per (model, backend) — context speed profile.
+
+    Context task columns show tok/s on pass (with ~ suffix for PASS_BUT_SLOW),
+    a short error code on failure, or — when the task was not run.
+    The ctx_256k column is always included here; main() drops it if all rows are —.
+    """
+    run_date = _run_date(path)
+    total_vram_gb = _hw_total_vram_gb(hw)
+
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for r in results:
+        key = (r["model"], r.get("backend", "ollama"))
+        groups.setdefault(key, []).append(r)
+
+    rows = []
+    for (model, backend), recs in groups.items():
+        passed = sum(1 for r in recs if r["tests_pass"])
+        total = len(recs)
+        by_task = {r["task"]: r for r in recs}
+
+        row: dict = {
+            "run_date":  run_date,
+            "model":     model,
+            "backend":   backend,
+            "vram_gb":   total_vram_gb,
+            "pass_pct":  f"{round(passed / total * 100, 1) if total else 0.0}%",
+        }
+
+        for task_id in _CONTEXT_TASKS:
+            col = _CTX_COL[task_id]
+            r = by_task.get(task_id)
+            if r is None:
+                row[col] = "—"
+            elif r["tests_pass"]:
+                val = f"{r.get('tok_per_s', 0.0):.1f}"
+                if r.get("slow"):
+                    val += "~"
+                row[col] = val
+            else:
+                ek = r.get("error_kind") or ""
+                row[col] = _SHORT_ERROR.get(ek, "FAIL")
+
+        rows.append(row)
     return rows
 
 
@@ -344,17 +457,28 @@ def main() -> None:
         "--detail", action="store_true",
         help="One row per task instead of one row per model",
     )
+    parser.add_argument(
+        "--summary", action="store_true",
+        help=(
+            "Context speed profile: one row per model with pass%% and "
+            "tok/s for each context size (8k/32k/64k/128k/256k). "
+            "ctx_256k column is omitted when no model ran that task."
+        ),
+    )
     args = parser.parse_args()
 
     # Resolve input files
+    _NON_RESULT_FILES = {"compare-history.json", "hf-scout-state.json"}
     if args.files:
         paths = [Path(f) for f in args.files]
     else:
         output_dir = SCRIPT_DIR / "output"
         paths = sorted(p for p in output_dir.glob("*.json")
-                       if p.name != "compare-history.json")
+                       if p.name not in _NON_RESULT_FILES)
         if not paths:
             sys.exit("No result files found in output/")
+
+    scout = _load_scout_state(SCRIPT_DIR)
 
     all_rows: list[dict] = []
     for path in paths:
@@ -363,11 +487,21 @@ def main() -> None:
         except Exception as exc:
             print(f"Skipping {path.name}: {exc}", file=sys.stderr)
             continue
-        rows = detail_rows(path, results, hw) if args.detail else summary_rows(path, results, hw)
+        if args.summary:
+            rows = context_summary_rows(path, results, hw)
+        elif args.detail:
+            rows = detail_rows(path, results, hw, scout)
+        else:
+            rows = summary_rows(path, results, hw, scout)
         all_rows.extend(rows)
 
     if not all_rows:
         sys.exit("No data found.")
+
+    # Drop ctx_256k column from --summary output when no model ran that task
+    if args.summary and all(r.get("ctx_256k", "—") == "—" for r in all_rows):
+        for r in all_rows:
+            r.pop("ctx_256k", None)
 
     formatters = {"json": fmt_json, "csv": fmt_csv, "markdown": fmt_markdown}
     output = formatters[args.fmt](all_rows)

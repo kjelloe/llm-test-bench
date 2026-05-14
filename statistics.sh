@@ -2,10 +2,11 @@
 # statistics.sh — Aggregate benchmark results into a sharable dataset.
 #
 # Usage:
-#   ./statistics.sh                              markdown summary to stdout
+#   ./statistics.sh                              markdown summary to stdout (one row per model)
+#   ./statistics.sh --summary                    context speed profile: pass% + tok/s per context size
+#   ./statistics.sh --detail                     one row per task
 #   ./statistics.sh --format csv --out stats.csv
 #   ./statistics.sh --format json
-#   ./statistics.sh --detail                     one row per task
 #   ./statistics.sh output/results-compare.json  specific file(s)
 #
 # Formats:
