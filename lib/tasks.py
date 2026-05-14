@@ -575,3 +575,23 @@ BUILTIN_TASKS: list[Task] = [
     CONTEXT_256K,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
+
+# Predefined task groups for --task-group.  Each list preserves BUILTIN_TASKS order.
+TASK_GROUPS: dict[str, list[str]] = {
+    "coding": [
+        "csv_nordic_property",
+        "node_slugify", "python_safe_div", "dotnet_sas",
+        "node_csv_parser",
+        "python_lru_cache", "python_lfu_cache", "python_minheap",
+        "python_multifile_rename", "node_memoize_bug",
+        "python_ledger_bug", "python_expr_eval",
+        "python_dijkstra", "python_hashmap", "python_tokenizer",
+    ],
+    "context": [
+        "context_8k", "context_16k", "context_32k",
+        "context_64k", "context_128k", "context_256k",
+    ],
+    "multihop": [
+        "multihop_forward", "multihop_reverse", "distractor_notes",
+    ],
+}

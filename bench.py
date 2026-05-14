@@ -14,7 +14,7 @@ from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
-from lib.tasks import BUILTIN_TASKS, TASK_MAP, Task, build_prompt, prepare_workdir, run_setup, run_tests
+from lib.tasks import BUILTIN_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, prepare_workdir, run_setup, run_tests
 
 
 def _safe_model_name(model: str) -> str:
@@ -247,9 +247,17 @@ def run_one(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark local LLMs on coding tasks (Ollama or llama-server)")
     parser.add_argument("--models", nargs="+", required=True, metavar="MODEL")
-    parser.add_argument(
+    _task_sel = parser.add_mutually_exclusive_group()
+    _task_sel.add_argument(
         "--tasks", nargs="+", default=None, metavar="TASK_ID",
-        help=f"Subset of task IDs (default: all). Choices: {', '.join(TASK_MAP)}",
+        help=f"Explicit task IDs (default: all). Choices: {', '.join(TASK_MAP)}",
+    )
+    _task_sel.add_argument(
+        "--task-group", nargs="+", default=None, metavar="GROUP",
+        help=(
+            f"Task group shorthand; can combine multiple. "
+            f"Groups: {', '.join(f'{g} ({len(v)} tasks)' for g, v in TASK_GROUPS.items())}"
+        ),
     )
     parser.add_argument(
         "--backend", default=os.environ.get("BENCH_BACKEND", "ollama"),
@@ -285,7 +293,18 @@ def main() -> None:
                         help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
 
-    if args.tasks:
+    if args.task_group:
+        unknown_groups = [g for g in args.task_group if g not in TASK_GROUPS]
+        if unknown_groups:
+            parser.error(
+                f"Unknown task group(s): {unknown_groups}. "
+                f"Available: {sorted(TASK_GROUPS)}"
+            )
+        selected_ids: set[str] = set()
+        for g in args.task_group:
+            selected_ids.update(TASK_GROUPS[g])
+        tasks_to_run = [t for t in BUILTIN_TASKS if t.id in selected_ids]
+    elif args.tasks:
         unknown = [t for t in args.tasks if t not in TASK_MAP]
         if unknown:
             parser.error(f"Unknown task IDs: {unknown}. Available: {sorted(TASK_MAP)}")

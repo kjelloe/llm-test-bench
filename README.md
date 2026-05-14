@@ -97,6 +97,25 @@ The header printed before each run shows estimated runtime from the previous run
 ./run.sh --models qwen2.5-coder:7b --tasks python_safe_div
 ```
 
+### Run only coding tasks (or context / multihop)
+
+```bash
+# 15 coding tasks only (useful for large RAM-bound models where context tasks are impractical)
+./compare.sh --task-group coding
+./run.sh --models qwen2.5-coder:7b --task-group coding
+
+# 6 context-retrieval tasks only
+./compare.sh --task-group context
+
+# 3 multihop + distractor tasks only
+./compare.sh --task-group multihop
+
+# Combine groups
+./compare.sh --task-group coding multihop
+```
+
+`--task-group` and `--tasks` are mutually exclusive.
+
 ### Run multiple models of your choosing
 
 ```bash
@@ -198,7 +217,8 @@ The **Skill** column in the results table shows the highest difficulty tier wher
 python3 bench.py --help
 
   --models MODEL [MODEL ...]   Ollama model names (required)
-  --tasks TASK_ID [...]        Subset of tasks (default: all)
+  --tasks TASK_ID [...]        Explicit subset of task IDs (default: all); mutually
+                               exclusive with --task-group.
                                Choices: csv_nordic_property,
                                         python_safe_div, dotnet_sas, node_slugify,
                                         python_lru_cache, python_multifile_rename,
@@ -210,6 +230,11 @@ python3 bench.py --help
                                         context_32k, context_64k, context_128k,
                                         context_256k, multihop_forward,
                                         multihop_reverse, distractor_notes
+  --task-group GROUP [...]     Task group shorthand; mutually exclusive with --tasks.
+                               Can combine multiple groups.
+                               Groups: coding (15 tasks), context (6 tasks),
+                                       multihop (3 tasks — multihop_forward,
+                                       multihop_reverse, distractor_notes)
   --backend ollama|llama-server  Inference backend (default: ollama; env: BENCH_BACKEND)
   --model-file PATH            models/*.txt file for GGUF/param lookup (required for
                                llama-server backend; compare.sh passes it automatically)
@@ -288,6 +313,7 @@ Extra flags passed to `compare.sh` or `run.sh` are forwarded to `bench.py`:
 ```bash
 ./compare.sh --num-ctx 16384 --num-predict 500
 ./compare.sh --tasks node_slugify python_safe_div
+./compare.sh --task-group coding
 ```
 
 ---

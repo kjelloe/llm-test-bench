@@ -166,6 +166,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
 - **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list and a lookup dict by task id.
+- **`TASK_GROUPS`**: predefined group shorthands for `--task-group`: `coding` (15 tasks), `context` (6 tasks: context_8k … context_256k), `multihop` (3 tasks: multihop_forward, multihop_reverse, distractor_notes). Together they cover all 24 tasks with no overlap. `bench.py` resolves groups by filtering `BUILTIN_TASKS` in order, so combining groups preserves the canonical task sequence.
 
 #### `ollama_client.py` — Ollama Model Adapter
 
