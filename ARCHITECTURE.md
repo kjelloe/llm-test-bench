@@ -29,7 +29,7 @@ run.sh                    Venv setup + bench.py entrypoint
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
 compare-results.sh        Merges two result JSONs and prints speed summary + full task table for backend comparison; thin wrapper for lib/compare_results.py
-statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); thin wrapper for lib/statistics.py
+statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); supports --summary (context speed profile), --detail (per-task), --sort-by COLUMN [asc|desc]; thin wrapper for lib/statistics.py
 fetch-hf.sh               Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; thin wrapper for lib/fetch_hf.py
 search-hf.sh              Searches HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste; thin wrapper for lib/search_hf.py
 scout-hf.sh               Periodically scans HuggingFace for new GGUFs relevant to coding + context benchmarks; diffs against saved state to show new/updated/gone repos; thin wrapper for lib/scout_hf.py
@@ -47,7 +47,7 @@ lib/                      Python support modules (imported by bench.py and shell
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
   history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
-  statistics.py           Dataset builder: one row per model (summary) or per task (--detail); exports hardware, pass rates, tok/s, skill breakdown
+  statistics.py           Dataset builder: default mode (one row per model/backend), --summary (context speed profile: pass% + tok/s per context size with TRUNC/SKIP/FAIL codes and auto-dropped ctx_256k column), --detail (one row per task); --sort-by COLUMN [asc|desc] with run_date desc default; HF scout enrichment (hf_downloads, hf_gguf_gb) cross-referenced from hf-scout-state.json; new summary fields: slow, skipped_vram, skipped_ctx
   compare_results.py      Merges two result JSONs and prints speed summary + full task comparison table
   fetch_hf.py             Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
   search_hf.py            Searches HuggingFace Hub for GGUF files matching model names; suggests models/*.txt lines

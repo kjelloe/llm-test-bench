@@ -357,17 +357,22 @@ Each repo entry shows downloads, the recommended GGUF file, and a VRAM fit indic
 
 ## Exporting results
 
-`statistics.sh` aggregates all `output/*.json` result files into a flat dataset for comparison across hardware or model versions.
+`statistics.sh` aggregates all `output/*.json` result files into a flat dataset for comparison across hardware or model versions. Results are sorted by `run_date` descending (newest first) by default.
 
 ```bash
-# Markdown table to stdout (default)
+# Default: one row per model, newest run first
 ./statistics.sh
 
-# One row per model (summary — pass rate, avg tok/s, skill breakdown)
-./statistics.sh --format markdown
+# Context speed profile: pass% + tok/s for each context size (8k/32k/64k/128k/256k)
+./statistics.sh --summary
 
-# One row per task (detailed)
+# One row per task
 ./statistics.sh --detail --format csv --out stats.csv
+
+# Sort by any column; optional direction asc or desc (default asc when column specified)
+./statistics.sh --sort-by model
+./statistics.sh --sort-by pass_pct desc
+./statistics.sh --summary --sort-by ctx_128k desc
 
 # JSON array for programmatic processing
 ./statistics.sh --format json --out stats.json
@@ -376,9 +381,11 @@ Each repo entry shows downloads, the recommended GGUF file, and a VRAM fit indic
 ./statistics.sh output/results-compare-ls.json --format markdown
 ```
 
-**Summary mode** (default) produces one row per `(model, backend)` with: hardware identifiers, pass rate, avg tok/s, total wall time, per-level skill breakdown (e.g. `L1:6/6  L2:4/5  L3:3/3`), and error kind counts.
+**Default mode** produces one row per `(model, backend)` with: hardware identifiers, pass rate, avg tok/s, total wall time, per-level skill breakdown (e.g. `L1:6/6  L2:4/5  L3:3/3`), error kind counts (`no_blocks`, `tests_still_fail`, `ctx_truncated`, `skipped_vram`, `skipped_ctx`, `slow`), and HF scout enrichment (`hf_downloads`, `hf_gguf_gb`) when `output/hf-scout-state.json` exists.
 
-**Detail mode** (`--detail`) produces one row per `(model, task)` with: all hardware fields, task difficulty, pass/fail, error kind, tok/s, wall_s, prompt tokens, gen tokens, num_ctx, and truncation flags.
+**Context summary mode** (`--summary`) produces one row per `(model, backend)` with: `vram_gb`, `pass_pct`, and a tok/s column per context size. Pass results show the generation tok/s; PASS_BUT_SLOW results append `~`; failures show a short code (`TRUNC`, `SKIP_VRAM`, `SKIP_CTX`, `T/O`, `FAIL`); tasks not run show `—`. The `ctx_256k` column is omitted automatically when no model ran that task.
+
+**Detail mode** (`--detail`) produces one row per `(model, task)` with: all hardware fields, task difficulty, pass/fail, slow flag, error kind, tok/s, wall_s, prompt tokens, gen tokens, num_ctx, and truncation flags.
 
 Hardware fields exported: GPU label (multi-GPU aware, e.g. `2× RTX 3090 24GB (48GB total)`), GPU count, total VRAM GB, compute capability, GPU driver, free VRAM at run start, GPU temperature, GPU power limit, CPU, RAM, platform, CUDA toolkit version, llama-server version (if applicable), Ollama version (if applicable), and storage device type.
 

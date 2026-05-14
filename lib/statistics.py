@@ -391,6 +391,37 @@ def context_summary_rows(path: Path, results: list[dict], hw: dict | None) -> li
     return rows
 
 
+# ── Sorting ───────────────────────────────────────────────────────────────────
+
+_EMPTY_VALS = {"", "—", "none", "null"}
+
+
+def _apply_sort(rows: list[dict], col: str, reverse: bool) -> list[dict]:
+    """Sort rows by col, direction controlled by reverse.  Empties always last.
+
+    Tries numeric sort first (strips trailing ~/%); falls back to case-insensitive
+    string sort if any value cannot be parsed as float.  The two groups (empties
+    and non-empties) are sorted independently so empties are always appended at
+    the end regardless of direction.
+    """
+    def _raw(row: dict) -> str:
+        v = row.get(col, "")
+        return "" if (v is None or str(v).strip().lower() in _EMPTY_VALS) else str(v)
+
+    empties = [r for r in rows if _raw(r) == ""]
+    rest    = [r for r in rows if _raw(r) != ""]
+
+    def _num_key(row: dict) -> float:
+        return float(_raw(row).rstrip("~%").strip())
+
+    try:
+        rest.sort(key=_num_key, reverse=reverse)
+    except ValueError:
+        rest.sort(key=lambda r: _raw(r).lower(), reverse=reverse)
+
+    return rest + empties
+
+
 # ── Formatters ────────────────────────────────────────────────────────────────
 
 def fmt_json(rows: list[dict]) -> str:
@@ -465,7 +496,28 @@ def main() -> None:
             "ctx_256k column is omitted when no model ran that task."
         ),
     )
+    parser.add_argument(
+        "--sort-by", nargs="+", metavar=("COLUMN", "DIR"),
+        help=(
+            "Sort by column name, with optional direction: asc or desc. "
+            "Examples: --sort-by model  /  --sort-by pass_pct desc  "
+            "(default: run_date desc)"
+        ),
+    )
     args = parser.parse_args()
+
+    # Parse --sort-by into (column, reverse)
+    sort_col = "run_date"
+    sort_reverse = True   # default: newest first
+    if args.sort_by:
+        sort_col = args.sort_by[0]
+        if len(args.sort_by) >= 2:
+            direction = args.sort_by[1].lower()
+            if direction not in ("asc", "desc"):
+                parser.error(f"--sort-by direction must be 'asc' or 'desc', got {args.sort_by[1]!r}")
+            sort_reverse = direction == "desc"
+        else:
+            sort_reverse = False   # explicit column with no direction → asc
 
     # Resolve input files
     _NON_RESULT_FILES = {"compare-history.json", "hf-scout-state.json"}
@@ -502,6 +554,12 @@ def main() -> None:
     if args.summary and all(r.get("ctx_256k", "—") == "—" for r in all_rows):
         for r in all_rows:
             r.pop("ctx_256k", None)
+
+    # Validate sort column exists, then sort
+    if sort_col not in all_rows[0]:
+        available = ", ".join(all_rows[0].keys())
+        sys.exit(f"Unknown sort column {sort_col!r}. Available: {available}")
+    all_rows = _apply_sort(all_rows, sort_col, sort_reverse)
 
     formatters = {"json": fmt_json, "csv": fmt_csv, "markdown": fmt_markdown}
     output = formatters[args.fmt](all_rows)
