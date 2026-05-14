@@ -32,6 +32,7 @@ compare-results.sh        Merges two result JSONs and prints speed summary + ful
 statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); thin wrapper for lib/statistics.py
 fetch-hf.sh               Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; thin wrapper for lib/fetch_hf.py
 search-hf.sh              Searches HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste; thin wrapper for lib/search_hf.py
+scout-hf.sh               Periodically scans HuggingFace for new GGUFs relevant to coding + context benchmarks; diffs against saved state to show new/updated/gone repos; thin wrapper for lib/scout_hf.py
 show-all-models.sh        Runs ollama show on every locally installed model
 lib/optimize_models.py    Hardware-aware llama-server param optimizer: detects GPU/VRAM/compute, suggests ngl, split_mode, tensor_split, flash_attn, n_cpu_moe, KV cache type, batch sizes; writes back to models/*.txt; --suggest-ctx prints DEFAULT_CTX for configure.sh
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
@@ -50,6 +51,7 @@ lib/                      Python support modules (imported by bench.py and shell
   compare_results.py      Merges two result JSONs and prints speed summary + full task comparison table
   fetch_hf.py             Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
   search_hf.py            Searches HuggingFace Hub for GGUF files matching model names; suggests models/*.txt lines
+  scout_hf.py             Scans HuggingFace Hub across curated coding/context model queries; saves state snapshot; diffs on re-run to report new, updated, and gone repos; VRAM fit labels (✓/~/✗) for 24 GB cards
 output/                   Runtime artifacts — git-ignored, created on first run
   results-compare.json    Written by compare.sh (default set)
   results-<set>.json      Written by compare.sh <set> (e.g. extended, full)

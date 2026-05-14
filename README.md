@@ -327,6 +327,32 @@ Multi-shard models (e.g. `gpt-oss-120b-mxfp4-00001-of-00003.gguf`) are detected 
 
 Requires `huggingface_hub` (included in `requirements.txt`; installed when you first run `./run.sh`).
 
+### Discovering new models
+
+`scout-hf.sh` periodically scans HuggingFace Hub across a curated set of queries covering the model families relevant to coding and context benchmarks (Qwen3-Coder, Qwen2.5-Coder, Devstral, DeepSeek-Coder, Llama3, Gemma, GPT-OSS, Codestral, Phi4). It saves a state snapshot after each run; subsequent runs diff against the snapshot and show only what changed — new repos, updated file lists (new quants added), and repos that disappeared.
+
+```bash
+# First run — shows the full list and saves state
+./scout-hf.sh
+
+# Subsequent runs — shows only new / updated / gone repos
+./scout-hf.sh
+
+# Dry-run without updating state
+./scout-hf.sh --no-save
+
+# Also print the full repo list on re-runs
+./scout-hf.sh --show-all
+
+# More repos per query (default: 8)
+./scout-hf.sh --limit 12
+
+# Override the default query list
+./scout-hf.sh --queries "qwen3 coder" "llama4 instruct"
+```
+
+Each repo entry shows downloads, the recommended GGUF file, and a VRAM fit indicator: ✓ ≤20 GB (fits with KV headroom on a 24 GB card), `~` 20–24 GB (tight, limited KV cache), ✗ >24 GB (multi-GPU needed). State is saved to `output/hf-scout-state.json`.
+
 ---
 
 ## Exporting results
