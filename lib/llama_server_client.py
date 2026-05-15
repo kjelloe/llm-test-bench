@@ -236,6 +236,8 @@ def chat(
         raise OllamaError(f"URL error: {exc.reason}") from exc
     except TimeoutError as exc:
         raise OllamaError(f"Timed out after {timeout}s") from exc
+    except (ConnectionError, OSError) as exc:
+        raise OllamaError(f"Connection error (server crash/OOM?): {exc}") from exc
 
     elapsed_ns = int((time.monotonic() - t_start) * 1e9)
     return _parse_body(body, elapsed_ns)
