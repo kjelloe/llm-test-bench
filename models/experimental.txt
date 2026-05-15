@@ -51,12 +51,12 @@ mistral-medium-3.5:128b  Q4_K_M/Mistral-Medium-3.5-128B-Q4_K_M-00001-of-00003.gg
 # Benchmarks (NVIDIA, vs qwen3-coder:30b proxy Qwen3-30B-A3B-Thinking-2507):
 #   AIME25 89.1 (vs 85.0), LiveCodeBench 68.3 (vs 66.0), SWE-Bench 38.8 (vs 22.0)
 # Results (2026-05-15, llama-server, RTX 3090 24 GB, coding tasks):
-#   12/15  168.3 tok/s  ~274s total
+#   12/15  168.3 tok/s  ~274s total  (confirmed — rerun of 3 fails at 144–151 tok/s all TESTS_STILL_FAIL)
 #   PASS: node_slugify, python_safe_div, dotnet_sas, node_csv_parser, python_lru_cache,
 #         python_lfu_cache, python_minheap, python_multifile_rename, node_memoize_bug,
 #         python_ledger_bug, python_dijkstra, python_hashmap (L5 — unique pass among thinking models)
-#   FAIL: csv_nordic_property (likely thinking budget; rerun with min_predict=16000)
-#         python_expr_eval, python_tokenizer (L4 — complex tasks, thinking budget)
+#   FAIL: csv_nordic_property (incorrect logic, not budget — 8.9k tokens generated, still wrong)
+#         python_expr_eval, python_tokenizer (L4 — genuine capability gap; 3k/5k tokens, wrong output)
 # Fastest thinking model tested: 168 tok/s beats qwen3.5:35b (133), qwen3.6:35b-A3B (141), qwen3-coder:30b (152).
 # Context results (2026-05-15): context_8k PASS 166.7 tok/s, context_32k PASS 144.9 tok/s,
 #   context_64k PASS 116.6 tok/s, context_128k CRASH (server OOM at ctx=131072).

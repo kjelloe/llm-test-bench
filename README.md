@@ -164,7 +164,7 @@ The `before_load` snapshot includes a `"dirty": true` flag if VRAM did not drain
 
 ## Tasks
 
-Tasks are tagged with a difficulty level (L1–L5) used to compute the **Skill** rating in the results table.
+Tasks are tagged with a difficulty level (L1–L6) used to compute the **Skill** rating in the results table.
 
 | ID | Level | Language | What the model must do |
 |----|-------|----------|------------------------|
@@ -180,8 +180,10 @@ Tasks are tagged with a difficulty level (L1–L5) used to compute the **Skill**
 | `node_memoize_bug` | L3 | Node.js / ESM | `memoize()` in `src/memoize.js` builds its cache key from only the first argument — calls with the same first arg but different second arg return a stale cached result |
 | `python_ledger_bug` | L4 | Python / pytest | `Ledger.transfer()` in `ledger.py` credits the destination account before checking the source balance — a failed transfer leaves the destination corrupted |
 | `python_expr_eval` | L4 | Python / pytest | `Parser.expr()` and `Parser.term()` have their operator sets swapped — `*`/`/` are treated as low-precedence and `+`/`-` as high-precedence, inverting standard arithmetic precedence |
+| `python_tokenizer` | L4 | Python / pytest | After processing an escape sequence inside a string, the tokenizer transitions back to the wrong state — characters following any escape sequence are emitted as `WORD`/`UNKNOWN` tokens outside the string instead of being part of the `STRING` token |
 | `python_dijkstra` | L5 | Python / pytest | `dijkstra()` in `dijkstra.py` marks nodes visited when enqueued instead of when dequeued — shorter paths discovered later are silently ignored, producing wrong distances and paths |
 | `python_hashmap` | L5 | Python / pytest | `HashMap.delete()` in `hashmap.py` clears slots directly instead of writing a tombstone — breaks linear-probe chains, causing `get()` to miss keys inserted after a colliding deletion |
+| `node_paratrooper` | L6 | Node.js / ESM | Implement the full `Game` class in `src/game.js` — a headless, tick-based backend for the 1982 arcade game Paratrooper: turret rotation, projectiles, helicopters, paratroopers (chute/freefall/landed states), jets, bombs, overrun detection, and deterministic seeded RNG; 40 tests must pass |
 | `context_8k` | L1 | Python / pytest | Find a sentinel value (`BENCHMARK_SENTINEL_VALUE`) at 50% depth in a ~5.5k-token Python stdlib archive; primary metric is prompt-eval tok/s at this context size |
 | `context_16k` | L1 | Python / pytest | Same as context_8k at ~11k tokens |
 | `context_32k` | L1 | Python / pytest | Same as context_8k at ~22k tokens |
@@ -200,7 +202,8 @@ The **Skill** column in the results table shows the highest difficulty tier wher
 
 | Rating | Meaning |
 |--------|---------|
-| `L5` | Passes all tasks (L1 + L2 + L3 + L4 + L5) |
+| `L6` | Passes all tasks (L1 + L2 + L3 + L4 + L5 + L6) |
+| `L5` | Passes L1–L5, fails at least one L6 task |
 | `L4` | Passes L1 + L2 + L3 + L4, fails at least one L5 task |
 | `L3` | Passes L1 + L2 + L3, fails at least one L4 task |
 | `L2` | Passes L1 + L2, fails at least one L3 task |
@@ -226,13 +229,15 @@ python3 bench.py --help
                                         python_minheap, node_memoize_bug,
                                         python_ledger_bug, python_expr_eval,
                                         python_tokenizer, python_dijkstra,
-                                        python_hashmap, context_8k, context_16k,
-                                        context_32k, context_64k, context_128k,
-                                        context_256k, multihop_forward,
-                                        multihop_reverse, distractor_notes
+                                        python_hashmap, node_paratrooper,
+                                        context_8k, context_16k, context_32k,
+                                        context_64k, context_128k, context_256k,
+                                        multihop_forward, multihop_reverse,
+                                        distractor_notes
   --task-group GROUP [...]     Task group shorthand; mutually exclusive with --tasks.
                                Can combine multiple groups.
-                               Groups: coding (15 tasks), context (6 tasks),
+                               Groups: coding (15 tasks), l6 (1 task — node_paratrooper),
+                                       context (6 tasks),
                                        multihop (3 tasks — multihop_forward,
                                        multihop_reverse, distractor_notes)
   --backend ollama|llama-server  Inference backend (default: ollama; env: BENCH_BACKEND)
@@ -315,6 +320,39 @@ Extra flags passed to `compare.sh` or `run.sh` are forwarded to `bench.py`:
 ./compare.sh --tasks node_slugify python_safe_div
 ./compare.sh --task-group coding
 ```
+
+---
+
+## Model files
+
+Models are defined in `models/*.txt`. Each line has up to three fields:
+
+```
+<ollama-name>  [<gguf-file>  [<param>,<param>,...]]  [hf:<owner/repo>]
+```
+
+The `hf:` field is position-independent (may appear anywhere after the ollama name).
+
+| File | Purpose |
+|------|---------|
+| `default.txt` | Canonical benchmark set — used by `./compare.sh` with no arguments |
+| `experimental.txt` | Models under evaluation; not yet in the default set |
+| `extended.txt` | Extended set for `./compare.sh extended` |
+| `full.txt` | All tested models, including superseded ones |
+| `24gb.txt` | Models confirmed to run well on a single 24 GB GPU |
+| `32gb.txt` | Models requiring ~32 GB VRAM (e.g. 32B Q4_K_M + KV headroom) |
+| `16gb.txt` | Models that fit on a 16 GB card |
+| `2x24gb.txt` | Models needing dual 24 GB GPUs (e.g. 70B Q4_K_S) |
+| `2x32gb.txt` | Models needing dual 32 GB GPUs |
+
+Pass any file with `--model-file`:
+
+```bash
+BENCH_BACKEND=llama-server ./compare.sh --model-file models/experimental.txt
+./run.sh --models mymodel:latest --model-file models/my-custom.txt
+```
+
+`compare.sh` with a named set (e.g. `./compare.sh extended`) auto-selects the corresponding file. Named sets: `default` → `default.txt`, `extended` → `extended.txt`.
 
 ---
 
@@ -416,6 +454,41 @@ Each repo entry shows downloads, the recommended GGUF file, and a VRAM fit indic
 Hardware fields exported: GPU label (multi-GPU aware, e.g. `2× RTX 3090 24GB (48GB total)`), GPU count, total VRAM GB, compute capability, GPU driver, free VRAM at run start, GPU temperature, GPU power limit, CPU, RAM, platform, CUDA toolkit version, llama-server version (if applicable), Ollama version (if applicable), and storage device type.
 
 The CSV format uses `;` as delimiter with all cells double-quoted (Nordic CSV — compatible with Excel on Nordic locales).
+
+---
+
+## Utility scripts
+
+### fetch.sh — pull Ollama models
+
+Pull one or more Ollama models by name or set:
+
+```bash
+./fetch.sh default              # pull all models in models/default.txt
+./fetch.sh models/full.txt      # pull all models in a set file (by path)
+./fetch.sh qwen2.5-coder:14b    # pull a single model
+./fetch.sh default qwen3.5:7b   # mix: set + extra model
+```
+
+### powerlimit.sh — GPU power cap
+
+Set or query the GPU power limit. On WSL2 (where `nvidia-smi` power management is blocked inside the VM) the script detects this and prints the exact PowerShell command to run in an elevated Windows terminal instead.
+
+```bash
+./powerlimit.sh             # set to $POWER_LIMIT env var, or 350 W default
+./powerlimit.sh 300         # explicit wattage
+./powerlimit.sh --query     # show current limits without changing anything
+```
+
+`compare.sh` calls this automatically at the start of each run. Export `POWER_LIMIT=<watts>` in your `.bashrc` to change the default.
+
+### show-all-models.sh — inspect Ollama model details
+
+Prints `ollama show` output for every model currently loaded in Ollama — useful for verifying quantization, parameter counts, and context window limits across your pulled models.
+
+```bash
+./show-all-models.sh
+```
 
 ---
 
