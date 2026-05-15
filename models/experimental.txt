@@ -1,0 +1,49 @@
+# models/experimental.txt — RTX 3090 24 GB single-GPU
+# Qwen3.5 / Qwen3.6 MoE comparison + Qwen3.5-27B dense baseline
+# Benchmarked: 2026-05-14
+#
+# Usage:
+#   BENCH_BACKEND=llama-server ./compare.sh experimental
+#
+# Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
+
+# ── Qwen3.5 / Qwen3.6 MoE (A3B = 3B active / 35B total) ─────────────────────
+# Both fit fully in 24 GB VRAM (~8–9 GB weights).
+# Results (2026-05-14, llama-server, RTX 3090 24 GB):
+#   qwen3.5:35b     21/24  141.7 tok/s  — fails csv_nordic_property, python_hashmap
+#   qwen3.6:35b-A3B 21/24  133.7 tok/s  — fails csv_nordic_property, node_csv_parser
+# Qwen3.6 fixed the python_hashmap tombstone bug present in Qwen3.5.
+# Qwen3.5 passes node_csv_parser where Qwen3.6 does not.
+# Both pass context_128k cleanly (vs HauhauCS Qwen3.5 in default.txt which fails it).
+
+qwen3.5:35b      Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf      ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
+qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf        ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
+
+# ── Mistral-Medium-3.5 128B dense ────────────────────────────────────────────
+# Dense 128B Q4_K_M (~72 GB weights); ngl=24 → ~33% GPU-resident, rest in RAM.
+# Results (2026-05-14, llama-server, RTX 3090 24 GB, coding tasks only):
+#   Run 1 (max_ctx=8192): 12/15  0.9 tok/s  ~84 min
+#     SKIPPED_CTX: csv_nordic_property, python_multifile_rename (needed ctx>8192)
+#     TESTS_STILL_FAIL: python_hashmap (tombstone delete bug)
+#   Run 2 (max_ctx=16384, re-ran 2 skipped tasks):
+#     python_multifile_rename: PASS  360s  0.9 tok/s
+#     csv_nordic_property: TOOL_ERROR 606s — per-task timeout=600s; at 0.9 tok/s ~540 tokens
+#       is not enough for reasoning+solution; throughput wall, not a context issue
+#   Final: 13/15  (python_dijkstra L5 PASS; python_hashmap tombstone bug; csv_nordic_property unreachable)
+# max_ctx=16384 — safe since KV is mostly CPU-resident at ngl=24.
+# Practical note: 0.9 tok/s makes this impractical for regular benchmarking; quality-only runs.
+
+# ── Qwen3.5-27B dense ────────────────────────────────────────────────────────
+# Dense 27B Q4_K_M (~16 GB weights); best pass rate of the set: 22/24.
+# Confirmed thinking-capable (slower and more concise than 35B MoE).
+# Results (2026-05-14): 22/24  35.9 tok/s  — fails csv_nordic_property only (coding)
+# context_128k: SLOW (9.0 tok/s, 1389s) — dense 27B weights + 131k ctx fills 24 GB.
+# q8_0 KV (vs f16) halves the KV footprint; recovers speed at large contexts.
+qwen3.5:27b      Qwen_Qwen3.5-27B-Q4_K_M.gguf          ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
+mistral-medium-3.5:128b  Q4_K_M/Mistral-Medium-3.5-128B-Q4_K_M-00001-of-00003.gguf  ngl=24,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384,thinking  hf:unsloth/Mistral-Medium-3.5-128B-GGUF  # 3-part model
+
+# ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
+# Confirmed 2026-05-14: 2.5 tok/s at ngl=45; 9/10 coding tasks pass (86%) but
+# 9 SKIPPED_CTX (max_ctx=8192 blocks all context/multihop tasks).
+# Use models/2x24gb.txt for this model — it needs 48 GB to be useful.
+# llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_S.gguf  ngl=45,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=8192  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
