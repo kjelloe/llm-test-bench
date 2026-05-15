@@ -368,8 +368,8 @@ NODE_PARATROOPER = Task(
     context_files=["tests/game.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/game.test.js"],
     test_timeout=60,
-    num_ctx=65536,       # prompt ~3k + output ~32k; needs headroom for thinking + code
-    min_predict=32000,   # qwen3.5:35b hit 24k mid-implementation; 32k confirmed sufficient
+    num_ctx=32768,       # smaller ctx curbs thinking verbosity; prompt ~3k leaves ~30k for output
+    min_predict=28000,   # run1(24k,ctx=32k) got to collision code; run2(32k,ctx=64k) over-reasoned
     model_timeout=1800,  # complex generation; allow 30 min
 )
 
