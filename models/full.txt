@@ -14,10 +14,10 @@ deepseek-coder-v2:16b             # ~35 tok/s  GPU, est
 deepseek16b-hybrid:latest         # ~35 tok/s  GPU, est
 qwen3.6:35b-A3B                   # ~40 tok/s  MoE (3.5B active), thinking, est
 qwen3-coder:30b                   # ~40 tok/s  GPU
-devstral:24b                      # ~25 tok/s  GPU, est
+devstral:24b                      # SUPERSEDED by devstral-small-2 (successor; 22/24 at 45 tok/s confirmed)
 qwen3.5:27b                       # ~25 tok/s  GPU, thinking, est
 codestral:22b                     # ~18 tok/s  GPU
-devstral-small-2                  # ~16 tok/s  GPU
+devstral-small-2                  # ~45 tok/s  GPU (llama-server); 22/24 confirmed 2026-05-13
 gemma4:26b                        # ~28 tok/s  GPU, partial offload
 gemma4:31b                        # ~22 tok/s  GPU, partial offload, est
 qwq:32b                           # ~18 tok/s  GPU, thinking, est
