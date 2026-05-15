@@ -349,6 +349,30 @@ PYTHON_HASHMAP = Task(
     min_predict=16000,  # gpt-oss:20b TRUNCATED at 8192; raised from 8192
 )
 
+NODE_PARATROOPER = Task(
+    id="node_paratrooper",
+    difficulty=6,
+    description=(
+        "Implement the Game class in src/game.js — a headless backend for the 1982 arcade game "
+        "Paratrooper. The file contains a full specification in comments. "
+        "Key rules: a 320×200 coordinate space; turret fixed at (160,185) with angle 0=left/90=up/180=right; "
+        "helicopters fly across dropping paratroopers that descend under chutes; shooting a chute "
+        "converts the paratrooper to freefall (kills landed troops on impact); shooting the body kills "
+        "it outright; jets drop bombs that end the game if they hit the turret; 4 landed troops on "
+        "either side ends the game; every shot costs 1 point. "
+        "Implement game.input(action), game.tick(), game.getState(), game.isOver(), game.getResult(). "
+        "Do not modify tests/game.test.js or package.json."
+    ),
+    subdir="node_paratrooper",
+    editable_files=["src/game.js"],
+    context_files=["tests/game.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/game.test.js"],
+    test_timeout=60,
+    num_ctx=32768,       # prompt ~3k + output ~24k; needs headroom beyond default 8192
+    min_predict=24000,   # full game engine ~300 lines; thinking models need budget for reasoning + code
+    model_timeout=1800,  # complex generation; allow 30 min
+)
+
 _CONTEXT_PERF_DESC = (
     "An incident archive is provided as context. "
     "Each report has an incident ID, date, severity, engineer, system, resolution code, and notes. "
@@ -564,6 +588,7 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_DIJKSTRA,
     PYTHON_HASHMAP,
     PYTHON_TOKENIZER,
+    NODE_PARATROOPER,
     CONTEXT_8K,
     CONTEXT_16K,
     CONTEXT_32K,
@@ -586,6 +611,9 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_multifile_rename", "node_memoize_bug",
         "python_ledger_bug", "python_expr_eval",
         "python_dijkstra", "python_hashmap", "python_tokenizer",
+    ],
+    "l6": [
+        "node_paratrooper",
     ],
     "context": [
         "context_8k", "context_16k", "context_32k",
