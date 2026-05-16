@@ -116,25 +116,30 @@ def run_one(
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
         try:
+            # Use "After your reasoning..." only when we're actually asking the model to think.
+            # is_thinking=True with think=False (llama-server no --think) → thinking is disabled
+            # via enable_thinking:false, so use the plain system message.
             _system_msg = (
                 "After your reasoning, output ONLY BEGIN_FILE/END_FILE blocks. "
                 "No markdown, no prose, no explanation."
-                if is_thinking else
+                if (is_thinking and think) else
                 "Output ONLY BEGIN_FILE/END_FILE blocks. No markdown, no prose, no explanation."
             )
+            _messages = [
+                {"role": "system", "content": _system_msg},
+                {"role": "user", "content": prompt},
+            ]
             resp = chat_fn(
                 base_url=client_url,
                 model=model,
-                messages=[
-                    {"role": "system", "content": _system_msg},
-                    {"role": "user", "content": prompt},
-                ],
+                messages=_messages,
                 num_ctx=effective_num_ctx,
                 temperature=temperature,
                 seed=seed,
                 num_predict=effective_num_predict,
                 timeout=effective_timeout,
                 think=think,
+                thinking_budget=task.thinking_budget,
                 num_thread=num_thread,
             )
         except OllamaError as exc:

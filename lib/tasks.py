@@ -24,6 +24,7 @@ class Task:
     model_timeout: int | None = None    # override global --model-timeout for this task (seconds)
     min_vram_gb: int = 0                # skip task on hardware with less total VRAM (0 = no guard)
     wall_time_budget_s: int | None = None  # PASS_BUT_SLOW threshold; None = no limit
+    thinking_budget: int | None = None  # max thinking tokens for thinking models; None = unlimited
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -79,8 +80,8 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
         )
         out = r.stdout + r.stderr
         # Keep the head (primary errors) and tail (summary) — both matter for cascading failures.
-        if len(out) > 1200:
-            out = out[:600] + "\n…(truncated)…\n" + out[-400:]
+        if len(out) > 4000:
+            out = out[:2000] + "\n…(truncated)…\n" + out[-1500:]
         return r.returncode, out
     except subprocess.TimeoutExpired:
         return -1, f"Timed out after {timeout}s"
@@ -368,8 +369,9 @@ NODE_PARATROOPER = Task(
     context_files=["tests/game.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/game.test.js"],
     test_timeout=60,
-    num_ctx=32768,       # smaller ctx curbs thinking verbosity; prompt ~3k leaves ~30k for output
-    min_predict=28000,   # run1(24k,ctx=32k) got to collision code; run2(32k,ctx=64k) over-reasoned
+    num_ctx=65536,       # code ~30k + prompt ~3k; 65k ctx fits safely
+    min_predict=56000,   # 4.5k skeleton without thinking; full impl needs more room
+    thinking_budget=20000,  # desired cap but NOT honored by current llama-server/GGUF — kept for future builds
     model_timeout=1800,  # complex generation; allow 30 min
 )
 

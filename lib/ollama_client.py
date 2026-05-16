@@ -58,6 +58,7 @@ def chat(
     num_predict: int = 400,
     timeout: int = 300,
     think: bool = False,
+    thinking_budget: int | None = None,  # unused: Ollama has no thinking budget API
     num_thread: int | None = None,
     keep_alive: str | int | None = None,
 ) -> OllamaResponse:

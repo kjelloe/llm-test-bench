@@ -203,7 +203,8 @@ def chat(
     seed: int = 1,
     num_predict: int = 400,
     timeout: int = 300,
-    think: bool = False,          # unsupported by llama-server
+    think: bool = False,          # Qwen3: enables thinking via chat_template_kwargs (requires GGUF with enable_thinking in template)
+    thinking_budget: int | None = None,  # Qwen3: cap thinking tokens; None = unlimited
     num_thread: int | None = None,  # unused: set at server startup
     keep_alive: str | int | None = None,  # unused: no Ollama keep_alive concept
 ) -> OllamaResponse:
@@ -220,6 +221,14 @@ def chat(
         "top_k": 1,
         "repeat_penalty": 1.0,
     }
+    # Always send enable_thinking explicitly so Qwen3 GGUFs (which default to thinking-enabled)
+    # are deterministically controlled. think=False → disable; think=True → enable.
+    # Other models ignore unknown template variables.
+    # Note: assistant prefill is INCOMPATIBLE with enable_thinking — never combine them.
+    kwargs: dict = {"enable_thinking": think}
+    if think and thinking_budget is not None:
+        kwargs["thinking_budget"] = thinking_budget
+    payload["chat_template_kwargs"] = kwargs
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode(),
