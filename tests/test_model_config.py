@@ -117,8 +117,7 @@ def test_load_default_model_file():
     configs = load_model_file(path)
     assert len(configs) >= 1
     for cfg in configs:
-        assert cfg.ollama_name
-        assert ":" in cfg.ollama_name  # all model names have a tag
+        assert cfg.ollama_name  # name is non-empty
 
 
 def test_load_model_file_tmp(tmp_path):

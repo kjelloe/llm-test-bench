@@ -1,0 +1,6 @@
+{
+  "name": "node-para-combat-bench",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true
+}

@@ -104,6 +104,12 @@ The header printed before each run shows estimated runtime from the previous run
 ./compare.sh --task-group coding
 ./run.sh --models qwen2.5-coder:7b --task-group coding
 
+# 4 stepped L6 Paratrooper tasks (incremental difficulty; solvable without thinking mode)
+./compare.sh --task-group l6
+
+# Full L6 (implement entire Paratrooper game from scratch; needs thinking model + large token budget)
+./compare.sh --task-group l6_full
+
 # 6 context-retrieval tasks only
 ./compare.sh --task-group context
 
@@ -111,6 +117,7 @@ The header printed before each run shows estimated runtime from the previous run
 ./compare.sh --task-group multihop
 
 # Combine groups
+./compare.sh --task-group coding l6
 ./compare.sh --task-group coding multihop
 ```
 
@@ -183,7 +190,11 @@ Tasks are tagged with a difficulty level (L1–L6) used to compute the **Skill**
 | `python_tokenizer` | L4 | Python / pytest | After processing an escape sequence inside a string, the tokenizer transitions back to the wrong state — characters following any escape sequence are emitted as `WORD`/`UNKNOWN` tokens outside the string instead of being part of the `STRING` token |
 | `python_dijkstra` | L5 | Python / pytest | `dijkstra()` in `dijkstra.py` marks nodes visited when enqueued instead of when dequeued — shorter paths discovered later are silently ignored, producing wrong distances and paths |
 | `python_hashmap` | L5 | Python / pytest | `HashMap.delete()` in `hashmap.py` clears slots directly instead of writing a tombstone — breaks linear-probe chains, causing `get()` to miss keys inserted after a colliding deletion |
-| `node_paratrooper` | L6 | Node.js / ESM | Implement the full `Game` class in `src/game.js` — a headless, tick-based backend for the 1982 arcade game Paratrooper: turret rotation, projectiles, helicopters, paratroopers (chute/freefall/landed states), jets, bombs, overrun detection, and deterministic seeded RNG; 40 tests must pass |
+| `node_para_core` | L6 | Node.js / ESM | **Paratrooper step 1/4** — implement the `Game` constructor, input processing, tick counter, isOver/getResult/getState; seeded mulberry32 RNG; 7 tests |
+| `node_para_turret` | L6 | Node.js / ESM | **Paratrooper step 2/4** — add turret rotation (`_processInput`) and projectile physics (`_updateProjectiles`: `rad=(180-angle)×π/180`, `dx=cos(rad)×speed`, `dy=-sin(rad)×speed`); 17 cumulative tests |
+| `node_para_entities` | L6 | Node.js / ESM | **Paratrooper step 3/4** — add helicopter spawning/movement, paratrooper descent (chute → freefall → landed states), and overrun lose condition; 29 cumulative tests |
+| `node_para_combat` | L6 | Node.js / ESM | **Paratrooper step 4/4** — add jets, bombs, and full collision detection (projectile/bomb vs all entity types); 40 cumulative tests (complete suite) |
+| `node_paratrooper` | L6 | Node.js / ESM | **Full Paratrooper** (for `--task-group l6_full`) — implement the entire `Game` class from scratch; all 40 tests; requires a thinking model with large token budget |
 | `context_8k` | L1 | Python / pytest | Find a sentinel value (`BENCHMARK_SENTINEL_VALUE`) at 50% depth in a ~5.5k-token Python stdlib archive; primary metric is prompt-eval tok/s at this context size |
 | `context_16k` | L1 | Python / pytest | Same as context_8k at ~11k tokens |
 | `context_32k` | L1 | Python / pytest | Same as context_8k at ~22k tokens |
@@ -229,14 +240,19 @@ python3 bench.py --help
                                         python_minheap, node_memoize_bug,
                                         python_ledger_bug, python_expr_eval,
                                         python_tokenizer, python_dijkstra,
-                                        python_hashmap, node_paratrooper,
+                                        python_hashmap,
+                                        node_para_core, node_para_turret,
+                                        node_para_entities, node_para_combat,
+                                        node_paratrooper,
                                         context_8k, context_16k, context_32k,
                                         context_64k, context_128k, context_256k,
                                         multihop_forward, multihop_reverse,
                                         distractor_notes
   --task-group GROUP [...]     Task group shorthand; mutually exclusive with --tasks.
                                Can combine multiple groups.
-                               Groups: coding (15 tasks), l6 (1 task — node_paratrooper),
+                               Groups: coding (15 tasks), l6 (4 stepped tasks —
+                                       node_para_core/turret/entities/combat),
+                                       l6_full (1 task — node_paratrooper, full impl),
                                        context (6 tasks),
                                        multihop (3 tasks — multihop_forward,
                                        multihop_reverse, distractor_notes)

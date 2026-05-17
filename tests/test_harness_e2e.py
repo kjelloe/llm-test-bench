@@ -252,7 +252,12 @@ def _capture_chat_fn(store: dict):
 
 
 def test_is_thinking_true_uses_after_reasoning_message():
-    """is_thinking=True → 'After your reasoning,' system message regardless of backend."""
+    """is_thinking=True AND think=True → 'After your reasoning,' system message.
+    is_thinking=True alone (think=False, the default) → plain message because
+    llama-server sends enable_thinking:false when think=False, so there is no
+    reasoning phase to instruct the model to conclude from.
+    """
+    # Both flags needed → "After your reasoning,"
     captured: dict = {}
     run_one(
         model="mock-model",
@@ -266,9 +271,29 @@ def test_is_thinking_true_uses_after_reasoning_message():
         chat_fn=_capture_chat_fn(captured),
         backend="llama-server",
         is_thinking=True,
+        think=True,
     )
     sys_msg = captured["messages"][0]["content"]
     assert sys_msg.startswith("After your reasoning,"), repr(sys_msg)
+
+    # is_thinking=True alone (think=False) → plain message
+    captured2: dict = {}
+    run_one(
+        model="mock-model",
+        task=TASK,
+        client_url="http://unused",
+        num_ctx=4096,
+        temperature=0.0,
+        seed=1,
+        num_predict=400,
+        model_timeout=60,
+        chat_fn=_capture_chat_fn(captured2),
+        backend="llama-server",
+        is_thinking=True,
+        think=False,
+    )
+    sys_msg2 = captured2["messages"][0]["content"]
+    assert sys_msg2.startswith("Output ONLY"), repr(sys_msg2)
 
 
 def test_is_thinking_false_uses_plain_message():

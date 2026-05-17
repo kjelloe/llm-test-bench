@@ -375,6 +375,106 @@ NODE_PARATROOPER = Task(
     model_timeout=1800,  # complex generation; allow 30 min
 )
 
+# ── Paratrooper stepped tasks (L6 split into 4 focused steps) ─────────────────
+
+NODE_PARA_CORE = Task(
+    id="node_para_core",
+    difficulty=3,
+    description=(
+        "STEP 1 of 4 — Paratrooper game core structure. "
+        "Implement the Game class constructor, input(), tick() (tick counter only), "
+        "isOver(), getResult(), and getState() in src/game.js. "
+        "DEFAULTS and mulberry32 RNG are already provided. "
+        "State fields: tickCount, score, landedLeft, landedRight, over, outcome, turret, "
+        "helicopters[], jets[], paratroopers[], bombs[], projectiles[]. "
+        "getState() must return shallow copies of arrays. "
+        "tick() for this step: guard on over, increment tickCount, reset _pendingInput='none'. "
+        "Do not modify tests/game.test.js or package.json."
+    ),
+    subdir="node_para_core",
+    editable_files=["src/game.js"],
+    context_files=["tests/game.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/game.test.js"],
+    test_timeout=30,
+    min_predict=4000,
+)
+
+NODE_PARA_TURRET = Task(
+    id="node_para_turret",
+    difficulty=4,
+    description=(
+        "STEP 2 of 4 — Paratrooper turret controls and projectile physics. "
+        "The constructor, tick(), isOver(), getResult(), and getState() are already implemented. "
+        "Implement _processInput() and _updateProjectiles() in src/game.js. "
+        "_processInput(): rotate_left decreases angleDeg (clamp 0), rotate_right increases (clamp 180), "
+        "fire deducts scoreShotCost and creates a projectile — "
+        "rad=(180-angleDeg)*PI/180, dx=cos(rad)*speed, dy=-sin(rad)*speed, projectile starts at turret position. "
+        "_updateProjectiles(): move each live projectile by dx/dy; mark alive=false if out of bounds; filter dead. "
+        "Do not modify any other method, tests/game.test.js, or package.json."
+    ),
+    subdir="node_para_turret",
+    editable_files=["src/game.js"],
+    context_files=["tests/game.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/game.test.js"],
+    test_timeout=30,
+    min_predict=6000,
+)
+
+NODE_PARA_ENTITIES = Task(
+    id="node_para_entities",
+    difficulty=5,
+    description=(
+        "STEP 3 of 4 — Paratrooper helicopter and paratrooper entities. "
+        "Steps 1-2 are already implemented. Implement four methods in src/game.js: "
+        "_spawnHelicopters(): spawn when tickCount>=_nextHelicopterTick; advance interval; "
+        "choose side via RNG (<0.5=left); random y in [helicopterMinY,helicopterMaxY]; "
+        "push {id,x,y,direction,speed,state:'active',_nextDropTick}. "
+        "_updateHelicopters(): move by direction*speed; drop paratrooper at _nextDropTick "
+        "(paratrooper: {id,x,y,state:'chute',alive:true}); set state='exiting' when off-screen; filter. "
+        "_updateParatroopers(): chute descends at paratrooperDescentRate; freefall at paratrooperFreefallRate; "
+        "on landing (y>=groundY): chute→'landed' (record side, increment landedLeft/Right); "
+        "freefall→kill overlapping landed paratroopers (|dx|<=paratrooperRadius*2), decrement counter, "
+        "then set p.state='dead'. "
+        "_checkLoseConditions(): landedLeft>=overrunThreshold→over+outcome='overrun_left'; same for right. "
+        "Do not modify any other method, tests/game.test.js, or package.json."
+    ),
+    subdir="node_para_entities",
+    editable_files=["src/game.js"],
+    context_files=["tests/game.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/game.test.js"],
+    test_timeout=30,
+    min_predict=10000,
+)
+
+NODE_PARA_COMBAT = Task(
+    id="node_para_combat",
+    difficulty=6,
+    description=(
+        "STEP 4 of 4 — Paratrooper jets, bombs, and collision detection. "
+        "Steps 1-3 are already implemented. Implement four methods in src/game.js: "
+        "_spawnJets(): same pattern as _spawnHelicopters using jetSpawnInterval/_nextJetTick, "
+        "jetRadius, jetSpeed; entity has _nextBombTick=tickCount+jetBombInterval. "
+        "_updateJets(): same pattern as _updateHelicopters but drops bombs: "
+        "{id,x:j.x,y:j.y,state:'falling',alive:true}; uses jetBombInterval and jetRadius for exit. "
+        "_updateBombs(): b.y+=bombFallRate per falling bomb; b.state='gone' if y>height; filter gone. "
+        "_checkCollisions(): for each live projectile check vs helicopters (state='active'), "
+        "jets (state='active'), bombs (state='falling'), and paratroopers (state='chute'/'freefall'). "
+        "Chute hit: chuteY=p.y-paratrooperRadius-chuteRadius/2, dist<chuteRadius+projectileRadius → freefall. "
+        "Body hit: dist<paratrooperRadius+projectileRadius → dead+scoreParatrooper. "
+        "After loop: filter projectiles/helicopters/jets. "
+        "Then bombs vs turret: dist<bombRadius+turretRadius → bomb destroyed, turret.alive=false, "
+        "over=true, outcome='bomb_hit'. "
+        "Do not modify any other method, tests/game.test.js, or package.json."
+    ),
+    subdir="node_para_combat",
+    editable_files=["src/game.js"],
+    context_files=["tests/game.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/game.test.js"],
+    test_timeout=30,
+    num_ctx=16384,   # 400-line stub + 40 tests + description ≈ 9k tokens — exceeds 8192 default
+    min_predict=12000,
+)
+
 _CONTEXT_PERF_DESC = (
     "An incident archive is provided as context. "
     "Each report has an incident ID, date, severity, engineer, system, resolution code, and notes. "
@@ -591,6 +691,10 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_HASHMAP,
     PYTHON_TOKENIZER,
     NODE_PARATROOPER,
+    NODE_PARA_CORE,
+    NODE_PARA_TURRET,
+    NODE_PARA_ENTITIES,
+    NODE_PARA_COMBAT,
     CONTEXT_8K,
     CONTEXT_16K,
     CONTEXT_32K,
@@ -615,6 +719,9 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_dijkstra", "python_hashmap", "python_tokenizer",
     ],
     "l6": [
+        "node_para_core", "node_para_turret", "node_para_entities", "node_para_combat",
+    ],
+    "l6_full": [
         "node_paratrooper",
     ],
     "context": [

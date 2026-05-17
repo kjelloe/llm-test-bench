@@ -161,11 +161,39 @@ fi
 
 # ── Header ────────────────────────────────────────────────────────────────────
 NUM_MODELS=${#MODELS[@]}
-NUM_TASKS=$(python3 -c "
-import sys; sys.path.insert(0, '$SCRIPT_DIR')
-from lib.tasks import BUILTIN_TASKS
-print(len(BUILTIN_TASKS))
-" 2>/dev/null || echo 11)
+_bench_args_str="${BENCH_ARGS[*]+${BENCH_ARGS[*]}}"
+NUM_TASKS=$(
+    _BA="$_bench_args_str" python3 -c "
+import sys, os
+sys.path.insert(0, '$SCRIPT_DIR')
+from lib.tasks import BUILTIN_TASKS, TASK_GROUPS
+args = os.environ.get('_BA', '').split()
+groups=[]; task_ids=[]
+i=0
+while i < len(args):
+    if args[i] == '--task-group':
+        i += 1
+        while i < len(args) and not args[i].startswith('--'):
+            groups.append(args[i]); i += 1
+    elif args[i] == '--tasks':
+        i += 1
+        while i < len(args) and not args[i].startswith('--'):
+            task_ids.append(args[i]); i += 1
+    else:
+        i += 1
+if task_ids:
+    print(len(task_ids))
+elif groups:
+    seen = set(); n = 0
+    for g in groups:
+        for t in TASK_GROUPS.get(g, []):
+            if t not in seen:
+                seen.add(t); n += 1
+    print(n)
+else:
+    print(len(BUILTIN_TASKS))
+" 2>/dev/null || echo 11
+)
 MAX_RUNTIME=$(( MODEL_TIMEOUT * NUM_MODELS * NUM_TASKS ))
 
 echo "════════════════════════════════════════════════════════════"
