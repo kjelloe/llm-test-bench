@@ -80,8 +80,8 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
         )
         out = r.stdout + r.stderr
         # Keep the head (primary errors) and tail (summary) — both matter for cascading failures.
-        if len(out) > 4000:
-            out = out[:2000] + "\n…(truncated)…\n" + out[-1500:]
+        if len(out) > 12000:
+            out = out[:6000] + "\n…(truncated)…\n" + out[-4000:]
         return r.returncode, out
     except subprocess.TimeoutExpired:
         return -1, f"Timed out after {timeout}s"
@@ -369,8 +369,8 @@ NODE_PARATROOPER = Task(
     context_files=["tests/game.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/game.test.js"],
     test_timeout=60,
-    num_ctx=65536,       # code ~30k + prompt ~3k; 65k ctx fits safely
-    min_predict=56000,   # 4.5k skeleton without thinking; full impl needs more room
+    num_ctx=32768,       # measured prompt ≈5.4k tokens; 32k gives ~27k generation budget
+    min_predict=24000,   # thinking models need ~15-20k reasoning + ~4k code
     thinking_budget=20000,  # desired cap but NOT honored by current llama-server/GGUF — kept for future builds
     model_timeout=1800,  # complex generation; allow 30 min
 )

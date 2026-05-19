@@ -31,6 +31,11 @@
 //   overrunThreshold:4
 //   scoreHelicopter:150, scoreJet:200, scoreParatrooper:75, scoreBomb:50, scoreShotCost:1
 //
+// Firing formula (for _processInput / fire action):
+//   rad = (180 - angleDeg) * Math.PI / 180
+//   dx  = Math.cos(rad) * projectileSpeed
+//   dy  = -Math.sin(rad) * projectileSpeed   (negative = upward, y increases downward)
+//
 // Game rules:
 //   - Helicopters fly across the screen dropping paratroopers at helicopterDropInterval ticks.
 //   - Paratroopers descend in 'chute' state at paratrooperDescentRate px/tick.

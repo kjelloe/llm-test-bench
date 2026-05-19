@@ -83,7 +83,7 @@ task_data/
   node_para_turret/       src/game.js (step-1 ref + stubs), tests/game.test.js (17 tests)  — min_predict=6000  [L6 step 2: _processInput turret rotation, _updateProjectiles physics; stub header requires "output complete file including DEFAULTS and mulberry32"]
   node_para_entities/     src/game.js (steps 1-2 ref + stubs), tests/game.test.js (29 tests)  — min_predict=10000  [L6 step 3: helicopters, paratroopers chute/freefall/landed, lose conditions]
   node_para_combat/       src/game.js (steps 1-3 ref + stubs), tests/game.test.js (40 tests)  — num_ctx=16384  min_predict=12000  [L6 step 4: jets, bombs, collision detection; prompt ≈9k tokens]
-  node_paratrooper/       src/game.js (stub), src/game.reference.js (406-line reference), tests/game.test.js (40 tests)  — num_ctx=65536  min_predict=56000  [L6 full: implement entire Game class; use --task-group l6_full]
+  node_paratrooper/       src/game.js (stub with firing formula hint), src/game.reference.js (406-line reference, human-only — not in context_files), tests/game.test.js (40 tests)  — num_ctx=32768  min_predict=24000  [L6 full: implement entire Game class; use --task-group l6_full]
   context_8k/             documents/incident_archive.txt (~5.5k tok, 100 records), answer.txt (baseline), tests/test_answer.py  — num_ctx=8192   [tok/s profiler]
   context_16k/            documents/incident_archive.txt (~11k tok, 200 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=16384  [tok/s profiler]
   context_32k/            documents/incident_archive.txt (~22k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [tok/s profiler]

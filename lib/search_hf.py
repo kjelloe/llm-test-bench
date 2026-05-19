@@ -116,6 +116,14 @@ def _ollama_to_query(ollama_name: str) -> str:
     return ollama_name.replace(":", " ")
 
 
+def _parse_hf_url(s: str) -> str | None:
+    """Extract 'owner/repo' from a HuggingFace URL, or return None if not a URL."""
+    for prefix in ("https://huggingface.co/", "http://huggingface.co/", "huggingface.co/"):
+        if s.startswith(prefix):
+            return s[len(prefix):].rstrip("/")
+    return None
+
+
 # ── HF API calls ──────────────────────────────────────────────────────────────
 
 def _search_repos(api, query: str, limit: int, author: str | None = None) -> list:
@@ -220,6 +228,29 @@ def _print_repo_results(
     return line + shard_note
 
 
+def _run_url_lookup(api, repo_id: str, already_downloaded: set[str], max_files: int) -> list[str]:
+    """Fetch a specific HF repo by ID and print its GGUF files — no search needed."""
+    print(f"\n{'━' * 70}")
+    print(f"  {repo_id}  (direct URL lookup)")
+    print(f"{'━' * 70}")
+    try:
+        repo = api.model_info(repo_id, files_metadata=True)
+    except Exception as e:
+        print(f"  Error fetching {repo_id!r}: {e}")
+        return []
+    files = [
+        {"name": s.rfilename, "size": s.size}
+        for s in (repo.siblings or [])
+        if s.rfilename.endswith(".gguf")
+    ]
+    if not files:
+        print("  No .gguf files found.")
+        return []
+    suggested = _suggest_file(files)
+    line = _print_repo_results(repo, files, already_downloaded, suggested, ollama_name=None, max_files=max_files)
+    return [line] if line else []
+
+
 def _run_search(api, query: str, ollama_name: str | None,
                 already_downloaded: set[str], limit: int,
                 max_files: int = _MAX_FILES_SHOWN,
@@ -277,9 +308,10 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  ./search-hf.sh                       # search for unconfigured models in models/*.txt\n"
-            "  ./search-hf.sh 'qwen2.5 coder 14b'  # direct query\n"
-            "  ./search-hf.sh --limit 3             # fewer results per model\n"
+            "  ./search-hf.sh                                      # search for unconfigured models in models/*.txt\n"
+            "  ./search-hf.sh 'qwen2.5 coder 14b'                 # direct query\n"
+            "  ./search-hf.sh https://huggingface.co/owner/repo   # direct lookup by URL\n"
+            "  ./search-hf.sh --limit 3                            # fewer results per model\n"
         ),
     )
     parser.add_argument(
@@ -332,6 +364,14 @@ def main() -> None:
     models_dir = os.environ.get("LLAMA_MODELS_DIR", "")
     if models_dir and Path(models_dir).exists():
         already_downloaded = {p.name for p in Path(models_dir).glob("*.gguf")}
+
+    # ── URL mode ──────────────────────────────────────────────────────────────
+    if args.query:
+        repo_id = _parse_hf_url(args.query)
+        if repo_id:
+            suggestions = _run_url_lookup(api, repo_id, already_downloaded, max_files)
+            _print_summary(suggestions)
+            return
 
     # ── Direct query mode ─────────────────────────────────────────────────────
     if args.query:

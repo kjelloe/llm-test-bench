@@ -28,6 +28,13 @@ qwen3.5:35b      Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf      ngl=999,no_mmap,cache_typ
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf        ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
 
+# ── Carnice-Qwen3.6 MoE 35B A3B (fine-tune by mudler) ───────────────────────
+# Qwen3.6-35B-A3B fine-tune; same architecture and weight size as qwen3.6:35b-A3B.
+# "APEX-MTP" training methodology; thinking behavior unknown — omit thinking flag
+# until confirmed. Adding thinking to a non-thinking model causes planning loops.
+# If model emits <think> tags, add ,thinking to params.
+carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:mudler/Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-GGUF
+
 # ── Mistral-Medium-3.5 128B dense ────────────────────────────────────────────
 # Dense 128B Q4_K_M (~72 GB weights); ngl=24 → ~33% GPU-resident, rest in RAM.
 # Results (2026-05-14, llama-server, RTX 3090 24 GB, coding tasks only):
