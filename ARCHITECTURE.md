@@ -80,7 +80,7 @@ task_data/
   python_tokenizer/       tokenizer.py (baseline), tests/test_tokenizer.py   — min_predict=12000  [state machine: ESCAPE→INIT bug; fix is ESCAPE→STRING]
   csv_nordic_property/    data.csv (5 000 rows × 103 cols, Nordic CSV), data_sample.csv (5-row sample for prompt), solution.py (skeleton), test_solution.py  — min_predict=12000  model_timeout=600  [code-gen from scratch: 10 data questions → answers.txt + quantile transform → output.csv]
   node_para_core/         src/game.js (stub), tests/game.test.js (7 tests), package.json  — min_predict=4000  [L6 step 1: constructor, processInput, tick, isOver, getResult, getState; seeded RNG]
-  node_para_turret/       src/game.js (step-1 ref + stubs), tests/game.test.js (17 tests)  — min_predict=6000  [L6 step 2: _processInput turret rotation, _updateProjectiles physics]
+  node_para_turret/       src/game.js (step-1 ref + stubs), tests/game.test.js (17 tests)  — min_predict=6000  [L6 step 2: _processInput turret rotation, _updateProjectiles physics; stub header requires "output complete file including DEFAULTS and mulberry32"]
   node_para_entities/     src/game.js (steps 1-2 ref + stubs), tests/game.test.js (29 tests)  — min_predict=10000  [L6 step 3: helicopters, paratroopers chute/freefall/landed, lose conditions]
   node_para_combat/       src/game.js (steps 1-3 ref + stubs), tests/game.test.js (40 tests)  — num_ctx=16384  min_predict=12000  [L6 step 4: jets, bombs, collision detection; prompt ≈9k tokens]
   node_paratrooper/       src/game.js (stub), src/game.reference.js (406-line reference), tests/game.test.js (40 tests)  — num_ctx=65536  min_predict=56000  [L6 full: implement entire Game class; use --task-group l6_full]

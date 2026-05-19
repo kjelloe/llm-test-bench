@@ -96,6 +96,20 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,
 # the context window before the model emits code. Use max_ctx=32768 for coding tasks.
 deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF
 
+# Results (2026-05-19, llama-server, RTX 3090 24 GB, l6 group 4 tasks, models/coding5.txt):
+#   qwen3.5:35b      4/4  149.4 tok/s  — L6 achieved; only model to pass step 3 (entities)
+#   gemma4:26b       3/4  112.9 tok/s  — step 3 NO_BLOCKS: verbose preamble + reference steps
+#                                        1-2 in prompt exhaust token budget before END_FILE
+#   devstral-small-2 3/4   44.7 tok/s  — step 3 fails entity logic (TESTS_STILL_FAIL)
+#   qwen3-coder:30b  2/4  171.5 tok/s  — step 2 fails: drops DEFAULTS/mulberry32 preamble
+#                                        (ReferenceError; "do not modify" misread as output-
+#                                        methods-only); step 3 fails entity logic; step 4 PASS
+#   deepseek-r1:32b  2/4   30.1 tok/s  — step 2 fails turret tests; step 3 rewrites game.js
+#                                        breaking rotate_left; step 4 PASS (full scaffolding)
+# Note: ALL 5 models pass step 4 (combat) because steps 1-3 ref implementation is provided.
+# Step 3 (entities) is the true difficulty wall; step 4 is well-scaffolded, not strictly harder.
+# Fix: added "Output the complete file, including DEFAULTS and mulberry32." to step 2 stub header.
+
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
 # Confirmed 2026-05-14: 2.5 tok/s at ngl=45; 9/10 coding tasks pass (86%) but
 # 9 SKIPPED_CTX (max_ctx=8192 blocks all context/multihop tasks).

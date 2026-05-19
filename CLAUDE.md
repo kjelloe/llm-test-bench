@@ -38,10 +38,20 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     before BEGIN_FILE regardless of the system prompt; exhausts 4800 tokens on complex tasks
     (node_csv_parser, python_lru_cache, python_tokenizer, multihop_forward, csv_nordic_property).
     Needs 8000+ for L2+ tasks; compare.sh now uses 8000 which should fix these.
+    Also causes NO_BLOCKS on node_para_entities (L6 step 3): the step 3 prompt includes
+    reference implementations for steps 1-2, making the context significantly larger;
+    verbose preamble exhausts the budget before END_FILE even at 8000 tokens.
   - **qwen3.5:35b over-reasoning**: even python_hashmap at min_predict=16000 is exhausted
     by reasoning alone (wall 100s × 158 tok/s ≈ all 16000 tokens); consider 24000 for that task.
     Also fails context_128k at 8000 num_predict — thinking budget exhausted before BEGIN_FILE
     at 131k context (response_truncated, outputs plain-text reasoning instead of code block).
+    Despite over-reasoning on simpler tasks, achieves L6 4/4 on stepped tasks (2026-05-19,
+    149 tok/s) — the only model to pass node_para_entities (step 3) in the coding5 set.
+  - **qwen3-coder:30b partial-method-completion**: on tasks with "Do not modify any other
+    method" instruction, may output just the class body and drop module-level declarations
+    (DEFAULTS, mulberry32) — produces `ReferenceError: DEFAULTS is not defined` at runtime.
+    Step 2 stub now includes explicit "Output the complete file" instruction. Otherwise
+    achieves 15/15 on coding tasks; passes L6 step 4 (full scaffolding eliminates the issue).
 - `--warmup` sends a 5-token dummy prompt to each model before the benchmark loop to force
   model load from RAM/disk. Eliminates the cold-start wall-time penalty on the first task
   (gpt-oss:120b first task was 399s cold vs 68s warm). Enabled by default in `compare.sh`.

@@ -10,6 +10,7 @@
 //                          bounds (x<0 || x>width || y<0 || y>height); filter dead ones out
 //
 // Do not modify any other method.
+// Output the complete file, including DEFAULTS and mulberry32.
 
 const DEFAULTS = {
   width: 320, height: 200, seed: 42,
