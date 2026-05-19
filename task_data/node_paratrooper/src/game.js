@@ -38,6 +38,7 @@
 //
 // Game rules:
 //   - Helicopters fly across the screen dropping paratroopers at helicopterDropInterval ticks.
+//   - Helicopters and jets that exit either boundary (x < 0 or x > width) are removed.
 //   - Paratroopers descend in 'chute' state at paratrooperDescentRate px/tick.
 //   - Shooting a parachute converts the paratrooper to 'freefall' (faster descent).
 //   - Shooting a paratrooper body (or freefall) sets state to 'dead' and awards scoreParatrooper.

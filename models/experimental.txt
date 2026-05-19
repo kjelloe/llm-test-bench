@@ -28,12 +28,26 @@ qwen3.5:35b      Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf      ngl=999,no_mmap,cache_typ
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf        ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
 
-# ── Carnice-Qwen3.6 MoE 35B A3B (fine-tune by mudler) ───────────────────────
-# Qwen3.6-35B-A3B fine-tune; same architecture and weight size as qwen3.6:35b-A3B.
-# "APEX-MTP" training methodology; thinking behavior unknown — omit thinking flag
-# until confirmed. Adding thinking to a non-thinking model causes planning loops.
-# If model emits <think> tags, add ,thinking to params.
-carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:mudler/Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-GGUF
+# ── Carnice-Qwen3.6 MoE 35B A3B (fine-tune by mudler, MTP-trained) ──────────
+# Qwen3.6-35B-A3B fine-tune with Multi-Token Prediction (MTP) training.
+# GGUF bundles the MTP head for self-speculative decoding (llama.cpp PR #22673).
+# Requires llama-server >= commit 255582687 (ac76808e4 is well past this).
+# Self-speculative decoding flags: --spec-type draft-mtp --spec-draft-n-max 4
+#   --spec-type draft-mtp     enables MTP self-speculative decoding (no separate draft model needed)
+#   --spec-draft-n-max 4      tokens drafted per step; 2–8 are reasonable; tune vs acceptance rate
+# Note: --draft-mtp (bare flag) is NOT a real llama-server argument — the model card is wrong.
+# Note: --draft / --draft-n / --draft-max are removed; use --spec-draft-n-max instead.
+#
+# Results (2026-05-19, llama-server 9237 ac76808e4, RTX 3090 24 GB, coding group 15 tasks,
+#          WITHOUT spec-type — self-speculative decoding not enabled, MTP head loaded but unused):
+#   carnice:35b  14/15  30.0 tok/s  — fails csv_nordic_property (Q8 comprehension, shared Qwen flaw)
+#                                     passes L5 (python_dijkstra, python_hashmap) without thinking flag
+# Speed: ~30 tok/s vs ~133 tok/s for base qwen3.6:35b-A3B — MTP head loaded but not speculating;
+# expect significant speedup once spec-type=draft-mtp is active (to be benchmarked).
+# python_lfu_cache PASS TRUNCATED at 508s (~12k tokens) — MTP amplifies verbosity without speculation.
+# Thinking flag: NOT needed — model achieves L5 without it; adding thinking to MTP fine-tunes
+# may cause planning loops. Leave off until confirmed otherwise.
+carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,spec_type=draft-mtp,spec_draft_n_max=4  hf:mudler/Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-GGUF
 
 # ── Mistral-Medium-3.5 128B dense ────────────────────────────────────────────
 # Dense 128B Q4_K_M (~72 GB weights); ngl=24 → ~33% GPU-resident, rest in RAM.
