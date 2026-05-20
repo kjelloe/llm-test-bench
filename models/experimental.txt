@@ -23,6 +23,19 @@
 #                                          python_hashmap (enable_thinking:false fix)
 # KEY: bartowski GGUF defaults to thinking-enabled; send enable_thinking:false to
 # prevent all-reasoning / NO_BLOCKS failures. This is now always done in llama_server_client.py.
+#
+# Results (2026-05-20, llama-server, RTX 3090 24 GB, full 29-task set):
+#   qwen3-coder:30b  26/29  145.2 tok/s avg  (2517s total wall)
+#   PASS: all 15 coding tasks (incl. csv_nordic_property at 148 tok/s); all context tasks
+#         (8k 145t/s, 16k 130t/s, 32k 108t/s, 64k 76t/s); multihop_forward, multihop_reverse,
+#         distractor_notes (~102 tok/s at 32k ctx); context_128k PASS SLOW (3.3 tok/s, 2005s)
+#   FAIL: node_para_entities (L5 entity-logic wall, consistent with prior l6 run)
+#         node_paratrooper (l6_full) — MISLEADING: compare.sh uses num_predict=8000; model
+#           only generates ~4k tokens, insufficient for full 40-test game; use dedicated
+#           l6_full run with --num-predict 24000 for valid results (not tested yet)
+#   SKIP: context_256k (min_vram_gb=48, correctly skipped)
+#   Speed collapse at large ctx: 170 tok/s (normal) → 76 tok/s (64k) → 3.3 tok/s (128k)
+#   qwen3-coder:30b is a strong all-rounder: perfect coding + full retrieval/context coverage.
 
 qwen3.5:35b      Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf      ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf        ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
@@ -82,17 +95,20 @@ mistral-medium-3.5:128b  Q4_K_M/Mistral-Medium-3.5-128B-Q4_K_M-00001-of-00003.gg
 #   max_ctx=131072 is safe; 256k or higher likely feasible — needs testing.
 # Benchmarks (NVIDIA, vs qwen3-coder:30b proxy Qwen3-30B-A3B-Thinking-2507):
 #   AIME25 89.1 (vs 85.0), LiveCodeBench 68.3 (vs 66.0), SWE-Bench 38.8 (vs 22.0)
-# Results (2026-05-15, llama-server, RTX 3090 24 GB, coding tasks):
-#   12/15  168.3 tok/s  ~274s total  (confirmed — rerun of 3 fails at 144–151 tok/s all TESTS_STILL_FAIL)
-#   PASS: node_slugify, python_safe_div, dotnet_sas, node_csv_parser, python_lru_cache,
-#         python_lfu_cache, python_minheap, python_multifile_rename, node_memoize_bug,
-#         python_ledger_bug, python_dijkstra, python_hashmap (L5 — unique pass among thinking models)
-#   FAIL: csv_nordic_property (incorrect logic, not budget — 8.9k tokens generated, still wrong)
-#         python_expr_eval, python_tokenizer (L4 — genuine capability gap; 3k/5k tokens, wrong output)
-# Fastest thinking model tested: 168 tok/s beats qwen3.5:35b (133), qwen3.6:35b-A3B (141), qwen3-coder:30b (152).
-# Context results (2026-05-15): context_8k PASS 166.7 tok/s, context_32k PASS 144.9 tok/s,
-#   context_64k PASS 116.6 tok/s, context_128k CRASH (server OOM at ctx=131072).
-# Mamba-2 KV advantage is real: 116 tok/s at 64k vs qwen3-coder:30b at 3.8 tok/s at 128k.
+# Results (2026-05-15, llama-server, RTX 3090 24 GB, coding tasks — see non-determinism note):
+#   12/15  168.3 tok/s — fails csv_nordic_property, python_expr_eval, python_tokenizer
+# Results (2026-05-20, llama-server, RTX 3090 24 GB, full 29-task run):
+#   20/29  168.3 tok/s  456s total
+#   Coding:   12/15 — fails node_slugify, python_dijkstra, python_hashmap (different 3 than May-15!)
+#   L6 step:   3/4  — fails node_para_entities (consistent); passes core/turret/combat
+#   l6_full:   FAIL — ES module export failure; model writes class without `export` keyword (2.6k tok)
+#   Context:   PASS 8k/16k/32k/64k (171→162→147→116 tok/s); Mamba-2 KV advantage vs transformer
+#   Multihop:  FAIL both forward+reverse (2-hop retrieval gap); distractor_notes PASS (1-hop OK)
+#   Skips:     context_128k (SKIPPED_CTX, max=65536), context_256k (SKIPPED_VRAM)
+# NON-DETERMINISM: both runs score 12/15 coding but fail completely different tasks. Mamba-2
+#   recurrent state has floating-point variance even at temperature=0 seed=1. Per-task results
+#   on borderline coding tasks are unreliable; only aggregate 12/15 is a stable signal.
+# Fastest model tested: 168–181 tok/s; context_64k at 116 tok/s vs qwen3-coder at 76 tok/s.
 # Safe limit on 24 GB is ctx=65536. Tested q8_0 and q4_0 KV — both OOM at ctx=131072.
 # KV cache precision is not the bottleneck: llama.cpp appears to pre-allocate Mamba-2
 # activation/state buffers proportional to context length (not just the 6 attention layers).
@@ -132,6 +148,24 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # Note: ALL 5 models pass step 4 (combat) because steps 1-3 ref implementation is provided.
 # Step 3 (entities) is the true difficulty wall; step 4 is well-scaffolded, not strictly harder.
 # Fix: added "Output the complete file, including DEFAULTS and mulberry32." to step 2 stub header.
+#
+# Results (2026-05-20, llama-server, RTX 3090 24 GB, l6_full node_paratrooper, num_predict=24000):
+#   gemma4:26b            39/40  102.2 tok/s  — BEST; only test 33 fails (freefall crush, cap gap)
+#   devstral-small-2      38/40   43.6 tok/s  — fails test 33 + test 35 (bomb hits turret)
+#   qwen3.5:35b (v4)      38/40  144.3 tok/s  — fails test 18 (spawn timing) + test 33; boundary
+#                                               hint fixed test 20 but shifted failure to test 18
+#   qwen3-coder:30b        0/40  159.7 tok/s  — constructor broken (fails tests 1-7); 3.6k tokens
+#   nemotron-nano:30b-a3b  0/40  174.4 tok/s  — ES module export failure (no named export 'Game')
+#   carnice:35b            0/40   26.0 tok/s  — NO_BLOCKS; 5.2k tokens of plain-text reasoning,
+#                                               never emits BEGIN_FILE (same pattern as csv_nordic)
+# Prior l6_full results:
+#   qwen3.5:35b (v2/v3)   38/40  — failed test 20 + test 33 before boundary hint
+#   deepseek-r1:32b       32/40   30.1 tok/s
+# KEY FINDINGS: (1) Thinking does NOT help on l6_full — non-thinking gemma4/devstral outperform
+#   thinking qwen3.5. (2) Code-editing skill (qwen3-coder 15/15) ≠ from-scratch architecture skill.
+#   (3) Test 33 (freefall crush) is the universal wall — no model passes it; rule IS in stub.
+#   (4) Stub hints shift failures without reducing total; 38-39/40 appears to be the model ceiling.
+#   (5) Nemotron and carnice have structural output failures on this task (wrong export / NO_BLOCKS).
 
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
 # Confirmed 2026-05-14: 2.5 tok/s at ngl=45; 9/10 coding tasks pass (86%) but
