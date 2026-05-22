@@ -123,16 +123,25 @@ nemotron-nano:30b-a3b  Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cach
 #   gemma4:26b        14/15  110.8 tok/s  — fails csv_nordic_property
 #   devstral-small-2  14/15   44.2 tok/s  — fails node_slugify: [^\w]+→'-' replaces
 #                                           apostrophes with hyphen; expects silent removal
-#   deepseek-r1:32b   14/15   29.8 tok/s  — fails python_expr_eval NO_BLOCKS: thinking
-#                                           fills ctx=16384 (~15k tokens) before code;
-#                                           fix: add max_ctx=32768 in model config
+#   deepseek-r1:32b   14/15   29.8 tok/s  — fails python_expr_eval: reasoning spiral
+#                                           exhausts 24k token budget ("code is correct.
+#                                           But..."); capability gap, not token budget
 devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256  hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
 # DeepSeek-R1-Distill-Qwen-32B: ~20 GB weights; q8_0 KV reduces pressure on 24 GB.
-# Thinking in <think> tags; llama-server extracts into reasoning_content. ~30 tok/s.
-# KV OOM at ctx≥32k on 24 GB (dense 20 GB weights leave ~4 GB for KV).
-# python_expr_eval (min_predict=24000) fails NO_BLOCKS at ctx=16384: heavy thinking fills
-# the context window before the model emits code. Use max_ctx=32768 for coding tasks.
+# Thinking in <think> tags; llama-server extracts into reasoning_content. ~29–32 tok/s.
+# max_ctx=32768 config unlocks context_32k and multihop tasks (previously TOOL_ERROR timeout).
+# Results (2026-05-22, llama-server, RTX 3090 24 GB, full 29-task set, max_ctx=32768):
+#   23/29 (26 eligible, 3 SKIPPED)  29.0 tok/s avg  2378s total
+#   Coding:   14/15 — fails python_expr_eval (NO_BLOCKS TRUNCATED): reasoning spiral,
+#              "code is correct. But..." loop; exhausts full 24k token budget without
+#              emitting code; capability gap — does not resolve with more tokens
+#   L6 step:   2/4  — fails node_para_entities (step 3) and node_paratrooper (l6_full TESTS_STILL_FAIL)
+#   Context:   PASS 8k/16k/32k (29.8→26.3→21.4 tok/s); SKIPPED 64k/128k (max_ctx=32768)
+#   Multihop:  PASS forward + reverse + distractor (~21 tok/s) — good 2-hop retrieval at 32k
+#   Skips:     context_64k, context_128k (SKIPPED_CTX, max=32768), context_256k (SKIPPED_VRAM)
+# python_expr_eval: NOT fixable with more tokens. Model loops (24k tokens consumed, "code is
+# correct. But..." spiral). A structural capability gap in R1-Distill on this L4 parsing task.
 deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF
 
 # Results (2026-05-19, llama-server, RTX 3090 24 GB, l6 group 4 tasks, models/coding5.txt):

@@ -296,7 +296,10 @@ PYTHON_EXPR_EVAL = Task(
     context_files=["tests/test_expr_eval.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    num_ctx=32768,       # prompt ~1.1k tokens; thinking models need ~24k generation headroom
     min_predict=24000,  # qwen3.5:35b exhausts 16000 reasoning tokens; raised from 16000
+    # NOTE: deepseek-r1:32b loops indefinitely on this task regardless of budget —
+    # reasoning spiral ("code is correct. But..."); capability gap, not token budget
 )
 
 PYTHON_MULTIFILE_RENAME = Task(

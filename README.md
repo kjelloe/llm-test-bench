@@ -73,7 +73,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all twenty-four tasks. Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all twenty-nine tasks. Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (10 models)
 
@@ -128,6 +128,49 @@ The header printed before each run shows estimated runtime from the previous run
 ```bash
 ./run.sh --models qwen2.5-coder:7b gemma4:12b --out my-results.json
 ```
+
+---
+
+## Benchmark results
+
+All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3D, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
+
+### Default set — 29 tasks (2026-05-22)
+
+| Model | Pass | Avg tok/s | Notes |
+|---|---|---|---|
+| qwen3-coder:30b | 26/29 | 160 | MoE 30B/3B active; context_128k SLOW 3.3 tok/s |
+| qwen3.5:35b | 26/29 | 147 | MoE 35B/3B active; context_128k 104 tok/s |
+| gpt-oss:120b | 26/29 | 17 | RAM-bound; context_128k SLOW 15.9 tok/s |
+| gemma4:26b | 25/29 | 114 | MoE 26B/4B active; context_128k 84.5 tok/s |
+| devstral-small-2 | 25/29 | 42 | Dense 24B; context_128k SLOW 5.2 tok/s |
+| gpt-oss:20b | 23/29 | 197 | Fastest; context_64k wrong answer |
+| qwen2.5-coder:14b | 19/29 | 68 | Dense 14B; context_64k+ SKIPPED (KV pressure on 24 GB) |
+
+All 7 models score 15/15 on pure coding tasks (within normal model constraints). MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
+
+### Experimental models (llama-server, RTX 3090 24 GB)
+
+| Model | Pass | Avg tok/s | Notes |
+|---|---|---|---|
+| nemotron-nano:30b-a3b | 20/29 | 168 | Mamba-2 hybrid; fastest at large ctx; multihop FAIL; non-deterministic |
+| deepseek-r1:32b | 23/29 | 29 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval reasoning spiral |
+| carnice:35b | 14/15* | 30 | MTP fine-tune; coding-only run; spec-decoding disabled (harms determinism) |
+
+\* carnice:35b was run on 15 coding tasks only.
+
+### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
+
+| Model | Score | Notes |
+|---|---|---|
+| gemma4:26b | 39/40 | Non-thinking; fails only test 33 (freefall crush) |
+| devstral-small-2 | 38/40 | Non-thinking; fails test 33 + test 35 |
+| qwen3.5:35b | 38/40 | Thinking; fails test 18 (spawn timing) + test 33 |
+| deepseek-r1:32b | 32/40 | Thinking |
+| qwen3-coder:30b | 0/40 | Constructor broken; 15/15 on coding ≠ from-scratch architecture |
+| nemotron-nano:30b | 0/40 | ES module export failure (no `export` keyword on class) |
+
+Run with `--task-group l6_full --num-predict 24000 --model-timeout 1800`. compare.sh default (8000 tokens) is insufficient. Test 33 is the universal failure wall across all models. **Thinking does not help** — non-thinking gemma4 and devstral outperform thinking qwen3.5.
 
 ---
 

@@ -43,10 +43,15 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     verbose preamble exhausts the budget before END_FILE even at 8000 tokens.
   - **qwen3.5:35b over-reasoning**: even python_hashmap at min_predict=16000 is exhausted
     by reasoning alone (wall 100s × 158 tok/s ≈ all 16000 tokens); consider 24000 for that task.
-    Also fails context_128k at 8000 num_predict — thinking budget exhausted before BEGIN_FILE
-    at 131k context (response_truncated, outputs plain-text reasoning instead of code block).
+    Passes context_128k at 104.4 tok/s (2026-05-20 default run) — retrieval questions are
+    answered quickly and don't exhaust budget. Budget exhaustion applies to coding tasks at
+    131k context: thinking tokens fill the 8000 budget before BEGIN_FILE (response_truncated,
+    plain-text reasoning emitted). Use 16000+ num_predict for coding tasks at large context.
     Despite over-reasoning on simpler tasks, achieves L6 4/4 on stepped tasks (2026-05-19,
     149 tok/s) — the only model to pass node_para_entities (step 3) in the coding5 set.
+    In the default 7-model set (2026-05-20): gpt-oss:20b and qwen2.5-coder:14b also pass
+    step 3, but gpt-oss:20b fails step 4 (NO_BLOCKS) and qwen2.5-coder:14b fails steps 1, 2,
+    4. qwen3-coder:30b fails step 3 despite 15/15 on coding tasks.
   - **qwen3-coder:30b partial-method-completion**: on tasks with "Do not modify any other
     method" instruction, may output just the class body and drop module-level declarations
     (DEFAULTS, mulberry32) — produces `ReferenceError: DEFAULTS is not defined` at runtime.
@@ -69,9 +74,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   qwen2.5-coder:32b Q4_K_M (~20 GB weights) leaves only ~4 GB for KV on 24 GB — ctx=32768
   causes TOOL_ERROR timeout (300s) on context_32k and multihop tasks; 15/15 coding tasks
   pass cleanly at ~36 tok/s. Large-context tasks require a true 32 GB card.
-  deepseek-r1:32b Q4_K_M (~20 GB): same KV-pressure pattern; 16/24 on 24 GB at ~32 tok/s;
-  coding tasks pass, ctx≥32k fails. Viable for coding-only on 24 GB; true 32 GB needed for
-  large-context tasks.
+  deepseek-r1:32b Q4_K_M (~20 GB): with max_ctx=32768 scores 23/29 (26 eligible) at ~29 tok/s
+  (2026-05-22). 14/15 coding — python_expr_eval is a structural capability gap: model enters
+  an infinite reasoning spiral ("code is correct. But...") and exhausts any token budget
+  without emitting code; not fixable by increasing num_predict or num_ctx. Multihop/distractor
+  all PASS at ~21 tok/s. ctx≥64k SKIPPED (max_ctx=32768 hard cap). Use max_ctx=32768 in model
+  config to unlock context_32k and multihop tasks on 24 GB.
   qwq:32b Q5_K_M (~22 GB): effectively unusable on 24 GB — KV thrashing reduces throughput
   to ~6 tok/s; 11/24 tasks pass. Server silently caps max_ctx=65536 → 32768 when VRAM is
   exhausted. Needs true 32 GB to be useful. Use `max_ctx=32768` in model config to avoid
