@@ -9,12 +9,27 @@
 
 # ── Qwen3.5 / Qwen3.6 MoE (A3B = 3B active / 35B total) ─────────────────────
 # Both fit fully in 24 GB VRAM (~8–9 GB weights).
-# Results (2026-05-14, llama-server, RTX 3090 24 GB, 24-task full set):
+# Results (2026-05-14, llama-server, RTX 3090 24 GB, 24-task set):
 #   qwen3.5:35b     21/24  141.7 tok/s  — fails csv_nordic_property, python_hashmap
 #   qwen3.6:35b-A3B 21/24  133.7 tok/s  — fails csv_nordic_property, node_csv_parser
 # Qwen3.6 fixed the python_hashmap tombstone bug present in Qwen3.5.
 # Qwen3.5 passes node_csv_parser where Qwen3.6 does not.
 # Both pass context_128k cleanly (vs HauhauCS Qwen3.5 in default.txt which fails it).
+#
+# Results (2026-05-22, llama-server, RTX 3090 24 GB, full 29-task set):
+#   qwen3.6:35b-A3B  25/29  134.1 tok/s  606s total  (28 eligible — SKIPPED context_256k)
+#   Coding:   13/15 — fails csv_nordic_property (consistent) and node_csv_parser (consistent)
+#   L6 step:   4/4  — PASSES node_para_entities (step 3); all 4 stepped tasks pass
+#   l6_full:   39/40 (num_predict=24000, model-timeout=1800) — ties gemma4:26b for BEST;
+#              non-thinking, 4.2k tokens, 35s, 135 tok/s; fails only test 33 (freefall crush)
+#   Context:   PASS all 8k/16k/32k/64k/128k (134→132→127→108→96 tok/s); SKIPPED 256k
+#   Multihop:  PASS forward + reverse + distractor (~125 tok/s)
+#   python_expr_eval: PASS in 13.7s — num_ctx=32768 fix effective; no reasoning spiral
+#   python_hashmap:   PASS — tombstone fix confirmed
+#   node_csv_parser:  FAIL — consistent; qwen3.6 has a specific CSV edge-case blind spot
+#   Skill rating shows L2 (due to node_csv_parser L3 fail) but model passes all L4/L5/L6 stepped —
+#     this is a specific task gap, not a capability ceiling.
+# Speed: 134 tok/s vs qwen3.5:35b 147 tok/s — qwen3.5 is faster; qwen3.6 scores same or lower.
 #
 # Results (2026-05-17, llama-server, RTX 3090 24 GB, coding group 15 tasks,
 #          enable_thinking:false — always sent now for all llama-server requests):
@@ -54,14 +69,28 @@ qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 #   WITHOUT spec-type (MTP head loaded but not speculating):
 #     carnice:35b  14/15  30.0 tok/s  — fails csv_nordic_property only; passes L5 (dijkstra, hashmap)
 #   WITH spec-type=draft-mtp, spec_draft_n_max=4:
-#     carnice:35b  13/15  28.3 tok/s  — python_hashmap REGRESSES (model emits _OUTPUT_ONLY_ sentinel
-#                                       during speculative rejection/resample); csv_nordic NO_BLOCKS
-#     MTP speculation NOT beneficial: acceptance rate low on coding tasks → slower AND lower quality
+#     carnice:35b  13/15  28.3 tok/s  — python_hashmap REGRESSES; spec decoding harms determinism
+#     MTP speculation NOT beneficial: acceptance rate low → slower AND lower quality
 # Conclusion: run WITHOUT spec flags. 14/15 at 30 tok/s is the correct baseline.
-# Speed: ~30 tok/s reflects MTP overhead cost (base qwen3.6:35b-A3B runs at 133 tok/s).
-#   MTP head adds ~4× forward-pass overhead; llama.cpp MTP implementation not yet optimized.
-# Thinking flag: NOT needed — model achieves L5 without it; adding thinking to MTP fine-tunes
-# may cause planning loops. Leave off until confirmed otherwise.
+#
+# Results (2026-05-22, llama-server, RTX 3090 24 GB, full 29-task set):
+#   24/29 (28 eligible)  26.5 tok/s avg  5743s total  (96 minutes — SLOW)
+#   Coding:   14/15 — fails csv_nordic_property only (consistent)
+#   L6 step:   2/4  — PASS turret (step 2) + combat (step 4); FAIL core (step 1) + entities (step 3)
+#     node_para_core: NO_BLOCKS TRUNCATED — 8300 tokens of planning, never emits BEGIN_FILE
+#     node_para_entities: NO_BLOCKS TRUNCATED — 444s; same verbose reasoning pattern
+#     node_para_turret PASSES: step 1 reference provided → simpler prompt, less reasoning
+#     node_para_combat PASSES: full scaffolding provided
+#   l6_full:   NO_BLOCKS (232s) — same pattern as csv_nordic_property
+#   Context:   all 8k/16k/32k/64k/128k PASS — but severe MTP speed collapse:
+#     26.4 → 21.2 → 16.1 → 10.2 → 6.2 tok/s (32k/64k/128k all PASS_BUT_SLOW)
+#     context_128k: 1504s (25 minutes) vs qwen3.6:35b at 95s
+#   Multihop:  PASS forward + reverse + distractor (~16 tok/s at 64k ctx)
+#   Skips:     context_256k (SKIPPED_VRAM)
+#   python_lfu_cache: PASS TRUNCATED at 480s — barely fits within 8000 token budget
+# Speed: ~26.5 tok/s avg; MTP head adds ~4-5× overhead vs base qwen3.6 (133 tok/s).
+#   Total run 5743s vs qwen3.6 606s — MTP makes carnice impractical for any context-heavy workload.
+# Thinking flag: NOT needed — model achieves L5 without it.
 carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:mudler/Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-GGUF
 
 # ── Mistral-Medium-3.5 128B dense ────────────────────────────────────────────
@@ -158,8 +187,9 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # Step 3 (entities) is the true difficulty wall; step 4 is well-scaffolded, not strictly harder.
 # Fix: added "Output the complete file, including DEFAULTS and mulberry32." to step 2 stub header.
 #
-# Results (2026-05-20, llama-server, RTX 3090 24 GB, l6_full node_paratrooper, num_predict=24000):
-#   gemma4:26b            39/40  102.2 tok/s  — BEST; only test 33 fails (freefall crush, cap gap)
+# Results (2026-05-20–22, llama-server, RTX 3090 24 GB, l6_full node_paratrooper, num_predict=24000):
+#   qwen3.6:35b-A3B       39/40  135.2 tok/s  — BEST (tie); 4.2k tokens, 35s; most efficient
+#   gemma4:26b            39/40  102.2 tok/s  — BEST (tie); 4.7k tokens, ~95s
 #   devstral-small-2      38/40   43.6 tok/s  — fails test 33 + test 35 (bomb hits turret)
 #   qwen3.5:35b (v4)      38/40  144.3 tok/s  — fails test 18 (spawn timing) + test 33; boundary
 #                                               hint fixed test 20 but shifted failure to test 18

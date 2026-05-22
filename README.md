@@ -153,9 +153,10 @@ All 7 models score 15/15 on pure coding tasks (within normal model constraints).
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
+| qwen3.6:35b-A3B | 25/29 | 134 | Qwen3.6 MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 20/29 | 168 | Mamba-2 hybrid; fastest at large ctx; multihop FAIL; non-deterministic |
 | deepseek-r1:32b | 23/29 | 29 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval reasoning spiral |
-| carnice:35b | 14/15* | 30 | MTP fine-tune; coding-only run; spec-decoding disabled (harms determinism) |
+| carnice:35b | 24/29 | 27 | MTP fine-tune; 96 min total; context_128k SLOW 6.2 tok/s (1504s); NO_BLOCKS on complex tasks |
 
 \* carnice:35b was run on 15 coding tasks only.
 
@@ -163,7 +164,8 @@ All 7 models score 15/15 on pure coding tasks (within normal model constraints).
 
 | Model | Score | Notes |
 |---|---|---|
-| gemma4:26b | 39/40 | Non-thinking; fails only test 33 (freefall crush) |
+| qwen3.6:35b-A3B | **39/40** | Non-thinking; 4.2k tokens, 35s — most efficient; fails only test 33 |
+| gemma4:26b | **39/40** | Non-thinking; fails only test 33 (freefall crush) |
 | devstral-small-2 | 38/40 | Non-thinking; fails test 33 + test 35 |
 | qwen3.5:35b | 38/40 | Thinking; fails test 18 (spawn timing) + test 33 |
 | deepseek-r1:32b | 32/40 | Thinking |

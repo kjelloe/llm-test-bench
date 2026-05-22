@@ -52,6 +52,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     In the default 7-model set (2026-05-20): gpt-oss:20b and qwen2.5-coder:14b also pass
     step 3, but gpt-oss:20b fails step 4 (NO_BLOCKS) and qwen2.5-coder:14b fails steps 1, 2,
     4. qwen3-coder:30b fails step 3 despite 15/15 on coding tasks.
+  - **carnice:35b MTP overhead**: MTP head causes ~4-5× speed penalty vs base qwen3.6 (26 tok/s
+    vs 134 tok/s). Full 29-task run takes 96 min vs 10 min for qwen3.6. Context speed collapses
+    to 6.2 tok/s at 128k (1504s) — slower than RAM-bound gpt-oss:120b (16.9 tok/s). Also prone
+    to NO_BLOCKS on complex tasks (node_para_core, node_para_entities, csv_nordic_property,
+    node_paratrooper): verbose reasoning exhausts 8000-token budget before emitting BEGIN_FILE.
+    14/15 coding is strong but impractical for any workload beyond short coding tasks on 24 GB.
+    Spec decoding (--spec-type draft-mtp) disabled — harms determinism at temperature=0.
   - **qwen3-coder:30b partial-method-completion**: on tasks with "Do not modify any other
     method" instruction, may output just the class body and drop module-level declarations
     (DEFAULTS, mulberry32) — produces `ReferenceError: DEFAULTS is not defined` at runtime.
