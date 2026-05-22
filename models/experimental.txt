@@ -1,6 +1,6 @@
 # models/experimental.txt — RTX 3090 24 GB single-GPU
 # Qwen3.5 / Qwen3.6 MoE comparison + Qwen3.5-27B dense baseline
-# Benchmarked: 2026-05-14
+# Last updated: 2026-05-22
 #
 # Usage:
 #   BENCH_BACKEND=llama-server ./compare.sh experimental
@@ -108,11 +108,23 @@ carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap
 # Practical note: 0.9 tok/s makes this impractical for regular benchmarking; quality-only runs.
 
 # ── Qwen3.5-27B dense ────────────────────────────────────────────────────────
-# Dense 27B Q4_K_M (~16 GB weights); best pass rate of the set: 22/24.
-# Confirmed thinking-capable (slower and more concise than 35B MoE).
-# Results (2026-05-14): 22/24  35.9 tok/s  — fails csv_nordic_property only (coding)
-# context_128k: SLOW (9.0 tok/s, 1389s) — dense 27B weights + 131k ctx fills 24 GB.
-# q8_0 KV (vs f16) halves the KV footprint; recovers speed at large contexts.
+# Dense 27B Q4_K_M (~16 GB weights); thinking-capable; q8_0 KV halves footprint at large ctx.
+# Results (2026-05-14, llama-server, 24-task set): 22/24  35.9 tok/s
+#
+# Results (2026-05-22, llama-server, RTX 3090 24 GB, full 29-task set):
+#   27/29 (28 eligible)  34.6 tok/s avg  1231s total  (SKIPPED context_256k)
+#   Coding:   15/15 — PERFECT; passes csv_nordic_property (MoE qwen3.5:35b consistently fails!)
+#             and python_hashmap — dense model handles multi-step data analysis better
+#   L6 step:   4/4  — passes node_para_entities (step 3); all 4 stepped tasks pass
+#   l6_full:   FAIL — node_paratrooper; compare.sh 8000-token budget insufficient for 40-test game;
+#              not a capability gap — valid l6_full run requires num_predict=24000 (not yet tested)
+#   Context:   PASS 8k/16k/32k/64k; context_128k SLOW (18.4 tok/s) — dense KV fills 24 GB at 131k
+#   Multihop + distractor: all PASS
+#   Skips:     context_256k (SKIPPED_VRAM)
+# Dense vs MoE: 27B dense passes csv_nordic_property and all L6 steps where 35B MoE (qwen3.5:35b)
+#   fails csv_nordic_property; dense coherence likely advantages multi-step data analysis tasks.
+# Speed: 34.6 tok/s avg (vs MoE qwen3.5:35b at ~147 tok/s) — 4× slower; 29-task: 1231s vs ~720s.
+# 29-task vs qwen3.5:35b (26/29, 147 tok/s): 27B dense scores higher (27/29) at 4× cost in speed.
 qwen3.5:27b      Qwen_Qwen3.5-27B-Q4_K_M.gguf          ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
 mistral-medium-3.5:128b  Q4_K_M/Mistral-Medium-3.5-128B-Q4_K_M-00001-of-00003.gguf  ngl=24,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384,thinking  hf:unsloth/Mistral-Medium-3.5-128B-GGUF  # 3-part model
 

@@ -677,6 +677,80 @@ CSV_NORDIC_PROPERTY = Task(
     model_timeout=600,  # cold-start + ~12000 token generation exceeds run.sh's 300s default
 )
 
+NODE_DEBOUNCE = Task(
+    id="node_debounce",
+    difficulty=3,
+    description=(
+        "The debounce() function in src/debounce.js has a closure bug: "
+        "the timer variable is declared inside the returned function, so every call "
+        "creates a fresh undefined variable and clearTimeout() never cancels the previous "
+        "timer — every invocation fires independently after the delay. "
+        "Move the timer declaration outside the returned function so it is captured "
+        "in the closure and shared across all calls, enabling proper cancellation. "
+        "Do not change the function signature or any other behaviour."
+    ),
+    subdir="node_debounce",
+    editable_files=["src/debounce.js"],
+    context_files=["tests/debounce.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/debounce.test.js"],
+    test_timeout=30,
+)
+
+PYTHON_MERGE_INTERVALS = Task(
+    id="python_merge_intervals",
+    difficulty=4,
+    description=(
+        "merge_intervals() in merge_intervals.py has a containment bug: "
+        "when a later interval is fully contained within the current merged interval, "
+        "it overwrites the end with the smaller value — shrinking the interval instead "
+        "of keeping the larger end. "
+        "Fix the single incorrect assignment so that the merged interval always "
+        "extends to the maximum of the two endpoints. "
+        "Do not change the sort, the overlap condition, or any other line."
+    ),
+    subdir="python_merge_intervals",
+    editable_files=["merge_intervals.py"],
+    context_files=["tests/test_merge_intervals.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
+AWK_CSV_STATS = Task(
+    id="awk_csv_stats",
+    difficulty=3,
+    description=(
+        "stats.awk reads sales.csv (comma-separated: date,region,amount) and prints "
+        "per-region total sales, one line per region in the format 'region: total' "
+        "(two decimal places, e.g. 'east: 330.25'). "
+        "The script uses the wrong field separator — FS is set to a space instead of "
+        "a comma, so fields are not split correctly and all totals are zero. "
+        "Fix the single incorrect FS value in stats.awk so all tests pass."
+    ),
+    subdir="awk_csv_stats",
+    editable_files=["stats.awk"],
+    context_files=["sales.csv", "tests/test_stats.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
+JAVA_WORD_FREQ = Task(
+    id="java_word_freq",
+    difficulty=3,
+    description=(
+        "WordFreq.topK(int k) in WordFreq.java should return the k words with the "
+        "highest frequency in descending order. "
+        "The sort comparator uses (a, b) -> a.getValue() - b.getValue(), which produces "
+        "ascending order — so it returns the LEAST frequent words instead of the most. "
+        "Fix the comparator lambda so entries are sorted highest-frequency first. "
+        "Do not change the add() method, the tokenisation, or the result-building loop."
+    ),
+    subdir="java_word_freq",
+    editable_files=["WordFreq.java"],
+    context_files=["WordFreqTest.java"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+)
+
 BUILTIN_TASKS: list[Task] = [
     CSV_NORDIC_PROPERTY,
     NODE_SLUGIFY,
@@ -693,6 +767,10 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_DIJKSTRA,
     PYTHON_HASHMAP,
     PYTHON_TOKENIZER,
+    NODE_DEBOUNCE,
+    PYTHON_MERGE_INTERVALS,
+    AWK_CSV_STATS,
+    JAVA_WORD_FREQ,
     NODE_PARATROOPER,
     NODE_PARA_CORE,
     NODE_PARA_TURRET,
@@ -720,6 +798,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_multifile_rename", "node_memoize_bug",
         "python_ledger_bug", "python_expr_eval",
         "python_dijkstra", "python_hashmap", "python_tokenizer",
+        "node_debounce", "python_merge_intervals", "awk_csv_stats", "java_word_freq",
     ],
     "l6": [
         "node_para_core", "node_para_turret", "node_para_entities", "node_para_combat",

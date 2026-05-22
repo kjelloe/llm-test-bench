@@ -170,7 +170,21 @@ else
   fail "dotnet not found — https://dotnet.microsoft.com/download"
 fi
 
-# ── 7. llama-server (optional — only needed for --backend llama-server) ───────
+# ── 7. Java ───────────────────────────────────────────────────────────────────
+section "Java"
+if command -v java &>/dev/null; then
+  JAVA_VER=$(java -version 2>&1 | head -1)
+  ok "java  $JAVA_VER"
+  if command -v javac &>/dev/null; then
+    ok "javac  $(javac -version 2>&1)"
+  else
+    warn "javac not found — JDK required for Java tasks (install JDK, not just JRE)"
+  fi
+else
+  fail "java not found — https://adoptium.net (required for java_* tasks)"
+fi
+
+# ── 8. llama-server (optional — only needed for --backend llama-server) ───────
 section "llama-server (optional)"
 _ls_bin="${LLAMA_SERVER_BIN:-$(command -v llama-server 2>/dev/null || true)}"
 if [[ -n "$_ls_bin" ]]; then

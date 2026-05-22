@@ -298,6 +298,13 @@ def main() -> None:
                         help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
 
+    # Accept comma-separated values in addition to space-separated, e.g.
+    # --tasks "a,b,c" or --tasks a,b c  (any mix)
+    if args.tasks:
+        args.tasks = [t for tok in args.tasks for t in tok.split(",") if t]
+    if args.task_group:
+        args.task_group = [g for tok in args.task_group for g in tok.split(",") if g]
+
     if args.task_group:
         unknown_groups = [g for g in args.task_group if g not in TASK_GROUPS]
         if unknown_groups:
