@@ -93,6 +93,39 @@ qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # Thinking flag: NOT needed — model achieves L5 without it.
 carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:mudler/Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-GGUF
 
+# ── noctrex Qwen3.6 35B A3B MTP-MXFP4 ───────────────────────────────────────
+# Qwen3.6-35B-A3B with MTP head, MoE weights in MXFP4 (hardware-accelerated low-bit format).
+# Three non-MoE weight variants in the same GGUF repo:
+#   BF16 — 21.39 GB  (best accuracy; use if GPU supports native BF16)
+#   F16  — 21.39 GB  (faster on older architectures that emulate BF16)
+#   Q8   — 19.71 GB  (recommended for 24 GB — leaves ~4 GB for KV cache)
+# Only one GGUF file per variant: Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf
+# (The repo name contains "MXFP4_MOE"; the actual file is that single name.)
+#
+# MTP spec decoding flags (from model card / noctrex recommendations):
+#   --spec-type draft-mtp        enable self-speculative decoding
+#   --spec-draft-p-min 0.75      only speculate when draft prob >= 0.75 (new vs carnice)
+#   --spec-draft-n-max 3         draft 3 tokens per step
+#
+# ⚠ DETERMINISM WARNING (from carnice:35b experience):
+#   spec-type draft-mtp broke temp=0 determinism for carnice — python_hashmap REGRESSED.
+#   --spec-draft-p-min 0.75 is intended to reduce acceptance noise but does not
+#   guarantee greedy-equivalent output. Benchmark WITHOUT spec flags first; add them
+#   only for throughput comparison runs where result correctness is not the primary goal.
+#
+# Recommended benchmark config (deterministic, no spec):
+#   Same params as carnice/qwen3.6: ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,
+#   flash_attn,batch_size=512,ubatch_size=128
+# Optional speed-test config (adds spec flags — MAY harm determinism at temp=0):
+#   Add: spec_type=draft-mtp,spec_draft_p_min=0.75,spec_draft_n_max=3
+#   (llama-server GGUF params use underscores; exact flag name may differ — verify with
+#    llama-server --help if the spec flags are not recognised)
+#
+# Compared to carnice:35b: same MTP architecture, different base quant (MXFP4 vs Q4_K_M).
+# If MXFP4 has lower MTP overhead than Q4_K_M, throughput may be meaningfully better.
+# Not yet benchmarked — run coding group first to establish baseline.
+noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
+
 # ── Mistral-Medium-3.5 128B dense ────────────────────────────────────────────
 # Dense 128B Q4_K_M (~72 GB weights); ngl=24 → ~33% GPU-resident, rest in RAM.
 # Results (2026-05-14, llama-server, RTX 3090 24 GB, coding tasks only):
