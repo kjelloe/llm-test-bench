@@ -73,7 +73,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all twenty-nine tasks. Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks. Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (10 models)
 
@@ -235,6 +235,10 @@ Tasks are tagged with a difficulty level (L1–L6) used to compute the **Skill**
 | `python_tokenizer` | L4 | Python / pytest | After processing an escape sequence inside a string, the tokenizer transitions back to the wrong state — characters following any escape sequence are emitted as `WORD`/`UNKNOWN` tokens outside the string instead of being part of the `STRING` token |
 | `python_dijkstra` | L5 | Python / pytest | `dijkstra()` in `dijkstra.py` marks nodes visited when enqueued instead of when dequeued — shorter paths discovered later are silently ignored, producing wrong distances and paths |
 | `python_hashmap` | L5 | Python / pytest | `HashMap.delete()` in `hashmap.py` clears slots directly instead of writing a tombstone — breaks linear-probe chains, causing `get()` to miss keys inserted after a colliding deletion |
+| `node_debounce` | L3 | Node.js / ESM | `debounce()` in `src/debounce.js` has a closure bug: `let timer` is declared inside the returned function, resetting to `undefined` on every call — `clearTimeout()` never cancels a pending timeout so every call fires independently |
+| `python_merge_intervals` | L4 | Python / pytest | `merge_intervals()` in `merge_intervals.py` writes `prev[1] = curr[1]` when merging — shrinks the interval if `curr` is contained within `prev`; fix: `max(prev[1], curr[1])` |
+| `awk_csv_stats` | L3 | AWK / pytest | `stats.awk` aggregates per-region sales from a comma-separated CSV but uses `FS=" "` (whitespace) — no fields are split so all totals are zero; fix: `FS=","` |
+| `java_word_freq` | L3 | Java / pytest | `WordFreq.topK()` in `WordFreq.java` sorts entries ascending `(a, b) -> a.getValue()-b.getValue()` so it returns the least-frequent words; fix: reverse the subtraction |
 | `node_para_core` | L6 | Node.js / ESM | **Paratrooper step 1/4** — implement the `Game` constructor, input processing, tick counter, isOver/getResult/getState; seeded mulberry32 RNG; 7 tests |
 | `node_para_turret` | L6 | Node.js / ESM | **Paratrooper step 2/4** — add turret rotation (`_processInput`) and projectile physics (`_updateProjectiles`: `rad=(180-angle)×π/180`, `dx=cos(rad)×speed`, `dy=-sin(rad)×speed`); 17 cumulative tests |
 | `node_para_entities` | L6 | Node.js / ESM | **Paratrooper step 3/4** — add helicopter spawning/movement, paratrooper descent (chute → freefall → landed states), and overrun lose condition; 29 cumulative tests |
@@ -251,6 +255,92 @@ Tasks are tagged with a difficulty level (L1–L6) used to compute the **Skill**
 | `distractor_notes` | L2 | Python / pytest | Find INCIDENT-5000 header at ~50%; three decoy mentions in note bodies at ~15%, ~35%, ~70% — model must read the header field, not the notes |
 
 Baseline tests fail on the unmodified files. The model must output `BEGIN_FILE / END_FILE` blocks with the corrected file content, and tests must pass afterwards.
+
+### Task catalog
+
+Each task is a realistic bug pattern a developer might encounter. The model sees only the broken file and the test suite — no hint about what is wrong.
+
+#### Coding — Python
+
+**`python_safe_div` (L1)** — A one-line fix: the function raises the wrong exception type (`ZeroDivisionError` instead of `ValueError`). Tests catch the specific type. Easy warm-up.
+
+**`python_lru_cache` (L2)** — `get()` returns the correct value but silently skips promoting the node to the most-recently-used position. The eviction order is wrong as a result. Requires understanding the doubly-linked list invariant, not just the map lookup.
+
+**`python_multifile_rename` (L2)** — A field was renamed in one file but two dependent modules still use the old name. The model must output two `BEGIN_FILE` blocks — one per file. Tests the ability to track a rename across a small codebase.
+
+**`python_lfu_cache` (L3)** — The LFU eviction policy has a subtle invariant bug in `_promote()`: it doesn't update `min_freq` when a frequency bucket empties. The cache works most of the time but crashes with `KeyError` on the next eviction after a specific access pattern.
+
+**`python_minheap` (L3)** — `_sift_down()` only compares against the left child, ignoring the right. The heap property is violated after `pop()` on certain inputs. A missing two-line right-child check.
+
+**`python_ledger_bug` (L4)** — A classic atomicity bug: the destination account is credited before the source balance is checked, so a failed transfer leaves money credited to the destination but not debited from the source. Requires understanding the correct order of operations for transactional state updates.
+
+**`python_expr_eval` (L4)** — The recursive descent parser has `expr()` and `term()` with their operator sets swapped: `*`/`÷` are treated as low precedence and `+`/`-` as high. `2 + 3 * 4` evaluates to 20 instead of 14. Requires understanding how precedence climbing works through mutual recursion.
+
+**`python_tokenizer` (L4)** — After processing an escape sequence (`\n`, `\t`, etc.) inside a string literal, the state machine jumps back to the default state instead of staying inside the string. Characters after an escape are tokenised as `WORD` tokens outside the string rather than continuing the `STRING` token.
+
+**`python_dijkstra` (L5)** — Nodes are marked visited when added to the priority queue instead of when popped. This means a shorter path discovered later is discarded because the node is already marked. Produces wrong shortest distances and paths on graphs with multiple routes to a node.
+
+**`python_hashmap` (L5)** — Open-addressing hash map: `delete()` clears the slot directly instead of writing a tombstone sentinel. This breaks the linear-probe chain — a `get()` for a key inserted after a collision stops at the empty slot and reports the key as missing.
+
+**`python_merge_intervals` (L4)** — Interval merging has a containment bug: when a later interval is fully inside the current one (e.g. `[1,10]` followed by `[2,5]`), the code writes `prev[1] = curr[1]` — shrinking `[1,10]` to `[1,5]`. The fix is `max(prev[1], curr[1])`. Straightforward but only triggered by containment, not simple overlap.
+
+**`csv_nordic_property` (L3)** — Implement `solution.py` from scratch to answer 10 questions about a 5 000-row Norwegian property dataset (semicolon-separated, UTF-8, `..` for nulls) and produce a filtered CSV. Tests multi-step data analysis: filtering, aggregation, sorting, and output formatting. Consistently fails models that struggle with multi-step reasoning over real tabular data.
+
+#### Coding — JavaScript / Node.js
+
+**`node_slugify` (L2)** — The slug function lowercases and replaces spaces, but doesn't strip apostrophes silently (`it's` → `its`, not `it-s`) or collapse multiple non-alphanumeric characters into a single hyphen. Tests require exact output on several tricky inputs.
+
+**`node_csv_parser` (L3)** — The parser splits every line on commas without checking whether a comma is inside a quoted field. Fields containing commas, escaped double-quotes (`""`), or empty quoted fields all parse incorrectly. A complete RFC 4180-style parser is required.
+
+**`node_memoize_bug` (L3)** — The cache key is built from the first argument only. When two calls share the same first argument but differ on the second (e.g. `applyDiscount(price, 10)` vs `applyDiscount(price, 20)`), the second call returns the cached result of the first. A one-line fix: include all arguments in the key.
+
+**`node_debounce` (L3)** — A classic JavaScript closure bug: the `timer` variable is declared with `let` *inside* the returned function, so every invocation creates a fresh `undefined` variable. `clearTimeout(undefined)` is a no-op, and every call fires independently after the delay rather than resetting the timer. Moving `let timer` outside the inner function fixes it. Tests use real millisecond-range timers.
+
+#### Coding — .NET
+
+**`dotnet_sas` (L1)** — Azure SAS token generation: `ExpiresOn` is set with `AddMinutes(-10)` (10 minutes in the past) instead of `AddMinutes(60)`. One integer sign change. Validates that the model can apply a targeted edit without touching unrelated code.
+
+#### Coding — Java
+
+**`java_word_freq` (L3)** — `topK()` should return the k most frequent words but uses `(a, b) -> a.getValue() - b.getValue()` as the comparator, producing ascending order. The model must reverse the subtraction to `b.getValue() - a.getValue()` to get descending frequency order. Tests cover multi-add accumulation, case folding, and punctuation delimiters.
+
+#### Coding — AWK
+
+**`awk_csv_stats` (L3)** — The script aggregates per-region sales from a comma-separated CSV but sets `FS = " "` (whitespace) instead of `FS = ","`. With whitespace splitting, each record is treated as a single field — all region names and amounts are empty, and every total is zero. A one-character fix to the field separator.
+
+---
+
+#### L6 — Paratrooper (stepped and full)
+
+A headless JavaScript backend for the 1982 arcade game *Paratrooper*, split into four steps of increasing complexity plus a full from-scratch variant. Each step adds one subsystem; subsequent steps include the reference implementation from all prior steps, so the model only needs to implement the new methods.
+
+**`node_para_core` (L6, step 1/4)** — Constructor, tick counter, state fields, input queue, `isOver()`, `getResult()`, `getState()`. Foundation layer; 7 tests.
+
+**`node_para_turret` (L6, step 2/4)** — Turret rotation (clamp to 0–180°) and projectile physics using the firing formula `rad = (180 − angle) × π/180`. 17 cumulative tests.
+
+**`node_para_entities` (L6, step 3/4)** — Helicopter spawning and movement, paratrooper descent through chute → freefall → landed states, overrun lose condition. The real difficulty wall: only the strongest models pass this step without the full scaffolding. 29 cumulative tests.
+
+**`node_para_combat` (L6, step 4/4)** — Jets, falling bombs, and collision detection between projectiles/bombs and all entity types (helicopters, jets, paratroopers, turret). 40 cumulative tests (the complete suite).
+
+**`node_paratrooper` (L6, from scratch)** — Implement the entire `Game` class from a spec and stub comments, with no prior-step reference. Run separately with `--task-group l6_full --num-predict 24000`. Best scores to date: 39/40 (qwen3.6:35b-A3B and gemma4:26b). Test 33 — a freefall paratrooper crushing landed troops on landing — has not been passed by any model despite the rule being explicit in the stub.
+
+---
+
+#### Context retrieval
+
+Six tasks at increasing context depths (8k → 256k tokens) ask the model to find a specific sentinel value buried in a Python standard library archive. The task itself is trivially easy at short context; it measures raw retrieval reliability and generation speed (tok/s) as the context grows.
+
+**`context_8k` / `context_16k` / `context_32k` / `context_64k` / `context_128k` / `context_256k` (L1)** — Find `BENCHMARK_SENTINEL_VALUE` at 50% depth in archives ranging from ~5.5k to ~220k tokens. Speed collapses at 128k+ for models whose KV cache overflows VRAM. `context_256k` is skipped automatically on 24 GB cards (`min_vram_gb=48`).
+
+---
+
+#### Multihop retrieval
+
+**`multihop_forward` (L3)** — Two-hop retrieval in a ~30k-token incident archive. Anchor: engineer K. Vasquez at ~20% depth. The model must carry the name forward and find her second incident at ~75% depth. The answer is never stated directly — it requires connecting two records.
+
+**`multihop_reverse` (L3)** — Same two-hop mechanic in reverse: anchor at ~75%, second incident at ~20%. Harder for models that scan forward and stop at the anchor.
+
+**`distractor_notes` (L2)** — Find `INCIDENT-5000`'s resolution code in a ~30k-token archive. Three decoy mentions of the same code appear in note bodies at ~15%, ~35%, and ~70% depth. The model must read the structured header field, not the prose notes. Tests whether the model is fooled by repeated distractor context.
 
 ### Skill rating
 
@@ -286,6 +376,8 @@ python3 bench.py --help
                                         python_ledger_bug, python_expr_eval,
                                         python_tokenizer, python_dijkstra,
                                         python_hashmap,
+                                        node_debounce, python_merge_intervals,
+                                        awk_csv_stats, java_word_freq,
                                         node_para_core, node_para_turret,
                                         node_para_entities, node_para_combat,
                                         node_paratrooper,
@@ -295,7 +387,7 @@ python3 bench.py --help
                                         distractor_notes
   --task-group GROUP [...]     Task group shorthand; mutually exclusive with --tasks.
                                Can combine multiple groups.
-                               Groups: coding (15 tasks), l6 (4 stepped tasks —
+                               Groups: coding (19 tasks), l6 (4 stepped tasks —
                                        node_para_core/turret/entities/combat),
                                        l6_full (1 task — node_paratrooper, full impl),
                                        context (6 tasks),
