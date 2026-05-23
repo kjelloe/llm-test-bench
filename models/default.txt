@@ -6,6 +6,7 @@
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
+# noctrex-qwen3.6:35b  # ~118 tok/s  GPU only (MoE+MXFP4); 31/33 BEST — perfect coding 19/19; requires Ampere+
 # gpt-oss:20b          # ~197 tok/s  GPU only
 # qwen3-coder:30b      # ~160 tok/s  GPU only (MoE, fits in 24 GB)
 # qwen3.5:35b          # ~147 tok/s  GPU only (MoE, fits in 24 GB), thinking
@@ -16,6 +17,8 @@
 # speeds measured on RTX 3090 24 GB (2026-05-22, llama-server backend, 33-task run)
 
 # GPU-only — fit fully in 24 GB VRAM
+# Run WITHOUT spec flags (--spec-type draft-mtp) — spec decoding breaks temp=0 determinism
+noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
 gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/gpt-oss-20b-GGUF
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF

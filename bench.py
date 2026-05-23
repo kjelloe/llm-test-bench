@@ -291,12 +291,17 @@ def main() -> None:
                         help="Warm up each model before its first task (ollama only; default: off)")
     parser.add_argument("--set-power-limit", type=int, default=None, metavar="WATTS",
                         help="Set GPU power limit via 'sudo nvidia-smi -pl WATTS' before benchmarking")
-    parser.add_argument("--out", default="output/results.json")
+    parser.add_argument("--out", default=None,
+                        help="Output JSON file (default: output/results-YYYYMMDD-HHmmss.json)")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
     parser.add_argument("--checkpoint-dir", default=None, metavar="PATH",
                         help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
+
+    if args.out is None:
+        from datetime import datetime
+        args.out = f"output/results-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
 
     # Accept comma-separated values in addition to space-separated, e.g.
     # --tasks "a,b,c" or --tasks a,b c  (any mix)
