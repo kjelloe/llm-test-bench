@@ -37,6 +37,11 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,
 # context_128k was 18.4 tok/s SLOW on 24 GB due to KV spill; on 48 GB full KV fits.
 qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
 
+# noctrex-qwen3.6:35b: MXFP4+MTP; 31/33 at 118 tok/s on 24 GB; 19/19 coding PERFECT.
+# On 48 GB: full KV headroom, context_128k at full speed. Requires Ampere+ and MXFP4 llama.cpp.
+# Run WITHOUT spec flags — spec decoding breaks temp=0 determinism.
+noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
+
 # ── 32B models — ctx≥32k was KV-limited on single 24 GB; 48 GB removes that cap ──
 # qwen2.5-coder:32b: Q5_K_M (~26 GB); confirmed coding-only at Q4_K_M; 64k context now feasible on 48 GB
 qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
