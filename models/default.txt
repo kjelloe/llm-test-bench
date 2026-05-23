@@ -6,14 +6,14 @@
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
-# gpt-oss:20b          # ~206 tok/s  GPU only
-# qwen3-coder:30b      # ~165 tok/s  GPU only (MoE, fits in 24 GB)
-# qwen3.5:35b          # ~142 tok/s  GPU only (MoE, fits in 24 GB), thinking
-# gemma4:26b           # ~115 tok/s  GPU only (MoE, fits in 24 GB)
-# qwen2.5-coder:14b    #  ~73 tok/s  GPU only
-# devstral-small-2     #  ~45 tok/s  GPU only (dense 24B)  22/24; ~17 tok/s with ollama backend
-# gpt-oss:120b         #  ~18 tok/s  RAM + partial GPU, thinking
-# speeds measured on RTX 3090 24 GB (2026-05-13, llama-server backend)
+# gpt-oss:20b          # ~197 tok/s  GPU only
+# qwen3-coder:30b      # ~160 tok/s  GPU only (MoE, fits in 24 GB)
+# qwen3.5:35b          # ~147 tok/s  GPU only (MoE, fits in 24 GB), thinking
+# gemma4:26b           # ~114 tok/s  GPU only (MoE, fits in 24 GB)
+# qwen2.5-coder:14b    #  ~68 tok/s  GPU only
+# devstral-small-2     #  ~42 tok/s  GPU only (dense 24B); ~17 tok/s with ollama backend
+# gpt-oss:120b         #  ~17 tok/s  RAM + partial GPU, thinking
+# speeds measured on RTX 3090 24 GB (2026-05-22, llama-server backend, 33-task run)
 
 # GPU-only — fit fully in 24 GB VRAM
 gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/gpt-oss-20b-GGUF
