@@ -1,6 +1,10 @@
 # Dual 32 GB VRAM model set — 2× RTX 6000 Ada / A6000 / RTX 5090 etc. (64 GB total)
 # All models use tensor_split=1|1 (equal layer distribution across both GPUs).
 #
+# Purpose: 70B+ models that cannot fit on a single GPU or on 2×24 GB.
+# 30B/35B models (qwen3-coder, qwen3.5:35b, noctrex) are NOT listed here — they already
+# receive their full KV benefit at 48 GB (2x24gb.txt); repeating them at 64 GB adds no insight.
+#
 # Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
 #   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
 #   params     comma-separated llama-server flags
@@ -10,31 +14,19 @@
 # NVLink vs PCIe between GPUs significantly affects 70B tensor-parallel throughput.
 
 # Speed index (est.):
-# qwen3-coder:30b      # ~160 tok/s  MoE 30B; confirmed single 24 GB — fully resident, ample KV on 64 GB
-# qwen3.5:35b          # ~147 tok/s  MoE 35B; confirmed single 24 GB — fully resident on 64 GB
-# qwen2.5:72b          #  ~20 tok/s  dense 72B Q5_K_M; ~48 GB weights, ~8 GB/GPU for KV
-# llama3.3:70b         #  ~20 tok/s  dense 70B Q5_K_M; ~46 GB weights, ~9 GB/GPU for KV
-# gpt-oss:120b         #  stress test only — mxfp4 ~60 GB; fully GPU-resident on 64 GB (no CPU offload)
-
-# ── Smaller specialists — fully GPU-resident on 64 GB with ample KV ──────────────
-# On single 24 GB, qwen3-coder:30b spills KV at ctx=131072 (3.8 tok/s). On 64 GB, full KV fits.
-qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
-# bartowski variant passes context_128k; HauhauCS variant fails it — do not use HauhauCS
-qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
-# noctrex: best overall result (31/33, 118 tok/s); 19/19 coding PERFECT; fully resident on 64 GB.
-# Requires Ampere+ GPU and llama.cpp with MXFP4 support. Run WITHOUT spec flags.
-noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
+# qwen2.5:72b    #  ~20 tok/s  dense 72B Q5_K_M; ~48 GB weights, ~8 GB/GPU for KV
+# llama3.3:70b   #  ~20 tok/s  dense 70B Q5_K_M; ~46 GB weights, ~9 GB/GPU for KV
+# gpt-oss:120b   #  stress test — mxfp4 ~60 GB; fully GPU-resident on 64 GB (hybrid RAM+GPU on 24 GB)
 
 # ── 70B models — practical production tier at 64 GB ──────────────────────────────
-# qwen2.5:72b: Q5_K_M (~48 GB); ~8 GB KV headroom per GPU → 32k-64k context feasible
+# qwen2.5:72b: Q5_K_M (~48 GB); ~8 GB KV headroom per GPU → 32k–64k context feasible
 qwen2.5:72b  Qwen2.5-72B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-72B-Instruct-GGUF
-# llama3.3:70b: Q5_K_M (~46 GB); ~9 GB KV headroom per GPU → 32k-64k context comfortable
+# llama3.3:70b: Q5_K_M (~46 GB); ~9 GB KV headroom per GPU → 32k–64k context comfortable
 llama3.3:70b  Llama-3.3-70B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
 
 # ── 120B stress test ──────────────────────────────────────────────────────────────
 # gpt-oss:120b mxfp4 (~60 GB weights): fits 64 GB VRAM with ~4 GB total KV headroom.
-# Fully GPU-resident on 64 GB — remove n_cpu_moe (all layers fit on GPU).
+# Fully GPU-resident here — unlike 24 GB (hybrid, n_cpu_moe=35) and 32 GB (hybrid, n_cpu_moe=20).
 # max_ctx=32768: at q8_0 KV this stays within ~4 GB; raise cautiously if no OOM.
 # If OOM, try Q3_K_M GGUF (~50 GB) from ggml-org/gpt-oss-120b-GGUF — frees ~14 GB for KV.
-# Confirmed on single 24 GB: ~17 tok/s hybrid RAM+GPU (n_cpu_moe=35); expect faster fully GPU.
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model; fully GPU-resident on 64 GB

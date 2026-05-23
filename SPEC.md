@@ -71,12 +71,12 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (29 total, difficulty L1–L6):
+- Built-in tasks (33 total, difficulty L1–L6):
 
   **Data tasks (1):**
   - `csv_nordic_property` (L3) — 5 000-row Norwegian residential property dataset (SSB 06726); Nordic CSV (`;`-separated, UTF-8, `..` = missing value), 103 columns (region + 3 metrics × 34 years 1992–2025). Model implements `solution.py` from a skeleton: `answer_questions()` returns 10 scalar answers written to `answers.txt`; `transform()` selects bottom-25% and top-25% of regions by 2023 total purchase sum, outputs a 7-column Nordic CSV (`output.csv`) with only the 1992 and 2022 year-columns, sorted ascending. `num_ctx=16384` (prompt alone is ~6 400 tokens; the 8192 default left only ~1 700 tokens for generation — models started BEGIN_FILE but were cut off before END_FILE); `min_predict=12000` (thinking models exhaust 8000 mid-output; all 6 models still failed at 8000); `model_timeout=600` (cold-start + 12000-token generation exceeds run.sh's 300s default). Known: llama4-scout:17b TOOL_ERROR timeout at 600s (3.3 tok/s ≈ 2000 max tokens, insufficient for full solution). `pytest`
 
-  **Coding tasks (13):**
+  **Coding tasks (18):**
   - `python_safe_div` (L1) — `calc.safe_div` must raise `ValueError` on zero divisor; `pytest`
   - `dotnet_sas` (L1) — Azure SAS expiry is 10 min in the past; fix to 60 min future; `xUnit`
   - `node_slugify` (L2) — ESM `src/slug.js`; fix punctuation stripping + hyphen collapsing; `node --test`. Known: devstral-small-2 fails this task despite passing all L3–L5 tasks — uses `[^\w]+→'-'` which replaces apostrophes with a hyphen instead of silently removing them ("it's"→"it-s" not "its"); 5/6 subtests pass. codestral:22b passes (same Mistral family, different behaviour).
@@ -91,6 +91,10 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `python_tokenizer` (L4) — character-by-character state machine tokeniser; `ESCAPE` state transitions back to `INIT` instead of `STRING`, so characters after any escape sequence leak out of the string as `WORD`/`UNKNOWN` tokens; fix is one word: `INIT` → `STRING`. Discriminator: qwen2.5-coder:14b changes the buffer accumulation line too (wrong fix); gemma4:26b produces NO_BLOCKS TRUNCATED (verbose preamble exhausts 4800-token budget before code). `min_predict=12000` (thinking models need extended budget for reasoning + full-file output). `pytest`
   - `python_dijkstra` (L5) — `dijkstra()` marks nodes visited when enqueued instead of dequeued; shorter paths discovered later are silently ignored; fix by moving `seen.add()` to the dequeue point; `pytest`
   - `python_hashmap` (L5) — `HashMap.delete()` clears slots directly instead of writing a tombstone; breaks linear-probe chains causing `get()` to miss keys inserted after a colliding deletion; `pytest`. Known: qwen3.5:35b (bartowski GGUF) passes with `enable_thinking:false` (llama-server always sends this now); previously failed with unlimited thinking (all 24k tokens consumed by reasoning). qwen3.5:35b at 8000 num_predict fails `test_delete_two_chain_members_tail_still_reachable`: subscripts tombstone slot without `is not _TOMBSTONE` guard, causing `TypeError`.
+  - `node_debounce` (L3) — ESM `src/debounce.js`; broken debounce implementation does not coalesce rapid successive calls; fix so `fn` is invoked only after `delay` ms of silence; `node --test`
+  - `python_merge_intervals` (L4) — `merge_intervals()` returns wrong results on certain overlapping inputs; fix so intervals are sorted and merged into a minimal non-overlapping list; `pytest`
+  - `awk_csv_stats` (L3) — `stats.awk` reads `sales.csv` and should print per-region totals in `region: total` format (two decimal places); output is incorrect; fix `stats.awk`; `pytest` wrapper
+  - `java_word_freq` (L3) — `WordFreq.topK(int k)` returns the wrong words; fix `WordFreq.java` so the k most frequent words are returned in descending order; JUnit via `pytest` wrapper
 
   **L6 stepped game-implementation tasks (4 + 1 full):**
   - `node_para_core` (L6, step 1/4) — implement `Game` constructor, `processInput()`, `tick()`, `isOver()`, `getResult()`, `getState()` for a headless Paratrooper arcade game; seeded mulberry32 RNG; 7 tests; `node --test`. `min_predict=4000`

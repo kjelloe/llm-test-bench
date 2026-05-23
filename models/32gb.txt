@@ -22,24 +22,32 @@
 #   hf:        HuggingFace repo for fetch-hf.sh download helper
 
 # Speed index — confirmed (24 GB benchmark) and estimated:
-# gpt-oss:20b          # ~197 tok/s   ~12 GB   confirmed 24 GB
-# qwen3-coder:30b      # ~160 tok/s   ~20 GB   confirmed 24 GB (same quant)
-# qwen3.5:35b          # ~147 tok/s   ~22 GB   confirmed 24 GB (same quant; Q5_K_M also fits)
-# gemma4:26b           # ~114 tok/s   ~18 GB   confirmed 24 GB (same quant)
-# qwen3.5:27b          #  ~35 tok/s   ~16 GB   confirmed 24 GB; 27/29, 15/15 coding; dense thinking
-# deepseek-r1:32b      #  ~29 tok/s   ~20 GB   confirmed 24 GB — 23/29; ctx≥64k SKIPPED on 24 GB
-# qwen2.5-coder:32b    #  ~36 tok/s   ~20 GB   confirmed 24 GB — coding only; ctx≥32k needs 32 GB
-# qwen2.5-coder:14b    #  ~68 tok/s   ~10 GB   confirmed 24 GB (same quant)
-# qwq:32b              #  ~6 tok/s    ~22 GB   unusable on 24 GB (KV thrashing); works on 32 GB
-# gpt-oss:120b         #  ~17 tok/s   ~70 GB   confirmed 24 GB (hybrid; n_cpu_moe tunable)
+# qwen3-coder:30b      # ~160 tok/s   ~20 GB   ctx_128k SLOW on 24 GB (3.3 tok/s spill) → clean on 32 GB
+# qwen3.5:35b          # ~147 tok/s   ~22 GB   confirmed 24 GB; passes ctx_128k already; Q5_K_M also fits
+# gemma4:26b           # ~114 tok/s   ~18 GB   confirmed 24 GB; passes ctx_128k already
+# qwen3.5:27b          #  ~35 tok/s   ~16 GB   ctx_128k SLOW on 24 GB (18.4 tok/s spill) → clean on 32 GB
+# deepseek-r1:32b      #  ~29 tok/s   ~20 GB   ctx≥64k SKIPPED on 24 GB → feasible on 32 GB
+# qwen2.5-coder:32b    #  ~36 tok/s   ~20 GB   ctx≥32k TOOL_ERROR on 24 GB → unlocked on 32 GB
+# qwq:32b              #  ~6 tok/s    ~22 GB   KV thrashing / unusable on 24 GB → viable on 32 GB
+# gpt-oss:120b         #  ~17 tok/s   ~70 GB   hybrid; n_cpu_moe tunable (20 here vs 35 on 24 GB)
+# noctrex-qwen3.6:35b  # ~118 tok/s   ~20 GB   MXFP4+MTP; ample KV headroom on 32 GB
+# nemotron-nano:30b-a3b # ~168 tok/s  ~18 GB   NON-DETERMINISTIC; max_ctx=65536 hard limit
+#
+# NOT included (no 32 GB benefit — identical to 24 GB tier; see 24gb.txt):
+#   gpt-oss:20b (~12 GB): already passes context_128k on 24 GB; context_256k auto-skips below 48 GB
+#
+# INCLUDED despite fitting on 24 GB — 32 GB unlocks larger contexts:
+#   qwen2.5-coder:14b: max_ctx=32768 on 24 GB (KV-limited); on 32 GB ~22 GB KV headroom →
+#     context_64k and context_128k now feasible without restriction
 
-# ── Confirmed 24 GB — same quant, carry over unchanged ───────────────────────
-gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/gpt-oss-20b-GGUF
+# ── Models with meaningful 32 GB KV benefit ──────────────────────────────────
+# qwen2.5-coder:14b: no max_ctx cap here — 32 GB gives ~22 GB KV headroom vs ~4 GB at 24 GB;
+#   unlocks context_64k and context_128k (both SKIPPED on 24 GB due to max_ctx=32768)
+qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
 # bartowski variant passes context_128k; HauhauCS variant fails it — do not use HauhauCS
 qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
-qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,n_cpu_moe=20,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model; try n_cpu_moe=10 if more headroom
 
 # ── Dense 27B — strong thinking model; on 32 GB has ample KV headroom ────────

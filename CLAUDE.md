@@ -147,7 +147,7 @@ tests/
   test_parsing.py         Parser unit tests  →  python3 -m pytest tests/
   test_model_config.py    Model config parser unit tests
 task_data/
-  python_safe_div/        L1 Python pytest task (13 coding tasks total, L1–L5)
+  python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=8000 model_timeout=600
   context_8k/             L1 context retrieval at ~5.5k tokens (6 context tasks total)
   multihop_forward/       L3 two-hop retrieval (2 multihop tasks)
