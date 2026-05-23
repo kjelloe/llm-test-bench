@@ -122,8 +122,24 @@ carnice:35b  Carnice-Qwen3.6-MoE-35B-A3B-APEX-MTP-Balanced.gguf  ngl=999,no_mmap
 #    llama-server --help if the spec flags are not recognised)
 #
 # Compared to carnice:35b: same MTP architecture, different base quant (MXFP4 vs Q4_K_M).
-# If MXFP4 has lower MTP overhead than Q4_K_M, throughput may be meaningfully better.
-# Not yet benchmarked — run coding group first to establish baseline.
+#
+# Results (2026-05-22, llama-server, RTX 3090 24 GB, full 33-task set, no spec flags):
+#   31/33 (32 eligible — SKIPPED context_256k)  117.9 tok/s avg  665s total
+#   Coding:   19/19 — PERFECT; passes csv_nordic_property AND node_csv_parser
+#             (both consistent failures for qwen3.6:35b-A3B Q4_K_M; MXFP4 preserves precision)
+#   L6 step:   4/4  — PASSES node_para_entities (step 3); all 4 stepped tasks pass
+#   l6_full:   39/40 (num_predict=24000, 36s) — only test 33 fails (freefall crush; universal wall)
+#   Context:   PASS all 8k/16k/32k/64k/128k — 120/115/111/97/88 tok/s
+#              vs carnice:35b at 26/21/16/10/6 tok/s — 5–15× faster on context tasks
+#   Multihop:  PASS forward + reverse + distractor (~97 tok/s at 64k ctx)
+#   Skips:     context_256k (SKIPPED_VRAM, min_vram_gb=48)
+# MXFP4 key finding: passes csv_nordic_property and node_csv_parser where Q4_K_M qwen3.6 fails.
+#   MXFP4 likely preserves more precision on MoE expert weights for borderline analytical tasks.
+# Speed: 117.9 tok/s avg vs carnice 26.5 tok/s — 4.5× faster; 665s total vs 5743s for carnice.
+#   MXFP4 MoE weights compute faster, leaving headroom for MTP verification steps.
+#   Context_128k at 88 tok/s vs carnice 6.2 tok/s — MTP overhead negligible vs compute savings.
+# Best in class on coding: 19/19 perfect coding + 4/4 L6 stepped in a single 33-task run.
+# Run without spec flags — determinism is preserved; MTP spec was not tested in this run.
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
 
 # ── Mistral-Medium-3.5 128B dense ────────────────────────────────────────────

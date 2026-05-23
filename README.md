@@ -73,7 +73,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks. Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (10 models)
 
@@ -135,35 +135,35 @@ The header printed before each run shows estimated runtime from the previous run
 
 All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3D, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
 
-### Default set — 29 tasks (2026-05-22)
+### Default set — 33 tasks (2026-05-22)
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
-| qwen3-coder:30b | 26/29 | 160 | MoE 30B/3B active; context_128k SLOW 3.3 tok/s |
-| qwen3.5:35b | 26/29 | 147 | MoE 35B/3B active; context_128k 104 tok/s |
-| gpt-oss:120b | 26/29 | 17 | RAM-bound; context_128k SLOW 15.9 tok/s |
-| gemma4:26b | 25/29 | 114 | MoE 26B/4B active; context_128k 84.5 tok/s |
-| devstral-small-2 | 25/29 | 42 | Dense 24B; context_128k SLOW 5.2 tok/s |
-| gpt-oss:20b | 23/29 | 197 | Fastest; context_64k wrong answer |
-| qwen2.5-coder:14b | 19/29 | 68 | Dense 14B; context_64k+ SKIPPED (KV pressure on 24 GB) |
+| qwen3-coder:30b | 30/33 | 160 | MoE 30B/3B active; context_128k SLOW 3.3 tok/s; node_para_entities + node_paratrooper FAIL |
+| qwen3.5:35b | 30/33 | 147 | MoE 35B/3B active; csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
+| gpt-oss:120b | 30/33 | 17 | RAM-bound; csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
+| gemma4:26b | 29/33 | 114 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
+| devstral-small-2 | 29/33 | 42 | Dense 24B; node_slugify + node_para_entities + node_paratrooper FAIL |
+| gpt-oss:20b | 23/33 | 197 | Fastest; 7 NO_BLOCKS (semi-thinking planning loops); vagued descriptions trigger failures |
+| qwen2.5-coder:14b | 23/33 | 68 | Dense 14B; csv_nordic_property + node_csv_parser + python_tokenizer + L6 FAIL |
 
-All 7 models score 15/15 on pure coding tasks (within normal model constraints). MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
+node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficient for the 40-test game (needs 24000). All models fail it at 8000 tokens; this is a budget constraint, not a capability ceiling. MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
 
 ### Experimental models (llama-server, RTX 3090 24 GB)
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
-| qwen3.6:35b-A3B | 25/29 | 134 | Qwen3.6 MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
+| noctrex-qwen3.6:35b | 31/33 | 118 | MXFP4 MoE + MTP; 19/19 coding PERFECT; passes csv_nordic + node_csv_parser; 665s total |
+| qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 20/29 | 168 | Mamba-2 hybrid; fastest at large ctx; multihop FAIL; non-deterministic |
 | deepseek-r1:32b | 23/29 | 29 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval reasoning spiral |
 | carnice:35b | 24/29 | 27 | MTP fine-tune; 96 min total; context_128k SLOW 6.2 tok/s (1504s); NO_BLOCKS on complex tasks |
-
-\* carnice:35b was run on 15 coding tasks only.
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
 
 | Model | Score | Notes |
 |---|---|---|
+| noctrex-qwen3.6:35b | **39/40** | MXFP4+MTP; 36s — ties best; fails only test 33 (freefall crush) |
 | qwen3.6:35b-A3B | **39/40** | Non-thinking; 4.2k tokens, 35s — most efficient; fails only test 33 |
 | gemma4:26b | **39/40** | Non-thinking; fails only test 33 (freefall crush) |
 | devstral-small-2 | 38/40 | Non-thinking; fails test 33 + test 35 |
@@ -235,10 +235,10 @@ Tasks are tagged with a difficulty level (L1–L6) used to compute the **Skill**
 | `python_tokenizer` | L4 | Python / pytest | After processing an escape sequence inside a string, the tokenizer transitions back to the wrong state — characters following any escape sequence are emitted as `WORD`/`UNKNOWN` tokens outside the string instead of being part of the `STRING` token |
 | `python_dijkstra` | L5 | Python / pytest | `dijkstra()` in `dijkstra.py` marks nodes visited when enqueued instead of when dequeued — shorter paths discovered later are silently ignored, producing wrong distances and paths |
 | `python_hashmap` | L5 | Python / pytest | `HashMap.delete()` in `hashmap.py` clears slots directly instead of writing a tombstone — breaks linear-probe chains, causing `get()` to miss keys inserted after a colliding deletion |
-| `node_debounce` | L3 | Node.js / ESM | `debounce()` in `src/debounce.js` has a closure bug: `let timer` is declared inside the returned function, resetting to `undefined` on every call — `clearTimeout()` never cancels a pending timeout so every call fires independently |
-| `python_merge_intervals` | L4 | Python / pytest | `merge_intervals()` in `merge_intervals.py` writes `prev[1] = curr[1]` when merging — shrinks the interval if `curr` is contained within `prev`; fix: `max(prev[1], curr[1])` |
-| `awk_csv_stats` | L3 | AWK / pytest | `stats.awk` aggregates per-region sales from a comma-separated CSV but uses `FS=" "` (whitespace) — no fields are split so all totals are zero; fix: `FS=","` |
-| `java_word_freq` | L3 | Java / pytest | `WordFreq.topK()` in `WordFreq.java` sorts entries ascending `(a, b) -> a.getValue()-b.getValue()` so it returns the least-frequent words; fix: reverse the subtraction |
+| `node_debounce` | L3 | Node.js / ESM | `debounce()` in `src/debounce.js` should coalesce rapid calls into one delayed invocation — it does not; model must diagnose why cancellation never works |
+| `python_merge_intervals` | L4 | Python / pytest | `merge_intervals()` in `merge_intervals.py` returns wrong results for certain interval patterns; silent wrong-output bug — model must identify the incorrect case |
+| `awk_csv_stats` | L3 | AWK / pytest | `stats.awk` should print per-region sales totals from a comma-separated CSV — output is wrong; model must identify the misconfiguration |
+| `java_word_freq` | L3 | Java / pytest | `WordFreq.topK()` in `WordFreq.java` should return the k most frequent words in descending order — returns the wrong words; model must find the ordering bug |
 | `node_para_core` | L6 | Node.js / ESM | **Paratrooper step 1/4** — implement the `Game` constructor, input processing, tick counter, isOver/getResult/getState; seeded mulberry32 RNG; 7 tests |
 | `node_para_turret` | L6 | Node.js / ESM | **Paratrooper step 2/4** — add turret rotation (`_processInput`) and projectile physics (`_updateProjectiles`: `rad=(180-angle)×π/180`, `dx=cos(rad)×speed`, `dy=-sin(rad)×speed`); 17 cumulative tests |
 | `node_para_entities` | L6 | Node.js / ESM | **Paratrooper step 3/4** — add helicopter spawning/movement, paratrooper descent (chute → freefall → landed states), and overrun lose condition; 29 cumulative tests |
@@ -282,7 +282,7 @@ Each task is a realistic bug pattern a developer might encounter. The model sees
 
 **`python_hashmap` (L5)** — Open-addressing hash map: `delete()` clears the slot directly instead of writing a tombstone sentinel. This breaks the linear-probe chain — a `get()` for a key inserted after a collision stops at the empty slot and reports the key as missing.
 
-**`python_merge_intervals` (L4)** — Interval merging has a containment bug: when a later interval is fully inside the current one (e.g. `[1,10]` followed by `[2,5]`), the code writes `prev[1] = curr[1]` — shrinking `[1,10]` to `[1,5]`. The fix is `max(prev[1], curr[1])`. Straightforward but only triggered by containment, not simple overlap.
+**`python_merge_intervals` (L4)** — `merge_intervals()` should return a minimal non-overlapping sorted list, but returns wrong results for certain inputs. The bug is silent — no crash, just subtly wrong output on specific interval patterns. The model must identify which case is handled incorrectly and fix it.
 
 **`csv_nordic_property` (L3)** — Implement `solution.py` from scratch to answer 10 questions about a 5 000-row Norwegian property dataset (semicolon-separated, UTF-8, `..` for nulls) and produce a filtered CSV. Tests multi-step data analysis: filtering, aggregation, sorting, and output formatting. Consistently fails models that struggle with multi-step reasoning over real tabular data.
 
@@ -294,7 +294,7 @@ Each task is a realistic bug pattern a developer might encounter. The model sees
 
 **`node_memoize_bug` (L3)** — The cache key is built from the first argument only. When two calls share the same first argument but differ on the second (e.g. `applyDiscount(price, 10)` vs `applyDiscount(price, 20)`), the second call returns the cached result of the first. A one-line fix: include all arguments in the key.
 
-**`node_debounce` (L3)** — A classic JavaScript closure bug: the `timer` variable is declared with `let` *inside* the returned function, so every invocation creates a fresh `undefined` variable. `clearTimeout(undefined)` is a no-op, and every call fires independently after the delay rather than resetting the timer. Moving `let timer` outside the inner function fixes it. Tests use real millisecond-range timers.
+**`node_debounce` (L3)** — `debounce()` in `src/debounce.js` should coalesce rapid calls into a single delayed invocation, but rapid successive calls each fire independently. The model must read the implementation, identify why cancellation never works, and fix it. Tests use real millisecond-range timers.
 
 #### Coding — .NET
 
@@ -302,11 +302,11 @@ Each task is a realistic bug pattern a developer might encounter. The model sees
 
 #### Coding — Java
 
-**`java_word_freq` (L3)** — `topK()` should return the k most frequent words but uses `(a, b) -> a.getValue() - b.getValue()` as the comparator, producing ascending order. The model must reverse the subtraction to `b.getValue() - a.getValue()` to get descending frequency order. Tests cover multi-add accumulation, case folding, and punctuation delimiters.
+**`java_word_freq` (L3)** — `WordFreq.topK(int k)` should return the k most frequent words in descending order, but returns the wrong words. The model must identify the ordering bug in the implementation and fix it. Tests cover multi-add accumulation, case folding, and punctuation delimiters.
 
 #### Coding — AWK
 
-**`awk_csv_stats` (L3)** — The script aggregates per-region sales from a comma-separated CSV but sets `FS = " "` (whitespace) instead of `FS = ","`. With whitespace splitting, each record is treated as a single field — all region names and amounts are empty, and every total is zero. A one-character fix to the field separator.
+**`awk_csv_stats` (L3)** — `stats.awk` should print per-region sales totals from a comma-separated CSV, but produces wrong output. The model must inspect the script, identify the misconfiguration, and fix it.
 
 ---
 

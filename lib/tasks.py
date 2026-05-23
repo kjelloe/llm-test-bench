@@ -681,13 +681,11 @@ NODE_DEBOUNCE = Task(
     id="node_debounce",
     difficulty=3,
     description=(
-        "The debounce() function in src/debounce.js has a closure bug: "
-        "the timer variable is declared inside the returned function, so every call "
-        "creates a fresh undefined variable and clearTimeout() never cancels the previous "
-        "timer — every invocation fires independently after the delay. "
-        "Move the timer declaration outside the returned function so it is captured "
-        "in the closure and shared across all calls, enabling proper cancellation. "
-        "Do not change the function signature or any other behaviour."
+        "The debounce() function in src/debounce.js is broken. "
+        "It is supposed to delay invoking fn until after delay milliseconds have elapsed "
+        "since the last call — rapid successive calls should coalesce into one. "
+        "The current implementation does not do this. "
+        "Fix src/debounce.js so all tests pass."
     ),
     subdir="node_debounce",
     editable_files=["src/debounce.js"],
@@ -700,13 +698,10 @@ PYTHON_MERGE_INTERVALS = Task(
     id="python_merge_intervals",
     difficulty=4,
     description=(
-        "merge_intervals() in merge_intervals.py has a containment bug: "
-        "when a later interval is fully contained within the current merged interval, "
-        "it overwrites the end with the smaller value — shrinking the interval instead "
-        "of keeping the larger end. "
-        "Fix the single incorrect assignment so that the merged interval always "
-        "extends to the maximum of the two endpoints. "
-        "Do not change the sort, the overlap condition, or any other line."
+        "merge_intervals() in merge_intervals.py takes a list of [start, end] integer "
+        "intervals and should return a minimal sorted list of non-overlapping merged intervals. "
+        "It returns wrong results for certain inputs. "
+        "Fix merge_intervals.py so all tests pass."
     ),
     subdir="python_merge_intervals",
     editable_files=["merge_intervals.py"],
@@ -719,12 +714,10 @@ AWK_CSV_STATS = Task(
     id="awk_csv_stats",
     difficulty=3,
     description=(
-        "stats.awk reads sales.csv (comma-separated: date,region,amount) and prints "
-        "per-region total sales, one line per region in the format 'region: total' "
-        "(two decimal places, e.g. 'east: 330.25'). "
-        "The script uses the wrong field separator — FS is set to a space instead of "
-        "a comma, so fields are not split correctly and all totals are zero. "
-        "Fix the single incorrect FS value in stats.awk so all tests pass."
+        "stats.awk reads sales.csv and should print per-region total sales to stdout, "
+        "one line per region in the format 'region: total' (two decimal places, "
+        "e.g. 'east: 330.25'). "
+        "The output is incorrect. Fix stats.awk so all tests pass."
     ),
     subdir="awk_csv_stats",
     editable_files=["stats.awk"],
@@ -737,12 +730,9 @@ JAVA_WORD_FREQ = Task(
     id="java_word_freq",
     difficulty=3,
     description=(
-        "WordFreq.topK(int k) in WordFreq.java should return the k words with the "
-        "highest frequency in descending order. "
-        "The sort comparator uses (a, b) -> a.getValue() - b.getValue(), which produces "
-        "ascending order — so it returns the LEAST frequent words instead of the most. "
-        "Fix the comparator lambda so entries are sorted highest-frequency first. "
-        "Do not change the add() method, the tokenisation, or the result-building loop."
+        "WordFreq.topK(int k) in WordFreq.java should return the k most frequent words "
+        "in descending order of frequency. "
+        "It returns the wrong words. Fix WordFreq.java so all tests pass."
     ),
     subdir="java_word_freq",
     editable_files=["WordFreq.java"],

@@ -19,7 +19,6 @@ public class WordFreq {
      */
     public List<String> topK(int k) {
         List<Map.Entry<String, Integer>> entries = new ArrayList<>(counts.entrySet());
-        // BUG: ascending order — a.getValue()-b.getValue() puts lowest frequency first
         entries.sort((a, b) -> a.getValue() - b.getValue());
         List<String> result = new ArrayList<>();
         for (int i = 0; i < Math.min(k, entries.size()); i++) {
