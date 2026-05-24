@@ -155,9 +155,9 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
 | qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
-| nemotron-nano:30b-a3b | 20/29 | 168 | Mamba-2 hybrid; fastest at large ctx; multihop FAIL; non-deterministic |
+| nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
 | deepseek-r1:32b | 23/29 | 29 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval reasoning spiral |
-| carnice:35b | 24/29 | 27 | MTP fine-tune; 96 min total; context_128k SLOW 6.2 tok/s (1504s); NO_BLOCKS on complex tasks |
+| carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
 
@@ -596,6 +596,43 @@ Each repo entry shows downloads, the recommended GGUF file, and a VRAM fit indic
 
 # Process a specific file only
 ./statistics.sh output/results-compare-ls.json --format markdown
+```
+
+### Cross-hardware sharing
+
+Share results between machines so friends on different GPU tiers contribute real measurements to each other's VRAM estimation tables.
+
+```bash
+# On your machine — bundle all output/*.json into one sharable archive
+./statistics.sh --export                          # → stats-exported.json (default)
+./statistics.sh --export --out my-stats.json      # custom path
+
+# On your friend's machine — extract the runs into their output/
+./statistics.sh --import stats-exported.json
+
+# Plain results file (not an export package) is also accepted
+./statistics.sh --import output/results-compare-ls.json
+```
+
+Imported files land in `output/` in the native format under the name `results-import-<gpu_slug>-<instance_id>-<original_filename>.json`. Every machine gets a persistent 8-hex **instance ID** on first export (stored in `.instance-id`, gitignored). This means:
+
+- **Two friends with the same GPU** (`RTX_3090_24GB`) never collide — different instance IDs produce different filenames and both coexist.
+- **Re-importing from the same friend** (updated export) produces the same filenames and overwrites them — automatic update behaviour.
+
+GPU slug examples:
+
+| Hardware | Slug |
+|---|---|
+| RTX 3090 24 GB | `RTX_3090_24GB` |
+| 2× RTX 3090 24 GB | `2x_RTX_3090_48GB` |
+| RTX 3090 + RTX 4090 | `RTX_3090_RTX_4090_48GB` |
+| AMD RX 7900 XTX | `RX_7900_XTX_24GB` |
+
+Once imported, all `statistics.sh` commands pick up the foreign data automatically. For `--estimate-vram`, if the imported data comes from a different GPU tier, use `--anchor-vram N` to treat that tier as the estimation baseline:
+
+```bash
+# Friend has 2× RTX 3090 (48 GB total) — use their data as the 48 GB anchor
+./statistics.sh --estimate-vram --anchor-vram 48
 ```
 
 **Default mode** produces one row per `(model, backend)` with: hardware identifiers, pass rate, avg tok/s, total wall time, per-level skill breakdown (e.g. `L1:6/6  L2:4/5  L3:3/3`), error kind counts (`no_blocks`, `tests_still_fail`, `ctx_truncated`, `skipped_vram`, `skipped_ctx`, `slow`), and HF scout enrichment (`hf_downloads`, `hf_gguf_gb`) when `output/hf-scout-state.json` exists.

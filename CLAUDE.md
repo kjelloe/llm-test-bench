@@ -21,7 +21,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 - Default `temperature=0` and `seed=1`.
 - `num_predict` default is 400 for simple/instruct models. Use 8000+ for thinking models
   (qwen3.5, gpt-oss:120b, deepseek-r1, etc.) — their reasoning tokens consume the budget
-  before the answer. `compare.sh` sets `--num-predict 8000` explicitly; 4800 was insufficient
+  before the answer. All 19 coding tasks now have `min_predict` set (8000–24000) so they
+  floor the budget even when `--num-predict` is not passed; previously python_safe_div,
+  dotnet_sas, python_multifile_rename, python_ledger_bug, node_debounce,
+  python_merge_intervals, awk_csv_stats, and java_word_freq had `min_predict=None` and
+  silently failed with NO_BLOCKS TRUNCATED for thinking models on bare `./run.sh` calls.
+  `compare.sh` sets `--num-predict 8000` explicitly; 4800 was insufficient
   for gemma4:26b verbose preamble tasks and gpt-oss:20b complex tasks; 2400 was too few for
   qwen3.5:35b on basic tasks; 1200 was too few for gpt-oss:120b on complex tasks (CSV parser
   ran out mid-reasoning). Note: gpt-oss:20b and gemma4:26b are NOT thinking models — do not
@@ -52,12 +57,15 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     In the default 7-model set (2026-05-20): gpt-oss:20b and qwen2.5-coder:14b also pass
     step 3, but gpt-oss:20b fails step 4 (NO_BLOCKS) and qwen2.5-coder:14b fails steps 1, 2,
     4. qwen3-coder:30b fails step 3 despite 15/15 on coding tasks.
-  - **carnice:35b MTP overhead**: MTP head causes ~4-5× speed penalty vs base qwen3.6 (26 tok/s
-    vs 134 tok/s). Full 29-task run takes 96 min vs 10 min for qwen3.6. Context speed collapses
-    to 6.2 tok/s at 128k (1504s) — slower than RAM-bound gpt-oss:120b (16.9 tok/s). Also prone
-    to NO_BLOCKS on complex tasks (node_para_core, node_para_entities, csv_nordic_property,
-    node_paratrooper): verbose reasoning exhausts 8000-token budget before emitting BEGIN_FILE.
-    14/15 coding is strong but impractical for any workload beyond short coding tasks on 24 GB.
+  - **carnice:35b MTP overhead**: MTP head causes ~4-5× speed penalty vs base qwen3.6 (41 tok/s
+    coding-only, 27 tok/s full run with context, vs 134 tok/s base). Full 29-task run takes 96 min
+    vs 10 min for qwen3.6. Context speed collapses to 6.2 tok/s at 128k (1504s) — slower than
+    RAM-bound gpt-oss:120b (16.9 tok/s). Also prone to NO_BLOCKS on complex tasks (node_para_core,
+    node_para_entities, csv_nordic_property, node_paratrooper, python_merge_intervals): verbose
+    reasoning exhausts 8000-token budget before emitting BEGIN_FILE. python_merge_intervals
+    specifically: 8000 tokens entirely consumed by reasoning at 270s even with min_predict=8000;
+    needs ~12000+ for carnice on this task. 17/19 coding (2026-05-24) but impractical for any
+    workload beyond short coding tasks on 24 GB.
     Spec decoding (--spec-type draft-mtp) disabled — harms determinism at temperature=0.
   - **qwen3-coder:30b partial-method-completion**: on tasks with "Do not modify any other
     method" instruction, may output just the class body and drop module-level declarations
