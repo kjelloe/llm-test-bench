@@ -56,7 +56,8 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     149 tok/s) — the only model to pass node_para_entities (step 3) in the coding5 set.
     In the default 7-model set (2026-05-20): gpt-oss:20b and qwen2.5-coder:14b also pass
     step 3, but gpt-oss:20b fails step 4 (NO_BLOCKS) and qwen2.5-coder:14b fails steps 1, 2,
-    4. qwen3-coder:30b fails step 3 despite 15/15 on coding tasks.
+    4. qwen3-coder:30b (now qwen3-coder:30b-1m in default.txt since 2026-05-24) fails step 3
+    despite perfect 19/19 on coding tasks; the 1M variant has identical L6 behavior.
   - **carnice:35b MTP overhead**: MTP head causes ~4-5× speed penalty vs base qwen3.6 (41 tok/s
     coding-only, 27 tok/s full run with context, vs 134 tok/s base). Full 29-task run takes 96 min
     vs 10 min for qwen3.6. Context speed collapses to 6.2 tok/s at 128k (1504s) — slower than

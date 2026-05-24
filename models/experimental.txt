@@ -82,7 +82,10 @@ qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # L6 stepped (2026-05-24): 3/4 — PASS core/turret/combat; FAIL node_para_entities (TESTS_STILL_FAIL)
 # Same failure point as base qwen3-coder:30b. The 1M training does not improve L6 entity-logic.
 # Multihop (2026-05-24): 3/3 PERFECT — forward/reverse/distractor all PASS (~109–124 tok/s at 32k ctx)
-# Projected full 33-task: 30/33 — same score as base qwen3-coder:30b, ~9% faster throughout.
+# l6_full (2026-05-24, num_predict=24000): 0/1 FAIL (TESTS_STILL_FAIL) — constructor broken,
+#   test 1 fails; 4k tokens in 28.7s — not a budget issue; same failure as base qwen3-coder:30b.
+#   1M fine-tuning does not improve from-scratch architecture design skill.
+# Full 33-task: 30/33 CONFIRMED (all groups run) — same score as base, ~9% faster throughout.
 # → Swapped into models/default.txt (2026-05-24), replacing qwen3-coder:30b.
 qwen3-coder:30b-1m  Qwen3-Coder-30B-A3B-Instruct-1M-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-1M-GGUF
 

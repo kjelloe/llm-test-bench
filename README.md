@@ -135,12 +135,12 @@ The header printed before each run shows estimated runtime from the previous run
 
 All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3D, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
 
-### Default set — 33 tasks (2026-05-22)
+### Default set — 33 tasks (2026-05-22; qwen3-coder:30b-1m confirmed via component runs 2026-05-24)
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
 | noctrex-qwen3.6:35b | **31/33** | 120 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper + context_256k FAIL |
-| qwen3-coder:30b-1m | 30/33 | 185 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.6 tok/s; node_para_entities + node_paratrooper FAIL |
+| qwen3-coder:30b-1m | 30/33 | 185 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.6 tok/s; node_para_entities + node_paratrooper FAIL (same ceiling as base) |
 | qwen3.5:35b | 30/33 | 147 | MoE 35B/3B active; csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
 | gpt-oss:120b | 30/33 | 17 | RAM-bound; csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
 | gemma4:26b | 29/33 | 114 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
