@@ -1,15 +1,15 @@
 # Default / canonical model set
-# Order: fastest → slowest by observed avg tok/s (confirmed 2026-04-26)
+# Order: fastest → slowest by observed avg tok/s (confirmed 2026-05-22)
 #
 # Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
 #   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
-# noctrex-qwen3.6:35b  # ~118 tok/s  GPU only (MoE+MXFP4); 31/33 BEST — perfect coding 19/19; requires Ampere+
 # gpt-oss:20b          # ~197 tok/s  GPU only
 # qwen3-coder:30b      # ~160 tok/s  GPU only (MoE, fits in 24 GB)
 # qwen3.5:35b          # ~147 tok/s  GPU only (MoE, fits in 24 GB), thinking
+# noctrex-qwen3.6:35b  # ~120 tok/s  GPU only (MoE+MXFP4); 31/33 BEST — perfect coding 19/19; requires Ampere+
 # gemma4:26b           # ~114 tok/s  GPU only (MoE, fits in 24 GB)
 # qwen2.5-coder:14b    #  ~68 tok/s  GPU only
 # devstral-small-2     #  ~42 tok/s  GPU only (dense 24B); ~17 tok/s with ollama backend

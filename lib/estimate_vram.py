@@ -182,13 +182,67 @@ def _extract_anchors(results: list[dict]) -> dict[str, dict]:
     return anchors
 
 
+_CLEAN_128K = frozenset({None})       # error kinds that count as a clean 128k pass
+_BAD_128K   = frozenset({             # treated as "bad anchor" → estimate from 8k speed
+    "SKIPPED_CTX", "SKIPPED_VRAM",
+    "NO_BLOCKS", "TOOL_ERROR", "TESTS_STILL_FAIL", "EDITED_NONEDITABLE_FILE",
+})
+
+
 def _merge_anchors(all_anchors: list[dict[str, dict]]) -> dict[str, dict]:
-    """Merge per-file anchors; prefer highest tps_8k anchor per model."""
+    """Merge per-file anchors field-by-field so one run's coding speed combines
+    with another run's context-128k KV measurement.
+
+    Priority rules per field:
+      tps_8k      — highest wins (most comprehensive coding run)
+      weight_mb   — from the run that contributed tps_8k
+      kv128k_mb   — any measured value beats None; highest beats smaller
+      tps_128k /
+      ek_128k /
+      slow_128k   — prefer clean pass > slow pass > bad-error > not-run
+      tasks        — run with the most tasks wins
+    """
     merged: dict[str, dict] = {}
     for anchors in all_anchors:
         for model, data in anchors.items():
-            if model not in merged or data["tps_8k"] > merged[model]["tps_8k"]:
-                merged[model] = data
+            if model not in merged:
+                merged[model] = dict(data)
+                continue
+            ex = merged[model]
+
+            # tps_8k — higher is better; update weight_mb from the same run
+            if data["tps_8k"] > ex["tps_8k"]:
+                ex["tps_8k"]   = data["tps_8k"]
+                ex["weight_mb"] = data["weight_mb"]
+            elif data["weight_mb"] is not None and ex["weight_mb"] is None:
+                ex["weight_mb"] = data["weight_mb"]
+
+            # kv128k_mb — prefer measured over None; larger KV is more complete
+            if data["kv128k_mb"] is not None:
+                if ex["kv128k_mb"] is None or data["kv128k_mb"] > ex["kv128k_mb"]:
+                    ex["kv128k_mb"] = data["kv128k_mb"]
+
+            # 128k result — prefer clean pass > slow pass > bad-error > no data
+            def _128k_rank(d: dict) -> int:
+                if d["tps_128k"] <= 0 and d["ek_128k"] in (None, "SKIPPED_VRAM"):
+                    return 0   # not run or hard VRAM skip
+                if d["ek_128k"] in _BAD_128K:
+                    return 1   # ran but failed / exhausted
+                if d["slow_128k"] and d["tps_128k"] < _SLOW_THRESHOLD:
+                    return 2   # ran but unusably slow
+                if d["slow_128k"]:
+                    return 3   # slow but acceptable
+                return 4       # clean pass
+            if _128k_rank(data) > _128k_rank(ex):
+                ex["tps_128k"]  = data["tps_128k"]
+                ex["ek_128k"]   = data["ek_128k"]
+                ex["slow_128k"] = data["slow_128k"]
+
+            # task counts — most tasks wins
+            if data["tasks_total"] > ex["tasks_total"]:
+                ex["tasks_passed"] = data["tasks_passed"]
+                ex["tasks_total"]  = data["tasks_total"]
+
     return merged
 
 
@@ -264,9 +318,12 @@ def _cell_128k(model: str, a: dict, tier_vram_gb: int, gpu_count: int,
     # The model ran (or was config-skipped), so use that result directly.
     if is_anchor:
         if ek_128k == "SKIPPED_CTX":
-            return "SKIP_CTX"  # max_ctx config cap, not VRAM
+            return "SKIP_CTX"   # max_ctx config cap, not VRAM
         if ek_128k in ("SKIPPED_VRAM",):
             return "SKIPPED"
+        if ek_128k in _BAD_128K:
+            # Model ran at 128k but failed (NO_BLOCKS / timeout / wrong answer)
+            return f"{tps_128k:.1f} FAIL" if tps_128k > 0 else "FAIL"
         if tps_128k > 0 and not slow_128k:
             return _fmt(tps_128k, is_estimate=False)
         if slow_128k and tps_128k >= _SLOW_THRESHOLD:
@@ -293,10 +350,13 @@ def _cell_128k(model: str, a: dict, tier_vram_gb: int, gpu_count: int,
     else:
         factor = _DUAL_FACTOR
 
-    # If anchor 128k was SLOW (KV spill) or SKIPPED_CTX, estimate from 8k speed
-    anchor_128k_bad = (slow_128k and tps_128k < _SLOW_THRESHOLD) or \
-                       ek_128k in ("SKIPPED_CTX", "SKIPPED_VRAM") or \
-                       tps_128k <= 0
+    # If anchor 128k was bad (failed, SLOW, or skipped), estimate from 8k speed
+    anchor_128k_bad = (
+        ek_128k in _BAD_128K or
+        ek_128k in ("SKIPPED_CTX", "SKIPPED_VRAM") or
+        (slow_128k and tps_128k < _SLOW_THRESHOLD) or
+        tps_128k <= 0
+    )
     if anchor_128k_bad:
         if tps_8k <= 0:
             return "—"

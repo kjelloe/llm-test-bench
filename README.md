@@ -67,13 +67,13 @@ Example output:
 
 ## Quick start
 
-### Run the canonical benchmark (7 models)
+### Run the canonical benchmark (8 models)
 
 ```bash
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (10 models)
 
@@ -139,12 +139,13 @@ All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
+| noctrex-qwen3.6:35b | **31/33** | 120 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper + context_256k FAIL |
 | qwen3-coder:30b | 30/33 | 160 | MoE 30B/3B active; context_128k SLOW 3.3 tok/s; node_para_entities + node_paratrooper FAIL |
 | qwen3.5:35b | 30/33 | 147 | MoE 35B/3B active; csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
 | gpt-oss:120b | 30/33 | 17 | RAM-bound; csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
 | gemma4:26b | 29/33 | 114 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
 | devstral-small-2 | 29/33 | 42 | Dense 24B; node_slugify + node_para_entities + node_paratrooper FAIL |
-| gpt-oss:20b | 23/33 | 197 | Fastest; 7 NO_BLOCKS (semi-thinking planning loops); vagued descriptions trigger failures |
+| gpt-oss:20b | 26/33 | 197 | Fastest GPU; awk_csv_stats wrong output; context_64k retrieval bug; L6 paratrooper steps NO_BLOCKS at 8k |
 | qwen2.5-coder:14b | 23/33 | 68 | Dense 14B; csv_nordic_property + node_csv_parser + python_tokenizer + L6 FAIL |
 
 node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficient for the 40-test game (needs 24000). All models fail it at 8000 tokens; this is a budget constraint, not a capability ceiling. MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
@@ -153,7 +154,6 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
-| noctrex-qwen3.6:35b | 31/33 | 118 | MXFP4 MoE + MTP; 19/19 coding PERFECT; passes csv_nordic + node_csv_parser; 665s total |
 | qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 20/29 | 168 | Mamba-2 hybrid; fastest at large ctx; multihop FAIL; non-deterministic |
 | deepseek-r1:32b | 23/29 | 29 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval reasoning spiral |
