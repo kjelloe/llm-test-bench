@@ -18,6 +18,11 @@
 #   ./statistics.sh --estimate-vram output/results-compare-ls.json
 #   ./statistics.sh --estimate-vram --anchor-vram 24   (default anchor tier)
 #
+#   ./statistics.sh --export                     bundle all output/*.json → stats-exported.json
+#   ./statistics.sh --export --out shared.json   custom output path
+#   ./statistics.sh --import stats-exported.json extract runs from an export package → output/
+#   ./statistics.sh --import friend.json         import a plain results file → output/
+#
 # Formats:
 #   markdown   GitHub-flavoured markdown table (default)
 #   csv        Semicolon-separated, all cells quoted (Nordic CSV)
@@ -32,6 +37,10 @@ for arg in "$@"; do
             [[ "$a" != "--estimate-vram" ]] && args+=("$a")
         done
         exec python3 "$SCRIPT_DIR/lib/estimate_vram.py" "${args[@]}"
+    fi
+    # Route --export / --import to export.py (passes all args; export.py owns its argparse).
+    if [[ "$arg" == "--export" || "$arg" == "--import" ]]; then
+        exec python3 "$SCRIPT_DIR/lib/export.py" "$@"
     fi
 done
 

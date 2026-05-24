@@ -138,6 +138,7 @@ PYTHON_SAFE_DIV = Task(
     context_files=["tests/test_calc.py"],
     test_cmd=["python", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=8000,   # thinking models (deepseek-r1, qwen3.5) exhaust 400-token default in reasoning
 )
 
 DOTNET_SAS = Task(
@@ -158,6 +159,7 @@ DOTNET_SAS = Task(
     test_timeout=120,
     setup_cmd=["dotnet", "restore"],
     setup_timeout=180,
+    min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
 NODE_CSV_PARSER = Task(
@@ -258,6 +260,7 @@ PYTHON_LEDGER_BUG = Task(
     context_files=["account.py", "tests/test_ledger.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=8000,   # thinking models exhaust 400-token default before emitting BEGIN_FILE
 )
 
 NODE_MEMOIZE_BUG = Task(
@@ -320,6 +323,7 @@ PYTHON_MULTIFILE_RENAME = Task(
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
     num_ctx=16384,
+    min_predict=8000,   # thinking models exhaust 400-token default before emitting BEGIN_FILE
 )
 
 PYTHON_DIJKSTRA = Task(
@@ -692,6 +696,7 @@ NODE_DEBOUNCE = Task(
     context_files=["tests/debounce.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/debounce.test.js"],
     test_timeout=30,
+    min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
 PYTHON_MERGE_INTERVALS = Task(
@@ -708,6 +713,7 @@ PYTHON_MERGE_INTERVALS = Task(
     context_files=["tests/test_merge_intervals.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
 AWK_CSV_STATS = Task(
@@ -724,6 +730,7 @@ AWK_CSV_STATS = Task(
     context_files=["sales.csv", "tests/test_stats.py"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
 JAVA_WORD_FREQ = Task(
@@ -739,6 +746,7 @@ JAVA_WORD_FREQ = Task(
     context_files=["WordFreqTest.java"],
     test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
     test_timeout=30,
+    min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
 BUILTIN_TASKS: list[Task] = [
