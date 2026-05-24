@@ -56,6 +56,36 @@ qwen3.5:35b      Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf      ngl=999,no_mmap,cache_typ
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf        ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
 
+# ── Qwen3-Coder-30B-A3B 1M context variant ───────────────────────────────────
+# Same A3B MoE architecture and weight size (~17.3 GB Q4_K_M) as qwen3-coder:30b.
+# "1M" = trained/fine-tuned with 1M-token context window (extended RoPE scaling).
+#
+# Results (2026-05-24, llama-server, RTX 3090 24 GB, coding + context groups, 25 tasks):
+#   24/25 (PASS 24, SLOW 1, SKIP_VRAM 1)  166.5 tok/s avg  2125s total
+#   Coding:  19/19 PERFECT — passes ALL tasks including csv_nordic_property, node_csv_parser,
+#            python_expr_eval, python_dijkstra, python_hashmap
+#   Context: PASS 8k/16k/32k/64k → 162/142.7/117.8/83.4 tok/s (faster than base at all sizes)
+#            SLOW at context_128k: 3.6 tok/s (1822s) — same KV spill as base qwen3-coder:30b
+#            SKIP context_256k (SKIPPED_VRAM, min_vram_gb=48)
+#
+# Comparison vs qwen3-coder:30b (2026-05-20 full run):
+#   Coding tok/s: ~185 vs ~170 — 1M variant is ~9% faster
+#   ctx_8k:    162 vs 145   ctx_16k:  142 vs 130
+#   ctx_32k:   118 vs 108   ctx_64k:   83 vs  76
+#   ctx_128k:  3.6 vs 3.3   ← same hardware wall; 1M training does not help KV footprint
+#
+# KEY FINDING: "1M" means the model was trained to handle 1M-token correctness — it still
+# needs the VRAM to store the KV cache. The 128k collapse is a VRAM constraint (~17.3 GB
+# weights leave ~6 GB headroom; 131072 ctx overflows it), not a model training issue.
+# Needs a true 32 GB card to run context_128k at full throughput.
+#
+# L6 stepped (2026-05-24): 3/4 — PASS core/turret/combat; FAIL node_para_entities (TESTS_STILL_FAIL)
+# Same failure point as base qwen3-coder:30b. The 1M training does not improve L6 entity-logic.
+# Multihop (2026-05-24): 3/3 PERFECT — forward/reverse/distractor all PASS (~109–124 tok/s at 32k ctx)
+# Projected full 33-task: 30/33 — same score as base qwen3-coder:30b, ~9% faster throughout.
+# → Swapped into models/default.txt (2026-05-24), replacing qwen3-coder:30b.
+qwen3-coder:30b-1m  Qwen3-Coder-30B-A3B-Instruct-1M-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-1M-GGUF
+
 # ── Carnice-Qwen3.6 MoE 35B A3B (fine-tune by mudler, MTP-trained) ──────────
 # Qwen3.6-35B-A3B fine-tune with Multi-Token Prediction (MTP) training.
 # GGUF bundles the MTP head for self-speculative decoding (llama.cpp PR #22673, >= commit 255582687).
@@ -230,6 +260,15 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,
 #   Context:   PASS 8k/16k/32k (29.8→26.3→21.4 tok/s); SKIPPED 64k/128k (max_ctx=32768)
 #   Multihop:  PASS forward + reverse + distractor (~21 tok/s) — good 2-hop retrieval at 32k
 #   Skips:     context_64k, context_128k (SKIPPED_CTX, max=32768), context_256k (SKIPPED_VRAM)
+# Results (2026-05-24, llama-server, RTX 3090 24 GB, coding group 19 tasks, corrected flags):
+#   18/19  31.4 tok/s avg  2163s total
+#   FAIL: python_expr_eval only — NO_BLOCKS TRUNCATED 1009s; "code is correct. But..." spiral
+#         exhausts 8000-token budget without emitting BEGIN_FILE; capability gap confirmed.
+#   PASS: all other 18 tasks including csv_nordic_property (202s), node_csv_parser (151s),
+#         python_hashmap (246s), python_dijkstra (67s), python_merge_intervals (78s)
+#   Note: previous 10/19 bad result (2026-05-24) was from missing --num-predict 8000;
+#         8 tasks had min_predict=None and exhausted the 400-token default in reasoning.
+#         All 19 coding tasks now have min_predict=8000+ — that footgun is closed.
 # python_expr_eval: NOT fixable with more tokens. Model loops (24k tokens consumed, "code is
 # correct. But..." spiral). A structural capability gap in R1-Distill on this L4 parsing task.
 deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF

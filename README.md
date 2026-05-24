@@ -73,7 +73,7 @@ Example output:
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b-1m`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (10 models)
 
@@ -140,7 +140,7 @@ All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
 | noctrex-qwen3.6:35b | **31/33** | 120 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper + context_256k FAIL |
-| qwen3-coder:30b | 30/33 | 160 | MoE 30B/3B active; context_128k SLOW 3.3 tok/s; node_para_entities + node_paratrooper FAIL |
+| qwen3-coder:30b-1m | 30/33 | 185 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.6 tok/s; node_para_entities + node_paratrooper FAIL |
 | qwen3.5:35b | 30/33 | 147 | MoE 35B/3B active; csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
 | gpt-oss:120b | 30/33 | 17 | RAM-bound; csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
 | gemma4:26b | 29/33 | 114 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
@@ -154,9 +154,10 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
+| qwen3-coder:30b (base) | 30/33 | 160 | Superseded by 1M variant; same L6 ceiling; slower on all tasks |
 | qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
-| deepseek-r1:32b | 23/29 | 29 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval reasoning spiral |
+| deepseek-r1:32b | 18/19 coding | 31 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval NO_BLOCKS (reasoning spiral — confirmed capability gap, not token budget) |
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
