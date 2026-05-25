@@ -295,6 +295,10 @@ def main() -> None:
                         help="Output JSON file (default: output/results-YYYYMMDD-HHmmss.json)")
     parser.add_argument("--keep-workdirs", action="store_true",
                         help="Do not delete temp workdirs (useful for debugging)")
+    parser.add_argument("--debug", action="store_true",
+                        help="Stream server subprocess output live to the terminal instead of "
+                             "buffering it (llama-server and vllm backends; useful for diagnosing "
+                             "startup failures)")
     parser.add_argument("--checkpoint-dir", default=None, metavar="PATH",
                         help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
@@ -363,7 +367,7 @@ def main() -> None:
 
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
-        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path)
+        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path, debug=args.debug)
 
     elif args.backend == "vllm":
         import shutil
@@ -392,7 +396,7 @@ def main() -> None:
 
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
-        llama_manager = VLLMManager(models_dir=models_dir, bin_path=bin_path)
+        llama_manager = VLLMManager(models_dir=models_dir, bin_path=bin_path, debug=args.debug)
 
     else:
         from lib.ollama_client import chat as _chat_fn
@@ -566,7 +570,7 @@ def main() -> None:
                     continue
                 if llama_manager.needs_restart(cfg, effective_ctx):
                     if llama_manager._current_model is not None:
-                        print(f"  [llama-server] stopping {llama_manager._current_model!r} ...",
+                        print(f"  [{args.backend}] stopping {llama_manager._current_model!r} ...",
                               end=" ", flush=True)
                         llama_manager.stop()
                         print("done")
@@ -577,7 +581,7 @@ def main() -> None:
                             f"baseline ({system_baseline_vram_mb} MB + 200) within 10s — "
                             f"before_load snapshot is dirty"
                         )
-                    print(f"  [llama-server] starting {model!r} ctx={effective_ctx} ...",
+                    print(f"  [{args.backend}] starting {model!r} ctx={effective_ctx} ...",
                           end=" ", flush=True)
                     t0 = time.monotonic()
                     llama_manager.ensure(cfg, effective_ctx, num_threads=num_thread_opt,
@@ -666,7 +670,7 @@ def main() -> None:
             # requests against the same server process hang or error. Force a clean
             # restart before the next task so needs_restart() picks it up.
             if record.get("error_kind") == "CTX_TRUNCATED" and llama_manager is not None:
-                print("  [llama-server] CTX_TRUNCATED — stopping server for fresh restart on next task",
+                print(f"  [{args.backend}] CTX_TRUNCATED — stopping server for fresh restart on next task",
                       flush=True)
                 llama_manager.stop()
 

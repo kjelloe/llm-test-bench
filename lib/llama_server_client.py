@@ -37,9 +37,11 @@ _HEALTH_URL = f"{_BASE_URL}/health"
 class LlamaServerManager:
     """Manages a single llama-server subprocess for the duration of a benchmark run."""
 
-    def __init__(self, models_dir: str, bin_path: str = "llama-server") -> None:
+    def __init__(self, models_dir: str, bin_path: str = "llama-server",
+                 debug: bool = False) -> None:
         self.models_dir = Path(models_dir)
         self.bin_path = bin_path
+        self.debug = debug
         self._proc: subprocess.Popen | None = None
         self._current_model: str | None = None
         self._current_ctx: int = 0
@@ -74,7 +76,7 @@ class LlamaServerManager:
         except subprocess.TimeoutExpired:
             self._proc.kill()
             self._proc.wait()
-        if self._proc.stderr:
+        if not self.debug and self._proc.stderr:
             try:
                 self._proc.stderr.close()
             except Exception:
@@ -115,7 +117,10 @@ class LlamaServerManager:
                 # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
                 cmd.extend([flag, str(val).replace("|", ",")])
 
-        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        # debug=True: inherit terminal so output streams live; useful for startup diagnosis.
+        # debug=False: capture stderr so it can be shown on crash/timeout.
+        stderr = None if self.debug else subprocess.PIPE
+        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr)
         self._current_model = cfg.ollama_name
         self._current_ctx = ctx_size
         try:
@@ -129,15 +134,14 @@ class LlamaServerManager:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
-                stderr_out = ""
-                if self._proc.stderr:
+                msg = "llama-server exited unexpectedly during startup"
+                if not self.debug and self._proc.stderr:
                     try:
                         stderr_out = self._proc.stderr.read().decode(errors="replace").strip()
+                        if stderr_out:
+                            msg += f"\n--- stderr ---\n{stderr_out[-2000:]}"
                     except Exception:
                         pass
-                msg = "llama-server exited unexpectedly during startup"
-                if stderr_out:
-                    msg += f"\n--- stderr ---\n{stderr_out[-2000:]}"
                 raise RuntimeError(msg)
             try:
                 with urllib.request.urlopen(_HEALTH_URL, timeout=2) as r:

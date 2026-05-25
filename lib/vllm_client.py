@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -46,12 +47,16 @@ class VLLMManager:
     backend-specific branching beyond the initial setup block.
     """
 
-    def __init__(self, models_dir: str, bin_path: str = "vllm") -> None:
+    def __init__(self, models_dir: str, bin_path: str = "vllm",
+                 debug: bool = False) -> None:
         self.models_dir = Path(models_dir)
         self.bin_path = bin_path
+        self.debug = debug
         self._proc: subprocess.Popen | None = None
         self._current_model: str | None = None
         self._current_ctx: int = 0
+        self._log_path: str | None = None
+        self._last_cmd: list[str] = []
 
     @property
     def base_url(self) -> str:
@@ -65,13 +70,18 @@ class VLLMManager:
             or ctx_size > self._current_ctx
         )
 
+    # vLLM startup is slower than llama-server: FlashInfer JIT warmup adds
+    # ~100s even with a warm cache, and cold first-run compilation can take
+    # several minutes. Never allow less than 20 minutes.
+    _MIN_STARTUP_TIMEOUT = 1200
+
     def ensure(self, cfg: ModelConfig, ctx_size: int,
                num_threads: int | None = None, startup_timeout: int = 600) -> None:
         """Start or restart the server if model changed or ctx grew. No-op if suitable."""
         if not self.needs_restart(cfg, ctx_size):
             return
         self.stop()
-        self._start(cfg, ctx_size, startup_timeout=startup_timeout)
+        self._start(cfg, ctx_size, startup_timeout=max(startup_timeout, self._MIN_STARTUP_TIMEOUT))
 
     def stop(self) -> None:
         if self._proc is None:
@@ -82,14 +92,15 @@ class VLLMManager:
         except subprocess.TimeoutExpired:
             self._proc.kill()
             self._proc.wait()
-        if self._proc.stderr:
-            try:
-                self._proc.stderr.close()
-            except Exception:
-                pass
         self._proc = None
         self._current_model = None
         self._current_ctx = 0
+        if self._log_path and os.path.exists(self._log_path):
+            try:
+                os.unlink(self._log_path)
+            except Exception:
+                pass
+            self._log_path = None
 
     def _start(self, cfg: ModelConfig, ctx_size: int, startup_timeout: int = 600) -> None:
         if not cfg.gguf_file:
@@ -135,9 +146,25 @@ class VLLMManager:
                 if _token:
                     env["HF_TOKEN"] = _token
 
-        self._proc = subprocess.Popen(
-            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=env,
-        )
+        # Ensure .venv/bin is on PATH so flashinfer JIT can find the ninja
+        # binary installed by the ninja Python package (pip install ninja).
+        # Without this the EngineCore subprocess inherits the caller's PATH,
+        # which may not include the venv bin directory.
+        _venv_bin = str(Path(self.bin_path).parent)
+        if _venv_bin not in env.get("PATH", ""):
+            env["PATH"] = _venv_bin + os.pathsep + env.get("PATH", "")
+
+        self._last_cmd = cmd
+        if self.debug:
+            # Inherit terminal — output streams live; useful for startup diagnosis.
+            self._proc = subprocess.Popen(cmd, env=env)
+        else:
+            # Write stdout+stderr to a temp file so both crash and timeout paths
+            # can read the log regardless of whether the process is still running.
+            _log_fd, self._log_path = tempfile.mkstemp(suffix=".log", prefix="vllm-")
+            _log_file = os.fdopen(_log_fd, "wb")
+            self._proc = subprocess.Popen(cmd, stdout=_log_file, stderr=_log_file, env=env)
+            _log_file.close()  # Popen holds its own fd; we close our copy
         self._current_model = cfg.ollama_name
         self._current_ctx = ctx_size
         try:
@@ -147,19 +174,26 @@ class VLLMManager:
             self._current_ctx = 0
             raise
 
+    def _read_log(self, tail: int = 4000) -> str:
+        if not self._log_path:
+            return ""
+        try:
+            with open(self._log_path, errors="replace") as f:
+                content = f.read()
+            return content[-tail:] if len(content) > tail else content
+        except Exception:
+            return ""
+
     def _wait_ready(self, timeout: int) -> None:
+        cmd_str = " ".join(self._last_cmd)
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
-                stderr_out = ""
-                if self._proc.stderr:
-                    try:
-                        stderr_out = self._proc.stderr.read().decode(errors="replace").strip()
-                    except Exception:
-                        pass
-                msg = "vllm serve exited unexpectedly during startup"
-                if stderr_out:
-                    msg += f"\n--- stderr ---\n{stderr_out[-3000:]}"
+                msg = f"vllm serve exited unexpectedly during startup\n  cmd: {cmd_str}"
+                if not self.debug:
+                    log = self._read_log()
+                    if log:
+                        msg += f"\n--- vllm log ---\n{log}"
                 raise RuntimeError(msg)
             try:
                 with urllib.request.urlopen(_HEALTH_URL, timeout=2) as r:
@@ -168,8 +202,13 @@ class VLLMManager:
             except Exception:
                 pass
             time.sleep(2)
+        msg = f"vllm serve did not become ready within {timeout}s\n  cmd: {cmd_str}"
+        if not self.debug:
+            log = self._read_log()
+            if log:
+                msg += f"\n--- vllm log (last 4000 chars) ---\n{log}"
         self.stop()
-        raise TimeoutError(f"vllm serve did not become ready within {timeout}s")
+        raise TimeoutError(msg)
 
 
 def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
