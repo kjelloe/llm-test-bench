@@ -41,12 +41,14 @@ Example output:
   ✓  Ollama reachable at http://127.0.0.1:11434
 
 ── Ollama models ──
+  ✓  noctrex-qwen3.6:35b
   ✓  gpt-oss:20b
   ✓  qwen2.5-coder:14b
-  ✓  qwen3-coder:30b
+  ✓  qwen3-coder:30b-1m
   ✓  gemma4:26b
   ✓  qwen3.5:35b
   ✓  gpt-oss:120b
+  ✓  devstral-small-2
 
 ── Python ──
   ✓  Python 3.12.3
@@ -189,7 +191,7 @@ Hardware: RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 G
 |                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L1) ok  tok/s  wall     |                           |
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 | gpt-oss:20b        |  1  |  L3   | PASS    82.1t/s     8.3s | PASS    81.7t/s    23.4s |   …     | PASS  1574.0t/s    18.5s | 19/23   82.0t/s     …s    |
-| qwen3-coder:30b    |  3  |  L3   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS   404.0t/s    62.0s | 21/23   39.5t/s     …s    |
+| qwen3-coder:30b-1m |  3  |  L4   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS   404.0t/s    62.0s | 21/23   39.5t/s     …s    |
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 
 FAILURE DETAIL

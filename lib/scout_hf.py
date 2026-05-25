@@ -22,12 +22,15 @@ SCOUT_QUERIES: list[str] = [
     "qwen3 instruct moe",
     "qwen2.5 coder instruct",
     "devstral coding",
+    "deepseek-r1 instruct",
     "deepseek coder instruct",
+    "llama4 instruct",
     "llama3 coding instruct",
-    "gemma instruct",
+    "gemma4 instruct",
     "gpt-oss",
     "codestral",
     "phi4 coding instruct",
+    "mxfp4 gguf",
 ]
 
 _REPOS_PER_QUERY = 8
