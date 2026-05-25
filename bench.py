@@ -266,12 +266,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--backend", default=os.environ.get("BENCH_BACKEND", "ollama"),
-        choices=["ollama", "llama-server"],
+        choices=["ollama", "llama-server", "vllm"],
         help="Inference backend (default: ollama; env: BENCH_BACKEND)",
     )
     parser.add_argument(
         "--model-file", default=os.environ.get("BENCH_MODEL_FILE"), metavar="PATH",
-        help="models/*.txt file for GGUF/param lookup (required for --backend llama-server; env: BENCH_MODEL_FILE)",
+        help="models/*.txt / *.vllm file for GGUF/param lookup (required for llama-server and vllm; env: BENCH_MODEL_FILE)",
     )
     parser.add_argument("--ollama-url", default="http://localhost:11434")
     parser.add_argument("--num-ctx", type=int, default=int(os.environ.get("DEFAULT_CTX", "8192")))
@@ -333,6 +333,8 @@ def main() -> None:
     num_thread_opt = args.num_thread if args.num_thread > 0 else None
     llama_manager = None
     model_configs: dict = {}
+    bin_path = ""
+    models_dir = ""
 
     if args.backend == "llama-server":
         import shutil
@@ -362,6 +364,36 @@ def main() -> None:
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
         llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path)
+
+    elif args.backend == "vllm":
+        import shutil
+        from lib.vllm_client import VLLMManager
+        from lib.vllm_client import chat as _chat_fn
+        from lib.vllm_client import unload_model as _unload_fn
+        from lib.model_config import load_model_file
+
+        models_dir = os.environ.get("LLAMA_MODELS_DIR", "")
+        if not models_dir:
+            parser.error("LLAMA_MODELS_DIR environment variable must be set for --backend vllm")
+        if not args.model_file:
+            parser.error(
+                "--model-file is required for --backend vllm.\n"
+                "  Pass it explicitly:  --model-file models/default.vllm\n"
+                "  Or set the env var:  export BENCH_MODEL_FILE=models/default.vllm"
+            )
+
+        bin_path = os.environ.get("VLLM_BIN") or shutil.which("vllm") or ""
+        if not bin_path:
+            parser.error(
+                "vllm binary not found on PATH.\n"
+                "  Install vLLM:  .venv/bin/pip install vllm  (or run install.sh)\n"
+                "  Or point to the binary:  export VLLM_BIN=/path/to/vllm"
+            )
+
+        cfgs = load_model_file(args.model_file)
+        model_configs = {c.ollama_name: c for c in cfgs}
+        llama_manager = VLLMManager(models_dir=models_dir, bin_path=bin_path)
+
     else:
         from lib.ollama_client import chat as _chat_fn
         from lib.ollama_client import unload_model as _unload_fn
@@ -416,8 +448,8 @@ def main() -> None:
             print(f"WARNING: could not set power limit ({exc}); continuing.")
 
     hw = get_hw_snapshot(
-        llama_server_bin=bin_path if args.backend == "llama-server" else None,
-        models_dir=models_dir if args.backend == "llama-server" else None,
+        llama_server_bin=bin_path or None,
+        models_dir=models_dir or None,
     )
     total_vram_gb: float = sum(
         g.get("vram_total_mb", 0) for g in (hw.get("gpu") or [])

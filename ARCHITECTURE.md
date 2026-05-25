@@ -41,6 +41,7 @@ lib/                      Python support modules (imported by bench.py and shell
   tasks.py                Task dataclass, built-in task definitions, prompt builder, subprocess helpers
   ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
   llama_server_client.py  LlamaServerManager (spawn/restart/stop llama-server process) + chat() for OpenAI-compatible /v1/chat/completions; same interface as ollama_client
+  vllm_client.py          VLLMManager (spawn/restart/stop vllm serve process) + chat() for OpenAI-compatible /v1/chat/completions; mirrors LlamaServerManager interface exactly
   model_config.py         Parses models/*.txt 3-field format (ollama-name gguf-file params) into ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
   reporting.py            Comparison table (paginated), failure detail, JSON writer
@@ -55,7 +56,9 @@ lib/                      Python support modules (imported by bench.py and shell
   estimate_vram.py        VRAM scalability estimation table: reads anchor measurements from output/*.json, applies bandwidth-ratio heuristics to project tok/s at 16V/24V/2×16V/2×24V/2×32V tiers for both 8k and 128k context
   export.py               Cross-hardware result sharing: --export bundles output/*.json into a sharable archive with per-instance ID and GPU slug; --import extracts runs into output/ with collision-free naming (results-import-<gpu_slug>-<instance_id>-<file>.json); same-instance re-import overwrites (update), different instance coexists
 output/                   Runtime artifacts — git-ignored, created on first run
-  results-compare.json    Written by compare.sh (default set)
+  results-compare.json    Written by compare.sh (default set, ollama backend)
+  results-compare-ls.json Written by compare.sh --backend llama-server
+  results-compare-vl.json Written by compare.sh --backend vllm
   results-<set>.json      Written by compare.sh <set> (e.g. extended, full)
   results.json            Written by run.sh / bench.py --out default
   compare-history.json    Run summaries + per-model history archive
@@ -194,6 +197,35 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` s
 - **`_parse_body(body, elapsed_ns)`** — standalone helper that extracts `content`, `thinking`, `finish_reason`, and metrics from a `/v1/chat/completions` response dict. Reads `message.content` for the answer, `message.reasoning_content` for thinking (the field llama.cpp uses for reasoning models), and `choices[0].finish_reason` for the stop reason (`"stop"` / `"length"`). **Fallback:** when `content` is empty but `reasoning_content` is non-empty, `reasoning_content` is promoted to `content` — this recovers cases where thinking models (gpt-oss:120b, qwen3.5:35b) exhaust their token budget inside the `<think>` phase and produce nothing in the non-reasoning section. Separated from `chat()` so it can be unit-tested without HTTP mocking.
 - `unload_model(...)` — no-op; lifecycle is managed by `LlamaServerManager.stop()`.
 
+#### `vllm_client.py` — vLLM Backend Adapter
+
+Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` and `llama_server_client.py`. `bench.py` assigns either a `LlamaServerManager` or a `VLLMManager` to the same `llama_manager` variable — the rest of the model loop is unchanged.
+
+- **`VLLMManager`** — manages a single `vllm serve` subprocess:
+  - `ensure(cfg, ctx_size, num_threads, startup_timeout=600)` — starts or restarts the server when the model changes or `ctx_size` grew. Blocks until `/health` returns HTTP 200 (up to `startup_timeout` seconds). If the server exits early, its last 3000 chars of stderr are included in the raised `RuntimeError`.
+  - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; closes stderr pipe.
+  - Tracks `_current_model` and `_current_ctx`; never downsizes context between tasks.
+- **Server command built in `_start()`:**
+  ```
+  vllm serve <gguf_path>
+    --tokenizer <hf_repo>   (required for GGUF mode — tokenizer not embedded in .gguf)
+    --load-format gguf
+    --max-model-len <ctx_size>
+    --served-model-name <ollama_name>   (makes API model name match what bench.py sends)
+    --port 8090
+    --host 127.0.0.1
+    [--tensor-parallel-size N]  (from tp= param)
+    [--dtype auto]              (from dtype= param)
+    [other params from model file, after harness-only keys stripped]
+  ```
+  `max_model_len`, `max_ctx`, `thinking` are consumed by the harness and never forwarded.
+- **HF token:** reads `hf-token.txt` from the repo root and sets `HF_TOKEN` in the subprocess environment if not already set — required for gated models (Llama 3.3).
+- `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions`. `model` is the short `ollama_name` (matches `--served-model-name`). Reads `reasoning_content` for thinking models; promotes it to `content` when `content` is empty (same fallback as llama-server).
+- **`_parse_body(body, elapsed_ns)`** — vLLM does not expose llama.cpp `timings` fields, so `eval_duration` is set to wall time and `prompt_eval_duration` to 0. `tok_per_s` in results is therefore `completion_tokens / wall_time`.
+- `unload_model(...)` — no-op; lifecycle managed by `VLLMManager.stop()`.
+
+**Port allocation:** vLLM uses port 8090; llama-server uses 8080. Both can coexist on the same machine, though `bench.py` runs only one backend at a time.
+
 #### `model_config.py` — Model Config Parser
 
 Parses the 3-field space-separated format used in `models/*.txt` files.
@@ -293,7 +325,7 @@ Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. Th
 | Field | Type | Notes |
 |---|---|---|
 | `model` | string | |
-| `backend` | string | `"ollama"` or `"llama-server"` |
+| `backend` | string | `"ollama"`, `"llama-server"`, or `"vllm"` |
 | `hf_repo` | string | HuggingFace repo (e.g. `bartowski/Qwen2.5-Coder-14B-Instruct-GGUF`); populated for llama-server runs when the model file includes an `hf:` field |
 | `task` | string | |
 | `baseline_failed` | bool | |
@@ -415,6 +447,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 - GPU monitoring requires `nvidia-ml-py` and an NVIDIA GPU. Without it, `gpu_snapshots` and `kv_cache` fields are `null`; the benchmark otherwise runs identically.
 - **llama-server backend**: requires `llama-server` binary on `PATH` and `LLAMA_MODELS_DIR` env var pointing to the directory containing GGUF files. `--model-file` (or `BENCH_MODEL_FILE` env var) is required; if omitted, bench.py prints an actionable error showing both the CLI flag and env var alternatives. Models without a GGUF filename in `models/*.txt` cannot be used and will error immediately. `--think` and `--warmup` are no-ops. `tok_per_s` is wall-time derived (less accurate than Ollama's internal `eval_duration`). Context window is set at server startup; the server restarts automatically when a task requires a larger `num_ctx` than the running instance (never downsizes — a larger-ctx instance serves smaller tasks too). `--num-thread` is passed as `--threads` at startup, not per-request.
+- **vllm backend**: requires `vllm` installed in `.venv` (`pip install vllm && pip install 'gguf>=0.10.0'`) and `LLAMA_MODELS_DIR` pointing to the GGUF directory. `--model-file` must be a `.vllm` file (auto-selected by `compare.sh`). The `hf:` field is required per model (used as `--tokenizer` source). Uses port 8090. `tok_per_s` is wall-time only (`timings` not available). Multi-GPU: set `tp=N` in the params field; all N GPUs must have sufficient VRAM. `max_model_len` in the params field acts as both the harness `max_ctx` cap (SKIPPED_CTX) and the `--max-model-len` startup flag. `--num-thread`, `--think`, and `--warmup` are no-ops.
 - Ollama keeps the previous model's weights in VRAM after the last request (even when GPU utilisation drops to 0%). `unload_model()` + `wait_for_gpu_idle()` forces a clean drain before each model switch, but if Ollama doesn't evict within 10s the snapshot is marked `dirty: true`.
 - KV cache delta (`kv_cache.delta_mb`) covers both prompt and output tokens since the full KV cache is allocated across the complete inference call. Prompt tokens dominate for typical task prompt sizes (400–700 tokens vs. 50–200 generated).
 

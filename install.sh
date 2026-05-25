@@ -312,6 +312,31 @@ else
   info "Then pull models:  ollama pull <model>"
 fi
 
+# ── 7. vLLM (optional — required only for --backend vllm) ────────────────────
+section "vLLM backend (optional)"
+VENV="$SCRIPT_DIR/.venv"
+if [[ -d "$VENV" ]] && "$VENV/bin/python" -c "import vllm" &>/dev/null 2>&1; then
+    VLLM_VER=$("$VENV/bin/python" -c "import vllm; print(vllm.__version__)" 2>/dev/null || echo "unknown")
+    ok "vllm $VLLM_VER  (in .venv)"
+else
+    warn "vllm not installed"
+    info "Required only for --backend vllm (tensor-parallel inference, dual-GPU 70B models)"
+    info "Installation is large: ~4–8 GB including CUDA libraries"
+    if ask "Install vllm in .venv now?"; then
+        if [[ ! -d "$VENV" ]]; then
+            fail ".venv not found — run ./run.sh once first to create it, then re-run install.sh"
+        else
+            # Install separately: vllm[gguf] extra is not present in all releases
+            if run_cmd "vllm" "$VENV/bin/pip" install vllm; then
+                run_cmd "gguf (for --load-format gguf)" "$VENV/bin/pip" install "gguf>=0.10.0"
+            fi
+        fi
+    else
+        info "Skip — to install later:"
+        info "  .venv/bin/pip install vllm && .venv/bin/pip install 'gguf>=0.10.0'"
+    fi
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo
 hr

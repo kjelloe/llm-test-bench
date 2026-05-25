@@ -1,0 +1,38 @@
+# Default vLLM model set
+# Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<tokenizer-repo>]
+#
+#   short-name    Canonical name used in results/history (acts like ollama name)
+#   gguf-file     GGUF filename relative to $LLAMA_MODELS_DIR
+#   params        Comma-separated vLLM startup parameters:
+#                   tp=N              → --tensor-parallel-size N
+#                   dtype=auto        → --dtype auto  (let vLLM pick bf16/fp16)
+#                   max_model_len=N   → harness context cap; controls --max-model-len
+#                   enforce_eager     → --enforce-eager (disables CUDA graphs;
+#                                       use for debugging; ~20% slower)
+#                   gpu_mem_util=0.9  → --gpu-memory-utilization 0.9
+#   hf:           HuggingFace repo ID — used as vLLM --tokenizer source when
+#                 loading GGUFs; also used for fetch-hf.sh
+
+# Run with:
+#   ./compare.sh --backend vllm             (reads this file automatically)
+#   ./run.sh --backend vllm --model-file models/default.vllm --models qwen2.5-coder:14b-vl
+
+# ── Single-GPU smoke test (tp=1, fits in 24 GB) ───────────────────────────────
+# Known baseline from llama-server: 23/33, 64 tok/s — validates vLLM pipeline
+# and gives immediate comparison data without needing dual GPU.
+qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768  hf:Qwen/Qwen2.5-Coder-14B-Instruct
+
+# ── Dual-GPU models (tp=2, require 2× RTX 3090 = 48 GB total) ────────────────
+# llama3.3:70b — primary vLLM target; cannot run on single 24 GB GPU at all.
+# Q4_K_S at 40 GB fits 48 GB with ~8 GB for KV. Capped at 32k context.
+# Tokenizer is gated (meta-llama) — set HF_TOKEN env var or populate hf-token.txt.
+llama3.3:70b-q4ks    Llama-3.3-70B-Instruct-Q4_K_S.gguf     tp=2,dtype=auto,max_model_len=32768  hf:meta-llama/Llama-3.3-70B-Instruct
+
+# qwq:32b — strong reasoning model; previously unusable on 24 GB (22 GB weights,
+# ~2 GB KV headroom → thrashing at 6 tok/s). Dual GPU: 11 GB/GPU, ~13 GB for KV.
+# is_thinking=true: emits <think>…</think> reasoning before answer.
+qwq:32b-q5km         QwQ-32B-Q5_K_M.gguf                    tp=2,dtype=auto,max_model_len=32768,thinking  hf:Qwen/QwQ-32B
+
+# qwen2.5-coder:32b — currently fails context_32k+ on single GPU (weight leaves
+# ~4 GB for KV). Dual GPU: 10 GB/GPU → ~14 GB for KV, unlocks context_64k.
+qwen2.5-coder:32b-q4km  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=65536  hf:Qwen/Qwen2.5-Coder-32B-Instruct

@@ -1,21 +1,27 @@
-"""Parse model definition lines from models/*.txt files.
+"""Parse model definition lines from models/*.txt and models/*.vllm files.
 
 Line format (space-separated fields):
-  <ollama-name> [<gguf-file> [<key=val,flag,...>]] [hf:<owner/repo>]
+  <short-name> [<gguf-file> [<key=val,flag,...>]] [hf:<owner/repo>]
 
-Field 1       ollama model tag — always required
-Field 2       GGUF filename relative to LLAMA_MODELS_DIR — required for llama-server
-Field 3       comma-separated llama-server startup params
-                boolean flags: no_mmap, mlock
-                key-value:     n_cpu_moe=35, cache_type_k=turbo4, ngl=999
+Field 1       model name — ollama tag for .txt files; short canonical name for .vllm
+Field 2       GGUF filename relative to LLAMA_MODELS_DIR — required for llama-server/vllm
+Field 3       comma-separated backend startup params
+                llama-server: no_mmap, ngl=999, cache_type_k=f16, ...
+                vllm:         tp=2, dtype=auto, max_model_len=32768, enforce_eager, ...
               Underscores in names become hyphens when turned into CLI flags.
-hf:<repo>     HuggingFace repo ID for fetch-hf.py (position-independent after field 1;
-              identified by the hf: prefix so it can appear before or after params)
+hf:<repo>     HuggingFace repo ID for fetch-hf.py; for vllm used as --tokenizer source
+              (position-independent after field 1)
+
+Harness-only params (consumed by the harness; not forwarded to the backend):
+  thinking      Mark as thinking model (controls system message; .txt and .vllm)
+  max_ctx       Hard context cap; harness skips tasks that require more (.txt)
+  max_model_len Same as max_ctx for vllm models; controls --max-model-len at startup
 
 Examples:
   gpt-oss:20b
   qwen2.5-coder:14b  model.gguf  hf:Qwen/Qwen2.5-Coder-14B-Instruct-GGUF
   qwen3.5:35b  model.gguf  n_cpu_moe=35,no_mmap  hf:bartowski/Qwen3-235B-A22B-GGUF
+  llama3.3:70b  Llama-3.3-70B-Q4_K_S.gguf  tp=2,dtype=auto,max_model_len=32768  hf:meta-llama/Llama-3.3-70B-Instruct
 """
 from __future__ import annotations
 
@@ -65,8 +71,8 @@ def parse_model_line(line: str) -> ModelConfig | None:
             elif "=" in token:
                 k, v = token.split("=", 1)
                 k, v = k.strip(), v.strip()
-                if k == "max_ctx":
-                    max_ctx = int(v)  # harness-only field — not forwarded to llama-server
+                if k in ("max_ctx", "max_model_len"):
+                    max_ctx = int(v)  # harness-only — max_model_len is the vllm alias
                 else:
                     params[k] = v
             else:

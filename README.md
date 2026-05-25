@@ -396,9 +396,9 @@ python3 bench.py --help
                                        context (6 tasks),
                                        multihop (3 tasks — multihop_forward,
                                        multihop_reverse, distractor_notes)
-  --backend ollama|llama-server  Inference backend (default: ollama; env: BENCH_BACKEND)
-  --model-file PATH            models/*.txt file for GGUF/param lookup (required for
-                               llama-server backend; compare.sh passes it automatically)
+  --backend ollama|llama-server|vllm  Inference backend (default: ollama; env: BENCH_BACKEND)
+  --model-file PATH            models/*.txt/.vllm file for GGUF/param lookup (required for
+                               llama-server and vllm backends; compare.sh passes it automatically)
   --ollama-url URL             Default: http://localhost:11434 (ollama backend only)
   --num-ctx INT                Context window tokens (default: 8192); individual tasks
                                may specify a higher minimum via Task.num_ctx
@@ -475,6 +475,65 @@ Extra flags passed to `compare.sh` or `run.sh` are forwarded to `bench.py`:
 ./compare.sh --num-ctx 16384 --num-predict 500
 ./compare.sh --tasks node_slugify python_safe_div
 ./compare.sh --task-group coding
+```
+
+---
+
+## vLLM backend
+
+To benchmark using [vLLM](https://github.com/vllm-project/vllm)'s `vllm serve` instead of llama-server (recommended for dual-GPU tensor parallelism):
+
+1. Install vLLM in the repo's `.venv`:
+   ```bash
+   ./install.sh   # section 7; or manually:
+   .venv/bin/pip install vllm && .venv/bin/pip install 'gguf>=0.10.0'
+   ```
+
+2. Set `LLAMA_MODELS_DIR` to your GGUF directory:
+   ```bash
+   export LLAMA_MODELS_DIR=/path/to/gguf/models
+   ```
+
+3. Create or edit `models/default.vllm` (`.vllm` extension — auto-selected when `--backend vllm`):
+   ```
+   # short-name  gguf-file  params  hf:tokenizer-repo
+   qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768  hf:Qwen/Qwen2.5-Coder-14B-Instruct
+   llama3.3:70b-q4ks     Llama-3.3-70B-Q4_K_S.gguf       tp=2,dtype=auto,max_model_len=32768  hf:meta-llama/Llama-3.3-70B-Instruct
+   ```
+   The `hf:` field is required — it is passed as `--tokenizer` to vLLM for GGUF loading. For gated models (Llama 3.3), set `HF_TOKEN` or populate `hf-token.txt` in the repo root.
+
+4. Run with the vLLM backend:
+   ```bash
+   ./compare.sh --backend vllm
+   # or: BENCH_BACKEND=vllm ./compare.sh
+   ```
+   Output is written to `output/results-compare-vl.json`.
+
+**Params field (`.vllm` files):**
+
+| Param | vLLM CLI flag | Notes |
+|-------|--------------|-------|
+| `tp=N` | `--tensor-parallel-size N` | GPUs to use; `tp=2` for dual RTX 3090 |
+| `dtype=auto` | `--dtype auto` | Let vLLM pick bf16/fp16 |
+| `max_model_len=N` | `--max-model-len N` | Context cap; harness skips tasks requiring more (SKIPPED_CTX) |
+| `gpu_mem_util=0.9` | `--gpu-memory-utilization 0.9` | Default is 0.9; lower if OOM |
+| `enforce_eager` | `--enforce-eager` | Disables CUDA graphs; ~20% slower but useful for debugging |
+| `thinking` | — | Harness-only; sets `"After your reasoning"` system prefix |
+
+**Startup:** vLLM loads one model per `vllm serve` process. The harness starts it at the required context size and restarts automatically when the model changes or context grows. Startup is slower than llama-server for small models (~30–60s for 14B) because vLLM compiles CUDA graphs on first launch.
+
+**Timing:** `tok_per_s` uses wall time divided by `completion_tokens` (vLLM does not expose llama.cpp-style `timings` fields).
+
+**Multi-GPU (tp=2):** Both GPUs must be visible and have equivalent VRAM. The harness does not set CUDA_VISIBLE_DEVICES — vLLM auto-detects all available GPUs and uses `tp` of them starting from GPU 0.
+
+**Gated models:** `hf-token.txt` in the repo root is read automatically and forwarded as `HF_TOKEN` to the vLLM subprocess, so `meta-llama` models work without extra setup beyond populating that file.
+
+**Comparing all three backends:**
+```bash
+./compare.sh                        # → output/results-compare.json      (ollama)
+./compare.sh --backend llama-server # → output/results-compare-ls.json   (llama-server)
+./compare.sh --backend vllm         # → output/results-compare-vl.json   (vllm)
+./compare-results.sh output/results-compare-ls.json output/results-compare-vl.json
 ```
 
 ---

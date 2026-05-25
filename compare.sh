@@ -43,7 +43,7 @@ Run the canonical benchmark against a named model set or ad-hoc model list.
 Extra options are forwarded to bench.py (run.sh --help for the full list).
 
   (no args)                     run the 'default' model set
-  SET                           run models/<SET>.txt  (e.g. extended, experimental)
+  SET                           run models/<SET>.txt (or .vllm for vllm backend)
   --models M1 M2 ...            ad-hoc model list (no set file)
   --list                        list available model sets and exit
   --set-power-limit WATTS       enforce GPU power cap before run (requires sudo)
@@ -52,15 +52,19 @@ Extra options are forwarded to bench.py (run.sh --help for the full list).
 Forwarded to bench.py (selection):
   --task-group GROUP [...]      coding | l6 | l6_full | context | multihop
   --tasks TASK_ID [...]         explicit task subset
-  --backend ollama|llama-server inference backend (default: ollama)
+  --backend ollama|llama-server|vllm  inference backend (default: ollama)
   --num-predict INT             max output tokens (compare.sh default: 8000)
   --model-timeout INT           per-task timeout in seconds (default: 1200)
   --num-ctx INT                 context window tokens (default: 8192)
+
+Output files:  results-compare.json (ollama) / -ls.json (llama-server) / -vl.json (vllm)
+Model files:   models/<SET>.txt (ollama/llama-server)  models/<SET>.vllm (vllm)
 
 Examples:
   ./compare.sh
   ./compare.sh extended
   ./compare.sh --backend llama-server
+  ./compare.sh --backend vllm                  # reads models/default.vllm
   ./compare.sh --task-group coding
   ./compare.sh --models qwen2.5-coder:14b gemma4:26b
   ./compare.sh --list
@@ -68,12 +72,13 @@ EOF
     exit 0
 
 elif [[ "$1" == "--list" ]]; then
-    echo "Available model sets (models/*.txt):"
-    for _f in "$MODELS_DIR"/*.txt; do
+    echo "Available model sets:"
+    for _f in "$MODELS_DIR"/*.txt "$MODELS_DIR"/*.vllm; do
         [[ -f "$_f" ]] || continue
-        _name="$(basename "$_f" .txt)"
+        _ext="${_f##*.}"
+        _name="$(basename "$_f" ."$_ext")"
         _count=$(grep -v '^\s*#' "$_f" | grep -v '^\s*$' | wc -l | tr -d ' ')
-        printf "  %-20s  %s models\n" "$_name" "$_count"
+        printf "  %-24s  %s models  [.%s]\n" "$_name" "$_count" "$_ext"
     done
     exit 0
 
@@ -97,15 +102,30 @@ else
     BENCH_ARGS=("$@")
 fi
 
+# ── Detect backend early (needed for .vllm vs .txt file extension) ───────────
+BACKEND="${BENCH_BACKEND:-ollama}"
+_prev=""
+for _a in "${BENCH_ARGS[@]+"${BENCH_ARGS[@]}"}"; do
+    [[ "$_prev" == "--backend" ]] && BACKEND="$_a"
+    _prev="$_a"
+done
+unset _prev _a
+
 # ── Load model set from file ──────────────────────────────────────────────────
 if [[ -n "$SET_NAME" ]]; then
-    SET_FILE="$MODELS_DIR/${SET_NAME}.txt"
+    if [[ "$BACKEND" == "vllm" ]]; then
+        SET_FILE="$MODELS_DIR/${SET_NAME}.vllm"
+    else
+        SET_FILE="$MODELS_DIR/${SET_NAME}.txt"
+    fi
     if [[ ! -f "$SET_FILE" ]]; then
         echo "Error: model set '$SET_NAME' not found at $SET_FILE"
         echo ""
         echo "Available sets:"
-        for _f in "$MODELS_DIR"/*.txt; do
-            [[ -f "$_f" ]] && printf "  %s\n" "$(basename "$_f" .txt)"
+        for _f in "$MODELS_DIR"/*.txt "$MODELS_DIR"/*.vllm; do
+            [[ -f "$_f" ]] || continue
+            _ext="${_f##*.}"
+            printf "  %s  (.%s)\n" "$(basename "$_f" ."$_ext")" "$_ext"
         done
         echo ""
         echo "Run './compare.sh --list' for details, or './compare.sh --models m1 m2' for ad-hoc."
@@ -143,11 +163,12 @@ done
 BENCH_ARGS=("${_clean[@]+"${_clean[@]}"}")
 unset _clean _skip_out _skip_be _arg _line _f _name _count
 
-# Abbreviate backend for filenames: llama-server → ls
+# Abbreviate backend for filenames: llama-server → ls, vllm → vl
 BACKEND_SUFFIX=""
-if [[ "$BACKEND" != "ollama" ]]; then
-    BACKEND_SUFFIX="-${BACKEND/llama-server/ls}"
-fi
+case "$BACKEND" in
+    llama-server) BACKEND_SUFFIX="-ls" ;;
+    vllm)         BACKEND_SUFFIX="-vl" ;;
+esac
 
 if [[ -n "${OUT_OVERRIDE:-}" ]]; then
     OUT="$OUT_OVERRIDE"
