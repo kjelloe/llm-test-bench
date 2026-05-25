@@ -201,6 +201,41 @@ else
 fi
 unset _ls_bin
 
+# ── 9. vllm (optional — only needed for --backend vllm) ──────────────────────
+section "vllm backend (optional)"
+VENV="$SCRIPT_DIR/.venv"
+_vllm_bin="${VLLM_BIN:-}"
+[[ -z "$_vllm_bin" && -x "$VENV/bin/vllm" ]] && _vllm_bin="$VENV/bin/vllm"
+[[ -z "$_vllm_bin" ]] && _vllm_bin="$(command -v vllm 2>/dev/null || true)"
+
+if [[ -n "$_vllm_bin" ]]; then
+  _py_dir="$(dirname "$_vllm_bin")"
+  _vllm_ver=$("$_py_dir/python" -c "import vllm; print(vllm.__version__)" 2>/dev/null || echo "unknown")
+  ok "vllm $_vllm_ver  ($_vllm_bin)"
+  if [[ -n "${LLAMA_MODELS_DIR:-}" ]]; then
+    ok "LLAMA_MODELS_DIR=$LLAMA_MODELS_DIR"
+  else
+    warn "LLAMA_MODELS_DIR not set — required for --backend vllm"
+  fi
+  # List model sets
+  _vllm_files=("$SCRIPT_DIR"/models/*.vllm)
+  if [[ -f "${_vllm_files[0]:-}" ]]; then
+    for _vf in "${_vllm_files[@]}"; do
+      _vset="$(basename "$_vf" .vllm)"
+      _vcount=$(grep -v '^\s*#' "$_vf" | grep -v '^\s*$' | wc -l | tr -d ' ')
+      ok "model set '$_vset' ($_vcount models)  →  ./compare.sh --backend vllm $_vset"
+    done
+  else
+    warn "No models/*.vllm files found — create one to use --backend vllm"
+  fi
+else
+  warn "vllm not installed — needed only for --backend vllm"
+  warn "  Install: ./install.sh  (answer Y at section 7)"
+  warn "  Or:      .venv/bin/pip install vllm && .venv/bin/pip install 'gguf>=0.10.0'"
+  warn "  Or set:  export VLLM_BIN=/path/to/vllm"
+fi
+unset _vllm_bin _vllm_ver _py_dir _vllm_files _vf _vset _vcount
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo
 echo -e "${BOLD}════════════════════════════════════════${NC}"

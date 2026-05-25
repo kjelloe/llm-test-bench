@@ -273,11 +273,13 @@ section "Ollama models (for compare.sh)"
 MODELS_FILE="$SCRIPT_DIR/models/default.txt"
 REQUIRED_MODELS=()
 while IFS= read -r _line || [[ -n "$_line" ]]; do
-  _line="${_line%%#*}"
-  _line="${_line//[[:space:]]/}"
-  [[ -n "$_line" ]] && REQUIRED_MODELS+=("$_line")
+  _line="${_line%%#*}"                     # strip inline comment
+  _line="${_line#"${_line%%[! ]*}"}"       # strip leading whitespace
+  [[ -z "$_line" ]] && continue
+  _model="${_line%% *}"                    # first field only (ollama name)
+  REQUIRED_MODELS+=("$_model")
 done < "$MODELS_FILE"
-unset _line
+unset _line _model
 
 # Approximate sizes for user-facing warnings
 declare -A MODEL_SIZES=(
