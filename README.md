@@ -135,18 +135,18 @@ The header printed before each run shows estimated runtime from the previous run
 
 All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3D, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
 
-### Default set — 33 tasks (2026-05-22; qwen3-coder:30b-1m confirmed via component runs 2026-05-24)
+### Default set — 33 tasks (2026-05-25; llama-server, RTX 3090 24 GB, 8 models × 33 tasks)
 
-| Model | Pass | Avg tok/s | Notes |
-|---|---|---|---|
-| noctrex-qwen3.6:35b | **31/33** | 120 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper + context_256k FAIL |
-| qwen3-coder:30b-1m | 30/33 | 185 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.6 tok/s; node_para_entities + node_paratrooper FAIL (same ceiling as base) |
-| qwen3.5:35b | 30/33 | 147 | MoE 35B/3B active; csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
-| gpt-oss:120b | 30/33 | 17 | RAM-bound; csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
-| gemma4:26b | 29/33 | 114 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
-| devstral-small-2 | 29/33 | 42 | Dense 24B; node_slugify + node_para_entities + node_paratrooper FAIL |
-| gpt-oss:20b | 26/33 | 197 | Fastest GPU; awk_csv_stats wrong output; context_64k retrieval bug; L6 paratrooper steps NO_BLOCKS at 8k |
-| qwen2.5-coder:14b | 23/33 | 68 | Dense 14B; csv_nordic_property + node_csv_parser + python_tokenizer + L6 FAIL |
+| Model | Pass | Avg tok/s | Skill | Notes |
+|---|---|---|---|---|
+| noctrex-qwen3.6:35b | **31/33** | 119 | L5 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper + context_256k FAIL |
+| gpt-oss:120b | **31/33** | 16 | L5 | RAM-bound (~1 tok/s coding); csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
+| qwen3-coder:30b-1m | 30/33 | 150 | L4 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.3 tok/s (KV spill drags avg); node_para_entities + node_paratrooper FAIL |
+| qwen3.5:35b | 30/33 | 135 | L2 | MoE 35B/3B active; python_hashmap + csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
+| gemma4:26b | 29/33 | 105 | L2 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
+| devstral-small-2 | 29/33 | 40 | L1 | Dense 24B; node_slugify + node_para_entities + node_paratrooper FAIL |
+| qwen2.5-coder:14b | 23/33 | 64 | L2 | Dense 14B; csv_nordic_property + node_csv_parser + python_tokenizer + L6 FAIL |
+| gpt-oss:20b | **22/33** | 181 | **<L1** | Semi-thinking regression: verbose reasoning exhausts 8k budget before BEGIN_FILE on L4/L5 tasks; NO_BLOCKS on python_minheap/dijkstra/hashmap/tokenizer/para_combat; context_64k retrieval bug; non-deterministic between runs |
 
 node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficient for the 40-test game (needs 24000). All models fail it at 8000 tokens; this is a budget constraint, not a capability ceiling. MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
 

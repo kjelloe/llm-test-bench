@@ -31,6 +31,51 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Route --estimate-vram to the dedicated script; strip that flag before forwarding.
 for arg in "$@"; do
+    if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+        cat <<'EOF'
+Usage: ./statistics.sh [OPTIONS] [FILE ...]
+
+Aggregate benchmark results into a sharable dataset.
+Default: one row per model, newest run first (all output/*.json).
+
+Positional arguments:
+  FILE                  Result JSON files (default: all output/*.json)
+
+Standard options:
+  --format {json,csv,markdown}   Output format (default: markdown)
+  --out PATH                     Write to file instead of stdout
+  --detail                       One row per task instead of one row per model
+  --summary                      Context speed profile: one row per model with
+                                 pass% and tok/s per context size (8k–256k)
+  --sort-by COLUMN [DIR]         Sort by column; direction: asc or desc
+                                   --sort-by model
+                                   --sort-by pass_pct desc
+  -h, --help                     Show this help and exit
+
+VRAM estimation:
+  ./statistics.sh --estimate-vram
+  ./statistics.sh --estimate-vram --ctx 8k
+  ./statistics.sh --estimate-vram --ctx 128k
+  ./statistics.sh --estimate-vram --format csv
+  ./statistics.sh --estimate-vram --anchor-vram 24
+  ./statistics.sh --estimate-vram output/results-compare-ls.json
+
+Export / import (cross-hardware sharing):
+  ./statistics.sh --export                       bundle output/*.json → stats-exported.json
+  ./statistics.sh --export --out shared.json     custom output path
+  ./statistics.sh --import stats-exported.json   extract runs → output/
+  ./statistics.sh --import friend.json           import a plain results file
+
+Examples:
+  ./statistics.sh
+  ./statistics.sh --summary
+  ./statistics.sh --detail --format csv --out stats.csv
+  ./statistics.sh --sort-by pass_pct desc
+  ./statistics.sh output/results-compare-ls.json --format markdown
+  ./statistics.sh --estimate-vram --anchor-vram 48
+EOF
+        exit 0
+    fi
     if [[ "$arg" == "--estimate-vram" ]]; then
         args=()
         for a in "$@"; do

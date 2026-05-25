@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$SCRIPT_DIR/models"
 
-if [[ $# -eq 0 ]]; then
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
     echo "Usage: ./fetch.sh <set-name | set-file.txt | model> [...]"
     echo ""
     echo "Examples:"

@@ -35,6 +35,38 @@ SET_LABEL=""
 if [[ $# -eq 0 ]]; then
     SET_NAME="default"
 
+elif [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    cat <<'EOF'
+Usage: ./compare.sh [SET | --models M1 M2 ...] [OPTIONS]
+
+Run the canonical benchmark against a named model set or ad-hoc model list.
+Extra options are forwarded to bench.py (run.sh --help for the full list).
+
+  (no args)                     run the 'default' model set
+  SET                           run models/<SET>.txt  (e.g. extended, experimental)
+  --models M1 M2 ...            ad-hoc model list (no set file)
+  --list                        list available model sets and exit
+  --set-power-limit WATTS       enforce GPU power cap before run (requires sudo)
+  -h, --help                    show this help and exit
+
+Forwarded to bench.py (selection):
+  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop
+  --tasks TASK_ID [...]         explicit task subset
+  --backend ollama|llama-server inference backend (default: ollama)
+  --num-predict INT             max output tokens (compare.sh default: 8000)
+  --model-timeout INT           per-task timeout in seconds (default: 1200)
+  --num-ctx INT                 context window tokens (default: 8192)
+
+Examples:
+  ./compare.sh
+  ./compare.sh extended
+  ./compare.sh --backend llama-server
+  ./compare.sh --task-group coding
+  ./compare.sh --models qwen2.5-coder:14b gemma4:26b
+  ./compare.sh --list
+EOF
+    exit 0
+
 elif [[ "$1" == "--list" ]]; then
     echo "Available model sets (models/*.txt):"
     for _f in "$MODELS_DIR"/*.txt; do

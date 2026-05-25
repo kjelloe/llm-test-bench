@@ -34,9 +34,14 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   - **gpt-oss:20b "semi-thinking"**: generates verbose reasoning in plain text output (not
     `reasoning_content`) on L2+ tasks; exhausts 4800 token budget before BEGIN_FILE on
     python_expr_eval and python_tokenizer; needs 8000+ for those tasks (compare.sh now uses
-    8000). Also fails context_64k with a wrong answer (TESTS_STILL_FAIL — retrieves RC-5000
-    instead of correct value; passes at context_32k and context_128k; appears to be a
-    retrieval failure specific to that context depth, not a token budget issue).
+    8000). At 8000 tokens the reasoning length is non-deterministic — in the 2026-05-25
+    official compare.sh run, verbose reasoning exhausted the budget before BEGIN_FILE on
+    python_minheap, python_dijkstra, python_hashmap, python_tokenizer, and node_para_combat
+    → 22/33 (down from 26/33 in the 2026-05-24 run; same root cause, different reasoning
+    length). Skill <L1 because context_64k also fails with a wrong answer (TESTS_STILL_FAIL
+    — retrieves RC-5000 instead of correct value; passes at context_32k and context_128k;
+    appears to be a retrieval failure specific to that context depth, not a token budget
+    issue). Results for this model are inherently variable between runs.
     Adding `thinking` does NOT help — it causes a different planning loop. It is correctly
     left without the `thinking` flag.
   - **gemma4:26b verbose preamble**: generates a long task description + approach summary
