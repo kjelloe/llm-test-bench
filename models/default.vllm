@@ -24,16 +24,18 @@ qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,ma
 
 # ── Single-GPU 32B (tp=1, enforce_eager, 24 GB) ──────────────────────────────
 # enforce_eager disables CUDA graphs (~1 GB saved) so ~20 GB weights + 2 GB KV
-# fits in 24 GB at gpu_mem_util=0.95. Expect ~20-30% slower than llama-server
-# due to GGUF overhead in vLLM; throughput should be 20-35 tok/s.
+# fits in 24 GB. gpu_mem_util=0.94 (not 0.95): CUDA driver takes ~1.25 GB at
+# startup leaving only 22.75 GB free; 0.95×24=22.8 GB exceeds that by 50 MB.
+# 0.94×24=22.56 GB fits with ~190 MB to spare.
+# Expect ~20-30% slower than llama-server due to GGUF overhead; ~20-35 tok/s.
 # max_model_len=8192 → effective context cap for all tasks.
-qwen2.5-coder:32b-sg   Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf          tp=1,dtype=auto,max_model_len=8192,enforce_eager,gpu_mem_util=0.95              hf:Qwen/Qwen2.5-Coder-32B-Instruct
-deepseek-r1:32b-sg     DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf         tp=1,dtype=auto,max_model_len=8192,enforce_eager,gpu_mem_util=0.95,thinking      hf:deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+qwen2.5-coder:32b-sg   Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf          tp=1,dtype=auto,max_model_len=8192,enforce_eager,gpu_mem_util=0.94              hf:Qwen/Qwen2.5-Coder-32B-Instruct
+deepseek-r1:32b-sg     DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf         tp=1,dtype=auto,max_model_len=8192,enforce_eager,gpu_mem_util=0.94,thinking      hf:deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
 
 # qwq:32b single-GPU requires Q4_K_M (~20 GB). The Q5_K_M used in tp=2 below
 # (~22 GB) leaves <1 GB for KV on 24 GB — too small for coding tasks.
 # To add: download Q4_K_M via ./fetch-hf.sh, then uncomment:
-# qwq:32b-sg  QwQ-32B-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=8192,enforce_eager,gpu_mem_util=0.95,thinking  hf:Qwen/QwQ-32B
+# qwq:32b-sg  QwQ-32B-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=8192,enforce_eager,gpu_mem_util=0.94,thinking  hf:Qwen/QwQ-32B
 
 # ── Dual-GPU models (tp=2, require 2× RTX 3090 = 48 GB total) ────────────────
 # llama3.3:70b — primary vLLM target; cannot run on single 24 GB GPU at all.

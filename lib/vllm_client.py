@@ -178,7 +178,7 @@ class VLLMManager:
             self._current_ctx = 0
             raise
 
-    def _read_log(self, tail: int = 4000) -> str:
+    def _read_log(self, tail: int = 8000) -> str:
         if not self._log_path:
             return ""
         try:
@@ -254,7 +254,7 @@ class VLLMManager:
         if not self.debug:
             log = self._read_log()
             if log:
-                msg += f"\n--- vllm log (last 4000 chars) ---\n{log}"
+                msg += f"\n--- vllm log (last 8000 chars) ---\n{log}"
         self.stop()
         raise TimeoutError(msg)
 
