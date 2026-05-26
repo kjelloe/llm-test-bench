@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"
+
 VENV=".venv"
 
 if [[ ! -d "$VENV" ]]; then

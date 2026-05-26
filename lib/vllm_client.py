@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import tempfile
 import time
@@ -57,10 +58,11 @@ class VLLMManager:
         self._current_ctx: int = 0
         self._log_path: str | None = None
         self._last_cmd: list[str] = []
+        self._effective_base_url: str = _BASE_URL
 
     @property
     def base_url(self) -> str:
-        return _BASE_URL
+        return self._effective_base_url
 
     def needs_restart(self, cfg: ModelConfig, ctx_size: int) -> bool:
         return (
@@ -95,6 +97,7 @@ class VLLMManager:
         self._proc = None
         self._current_model = None
         self._current_ctx = 0
+        self._effective_base_url = _BASE_URL
         if self._log_path and os.path.exists(self._log_path):
             try:
                 os.unlink(self._log_path)
@@ -124,7 +127,7 @@ class VLLMManager:
             "--max-model-len", str(ctx_size),
             "--served-model-name", cfg.ollama_name,
             "--port", str(_PORT),
-            "--host", "127.0.0.1",
+            "--host", "0.0.0.0",
         ]
         for key, val in cfg.params.items():
             if key in _HARNESS_ONLY:
@@ -169,6 +172,7 @@ class VLLMManager:
         self._current_ctx = ctx_size
         try:
             self._wait_ready(startup_timeout)
+            self._effective_base_url = self._detect_connect_url()
         except Exception:
             self._current_model = None
             self._current_ctx = 0
@@ -184,9 +188,38 @@ class VLLMManager:
         except Exception:
             return ""
 
+    def _detect_connect_url(self) -> str:
+        """Find which URL can actually reach the server.
+
+        WSL2 networkingMode=mirrored routes 127.0.0.1 through the Windows
+        network stack where Windows Firewall may drop connections (ETIMEDOUT).
+        The machine's primary LAN IP bypasses this and reaches the server
+        directly (vllm binds to 0.0.0.0, so all interfaces are covered).
+        """
+        candidates = [f"http://127.0.0.1:{_PORT}"]
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as _s:
+                _s.connect(("8.8.8.8", 80))
+                _ip = _s.getsockname()[0]
+            if _ip and _ip != "127.0.0.1":
+                candidates.append(f"http://{_ip}:{_PORT}")
+        except Exception:
+            pass
+        for url in candidates:
+            try:
+                with urllib.request.urlopen(f"{url}/health", timeout=2) as r:
+                    if r.status == 200:
+                        if url != _BASE_URL and self.debug:
+                            print(f"  [vllm] using {url} (127.0.0.1 is unreachable)", flush=True)
+                        return url
+            except Exception:
+                continue
+        return _BASE_URL  # fallback: chat() will surface a clear network error
+
     def _wait_ready(self, timeout: int) -> None:
         cmd_str = " ".join(self._last_cmd)
         deadline = time.monotonic() + timeout
+        last_err = ""
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
                 msg = f"vllm serve exited unexpectedly during startup\n  cmd: {cmd_str}"
@@ -195,14 +228,29 @@ class VLLMManager:
                     if log:
                         msg += f"\n--- vllm log ---\n{log}"
                 raise RuntimeError(msg)
+            # Log-based readiness: parse uvicorn's startup banner from the temp log file.
+            # This is the primary readiness signal in non-debug mode because HTTP health
+            # checks time out on WSL2 networkingMode=mirrored (loopback is routed through
+            # the Windows network stack where it may be firewalled).
+            if not self.debug and "Application startup complete." in self._read_log():
+                return
             try:
-                with urllib.request.urlopen(_HEALTH_URL, timeout=2) as r:
+                # HTTP health check: fast path for non-WSL-mirrored environments.
+                with urllib.request.urlopen(_HEALTH_URL, timeout=5) as r:
                     if r.status == 200:
                         return
-            except Exception:
-                pass
+                    last_err = f"HTTP {r.status}"
+            except Exception as exc:
+                last_err = repr(exc)
+                if self.debug:
+                    elapsed = timeout - max(0.0, deadline - time.monotonic())
+                    print(f"  [vllm] health check ({elapsed:.0f}s): {exc}", flush=True)
             time.sleep(2)
-        msg = f"vllm serve did not become ready within {timeout}s\n  cmd: {cmd_str}"
+        msg = (
+            f"vllm serve did not become ready within {timeout}s\n"
+            f"  cmd: {cmd_str}\n"
+            f"  last health-check error: {last_err or '(no response yet)'}"
+        )
         if not self.debug:
             log = self._read_log()
             if log:
@@ -257,12 +305,17 @@ def chat(
     keep_alive: str | int | None = None,
 ) -> OllamaResponse:
     url = base_url.rstrip("/") + "/v1/chat/completions"
+    # vLLM enforces prompt_tokens + max_tokens <= max_model_len and rejects with
+    # HTTP 400 if the sum exceeds the limit. Reserve 512 tokens for the prompt so
+    # large num_predict values don't blow up small context windows (e.g. num_ctx=8192,
+    # num_predict=8000 → 8000+prompt > 8192).
+    effective_max_tokens = min(num_predict, max(1, num_ctx - 512))
     payload: dict = {
         "model": model,
         "messages": messages,
         "temperature": temperature,
         "seed": seed,
-        "max_tokens": num_predict,
+        "max_tokens": effective_max_tokens,
         "stream": False,
         "top_p": 1.0,
     }
