@@ -305,41 +305,46 @@ def chat(
     keep_alive: str | int | None = None,
 ) -> OllamaResponse:
     url = base_url.rstrip("/") + "/v1/chat/completions"
-    # vLLM enforces prompt_tokens + max_tokens <= max_model_len and rejects with
-    # HTTP 400 if the sum exceeds the limit. Reserve 512 tokens for the prompt so
-    # large num_predict values don't blow up small context windows (e.g. num_ctx=8192,
-    # num_predict=8000 → 8000+prompt > 8192).
+    # vLLM enforces prompt_tokens + max_tokens <= max_model_len at request time.
+    # Reserve 512 tokens for the prompt as an initial guess; tasks with large
+    # prompts (e.g. csv_nordic_property with a 5k-row CSV) may need more headroom.
+    # On HTTP 400 "context length" errors we halve max_tokens and retry up to 3×.
     effective_max_tokens = min(num_predict, max(1, num_ctx - 512))
-    payload: dict = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "seed": seed,
-        "max_tokens": effective_max_tokens,
-        "stream": False,
-        "top_p": 1.0,
-    }
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
     t_start = time.monotonic()
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = json.loads(resp.read())
-    except urllib.error.HTTPError as exc:
-        raise OllamaError(f"HTTP {exc.code}: {exc.read().decode()[:200]}") from exc
-    except urllib.error.URLError as exc:
-        raise OllamaError(f"URL error: {exc.reason}") from exc
-    except TimeoutError as exc:
-        raise OllamaError(f"Timed out after {timeout}s") from exc
-    except (ConnectionError, OSError) as exc:
-        raise OllamaError(f"Connection error (server crash/OOM?): {exc}") from exc
-
-    elapsed_ns = int((time.monotonic() - t_start) * 1e9)
-    return _parse_body(body, elapsed_ns)
+    for _attempt in range(4):
+        payload: dict = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "seed": seed,
+            "max_tokens": effective_max_tokens,
+            "stream": False,
+            "top_p": 1.0,
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                body = json.loads(resp.read())
+            elapsed_ns = int((time.monotonic() - t_start) * 1e9)
+            return _parse_body(body, elapsed_ns)
+        except urllib.error.HTTPError as exc:
+            err_body = exc.read().decode()
+            if exc.code == 400 and "context length" in err_body and effective_max_tokens > 1:
+                effective_max_tokens = max(1, effective_max_tokens // 2)
+                continue
+            raise OllamaError(f"HTTP {exc.code}: {err_body[:200]}") from exc
+        except urllib.error.URLError as exc:
+            raise OllamaError(f"URL error: {exc.reason}") from exc
+        except TimeoutError as exc:
+            raise OllamaError(f"Timed out after {timeout}s") from exc
+        except (ConnectionError, OSError) as exc:
+            raise OllamaError(f"Connection error (server crash/OOM?): {exc}") from exc
+    raise OllamaError(f"max_tokens still exceeds context after 3 halvings (final: {effective_max_tokens})")
 
 
 def unload_model(base_url: str, model: str, timeout: int = 30) -> None:
