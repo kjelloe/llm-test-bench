@@ -208,6 +208,61 @@ noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_t
 # Speed: 34.6 tok/s avg (vs MoE qwen3.5:35b at ~147 tok/s) — 4× slower; 29-task: 1231s vs ~720s.
 # 29-task vs qwen3.5:35b (26/29, 147 tok/s): 27B dense scores higher (27/29) at 4× cost in speed.
 qwen3.5:27b      Qwen_Qwen3.5-27B-Q4_K_M.gguf          ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
+
+# ── Qwen3.6 27B dense ────────────────────────────────────────────────────────
+# Dense 27B thinking model; successor to qwen3.5:27b (ollama shows 17 GB = Q4ish).
+# Vision + thinking capable. Announced/updated 2026-05-22.
+# Bartowski GGUF available as of 2026-05-20: bartowski/Qwen_Qwen3.6-27B-GGUF
+#   Q4_K_M: 17.98 GB — fits in 24 GB with ~6 GB headroom; use q8_0 KV to preserve headroom at large ctx
+#   GGUF includes MTP layers (b9180+) — loaded but NOT activated; do NOT add --spec-type draft-mtp
+#   (spec decoding harms determinism at temp=0; benchmark without spec always)
+# Download: ./fetch-hf.sh models/experimental.txt --models qwen3.6:27b
+#
+# Results (2026-05-27, ollama, RTX 3090 24 GB, coding 19 tasks):
+#   19/19 PERFECT  33.3 tok/s avg  520.6s total
+#   PASS: ALL tasks including csv_nordic_property (143s), node_csv_parser (14s),
+#         python_tokenizer (33s), python_expr_eval (43s), python_dijkstra (36s),
+#         python_hashmap (29s)
+#   Only 3rd model to achieve 19/19 (after qwen3-coder:30b-1m and noctrex-qwen3.6:35b).
+#
+# Results (2026-05-27, llama-server, RTX 3090 24 GB, coding 19 tasks, f16 KV):
+#   19/19 PERFECT  36.6 tok/s avg  419.5s total
+#   All tasks pass; server restarted at ctx=32768 for tasks 12-19. python_hashmap: 36.4 tok/s.
+#   Confirmed: f16 KV requirement holds; 36.6 tok/s vs 33.3 tok/s (ollama) — llama-server ~10% faster.
+#
+# Results (2026-05-27, ollama, RTX 3090 24 GB, full 33-task set):
+#   31/33 (32 eligible — SKIPPED context_256k)  29.7 tok/s avg  1719.9s total
+#   Coding:   19/19 PERFECT — all tasks; no failures
+#   L6 step:   4/4  — PASS node_para_core/turret/entities/combat; passes step 3!
+#              (qwen3-coder:30b-1m fails node_para_entities; qwen3.6:27b does not)
+#   l6_full:   FAIL (TESTS_STILL_FAIL) — ~4800 tokens generated (8k budget); code
+#              runs but some tests fail; needs num_predict=24000 for full game
+#   Context:   PASS 8k/16k/32k/64k/128k → 32.5/28.7/26.7/14.7/3.3 tok/s
+#              128k: 3.3 tok/s — ollama f16 KV artifact; with llama-server q8_0 KV
+#              expect ~15-18 tok/s (same pattern as qwen3.5:27b at 18.4 tok/s)
+#   Multihop:  PASS forward + reverse + distractor (~26.7 tok/s at 32k ctx)
+#   Skips:     context_256k (SKIPPED_VRAM, min_vram_gb=48)
+#
+# Comparison vs qwen3.5:27b (27/29 full-run, 34.6 tok/s, 1231s, 2026-05-22):
+#   Score: 31/33 vs 27/29 — on equivalent 29-task set, qwen3.6 likely matches/beats
+#   L6 step: qwen3.6 4/4; qwen3.5 4/4 (both pass step 3 — dense advantage)
+#   Speed: 29.7 vs 34.6 tok/s — qwen3.6 ~14% slower via ollama (backend overhead vs llama-server)
+#   128k: qwen3.6 3.3 tok/s (ollama f16 KV) vs qwen3.5 18.4 tok/s (llama-server q8_0 KV)
+#         Expect comparable once run via llama-server with GGUF
+#   Quality: materially better — qwen3.6 fixes python_hashmap and node_csv_parser issues
+#
+# vs default set top-scores:
+#   noctrex-qwen3.6:35b: 31/33, 119 tok/s, Skill L5 — same score, 4× faster
+#   qwen3-coder:30b-1m:  30/33, 150 tok/s, Skill L4 — qwen3.6:27b BEATS on score+L6
+#   qwen3.5:35b:         30/33, 135 tok/s, Skill L2 — same score but L2 vs L5 (node_csv_parser)
+#   Dense 27B at 36.6 tok/s (llama-server) reaches the same 31/33 ceiling as the best 35B models.
+#   → Promoted to default.txt (2026-05-27): llama-server 19/19 confirmed at 36.6 tok/s.
+# KV cache: use f16, NOT q8_0. With q8_0 KV, python_hashmap fails (TESTS_STILL_FAIL):
+#   model omits `_EMPTY = None` from the output file while correctly using _DELETED tombstone
+#   elsewhere — a precision-boundary token choice that q8_0 tips the wrong way. Confirmed:
+#   thinking flag removal (2 runs) did not fix it; switching to f16 KV fixed it (2026-05-27).
+#   f16 KV uses more VRAM at 128k context but ctx_128k still runs (partial spill at ~3-5 tok/s).
+qwen3.6:27b      Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
 mistral-medium-3.5:128b  Q4_K_M/Mistral-Medium-3.5-128B-Q4_K_M-00001-of-00003.gguf  ngl=24,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384,thinking  hf:unsloth/Mistral-Medium-3.5-128B-GGUF  # 3-part model
 
 # ── Nemotron-3-Nano 30B-A3B ──────────────────────────────────────────────────

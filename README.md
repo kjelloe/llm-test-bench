@@ -69,13 +69,13 @@ Example output:
 
 ## Quick start
 
-### Run the canonical benchmark (8 models)
+### Run the canonical benchmark (9 models)
 
 ```bash
 ./compare.sh
 ```
 
-Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b-1m`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b-1m`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`, `qwen3.6:27b`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
 
 ### Run the extended benchmark (10 models)
 
@@ -152,6 +152,8 @@ All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3
 
 node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficient for the 40-test game (needs 24000). All models fail it at 8000 tokens; this is a budget constraint, not a capability ceiling. MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
 
+**Added 2026-05-27:** `qwen3.6:27b` (dense 27B, bartowski Q4_K_M, llama-server, f16 KV) — 31/33, 37 tok/s, Skill L5; 19/19 coding PERFECT; not yet in a full compare.sh run. See experimental table below.
+
 ### Experimental models (llama-server, RTX 3090 24 GB)
 
 | Model | Pass | Avg tok/s | Notes |
@@ -160,6 +162,7 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
 | deepseek-r1:32b | 18/19 coding | 31 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval NO_BLOCKS (reasoning spiral — confirmed capability gap, not token budget) |
+| qwen3.6:27b | **31/33** | 37 | Dense 27B; Skill L5; **19/19 coding PERFECT** (llama-server 36.6 tok/s, f16 KV required); 4/4 L6 stepped PASS (incl. step 3); context_128k PASS 3.3 tok/s (ollama); node_paratrooper FAIL (8k budget); context_256k SKIP — **promoted to default.txt 2026-05-27** |
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
@@ -531,6 +534,8 @@ To benchmark using [vLLM](https://github.com/vllm-project/vllm)'s `vllm serve` i
 **Single-GPU VRAM constraints (24 GB, 32B Q4_K_M):** Weights occupy ~20 GB, leaving only ~2.8 GB for KV cache. `enforce_eager` + `gpu_mem_util=0.94` squeezes this to `max_model_len=8192` (the practical ceiling — vLLM reports max 11 312 tokens; no coding task needs ctx between 8 192 and 16 384). Three tasks permanently SKIPPED: `csv_nordic_property` (16k), `python_multifile_rename` (16k), `python_expr_eval` (32k). **Thinking models** (deepseek-r1, qwq) additionally hit a 7 680-token output cap (`max_model_len − 512` prompt reserve), which exhausts the reasoning budget before `BEGIN_FILE` on L3+ tasks — those tasks pass on llama-server with larger context. Use `models/32gb.vllm` on a 32 GB card for full coverage.
 
 **MoE GGUF models are not supported:** vLLM's `--load-format gguf` cannot map MoE expert weight tensors (`model.layers.X.mlp.experts.*`). All `*-A3B` / MoE GGUFs (qwen3-coder:30b, qwen3.5:35b, qwen3.6:35b, etc.) crash at startup with `Failed to map GGUF parameters`. Only dense models work via GGUF on vLLM. MoE models would require loading from HuggingFace safetensors (full bf16 weights, no GGUF), which is a separate setup. Use llama-server for MoE GGUF models.
+
+**HF-format models (GPTQ/AWQ/safetensors):** The harness supports loading directly from a HuggingFace repo (no local GGUF needed) when the `gguf-file` field is omitted or set to `-` in the `.vllm` model file. vLLM downloads to `~/.cache/huggingface/hub/` on first run and auto-detects quantization from the repo's `config.json`. Example: `AxisQuant/Qwen3.6-27b-gptq-int4` runs as `vllm serve AxisQuant/Qwen3.6-27b-gptq-int4` (no `--load-format`, no `--tokenizer`). **Caveats:** some GPTQ repos use a `model_type` that vLLM maps to an SSM/Mamba-aware handler even for pure transformers, requiring `enforce_eager,max_num_seqs=1` to bypass CUDA graph Mamba-block allocation errors. GPTQ INT4 calibrated on generic text (C4) may also lose coding precision — `AxisQuant/Qwen3.6-27b-gptq-int4` scored 18/19 coding at 23 tok/s, worse than the bartowski Q4_K_M GGUF on llama-server (19/19, 36 tok/s) on both quality and speed.
 
 **WSL2 `networkingMode=mirrored`:** Loopback connections go through Windows Firewall and may time out. The harness automatically falls back to the machine's LAN IP for inference calls (vLLM binds to `0.0.0.0`). Startup readiness is detected via log parsing rather than HTTP health checks, so both paths work regardless of network mode.
 

@@ -22,6 +22,35 @@
 # and gives immediate comparison data without needing dual GPU.
 qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768  hf:Qwen/Qwen2.5-Coder-14B-Instruct
 
+# ── HF-format models (GPTQ/AWQ/safetensors) — no GGUF field → HF-format mode ─
+# vLLM downloads from HuggingFace hub to ~/.cache/huggingface/hub/ on first run.
+# No --load-format gguf, no separate --tokenizer: vLLM auto-detects quantization
+# from config.json in the repo. Only the hf: field is required (no gguf-file).
+#
+# qwen3.6:27b-gptq — GPTQ INT4 quantization of Qwen/Qwen3.6-27B (by AxisQuant)
+# VRAM at load: ~14 GB weights → ~10 GB KV headroom on 24 GB → max_model_len=32768 safe.
+# Speed (per AxisQuant benchmarks): ~62 tok/s INT4 vs ~26 tok/s BF16 (+143% — 2.4× faster).
+# Download: automatic on first 'vllm serve' invocation (~18 GB to ~/.cache/huggingface/hub/).
+#
+# ⚠ Results (2026-05-27, vLLM + enforce_eager, RTX 3090 24 GB, coding 19 tasks):
+#   18/19  23.0 tok/s avg  417.0s total
+#   FAIL: python_hashmap — same _EMPTY sentinel omission as q8_0 KV on llama-server.
+#     GPTQ INT4 calibrated on C4 (generic text) lands on the same precision boundary;
+#     confirms HumanEval −8.54 pp warning was accurate for coding tasks.
+#   Speed: 23.0 tok/s — far below AxisQuant's 62 tok/s because enforce_eager removes
+#     CUDA graph optimization; SSM architecture misidentification adds further overhead.
+#   ⚠ VERDICT: NOT recommended over llama-server + bartowski GGUF Q4_K_M:
+#     GGUF (llama-server, f16 KV): 19/19, 36.7 tok/s — wins on both quality AND speed.
+#     GPTQ (vLLM, enforce_eager):  18/19, 23.0 tok/s — loses on both.
+#
+# ⚠ Mamba cache / CUDA graph workaround: vLLM incorrectly detects Mamba/SSM layers in
+#   Qwen3.6-27B GPTQ and pre-allocates Mamba state cache, exhausting VRAM before KV.
+#   Error: "max_num_seqs (N) exceeds available Mamba cache blocks (M)"; M is non-deterministic.
+#   Root cause: AxisQuant config.json model_type maps to an SSM-aware vLLM handler.
+#   Fix: enforce_eager disables CUDA graph capture (no Mamba-block constraint);
+#   max_num_seqs=1 as belt-and-suspenders. Benchmark sends 1 request at a time → no impact.
+qwen3.6:27b-gptq  -  tp=1,dtype=auto,max_model_len=32768,enforce_eager,max_num_seqs=1  hf:AxisQuant/Qwen3.6-27b-gptq-int4
+
 # ── MoE GGUF models — NOT SUPPORTED by vLLM's GGUF loader ───────────────────
 # vLLM's --load-format gguf cannot map MoE expert weight tensors. All A3B / MoE
 # models fail with "Failed to map GGUF parameters: model.layers.X.mlp.experts.*"

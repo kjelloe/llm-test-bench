@@ -106,29 +106,39 @@ class VLLMManager:
             self._log_path = None
 
     def _start(self, cfg: ModelConfig, ctx_size: int, startup_timeout: int = 600) -> None:
-        if not cfg.gguf_file:
-            raise ValueError(
-                f"Model {cfg.ollama_name!r} has no GGUF file configured — "
-                "required for vllm backend (set gguf-file field in .vllm model file)"
-            )
-        gguf_path = self.models_dir / cfg.gguf_file
-        if not gguf_path.exists():
-            raise FileNotFoundError(f"GGUF file not found: {gguf_path}")
-        if not cfg.hf_repo:
-            raise ValueError(
-                f"Model {cfg.ollama_name!r} has no hf: field — "
-                "required for vllm GGUF mode (used as --tokenizer source)"
-            )
+        # Two loading modes:
+        #   GGUF mode   — gguf_file is set (and not "-"): local file + --load-format gguf + --tokenizer
+        #   HF-format   — gguf_file absent or "-": serve hf_repo directly (GPTQ, AWQ, safetensors)
+        use_gguf = bool(cfg.gguf_file and cfg.gguf_file != "-")
+
+        if use_gguf:
+            gguf_path = self.models_dir / cfg.gguf_file
+            if not gguf_path.exists():
+                raise FileNotFoundError(f"GGUF file not found: {gguf_path}")
+            if not cfg.hf_repo:
+                raise ValueError(
+                    f"Model {cfg.ollama_name!r} has no hf: field — "
+                    "required for vLLM GGUF mode (used as --tokenizer source)"
+                )
+            model_arg = str(gguf_path)
+        else:
+            # HF-format: vLLM downloads from hub and auto-detects quantization (GPTQ/AWQ/etc.)
+            if not cfg.hf_repo:
+                raise ValueError(
+                    f"Model {cfg.ollama_name!r} has no hf: field — "
+                    "required for vLLM HF-format mode (GPTQ/AWQ/safetensors)"
+                )
+            model_arg = cfg.hf_repo
 
         cmd = [
-            self.bin_path, "serve", str(gguf_path),
-            "--tokenizer", cfg.hf_repo,
-            "--load-format", "gguf",
+            self.bin_path, "serve", model_arg,
             "--max-model-len", str(ctx_size),
             "--served-model-name", cfg.ollama_name,
             "--port", str(_PORT),
             "--host", "0.0.0.0",
         ]
+        if use_gguf:
+            cmd.extend(["--tokenizer", cfg.hf_repo, "--load-format", "gguf"])
         for key, val in cfg.params.items():
             if key in _HARNESS_ONLY:
                 continue

@@ -119,6 +119,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   is impractical. csv_nordic_property times out (model_timeout=600s at 3.3 tok/s ≈ 2000 max
   tokens). context_128k passes SLOW (1216s). Needs 64 GB+ VRAM to be GPU-resident and fast.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
+- **`python_hashmap` is a precision canary**: this L5 task is acutely sensitive to KV cache and
+  quantization precision. With q8_0 KV or GPTQ INT4 (C4 calibration), models omit `_EMPTY = None`
+  from the module-level definitions while correctly implementing the tombstone algorithm — a single
+  wrong token at a precision boundary. With f16 KV (llama-server) or ollama's internal format,
+  the same model passes cleanly. Use `cache_type_k=f16,cache_type_v=f16` for any 27B dense model
+  whose python_hashmap fails with q8_0 KV. Do not change the task stub to paper over this.
 
 #### Edit Protocol Enforcement
 
@@ -208,6 +214,13 @@ When asked to implement features:
 - **Qwen3 thinking control**: `vllm_client.py` sends `chat_template_kwargs: {enable_thinking: think}`
   so vLLM behaviour matches llama-server for thinking/non-thinking variants. Non-Qwen3 models
   ignore this field silently.
+- **HF-format mode (GPTQ/AWQ/safetensors)**: omit or set `gguf-file` to `-` in the `.vllm`
+  model file; harness serves `hf_repo` directly without `--load-format gguf` or `--tokenizer`.
+  Some GPTQ repos (e.g. AxisQuant/Qwen3.6-27b-gptq-int4) trigger vLLM's Mamba/SSM architecture
+  handler for pure-transformer models, requiring `enforce_eager,max_num_seqs=1` to bypass CUDA
+  graph Mamba-block allocation errors. AxisQuant GPTQ: 18/19 coding, 23 tok/s — worse than
+  bartowski GGUF on llama-server (19/19, 36 tok/s) on both quality and speed. GPTQ INT4
+  calibrated on C4 generic text fails `python_hashmap` (same `_EMPTY` omission as q8_0 KV).
 - **WSL2 mirrored-mode**: startup uses log-based readiness detection; inference uses LAN IP
   fallback. See `lib/vllm_client.py` `_wait_ready()` and `_detect_connect_url()`.
 

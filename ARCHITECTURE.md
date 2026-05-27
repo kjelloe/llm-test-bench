@@ -202,23 +202,29 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` s
 Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` and `llama_server_client.py`. `bench.py` assigns either a `LlamaServerManager` or a `VLLMManager` to the same `llama_manager` variable — the rest of the model loop is unchanged.
 
 - **`VLLMManager`** — manages a single `vllm serve` subprocess:
-  - `ensure(cfg, ctx_size, num_threads, startup_timeout=600)` — starts or restarts the server when the model changes or `ctx_size` grew. Blocks until `/health` returns HTTP 200 (up to `startup_timeout` seconds). If the server exits early, its last 3000 chars of stderr are included in the raised `RuntimeError`.
-  - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; closes stderr pipe.
+  - `ensure(cfg, ctx_size, num_threads, startup_timeout=600)` — starts or restarts the server when the model changes or `ctx_size` grew. Startup uses log-based readiness detection (scans for uvicorn's "Application startup complete." banner in the temp log file) as the primary signal; HTTP `/health` is a secondary fast-path for non-WSL2 environments. Minimum 1200s forced (`_MIN_STARTUP_TIMEOUT`). If the server exits early, its last 8000 chars of stdout/stderr are included in the raised `RuntimeError`.
+  - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; deletes temp log file.
   - Tracks `_current_model` and `_current_ctx`; never downsizes context between tasks.
-- **Server command built in `_start()`:**
-  ```
-  vllm serve <gguf_path>
-    --tokenizer <hf_repo>   (required for GGUF mode — tokenizer not embedded in .gguf)
-    --load-format gguf
-    --max-model-len <ctx_size>
-    --served-model-name <ollama_name>   (makes API model name match what bench.py sends)
-    --port 8090
-    --host 127.0.0.1
-    [--tensor-parallel-size N]  (from tp= param)
-    [--dtype auto]              (from dtype= param)
-    [other params from model file, after harness-only keys stripped]
-  ```
-  `max_model_len`, `max_ctx`, `thinking` are consumed by the harness and never forwarded.
+- **Two loading modes in `_start()`:**
+  - **GGUF mode** — `gguf_file` is set and not `"-"`: serves a local file, requires `hf:` field as `--tokenizer`:
+    ```
+    vllm serve <gguf_path>
+      --tokenizer <hf_repo>   (tokenizer not embedded in .gguf)
+      --load-format gguf
+      --max-model-len <ctx_size>
+      --served-model-name <ollama_name>
+      --port 8090  --host 0.0.0.0
+      [other params from model file]
+    ```
+  - **HF-format mode** — `gguf_file` absent or `"-"`: serves the HuggingFace repo directly (GPTQ/AWQ/safetensors). vLLM downloads on first run and auto-detects quantization from `config.json`. No `--load-format` or `--tokenizer` flags:
+    ```
+    vllm serve <hf_repo>
+      --max-model-len <ctx_size>
+      --served-model-name <ollama_name>
+      --port 8090  --host 0.0.0.0
+      [other params from model file]
+    ```
+  `max_model_len`, `max_ctx`, `thinking` are consumed by the harness and never forwarded. Inference calls use `_detect_connect_url()` which tries 127.0.0.1 first, then falls back to the machine's LAN IP (WSL2 mirrored-mode workaround — loopback may be firewalled).
 - **HF token:** reads `hf-token.txt` from the repo root and sets `HF_TOKEN` in the subprocess environment if not already set — required for gated models (Llama 3.3).
 - `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions`. `model` is the short `ollama_name` (matches `--served-model-name`). Reads `reasoning_content` for thinking models; promotes it to `content` when `content` is empty (same fallback as llama-server).
 - **`_parse_body(body, elapsed_ns)`** — vLLM does not expose llama.cpp `timings` fields, so `eval_duration` is set to wall time and `prompt_eval_duration` to 0. `tok_per_s` in results is therefore `completion_tokens / wall_time`.
@@ -447,7 +453,7 @@ Then add `task_data/my_task/` with baseline source + tests, and register the tas
 - `--num-thread 10` caps CPU threads per inference request; negligible effect on GPU-bound models but reduces heat on the host CPU.
 - GPU monitoring requires `nvidia-ml-py` and an NVIDIA GPU. Without it, `gpu_snapshots` and `kv_cache` fields are `null`; the benchmark otherwise runs identically.
 - **llama-server backend**: requires `llama-server` binary on `PATH` and `LLAMA_MODELS_DIR` env var pointing to the directory containing GGUF files. `--model-file` (or `BENCH_MODEL_FILE` env var) is required; if omitted, bench.py prints an actionable error showing both the CLI flag and env var alternatives. Models without a GGUF filename in `models/*.txt` cannot be used and will error immediately. `--think` and `--warmup` are no-ops. `tok_per_s` is wall-time derived (less accurate than Ollama's internal `eval_duration`). Context window is set at server startup; the server restarts automatically when a task requires a larger `num_ctx` than the running instance (never downsizes — a larger-ctx instance serves smaller tasks too). `--num-thread` is passed as `--threads` at startup, not per-request.
-- **vllm backend**: requires `vllm` installed in `.venv` (`pip install vllm && pip install 'gguf>=0.10.0'`) and `LLAMA_MODELS_DIR` pointing to the GGUF directory. `--model-file` must be a `.vllm` file (auto-selected by `compare.sh`). The `hf:` field is required per model (used as `--tokenizer` source). Uses port 8090. `tok_per_s` is wall-time only (`timings` not available). Multi-GPU: set `tp=N` in the params field; all N GPUs must have sufficient VRAM. `max_model_len` in the params field acts as both the harness `max_ctx` cap (SKIPPED_CTX) and the `--max-model-len` startup flag. `--num-thread`, `--think`, and `--warmup` are no-ops.
+- **vllm backend**: requires `vllm` installed in `.venv` (`pip install vllm && pip install 'gguf>=0.10.0'`). `--model-file` must be a `.vllm` file (auto-selected by `compare.sh`). Two loading modes: **GGUF mode** (gguf-file field set) requires `LLAMA_MODELS_DIR` and an `hf:` field (used as `--tokenizer`); **HF-format mode** (gguf-file absent or `-`) serves the `hf:` repo directly via HuggingFace hub (GPTQ/AWQ/safetensors) — no local GGUF needed, no `--tokenizer` flag. Uses port 8090. `tok_per_s` is wall-time only (`timings` not available). Multi-GPU: set `tp=N` in the params field. `max_model_len` in the params field acts as both the harness `max_ctx` cap (SKIPPED_CTX) and the `--max-model-len` startup flag. `--num-thread`, `--think`, and `--warmup` are no-ops.
 - Ollama keeps the previous model's weights in VRAM after the last request (even when GPU utilisation drops to 0%). `unload_model()` + `wait_for_gpu_idle()` forces a clean drain before each model switch, but if Ollama doesn't evict within 10s the snapshot is marked `dirty: true`.
 - KV cache delta (`kv_cache.delta_mb`) covers both prompt and output tokens since the full KV cache is allocated across the complete inference call. Prompt tokens dominate for typical task prompt sizes (400–700 tokens vs. 50–200 generated).
 
