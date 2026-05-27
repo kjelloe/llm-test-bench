@@ -517,16 +517,20 @@ To benchmark using [vLLM](https://github.com/vllm-project/vllm)'s `vllm serve` i
 | `dtype=auto` | `--dtype auto` | Let vLLM pick bf16/fp16 |
 | `max_model_len=N` | `--max-model-len N` | Context cap; harness skips tasks requiring more (SKIPPED_CTX) |
 | `gpu_mem_util=0.9` | `--gpu-memory-utilization 0.9` | Default is 0.9; lower if OOM |
-| `enforce_eager` | `--enforce-eager` | Disables CUDA graphs; ~20% slower but useful for debugging |
+| `enforce_eager` | `--enforce-eager` | Disables CUDA graphs; saves ~1 GB VRAM (critical for tight 24 GB budgets); ~20% slower inference |
 | `thinking` | — | Harness-only; sets `"After your reasoning"` system prefix |
 
-**Startup:** vLLM loads one model per `vllm serve` process. The harness starts it at the required context size and restarts automatically when the model changes or context grows. Startup is slower than llama-server for small models (~30–60s for 14B) because vLLM compiles CUDA graphs on first launch.
+**Startup:** vLLM loads one model per `vllm serve` process. The harness starts it at the required context size and restarts automatically when the model changes or context grows. Startup is slower than llama-server (~400s for 32B on first launch including CUDA graph capture; `enforce_eager` skips graph capture).
 
 **Timing:** `tok_per_s` uses wall time divided by `completion_tokens` (vLLM does not expose llama.cpp-style `timings` fields).
 
 **Multi-GPU (tp=2):** Both GPUs must be visible and have equivalent VRAM. The harness does not set CUDA_VISIBLE_DEVICES — vLLM auto-detects all available GPUs and uses `tp` of them starting from GPU 0.
 
 **Gated models:** `hf-token.txt` in the repo root is read automatically and forwarded as `HF_TOKEN` to the vLLM subprocess, so `meta-llama` models work without extra setup beyond populating that file.
+
+**Single-GPU VRAM constraints (24 GB, 32B Q4_K_M):** Weights occupy ~20 GB, leaving only ~2.8 GB for KV cache. `enforce_eager` + `gpu_mem_util=0.94` squeezes this to `max_model_len=8192` (the practical ceiling — vLLM reports max 11 312 tokens; no coding task needs ctx between 8 192 and 16 384). Three tasks permanently SKIPPED: `csv_nordic_property` (16k), `python_multifile_rename` (16k), `python_expr_eval` (32k). **Thinking models** (deepseek-r1, qwq) additionally hit a 7 680-token output cap (`max_model_len − 512` prompt reserve), which exhausts the reasoning budget before `BEGIN_FILE` on L3+ tasks — those tasks pass on llama-server with larger context. Use `models/32gb.vllm` on a 32 GB card for full coverage.
+
+**WSL2 `networkingMode=mirrored`:** Loopback connections go through Windows Firewall and may time out. The harness automatically falls back to the machine's LAN IP for inference calls (vLLM binds to `0.0.0.0`). Startup readiness is detected via log parsing rather than HTTP health checks, so both paths work regardless of network mode.
 
 **Comparing all three backends:**
 ```bash
@@ -559,6 +563,15 @@ The `hf:` field is position-independent (may appear anywhere after the ollama na
 | `16gb.txt` | Models that fit on a 16 GB card |
 | `2x24gb.txt` | Models needing dual 24 GB GPUs (e.g. 70B Q4_K_S) |
 | `2x32gb.txt` | Models needing dual 32 GB GPUs |
+
+`.vllm` files mirror the GPU-tier `.txt` files but carry vLLM-specific params (`tp`, `enforce_eager`, `gpu_mem_util`):
+
+| File | Purpose |
+|------|---------|
+| `default.vllm` | Canonical vLLM set — single-GPU 14B/32B entries + dual-GPU 70B entries |
+| `32gb.vllm` | Single 32 GB GPU — 32B models at `max_model_len=32768` (unlocks all coding tasks) |
+| `2x24gb.vllm` | Dual 24 GB GPUs (`tp=2`, 48 GB total) — standalone dual-GPU set including llama3.3:70b |
+| `2x32gb.vllm` | Dual 32 GB GPUs (`tp=2`, 64 GB total) — 70B+ models at extended context |
 
 Pass any file with `--model-file`:
 
