@@ -77,13 +77,13 @@ Example output:
 
 Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b-1m`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`, `qwen3.6:27b`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
 
-### Run the extended benchmark (10 models)
+### Run the extended benchmark (12 models)
 
 ```bash
 ./compare.sh extended
 ```
 
-Runs the 7 default models plus `codestral:22b`, `phi4-reasoning-plus:14b`, and `llama4-scout:17b`. Note: `phi4-reasoning-plus` is incompatible (loops in reasoning planning phase and never emits BEGIN_FILE regardless of token budget); `llama4-scout` runs at ~3.3 tok/s (CPU-bound on 24 GB). Writes results to `output/results-extended.json`.
+Runs the 9 default models plus `codestral:22b`, `phi4-reasoning-plus:14b`, and `llama4-scout:17b`. Note: `phi4-reasoning-plus` is incompatible (loops in reasoning planning phase and never emits BEGIN_FILE regardless of token budget); `llama4-scout` runs at ~3.3 tok/s (CPU-bound on 24 GB). Writes results to `output/results-extended.json`.
 
 The header printed before each run shows estimated runtime from the previous run, per-model history (last known pass rate and tok/s), and any **archived models** — models previously benchmarked but not in the current set. This means swapping a model out doesn't lose its history; it will reappear in the archived section on future runs.
 
