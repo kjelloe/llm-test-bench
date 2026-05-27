@@ -1,0 +1,38 @@
+# Single 32 GB GPU model set — RTX 6000 Ada / A6000 / A100 40 GB / similar
+# Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<tokenizer-repo>]
+#
+# NOTE: vLLM's --load-format gguf does NOT support MoE models (A3B, MoE expert tensors
+# fail to map). Only dense models are listed here. For MoE models use llama-server instead.
+#
+# vs. default.vllm single-GPU section (24 GB):
+#   24 GB: 32B Q4_K_M leaves only 2.76 GiB KV → max_model_len=8192, enforce_eager required
+#   32 GB: 32B Q4_K_M leaves ~8.8 GiB KV → max_model_len=32768, enforce_eager still needed
+#          (CUDA graphs add ~1 GiB overhead; 8.8-1=7.8 GiB → 30 468 tokens, under 32768)
+#          Without enforce_eager use max_model_len=24576 for safe margin.
+#   32 GB: qwq:32b Q5_K_M (22 GB) leaves ~6.8 GiB KV → max_model_len=24576 with enforce_eager
+#   32 GB: qwen2.5-coder:14b leaves ~18 GiB KV → max_model_len=65536 (context_64k accessible)
+#
+# Unlocked tasks vs. 24 GB:
+#   csv_nordic_property (16k), python_multifile_rename (16k) → now reachable at 32k ctx
+#   python_expr_eval (32k) → reachable for qwen/deepseek (deepseek spirals anyway)
+#   context_64k → reachable for 14b; 32b needs tp=2 (see 2x24gb.vllm)
+#
+# Run with:
+#   ./run.sh --backend vllm --model-file models/32gb.vllm --models qwen2.5-coder:32b
+#   ./compare.sh --backend vllm --model-file models/32gb.vllm
+
+# ── 14B baseline — context_64k accessible on 32 GB ───────────────────────────
+# ~18 GiB KV headroom; context_128k requires 25 GiB KV → needs tp=2 (2x24gb.vllm)
+qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=65536  hf:Qwen/Qwen2.5-Coder-14B-Instruct
+
+# ── 32B models — upgraded from 8192 → 32768 context vs. default.vllm ---------
+# enforce_eager saves ~1 GiB to keep 32 768-token KV under the ~8.8 GiB budget.
+# Without enforce_eager vLLM requests 32768+CUDA-graphs; to skip enforce_eager set
+# max_model_len=24576 instead (misses python_expr_eval which needs ctx=32768).
+qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768,enforce_eager,gpu_mem_util=0.9  hf:Qwen/Qwen2.5-Coder-32B-Instruct
+deepseek-r1:32b    DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768,enforce_eager,gpu_mem_util=0.9,thinking  hf:deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+
+# ── qwq:32b — Q5_K_M (22 GiB); was unusable on 24 GB (KV thrashing) ─────────
+# 32 GB: ~6.8 GiB KV with enforce_eager → max 26 624 tokens → max_model_len=24576 safe.
+# python_expr_eval (ctx=32768) remains SKIPPED; all other coding tasks accessible.
+qwq:32b  QwQ-32B-Q5_K_M.gguf  tp=1,dtype=auto,max_model_len=24576,enforce_eager,gpu_mem_util=0.9,thinking  hf:Qwen/QwQ-32B

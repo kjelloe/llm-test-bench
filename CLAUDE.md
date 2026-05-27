@@ -152,6 +152,7 @@ lib/
   tasks.py                Task definitions, prompt builder, subprocess helpers
   ollama_client.py        Ollama /api/chat client
   llama_server_client.py  LlamaServerManager (spawn/stop llama-server) + chat() for OpenAI-compatible API
+  vllm_client.py          VLLMManager (spawn/stop vllm serve) + chat() for OpenAI-compatible API
   model_config.py         Parse models/*.txt 3-field format → ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser + allow-list validator
   reporting.py            Comparison table (paginated), failure detail, JSON writer
@@ -194,6 +195,21 @@ When asked to implement features:
 - Provide a minimal working implementation first.
 - Add at least one test for any non-trivial parser or scoring logic.
 - Update `SPEC.md` / `ARCHITECTURE.md` if behavior changes.
+
+#### vLLM backend constraints (2026-05-27, vLLM with GGUF)
+
+- **MoE GGUF not supported**: `--load-format gguf` fails for any MoE / A3B model with
+  `Failed to map GGUF parameters: model.layers.X.mlp.experts.*`. Affects qwen3-coder:30b,
+  qwen3.5:35b-A3B, qwen3.6:35b-A3B, noctrex. Dense models (14B, 32B, 70B) work fine.
+- **Single-GPU 24 GB ceiling for 32B Q4_K_M**: `max_model_len=8192` with `enforce_eager` +
+  `gpu_mem_util=0.94`. Thinking models (deepseek-r1, qwq) hit a 7 680-token effective output
+  cap (`max_model_len − 512`) which exhausts the reasoning budget before `BEGIN_FILE` on L3+
+  tasks (NO_BLOCKS). Same tasks pass on llama-server at `max_ctx=32768`.
+- **Qwen3 thinking control**: `vllm_client.py` sends `chat_template_kwargs: {enable_thinking: think}`
+  so vLLM behaviour matches llama-server for thinking/non-thinking variants. Non-Qwen3 models
+  ignore this field silently.
+- **WSL2 mirrored-mode**: startup uses log-based readiness detection; inference uses LAN IP
+  fallback. See `lib/vllm_client.py` `_wait_ready()` and `_detect_connect_url()`.
 
 #### What NOT to do
 

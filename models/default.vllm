@@ -22,6 +22,16 @@
 # and gives immediate comparison data without needing dual GPU.
 qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768  hf:Qwen/Qwen2.5-Coder-14B-Instruct
 
+# ── MoE GGUF models — NOT SUPPORTED by vLLM's GGUF loader ───────────────────
+# vLLM's --load-format gguf cannot map MoE expert weight tensors. All A3B / MoE
+# models fail with "Failed to map GGUF parameters: model.layers.X.mlp.experts.*"
+# This includes: qwen3-coder:30b-1m, qwen3.5:35b-A3B, qwen3.6:35b-A3B, noctrex.
+# Workaround: load from HuggingFace safetensors (omit --load-format gguf and gguf-file),
+# but that requires downloading the full bf16 weights (~60 GB for 30B).
+# Dense models (32B, 70B) are unaffected — only MoE expert tensors are broken.
+#
+# qwen3-coder:30b-1m  Qwen3-Coder-30B-A3B-Instruct-1M-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=16384  hf:Qwen/Qwen3-Coder-30B-A3B-Instruct
+
 # ── Single-GPU 32B (tp=1, enforce_eager, 24 GB) ──────────────────────────────
 # enforce_eager disables CUDA graphs (~1 GB saved) so ~20 GB weights + KV
 # fits in 24 GB. gpu_mem_util=0.94 (not 0.95): CUDA driver takes ~1.25 GB at

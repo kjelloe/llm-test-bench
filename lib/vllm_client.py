@@ -320,6 +320,10 @@ def chat(
             "max_tokens": effective_max_tokens,
             "stream": False,
             "top_p": 1.0,
+            # Mirror llama-server's chat_template_kwargs: explicitly control Qwen3
+            # thinking mode so vLLM behaviour matches llama-server for the same model.
+            # Models that don't support this field (pre-Qwen3) ignore it silently.
+            "chat_template_kwargs": {"enable_thinking": think},
         }
         req = urllib.request.Request(
             url,

@@ -530,6 +530,8 @@ To benchmark using [vLLM](https://github.com/vllm-project/vllm)'s `vllm serve` i
 
 **Single-GPU VRAM constraints (24 GB, 32B Q4_K_M):** Weights occupy ~20 GB, leaving only ~2.8 GB for KV cache. `enforce_eager` + `gpu_mem_util=0.94` squeezes this to `max_model_len=8192` (the practical ceiling — vLLM reports max 11 312 tokens; no coding task needs ctx between 8 192 and 16 384). Three tasks permanently SKIPPED: `csv_nordic_property` (16k), `python_multifile_rename` (16k), `python_expr_eval` (32k). **Thinking models** (deepseek-r1, qwq) additionally hit a 7 680-token output cap (`max_model_len − 512` prompt reserve), which exhausts the reasoning budget before `BEGIN_FILE` on L3+ tasks — those tasks pass on llama-server with larger context. Use `models/32gb.vllm` on a 32 GB card for full coverage.
 
+**MoE GGUF models are not supported:** vLLM's `--load-format gguf` cannot map MoE expert weight tensors (`model.layers.X.mlp.experts.*`). All `*-A3B` / MoE GGUFs (qwen3-coder:30b, qwen3.5:35b, qwen3.6:35b, etc.) crash at startup with `Failed to map GGUF parameters`. Only dense models work via GGUF on vLLM. MoE models would require loading from HuggingFace safetensors (full bf16 weights, no GGUF), which is a separate setup. Use llama-server for MoE GGUF models.
+
 **WSL2 `networkingMode=mirrored`:** Loopback connections go through Windows Firewall and may time out. The harness automatically falls back to the machine's LAN IP for inference calls (vLLM binds to `0.0.0.0`). Startup readiness is detected via log parsing rather than HTTP health checks, so both paths work regardless of network mode.
 
 **Comparing all three backends:**
