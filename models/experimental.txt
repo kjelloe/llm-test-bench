@@ -246,9 +246,13 @@ qwen3.5:27b      Qwen_Qwen3.5-27B-Q4_K_M.gguf          ngl=999,no_mmap,cache_typ
 #   31/33 (32 eligible — SKIPPED context_256k)  34.3 tok/s avg  2870.3s total
 #   Coding:   19/19 PERFECT — all tasks pass (same as coding-only run)
 #   L6 step:   4/4  — PASS node_para_core/turret/entities/combat
-#   l6_full:   FAIL (TESTS_STILL_FAIL) — 4.5k tokens in 142s even at num_predict=24000;
-#              implementation is COMPLETE (not truncated); test 1 passes; failing tests unknown;
-#              capability gap, not a budget gap. Same result at 8k and 24k token budgets.
+#   l6_full:   FAIL 26/40 (minimum) — 4.5k tokens in 142s even at num_predict=24000;
+#              CAPABILITY GAP (implementation complete, not truncated). Two independent bugs:
+#              (1) Tests 23-26: paratrooper landing state never transitions 'chute'→'landed';
+#                  landedLeft/Right never increment; overrun condition never fires.
+#              (2) Tests 35-37: collision detection broken — bomb/turret, bomb/projectile, heli/projectile.
+#              Tests 27-33 unknown (TAP truncated) but likely fail (depend on landing).
+#              Passes tests 1-22 + 34 + 38-40. Compare: gemma4:26b 39/40, devstral-small-2 38/40.
 #   Context:   PASS 8k/16k/32k/64k → 37.1/36.6/35.2/32.6 tok/s
 #              SLOW 128k: 6.8 tok/s (1657s) — f16 KV spills heavily at 131k context;
 #              worse than expected: qwen3.5:27b with q8_0 KV runs at 18.4 tok/s at 128k.
@@ -381,6 +385,22 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache
 #   (3) Test 33 (freefall crush) is the universal wall — no model passes it; rule IS in stub.
 #   (4) Stub hints shift failures without reducing total; 38-39/40 appears to be the model ceiling.
 #   (5) Nemotron and carnice have structural output failures on this task (wrong export / NO_BLOCKS).
+
+# ── Qwen3-Coder-Next (4-shard Q4_K_M, ~14.5 GB total) ───────────────────────
+# New-generation Qwen coder model from official Qwen repo (scouted 2026-05-27).
+# Likely successor to qwen3-coder:30b-1m; architecture/size TBD on first run.
+# 4-shard GGUF split — llama-server loads all shards automatically from first.
+# HIGH PRIORITY: fits in 24 GB; run coding group first.
+# → Fetch: ./fetch-hf.sh models/experimental.txt  (hf: field below)
+# Not yet benchmarked.
+qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:Qwen/Qwen3-Coder-Next-GGUF
+
+# ── gemma-4-31B (Q4_K_M, ~17.1 GB) ──────────────────────────────────────────
+# New larger Gemma 4 size from unsloth (scouted 2026-05-27).
+# Different size/config from gemma4:26b (26B-A4B MoE, 4B active); no -A suffix → likely dense.
+# → Fetch: ./fetch-hf.sh models/experimental.txt  (hf: field below)
+# Not yet benchmarked. Benchmark vs gemma4:26b to compare dense vs MoE at this size range.
+gemma4:31b  gemma-4-31B-it-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-31B-it-GGUF
 
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
 # Confirmed 2026-05-14: 2.5 tok/s at ngl=45; 9/10 coding tasks pass (86%) but
