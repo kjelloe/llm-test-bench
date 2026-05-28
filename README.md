@@ -152,7 +152,7 @@ All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3
 
 node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficient for the 40-test game (needs 24000). All models fail it at 8000 tokens; this is a budget constraint, not a capability ceiling. MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
 
-**Added 2026-05-27:** `qwen3.6:27b` (dense 27B, bartowski Q4_K_M, llama-server, f16 KV) — 31/33, 37 tok/s, Skill L5; 19/19 coding PERFECT; not yet in a full compare.sh run. See experimental table below.
+**Added 2026-05-27:** `qwen3.6:27b` (dense 27B, bartowski Q4_K_M, llama-server, f16 KV) — 31/33, 34.3 tok/s avg, Skill L5; 19/19 coding PERFECT; 4/4 L6 stepped; context_128k SLOW 6.8 tok/s (f16 KV spill trade-off for python_hashmap correctness). Not yet in a full 9-model compare.sh run.
 
 ### Experimental models (llama-server, RTX 3090 24 GB)
 
@@ -162,7 +162,7 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
 | deepseek-r1:32b | 18/19 coding | 31 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval NO_BLOCKS (reasoning spiral — confirmed capability gap, not token budget) |
-| qwen3.6:27b | **31/33** | 37 | Dense 27B; Skill L5; **19/19 coding PERFECT** (llama-server 36.6 tok/s, f16 KV required); 4/4 L6 stepped PASS (incl. step 3); context_128k PASS 3.3 tok/s (ollama); node_paratrooper FAIL (8k budget); context_256k SKIP — **promoted to default.txt 2026-05-27** |
+| qwen3.6:27b | **31/33** | 34 | Dense 27B; Skill L5; **19/19 coding PERFECT**; 4/4 L6 stepped PASS (incl. step 3); context 37.1→32.6 tok/s (8k→64k); context_128k SLOW 6.8 tok/s (f16 KV spill — required to pass python_hashmap); l6_full FAIL (capability gap, not token budget); **promoted to default.txt 2026-05-27** |
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)

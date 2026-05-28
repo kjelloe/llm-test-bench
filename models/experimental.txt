@@ -238,18 +238,35 @@ qwen3.5:27b      Qwen_Qwen3.5-27B-Q4_K_M.gguf          ngl=999,no_mmap,cache_typ
 #   l6_full:   FAIL (TESTS_STILL_FAIL) — ~4800 tokens generated (8k budget); code
 #              runs but some tests fail; needs num_predict=24000 for full game
 #   Context:   PASS 8k/16k/32k/64k/128k → 32.5/28.7/26.7/14.7/3.3 tok/s
-#              128k: 3.3 tok/s — ollama f16 KV artifact; with llama-server q8_0 KV
-#              expect ~15-18 tok/s (same pattern as qwen3.5:27b at 18.4 tok/s)
+#              128k: 3.3 tok/s — ollama f16 KV artifact
 #   Multihop:  PASS forward + reverse + distractor (~26.7 tok/s at 32k ctx)
 #   Skips:     context_256k (SKIPPED_VRAM, min_vram_gb=48)
 #
-# Comparison vs qwen3.5:27b (27/29 full-run, 34.6 tok/s, 1231s, 2026-05-22):
-#   Score: 31/33 vs 27/29 — on equivalent 29-task set, qwen3.6 likely matches/beats
+# Results (2026-05-28, llama-server, RTX 3090 24 GB, full 33-task set, f16 KV):
+#   31/33 (32 eligible — SKIPPED context_256k)  34.3 tok/s avg  2870.3s total
+#   Coding:   19/19 PERFECT — all tasks pass (same as coding-only run)
+#   L6 step:   4/4  — PASS node_para_core/turret/entities/combat
+#   l6_full:   FAIL (TESTS_STILL_FAIL) — 4.5k tokens in 142s even at num_predict=24000;
+#              implementation is COMPLETE (not truncated); test 1 passes; failing tests unknown;
+#              capability gap, not a budget gap. Same result at 8k and 24k token budgets.
+#   Context:   PASS 8k/16k/32k/64k → 37.1/36.6/35.2/32.6 tok/s
+#              SLOW 128k: 6.8 tok/s (1657s) — f16 KV spills heavily at 131k context;
+#              worse than expected: qwen3.5:27b with q8_0 KV runs at 18.4 tok/s at 128k.
+#              Trade-off: f16 KV required to pass python_hashmap; but halves 128k throughput vs q8_0.
+#   Multihop:  PASS forward + reverse + distractor (35.0–35.3 tok/s at 64k ctx)
+#   Skips:     context_256k (SKIPPED_VRAM, min_vram_gb=48)
+#
+# f16 KV at 128k trade-off (confirmed 2026-05-28):
+#   f16 KV: python_hashmap PASS; context_128k 6.8 tok/s (1657s, SLOW flag)
+#   q8_0 KV: python_hashmap FAIL (_EMPTY omission); context_128k ~15-18 tok/s (estimate)
+#   f16 is 2.7× slower at 128k vs the q8_0 estimate. Cost is real but unavoidable.
+#
+# Comparison vs qwen3.5:27b (27/29 full-run, 34.6 tok/s, 1231s, llama-server, q8_0 KV):
+#   Score: 31/33 vs 27/29 — qwen3.6 higher; qwen3.5 task-set is 29 tasks, not 33
 #   L6 step: qwen3.6 4/4; qwen3.5 4/4 (both pass step 3 — dense advantage)
-#   Speed: 29.7 vs 34.6 tok/s — qwen3.6 ~14% slower via ollama (backend overhead vs llama-server)
-#   128k: qwen3.6 3.3 tok/s (ollama f16 KV) vs qwen3.5 18.4 tok/s (llama-server q8_0 KV)
-#         Expect comparable once run via llama-server with GGUF
-#   Quality: materially better — qwen3.6 fixes python_hashmap and node_csv_parser issues
+#   Speed: 34.3 vs 34.6 tok/s — essentially identical at normal context
+#   128k: qwen3.6 6.8 tok/s (f16 KV) vs qwen3.5 18.4 tok/s (q8_0 KV) — 2.7× slower due to f16
+#   Quality: materially better — qwen3.6 fixes python_hashmap and node_csv_parser
 #
 # vs default set top-scores:
 #   noctrex-qwen3.6:35b: 31/33, 119 tok/s, Skill L5 — same score, 4× faster
@@ -261,7 +278,8 @@ qwen3.5:27b      Qwen_Qwen3.5-27B-Q4_K_M.gguf          ngl=999,no_mmap,cache_typ
 #   model omits `_EMPTY = None` from the output file while correctly using _DELETED tombstone
 #   elsewhere — a precision-boundary token choice that q8_0 tips the wrong way. Confirmed:
 #   thinking flag removal (2 runs) did not fix it; switching to f16 KV fixed it (2026-05-27).
-#   f16 KV uses more VRAM at 128k context but ctx_128k still runs (partial spill at ~3-5 tok/s).
+#   f16 KV at 128k context: 6.8 tok/s (SLOW, 1657s) — heavy VRAM spill; q8_0 would be ~15-18 tok/s
+#   but q8_0 causes python_hashmap failure. f16 is the correct setting despite the 128k cost.
 qwen3.6:27b      Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
 mistral-medium-3.5:128b  Q4_K_M/Mistral-Medium-3.5-128B-Q4_K_M-00001-of-00003.gguf  ngl=24,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384,thinking  hf:unsloth/Mistral-Medium-3.5-128B-GGUF  # 3-part model
 

@@ -125,6 +125,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   wrong token at a precision boundary. With f16 KV (llama-server) or ollama's internal format,
   the same model passes cleanly. Use `cache_type_k=f16,cache_type_v=f16` for any 27B dense model
   whose python_hashmap fails with q8_0 KV. Do not change the task stub to paper over this.
+  **f16 KV trade-off at 128k context (confirmed 2026-05-28, qwen3.6:27b)**: f16 KV causes heavy
+  VRAM spill at ctx=131072 — 6.8 tok/s (1657s, SLOW) vs ~15-18 tok/s with q8_0 KV. The 2.7×
+  speed penalty at 128k is the real cost of the f16 requirement. context_128k still passes within
+  the 3600s task timeout but triggers the SLOW flag. Accept this trade-off; do not switch to q8_0.
 
 #### Edit Protocol Enforcement
 
@@ -149,7 +153,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 bench.py            CLI runner
 install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper
-compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json)
+compare.sh          Runs canonical 9-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json)
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
@@ -185,7 +189,7 @@ task_data/
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (6 models × 24 tasks)
+# Full benchmark (9 models × 33 tasks)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -223,6 +227,47 @@ When asked to implement features:
   calibrated on C4 generic text fails `python_hashmap` (same `_EMPTY` omission as q8_0 KV).
 - **WSL2 mirrored-mode**: startup uses log-based readiness detection; inference uses LAN IP
   fallback. See `lib/vllm_client.py` `_wait_ready()` and `_detect_connect_url()`.
+
+#### Model & Task Insights (accumulated findings)
+
+- **Dense vs MoE on multi-step data tasks**: dense 27B consistently beats MoE 35B on
+  `csv_nordic_property` and `node_csv_parser` — confirmed across two Qwen generations:
+  - qwen3.5:27b (dense) PASS; qwen3.5:35b-A3B (MoE) FAIL csv_nordic
+  - qwen3.6:27b (dense) PASS both; qwen3.6:35b-A3B (MoE) FAIL both
+  Likely cause: MoE expert routing breaks multi-step analytical reasoning where context
+  must be carried across sub-steps. Dense attention is more coherent here.
+  Do NOT conclude a dense model is "better overall" — MoE is faster and often stronger
+  on single-step coding tasks.
+
+- **GGUF Q4_K_M on llama-server beats GPTQ INT4 on vLLM for 27B dense models**:
+  qwen3.6:27b: bartowski GGUF → 19/19 @ 36 tok/s; AxisQuant GPTQ INT4 → 18/19 @ 23 tok/s.
+  C4-calibrated GPTQ loses on both quality AND speed for this size class. The f16 KV
+  requirement (see python_hashmap precision canary) applies to GGUF; GPTQ lands on the
+  wrong side of the same precision boundary. When choosing between GPTQ and GGUF for a
+  new 27B model, default to bartowski GGUF Q4_K_M on llama-server.
+
+- **gpt-oss:20b non-determinism**: results vary 22–26/33 between identical compare.sh runs
+  due to variable verbose reasoning length at temperature=0. Not a reliable benchmark
+  subject. Known stable failure: context_64k retrieval bug (retrieves RC-5000 instead of
+  correct value). Consider separating it from the canonical comparison set.
+
+- **L6 from-scratch ceiling is 39/40**: test 33 (freefall crush on landing) has never been
+  passed by any model despite the rule being explicit in the stub. Before adding more stub
+  hints, verify the timing description is unambiguous. If it is, this is a genuine
+  physics-simulation reasoning wall, not a spec gap. Do not change the test to lower the bar.
+
+- **MTP spec decoding breaks benchmarks**: `--spec-type draft-mtp` (carnice, noctrex MTP
+  variants) harms temp=0 determinism — confirmed regression on python_hashmap. Never add
+  spec flags to benchmark runs. MTP layers in a GGUF (e.g. bartowski qwen3.6:27b b9180+)
+  are harmless when spec flags are absent — the head loads but does not speculate.
+
+- **New model candidates (scout 2026-05-27)**:
+  - `Qwen3-Coder-Next` (Qwen/Qwen3-Coder-Next-GGUF, ~14.5 GB Q4_K_M, 4 shards) — fits 24 GB;
+    likely successor to qwen3-coder:30b-1m; HIGH PRIORITY to download and benchmark.
+  - `gemma-4-31B` (unsloth/gemma-4-31B-it-GGUF, ~17.1 GB Q4_K_M) — new Gemma 4 size; fits 24 GB.
+  - Devstral-Small-2507/2505 — OLDER versions (July/May 2025); current is 2512. Skip.
+  - Devstral-2-123B (46.5 GB) — needs dual GPU; note for when hardware arrives.
+  - Qwen3.6-27B-MTP (unsloth) — skip; MTP harms determinism (same as carnice pattern).
 
 #### What NOT to do
 

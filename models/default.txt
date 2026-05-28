@@ -27,7 +27,9 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,
 qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,n_cpu_moe=35,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model
 devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256   hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
-# KV cache MUST be f16 (not q8_0): q8_0 KV causes python_hashmap FAIL (_EMPTY = None omission,
-# precision boundary). 31/33 full run (ollama 2026-05-27); 19/19 coding perfect (llama-server 36.6 tok/s).
-# Ties noctrex-qwen3.6:35b at 31/33 — dense 27B at 4× lower speed but no MXFP4 hardware requirement.
+# KV cache MUST be f16 (not q8_0): q8_0 KV causes python_hashmap FAIL (_EMPTY = None omission).
+# Full run (llama-server 2026-05-28): 31/33, 34.3 tok/s, Skill L5; 19/19 coding PERFECT; 4/4 L6 stepped.
+# Context: 37.1/36.6/35.2/32.6 tok/s (8k→64k); 6.8 tok/s SLOW at 128k (f16 KV spill — trade-off for hashmap).
+# l6_full: FAIL (4.5k tokens, 142s; implementation complete, capability gap not token budget).
+# Ties noctrex-qwen3.6:35b at 31/33 — dense 27B at 4× lower speed, no MXFP4 hardware requirement.
 qwen3.6:27b  Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
