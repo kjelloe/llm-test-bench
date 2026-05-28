@@ -98,3 +98,10 @@ qwq:32b-q5km         QwQ-32B-Q5_K_M.gguf                    tp=2,dtype=auto,max_
 # qwen2.5-coder:32b — currently fails context_32k+ on single GPU (weight leaves
 # ~4 GB for KV). Dual GPU: 10 GB/GPU → ~14 GB for KV, unlocks context_64k.
 qwen2.5-coder:32b-q4km  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=65536  hf:Qwen/Qwen2.5-Coder-32B-Instruct
+
+# qwen3-coder-next — ~72B dense, 46 GB Q4_K_M (4 shards: 15+14+14+3.3 GB).
+# Single-GPU 24 GB: RAM-bound at 16.6 tok/s (52% VRAM-resident); 19/19 PERFECT coding confirmed.
+# Dual GPU: 23 GB/GPU → fully VRAM-resident; expected ~35-40 tok/s at perfect quality.
+# vLLM GGUF multi-shard not yet tested; use llama-server (ngl=999) on single GPU for now.
+# Uncomment and validate when dual GPU arrives:
+# qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004.gguf  tp=2,dtype=auto,max_model_len=32768  hf:Qwen/Qwen3-Coder-Next-GGUF

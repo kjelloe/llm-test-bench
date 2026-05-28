@@ -262,9 +262,17 @@ When asked to implement features:
   are harmless when spec flags are absent — the head loads but does not speculate.
 
 - **New model candidates (scout 2026-05-27)**:
-  - `Qwen3-Coder-Next` (Qwen/Qwen3-Coder-Next-GGUF, ~14.5 GB Q4_K_M, 4 shards) — fits 24 GB;
-    likely successor to qwen3-coder:30b-1m; HIGH PRIORITY to download and benchmark.
-  - `gemma-4-31B` (unsloth/gemma-4-31B-it-GGUF, ~17.1 GB Q4_K_M) — new Gemma 4 size; fits 24 GB.
+  - `Qwen3-Coder-Next` (Qwen/Qwen3-Coder-Next-GGUF) — BENCHMARKED 2026-05-28: **19/19 PERFECT**
+    at 16.6 tok/s. ACTUAL SIZE: ~46 GB (4 shards: 15+14+14+3.3 GB) — ~72B dense; the "14.5 GB"
+    estimate was shard 1 only. RAM-bound on 24 GB (52% VRAM). Not replacing qwen3-coder:30b-1m
+    (9× faster at 150 tok/s). HIGH VALUE for dual-GPU: fully resident on 48 GB → ~35-40 tok/s.
+    Added to default.vllm dual-GPU queue (commented).
+  - `gemma-4-31B` (unsloth/gemma-4-31B-it-GGUF, ~17.1 GB Q4_K_M) — BENCHMARKED 2026-05-28:
+    **18/19**, 34.6 tok/s. FAILS node_csv_parser (ESM syntax: `export function` in CJS context —
+    model output format bias, not capability gap). PASSES csv_nordic_property — confirms
+    dense-beats-MoE pattern in Gemma 4 generation (gemma4:26b MoE fails csv_nordic at 110 tok/s).
+    Peak skill L5 (passes dijkstra + hashmap); Skill L2 due to node_csv_parser L3 wall.
+    Not added to default.txt (18/19 at ~35 tok/s doesn't displace any current model).
   - Devstral-Small-2507/2505 — OLDER versions (July/May 2025); current is 2512. Skip.
   - Devstral-2-123B (46.5 GB) — needs dual GPU; note for when hardware arrives.
   - Qwen3.6-27B-MTP (unsloth) — skip; MTP harms determinism (same as carnice pattern).
