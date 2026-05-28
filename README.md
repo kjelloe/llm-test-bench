@@ -190,12 +190,12 @@ At the end of every run a comparison table is printed. When the full table would
 COMPARISON TABLE [1/3]  (Spd: assumed rank 1=fastest  |  Skill: L1:6  L2:4  L3:5  L4:3  L5:2)
 Hardware: RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 GB RAM
 +--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
-| Model              | Spd | Skill | python_safe_div          | node_slugify             |   …     | context_128k             | pass  avg tok/s   tot s   |
-|                    | est | L1-3  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L1) ok  tok/s  wall     |                           |
-+--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
-| gpt-oss:20b        |  1  |  L3   | PASS    82.1t/s     8.3s | PASS    81.7t/s    23.4s |   …     | PASS  1574.0t/s    18.5s | 19/23   82.0t/s     …s    |
-| qwen3-coder:30b-1m |  3  |  L4   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS   404.0t/s    62.0s | 21/23   39.5t/s     …s    |
-+--------------------+-----+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
+| Model              | Spd | Skill | Peak  | python_safe_div          | node_slugify             |   …     | context_128k             | pass  avg tok/s   tot s   |
+|                    | est | L1-3  |  top  | (L1) ok  tok/s  wall     | (L2) ok  tok/s  wall     |   …     | (L1) ok  tok/s  wall     |                           |
++--------------------+-----+-------+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
+| gpt-oss:20b        |  1  |  L3   |  L3   | PASS    82.1t/s     8.3s | PASS    81.7t/s    23.4s |   …     | PASS  1574.0t/s    18.5s | 19/23   82.0t/s     …s    |
+| qwen3-coder:30b-1m |  3  |  L4   |  L4   | PASS    44.7t/s     7.0s | PASS    43.1t/s     9.3s |   …     | PASS   404.0t/s    62.0s | 21/23   39.5t/s     …s    |
++--------------------+-----+-------+-------+--------------------------+--------------------------+--  …  --+--------------------------+---------------------------+
 
 FAILURE DETAIL
   Model: gpt-oss:20b
@@ -205,7 +205,7 @@ FAILURE DETAIL
       e.g. context_256k — Ollama capped num_ctx below 262144 (insufficient VRAM/RAM)
 ```
 
-The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below. `CTX_TRUNCATED` failures (Ollama capping the context window due to VRAM/RAM limits) are treated as hardware constraints and excluded from the skill rating — they do not reduce a model's tier.
+The **Skill** column shows the highest difficulty tier (L1–L5) where the model passes *all* tasks at that level and below. The **Peak** column shows the highest level L where the model passes *all* tasks specifically at level L — it surfaces the true capability ceiling even when one lower-level task fails (e.g. a model that fails a single L3 output-format task but passes all L5 tasks shows Skill=L2, Peak=L5). `CTX_TRUNCATED`, `TOOL_ERROR`, `SKIPPED_CTX`, and `SKIPPED_VRAM` are treated as hardware/infrastructure constraints and excluded from both ratings.
 
 Results are also written to JSON (default: `output/results.json`; `output/results-compare.json` for `compare.sh`; `output/results-extended.json` for `compare.sh extended`).
 
@@ -348,9 +348,11 @@ Six tasks at increasing context depths (8k → 256k tokens) ask the model to fin
 
 **`distractor_notes` (L2)** — Find `INCIDENT-5000`'s resolution code in a ~30k-token archive. Three decoy mentions of the same code appear in note bodies at ~15%, ~35%, and ~70% depth. The model must read the structured header field, not the prose notes. Tests whether the model is fooled by repeated distractor context.
 
-### Skill rating
+### Skill and Peak ratings
 
-The **Skill** column in the results table shows the highest difficulty tier where a model passes *all* tasks at that level and below:
+The results table has two related columns:
+
+**Skill** — highest consecutive tier: the model passes *all* tasks at every level from L1 up to N.
 
 | Rating | Meaning |
 |--------|---------|
@@ -362,7 +364,9 @@ The **Skill** column in the results table shows the highest difficulty tier wher
 | `L1` | Passes L1 only, fails at least one L2 task |
 | `<L1` | Fails at least one L1 task |
 
-`CTX_TRUNCATED` failures are excluded from this calculation — a model that could not process a large-context task due to VRAM/RAM limits is not penalised in its tier rating.
+**Peak** — highest level fully mastered: the highest level L where the model passes *all* tasks at exactly that level, regardless of whether lower levels are all complete. A model with Skill=L2 due to one L3 output-format failure but that passes all L5 tasks will show Peak=L5, correctly reflecting that it can solve L5 problems.
+
+Both columns exclude `CTX_TRUNCATED`, `TOOL_ERROR`, `SKIPPED_CTX`, and `SKIPPED_VRAM` — infrastructure/hardware constraints that are not capability failures.
 
 ---
 

@@ -42,25 +42,42 @@ def load_results(path: str) -> tuple[list[dict], dict | None]:
 _INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM"})
 
 
-def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dict[str, int]) -> str:
-    """Return highest difficulty tier N where the model passes ALL tasks at levels 1..N.
+def _pass_for_skill(model: str, t: str, idx: dict) -> bool:
+    """True if this result counts as a pass for skill/peak calculations.
 
-    Infrastructure failures (hardware limits, setup errors, skipped tasks) are excluded
-    from the skill calculation — only genuine capability failures count against a model.
+    Infrastructure failures (CTX_TRUNCATED, TOOL_ERROR, SKIPPED_*) are treated as
+    pass because they reflect hardware limits, not model capability.
     """
+    r = idx.get((model, t), {})
+    return bool(r.get("tests_pass") or r.get("error_kind") in _INFRA_ERROR_KINDS)
+
+
+def _skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dict[str, int]) -> str:
+    """Return highest difficulty tier N where the model passes ALL tasks at levels 1..N."""
     if not task_difficulties:
         return "?"
     max_level = max(task_difficulties.get(t, 1) for t in tasks)
     for level in range(max_level, 0, -1):
         tasks_up_to = [t for t in tasks if task_difficulties.get(t, 1) <= level]
-        def _counts_as_pass(model: str, t: str) -> bool:
-            r = idx.get((model, t), {})
-            if r.get("tests_pass"):
-                return True
-            if r.get("error_kind") in _INFRA_ERROR_KINDS:
-                return True  # hardware / infra limit, not a capability gap
-            return False
-        if all(_counts_as_pass(model, t) for t in tasks_up_to):
+        if all(_pass_for_skill(model, t, idx) for t in tasks_up_to):
+            return f"L{level}"
+    return "<L1"
+
+
+def _peak_skill_level(model: str, tasks: list[str], idx: dict, task_difficulties: dict[str, int]) -> str:
+    """Return the highest level L where the model passes ALL tasks AT level L.
+
+    Unlike _skill_level (which requires every lower level to also be complete),
+    this only asks: at the hardest level the model can handle, does it pass every
+    task there? A single L3 output-format failure won't collapse the rating if
+    the model passes all L5 tasks cleanly.
+    """
+    if not task_difficulties:
+        return "?"
+    max_level = max(task_difficulties.get(t, 1) for t in tasks)
+    for level in range(max_level, 0, -1):
+        tasks_at = [t for t in tasks if task_difficulties.get(t, 1) == level]
+        if tasks_at and all(_pass_for_skill(model, t, idx) for t in tasks_at):
             return f"L{level}"
     return "<L1"
 
@@ -78,9 +95,10 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
     SUM_W   = 25   # "3/3  1234.5t/s  1234.5s"
     SPD_W   = 3
     SKILL_W = 5
+    PEAK_W  = 5
 
-    # Fixed columns overhead: "| model | Spd | Skill " prefix + "| summary |" suffix
-    FIXED_W = (model_w + 3) + (SPD_W + 3) + (SKILL_W + 3) + (SUM_W + 3) + 1
+    # Fixed columns overhead: "| model | Spd | Skill | Peak " prefix + "| summary |" suffix
+    FIXED_W = (model_w + 3) + (SPD_W + 3) + (SKILL_W + 3) + (PEAK_W + 3) + (SUM_W + 3) + 1
     term_w  = shutil.get_terminal_size(fallback=(120, 40)).columns
     tasks_per_page = max(1, (term_w - FIXED_W) // (CELL_W + 3))
 
@@ -119,6 +137,7 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
             "+" + "-" * (model_w + 2)
             + "+" + "-" * (SPD_W + 2)
             + "+" + "-" * (SKILL_W + 2)
+            + "+" + "-" * (PEAK_W + 2)
             + ("+" + "-" * (CELL_W + 2)) * n_tasks
             + "+" + "-" * (SUM_W + 2) + "+"
         )
@@ -152,13 +171,13 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
         print(bar)
 
         task_hdrs = "".join(f"| {t:<{CELL_W}} " for t in page_tasks)
-        print(f"| {'Model':<{model_w}} | {'Spd':^{SPD_W}} | {'Skill':^{SKILL_W}} {task_hdrs}| {'pass  avg tok/s   tot s':<{SUM_W}} |")
+        print(f"| {'Model':<{model_w}} | {'Spd':^{SPD_W}} | {'Skill':^{SKILL_W}} | {'Peak':^{PEAK_W}} {task_hdrs}| {'pass  avg tok/s   tot s':<{SUM_W}} |")
 
         if task_difficulties:
             task_sub = "".join(f"| {'(L'+str(task_difficulties.get(t,1))+') ok  tok/s  wall':<{CELL_W}} " for t in page_tasks)
         else:
             task_sub = "".join(f"| {'ok  tok/s  wall':<{CELL_W}} " for _ in page_tasks)
-        print(f"| {'':<{model_w}} | {'est':^{SPD_W}} | {'L1-3':^{SKILL_W}} {task_sub}| {'':<{SUM_W}} |")
+        print(f"| {'':<{model_w}} | {'est':^{SPD_W}} | {'L1-3':^{SKILL_W}} | {'top':^{PEAK_W}} {task_sub}| {'':<{SUM_W}} |")
 
         print(bar)
 
@@ -168,7 +187,8 @@ def print_comparison_table(results: list[dict], task_difficulties: dict[str, int
             cells = "".join(f"| {cell(r)} " for r in page_recs)
             rank  = speed_rank[model]
             skill = _skill_level(model, tasks, idx, task_difficulties or {})
-            print(f"| {model:<{model_w}} | {rank:^{SPD_W}} | {skill:^{SKILL_W}} {cells}| {summary(all_recs):<{SUM_W}} |")
+            peak  = _peak_skill_level(model, tasks, idx, task_difficulties or {})
+            print(f"| {model:<{model_w}} | {rank:^{SPD_W}} | {skill:^{SKILL_W}} | {peak:^{PEAK_W}} {cells}| {summary(all_recs):<{SUM_W}} |")
 
         print(bar)
 
