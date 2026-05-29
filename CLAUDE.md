@@ -252,9 +252,14 @@ When asked to implement features:
   correct value). Consider separating it from the canonical comparison set.
 
 - **L6 from-scratch ceiling is 39/40**: test 33 (freefall crush on landing) has never been
-  passed by any model despite the rule being explicit in the stub. Before adding more stub
-  hints, verify the timing description is unambiguous. If it is, this is a genuine
-  physics-simulation reasoning wall, not a spec gap. Do not change the test to lower the bar.
+  passed by any model. **Stub investigated 2026-05-29 — spec is NOT the problem.** The rule
+  is explicit at `game.js` lines 45–46: "A freefall paratrooper landing on a landed paratrooper
+  kills the landed one and decrements the appropriate landedLeft/landedRight counter."
+  The test setup is unambiguous (same x=80, freefallRate=200, groundY=190 → lands in one tick).
+  Root cause: models implement the standard landing routine (state→'landed', increment counter)
+  but miss the secondary crush check in the same tick: scan landed paratroopers for proximity,
+  kill the colliding one, decrement its counter. This is a **multi-effect landing event** —
+  capability gap, not a spec gap. Do not change the test or the stub.
 
 - **MTP spec decoding breaks benchmarks**: `--spec-type draft-mtp` (carnice, noctrex MTP
   variants) harms temp=0 determinism — confirmed regression on python_hashmap. Never add

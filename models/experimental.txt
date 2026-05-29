@@ -417,14 +417,24 @@ qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004
 #   Skill: L2 (node_csv_parser L3 wall); passes all L4 (expr_eval, tokenizer) and L5 (dijkstra, hashmap)
 #   Peak skill: L5 — skill metric misleadingly penalizes one output-format failure
 #
+# Results (2026-05-28, llama-server, RTX 3090 24 GB, L6 stepped group 4 tasks):
+#   4/4  30.5 tok/s avg  387s total — ALL STEPS PASS including step 3 (node_para_entities)
+#   step 1 (core):    PASS  33.0 tok/s   43s
+#   step 2 (turret):  PASS  31.1 tok/s   72s
+#   step 3 (entities):PASS  30.3 tok/s  110s  ← gemma4:26b MoE FAILS this step
+#   step 4 (combat):  PASS  27.7 tok/s  163s
+#   Dense-beats-MoE confirmed on L6 step 3: gemma4:26b fails due to verbose preamble +
+#   large prompt exhausting budget; gemma4:31b dense passes cleanly.
+#
 # Dense vs MoE comparison (Gemma 4):
-#   gemma4:26b (MoE, 4B active): ~110 tok/s, 14/15 old set (fails csv_nordic), FAST
-#   gemma4:31b (dense, ~31B): 34.6 tok/s, 18/19, PASSES csv_nordic — same dense>MoE pattern
-#   Speed trade-off: gemma4:31b 3× slower for 1 extra coding pass on a multi-step data task
+#   gemma4:26b (MoE, 4B active): ~110 tok/s, 14/15 old coding set (fails csv_nordic), 3/4 L6 FAST
+#   gemma4:31b (dense, ~31B): 34.6 tok/s, 18/19 coding, 4/4 L6 — dense>MoE on multi-step tasks
+#   Dense advantage confirmed on: csv_nordic_property, L6 node_para_entities (step 3)
+#   Speed trade-off: gemma4:31b 3× slower; the quality gain is clear but not worth default.txt
 #   f16 KV: python_hashmap passes cleanly — no precision issue at this size
 #
-# NOT added to default.txt: worse coding than top models (vs 19/19), similar speed to qwen3.6:27b
-# but lower score. Useful as a reference point for dense-vs-MoE capability analysis.
+# NOT added to default.txt: 18/19 coding (ESM syntax failure), similar speed to qwen3.6:27b
+# which scores 31/33. Useful reference for dense-vs-MoE capability analysis across generations.
 gemma4:31b  gemma-4-31B-it-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-31B-it-GGUF
 
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
