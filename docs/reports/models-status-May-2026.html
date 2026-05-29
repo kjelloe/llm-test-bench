@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<!-- saved from url=(0094)file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#2-24-gb-vram-48-gb-total -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local LLM Model Status — May 2026 (HTML report)</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #121824;
+      --panel2: #0f1520;
+      --text: #e8edf6;
+      --muted: #aab6cc;
+      --line: rgba(255,255,255,0.08);
+      --accent: #4aa3ff;
+      --accent2: #7cf0c8;
+      --good: #31d07c;
+      --warn: #ffcc66;
+      --bad: #ff6b6b;
+      --shadow: 0 14px 40px rgba(0,0,0,0.45);
+      --radius: 10px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(74,163,255,0.14), transparent 60%),
+                  radial-gradient(900px 500px at 85% 10%, rgba(124,240,200,0.10), transparent 65%),
+                  var(--bg);
+      line-height: 1.45;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(to bottom, rgba(18,24,36,0.98), rgba(18,24,36,0.86));
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand .title { font-weight: 800; letter-spacing: 0.2px; }
+    .brand .sub { color: var(--muted); font-size: 12px; }
+
+    .crumbs {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px 16px 40px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 980px) {
+      .wrap { grid-template-columns: 1fr; }
+      .toc { position: relative; top: 0; }
+    }
+
+    .toc {
+      position: sticky;
+      top: 58px;
+      align-self: start;
+      background: rgba(18,24,36,0.80);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+    .toc h3 { margin: 6px 0 10px; font-size: 14px; color: var(--text); }
+    .toc a { display: block; padding: 6px 8px; border-radius: 8px; color: var(--muted); font-size: 13px; }
+    .toc a:hover { background: rgba(74,163,255,0.10); color: var(--text); text-decoration: none; }
+
+    .main {
+      background: rgba(18,24,36,0.78);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 18px 18px 10px;
+      background: linear-gradient(135deg, rgba(74,163,255,0.14), rgba(124,240,200,0.08));
+      border-bottom: 1px solid var(--line);
+    }
+    .hero h1 { margin: 0 0 6px; font-size: 22px; }
+    .hero .meta { color: var(--muted); font-size: 13px; }
+
+    .content { padding: 18px; }
+
+    h1, h2, h3, h4, h5, h6 {
+      scroll-margin-top: 80px;
+      margin: 18px 0 10px;
+      line-height: 1.2;
+    }
+    h2 { font-size: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+    h3 { font-size: 15px; color: #dbe7ff; }
+    p { margin: 10px 0; color: #dde6f7; }
+    .lede { color: var(--muted); margin-top: 6px; }
+
+    .sep { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+
+    .table-wrap { overflow-x: auto; margin: 10px 0 14px; border: 1px solid var(--line); border-radius: 10px; }
+    table.spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(15,21,32,0.75);
+      font-size: 13px;
+    }
+    .spec-table th, .spec-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    .spec-table th {
+      text-align: left;
+      font-weight: 700;
+      color: #eaf1ff;
+      background: rgba(18,24,36,0.9);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .spec-table td { color: #d5def2; }
+    .spec-table tr:hover td { background: rgba(74,163,255,0.06); }
+
+    code.inline {
+      font-family: var(--mono);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 1px 6px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #f2f6ff;
+    }
+
+    pre.code {
+      background: rgba(15,21,32,0.85);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 12px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.35;
+      color: #eaf1ff;
+    }
+
+    ul.bullets { margin: 8px 0 12px 22px; color: #d5def2; }
+    ul.bullets li { margin: 6px 0; }
+
+    .callout {
+      border: 1px solid rgba(74,163,255,0.25);
+      background: rgba(74,163,255,0.08);
+      padding: 12px;
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 780px) {
+      .insights-grid { grid-template-columns: 1fr; }
+    }
+
+    .insight-card {
+      background: rgba(15,21,32,0.72);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .insight-card h3 { margin: 0 0 8px; font-size: 14px; }
+    .insight-card p { margin: 0; color: #d5def2; }
+
+    .footer {
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      background: rgba(15,21,32,0.5);
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      .topbar, .toc { display: none; }
+      .wrap { grid-template-columns: 1fr; max-width: none; padding: 0; }
+      .main { box-shadow: none; border: 0; border-radius: 0; }
+      .content { padding: 18px; }
+      a { color: #000; text-decoration: underline; }
+      table.spec-table { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="title">Local LLM Model Status — May 2026</div>
+        <div class="sub">Standalone HTML report • table-centric layout inspired by spec sites</div>
+      </div>
+      <div class="crumbs">Home / Benchmarks / Local LLMs / May 2026</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <aside class="toc" aria-label="Table of contents">
+      <h3>Contents</h3>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#local-llm-model-status--may-2026">Overview</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#scoring-quick-reference">Scoring</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#runner-guide">Runner guide</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#kv-cache-cheat-sheet">KV cache</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#16-gb-vram">16 GB tier</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#24-gb-vram">24 GB tier</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#32-gb-vram">32 GB tier</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#2-24-gb-vram-48-gb-total">2×24 GB</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#2-32-gb-vram-64-gb-total">2×32 GB</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#cross-cutting-observations">Observations</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#runner-quick-reference">Runner matrix</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#appendix-benchmark-task-groups">Appendix</a>
+      <a href="file:///C:/Users/kjell/Downloads/local_llm_model_status_may_2026.html#insights-summary">Insights summary</a>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <h1 id="local-llm-model-status--may-2026">Local LLM Model Status — May 2026</h1>
+        <div class="meta">Measured on RTX 5060 TI 16 GB and RTX 3090 24 GB with Ryzen 7 9800X3D and 86 GB RAM on WSL - llama-server 9237 unless noted • 33 deterministic tasks @ temperature=0 • Generated 2026-05-29</div>
+      </section>
+
+      <section class="content">
+        <div class="callout">
+          This HTML is a faithful re-render of <code class="inline">models-status-May-2026.md</code> into a table-centric “spec sheet” style. Use your browser’s <strong>Print → Save as PDF</strong> if you want a PDF snapshot.
+        </div>
+
+        <h1 id="local-llm-model-status--may-2026">Local LLM Model Status — May 2026</h1>
+
+<p>All results measured on RTX 3090 24 GB, AMD Ryzen 7 9800X3D, 86 GB RAM,</p>
+<p>llama-server 9237 (ac76808e4), unless noted. Benchmarks use 33 deterministic</p>
+<p>tasks at temperature=0, seed=1.</p>
+
+<hr class="sep">
+
+<h2 id="scoring-quick-reference">Scoring Quick Reference</h2>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Column</th><th>Meaning</th></tr></thead><tbody><tr><td>**Pass**</td><td>Tasks passed out of eligible (SKIPPED_CTX excluded)</td></tr><tr><td>**Skill**</td><td>Highest consecutive tier where the model passes *all* tasks L1 through LN</td></tr><tr><td>**Peak**</td><td>Highest individual level where the model passes *all* tasks at that level (ignores lower-level gaps)</td></tr><tr><td>**tok/s**</td><td>Average generation throughput across all tasks at that context size</td></tr></tbody></table></div>
+
+<p>Task difficulty: L1 = trivial edits · L2 = simple logic · L3 = multi-file/data tasks · L4–L5 = complex algorithms · L6 = from-scratch game backend architecture.</p>
+
+<p>Infrastructure failures (<code class="inline">SKIPPED_CTX</code>, <code class="inline">TOOL_ERROR</code>, <code class="inline">CTX_TRUNCATED</code>) are excluded from scoring and do not penalise a model's tier.</p>
+
+<hr class="sep">
+
+<h2 id="runner-guide">Runner Guide</h2>
+
+<p>Choose your runner based on the use case:</p>
+
+<p><strong>Ollama</strong> — easiest to install and use; good enough for daily driving.</p>
+<p>Handles model lifecycle automatically. Roughly 2–3× slower than llama-server</p>
+<p>for the same model on the same hardware. Use it when convenience matters more</p>
+<p>than throughput. Context window is managed automatically but you have less</p>
+<p>control over KV quantization.</p>
+
+<p><strong>llama-server</strong> (llama.cpp) — the recommended production runner for</p>
+<p>everything in this document. Faster than Ollama, precise control over KV cache</p>
+<p>quantization (<code class="inline">f16</code>/<code class="inline">q8_0</code>/<code class="inline">q4_0</code>), flash attention, batch sizes, and per-model</p>
+<p>context caps. Required when KV precision matters (see python_hashmap canary</p>
+<p>note below). All benchmark numbers in this document are from llama-server.</p>
+
+<p><strong>vLLM</strong> — required for tensor parallelism across two or more GPUs. Use it</p>
+<p>for 70B+ models or any 32B model that needs <code class="inline">tp=2</code>. Does <strong>not</strong> support MoE</p>
+<p>GGUF files (qwen3-coder:30b-1m, gemma4:26b, noctrex, qwen3.5:35b all fail to</p>
+<p>load). Works well with dense GGUF or native HuggingFace safetensors / GPTQ /</p>
+<p>AWQ. For multi-GPU deployments, vLLM is the right choice for dense models.</p>
+
+<hr class="sep">
+
+<h2 id="kv-cache-cheat-sheet">KV Cache Cheat Sheet</h2>
+
+<p>KV cache grows linearly with context length and is the main reason a model</p>
+<p>that fits at 8k context starts to slow down or spill at 64k or 128k.</p>
+
+<p><strong>Rule of thumb for dense 27–32B models with f16 KV:</strong></p>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Context</th><th>Approx KV</th><th>Fits in 24 GB after 19 GB model?</th></tr></thead><tbody><tr><td>8k</td><td>~0.8 GB</td><td>Yes — fast</td></tr><tr><td>32k</td><td>~3 GB</td><td>Yes — fast</td></tr><tr><td>64k</td><td>~6 GB</td><td>Yes — fast</td></tr><tr><td>128k</td><td>~13 GB</td><td>No — spills to RAM, ~3–7× slower</td></tr></tbody></table></div>
+
+<p>Switching to <strong>q8_0 KV</strong> halves these numbers and keeps 128k context in VRAM</p>
+<p>on 24 GB, but some models (specifically <code class="inline">python_hashmap</code> on 27B dense models)</p>
+<p>fail with a precision-boundary error. Use f16 KV for 27B dense models;</p>
+<p>q8_0 KV is safe for MoE and for 32B models with larger weight-to-KV ratios.</p>
+
+<p><strong>MoE models</strong> (qwen3-coder:30b-1m, gemma4:26b, qwen3.5:35b) have the same</p>
+<p>KV size as an equivalent-width dense model despite being faster — only the</p>
+<p>weight forward pass is sparse, not the KV cache.</p>
+
+<hr class="sep">
+
+<h2 id="16-gb-vram">16 GB VRAM</h2>
+
+<p>*Representative hardware: RTX 3080 10 GB (too small), RTX 4080 16 GB, RTX 3080 Ti 12 GB*, RTX 5060 TI 16 GB</p>
+
+<p>At 16 GB, you can run models up to roughly 13–14 GB and still have meaningful</p>
+<p>KV cache headroom. Models at ~15 GB will fit but leave only ~1 GB for KV —</p>
+<p>fine for short coding prompts, unusable for retrieval tasks.</p>
+
+<h3 id="top-5-for-16-gb">Top 5 for 16 GB</h3>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Rank</th><th>Model</th><th>Size</th><th>tok/s</th><th>Score</th><th>Best For</th></tr></thead><tbody><tr><td>1</td><td>**noctrex-qwen3.6:35b**</td><td>~13 GB</td><td>~119</td><td>31/33</td><td>Best-quality coder; ⚠ Ampere required</td></tr><tr><td>2</td><td>**qwen3-coder:30b-1m**</td><td>~15 GB</td><td>~150</td><td>30/33</td><td>Fastest perfect coder; tight fit</td></tr><tr><td>3</td><td>**qwen2.5-coder:14b**</td><td>~9 GB</td><td>~68</td><td>~24/33</td><td>Best balance of size, speed, context</td></tr><tr><td>4</td><td>**gpt-oss:20b**</td><td>~12 GB</td><td>~197</td><td>22–26/33</td><td>Fastest raw throughput; variable results</td></tr><tr><td>5</td><td>**devstral-small-2**</td><td>~15 GB</td><td>~42</td><td>~28/33</td><td>Agentic/instruction-following; tight fit</td></tr></tbody></table></div>
+
+<h4 id="noctrex-qwen3635b-moe-mxfp4-13-gb">noctrex-qwen3.6:35b (MoE MXFP4, ~13 GB)</h4>
+<p>The single best coding model that fits in 16 GB — 31/33 and 19/19 coding</p>
+<p>perfect. MXFP4 quantization gives excellent quality at a tiny footprint.</p>
+<p><strong>Requires an Ampere or newer GPU</strong> (RTX 3090, RTX 4080, RTX 4090, A100).</p>
+<p>Leaves ~3 GB for KV: comfortable up to ~32k context, fast above that at ~8k.</p>
+<p>Not suitable for large context retrieval tasks on 16 GB.</p>
+
+<p><strong>Caveats:</strong> Ampere-only (MXFP4 format). MoE GGUF — use llama-server, not vLLM.</p>
+<p>Disable spec decoding flags; MTP head is present but should not speculate.</p>
+
+<p><strong>Runner:</strong> llama-server only (vLLM cannot load MoE GGUF). Ollama for casual use.</p>
+
+<h4 id="qwen3-coder30b-1m-moe-q4km-15-gb">qwen3-coder:30b-1m (MoE Q4_K_M, ~15 GB)</h4>
+<p>Perfect coding (19/19) at the fastest available throughput (~150 tok/s on</p>
+<p>24 GB; expect ~120 tok/s on 16 GB given tighter fit). On a 16 GB card this</p>
+<p>leaves only ~1 GB for KV — enough for coding tasks (prompts ≤ 4k tokens),</p>
+<p>too small for context-heavy retrieval or long agentic sessions.</p>
+<p>Despite the "1M context" label, that context window is not usable at 16 GB.</p>
+
+<p><strong>Caveats:</strong> ~1 GB KV at 16 GB limits useful context to ~4k tokens. MoE GGUF —</p>
+<p>llama-server only. Does not improve from-scratch architecture tasks over the</p>
+<p>base variant.</p>
+
+<p><strong>Runner:</strong> llama-server (best speed). Ollama available but ~3× slower.</p>
+
+<h4 id="qwen25-coder14b-dense-q4km-9-gb">qwen2.5-coder:14b (Dense Q4_K_M, ~9 GB)</h4>
+<p>The most versatile choice at 16 GB. At ~9 GB it leaves ~7 GB for KV,</p>
+<p>supporting ~64k context comfortably. Good coding ability (~68 tok/s), solid</p>
+<p>at L1–L3 tasks, starts to show limits at L4–L5 complex algorithms.</p>
+<p>The right pick if you need both coding and context retrieval on the same 16 GB card.</p>
+
+<p><strong>Caveats:</strong> Weaker than 27–30B models on L4/L5 tasks. q8_0 KV is safe for this size.</p>
+
+<p><strong>Runner:</strong> Ollama or llama-server, both work well. vLLM works (dense GGUF).</p>
+
+<h4 id="gpt-oss20b-dense-q4km-12-gb">gpt-oss:20b (Dense Q4_K_M, ~12 GB)</h4>
+<p>The fastest model in this tier at ~197 tok/s. Generates verbose reasoning in</p>
+<p>plain text (not a formal thinking model) which sometimes helps and sometimes</p>
+<p>exhausts the token budget. Results vary <strong>22–26/33</strong> between identical runs —</p>
+<p>reasoning length is non-deterministic at temperature=0. A confirmed retrieval</p>
+<p>bug at 64k context (returns RC-5000 instead of the correct value).</p>
+<p>Good for rapid iteration where you want fast drafts, less good when you need</p>
+<p>reproducibility.</p>
+
+<p><strong>Caveats:</strong> Non-deterministic results. 64k retrieval bug. Reasoning preamble</p>
+<p>can exhaust token budget on L3+ tasks — use <code class="inline">--num-predict 8000</code> minimum.</p>
+
+<p><strong>Runner:</strong> Ollama or llama-server. Not recommended as a reference benchmark model.</p>
+
+<h4 id="devstral-small-2-dense-24b-q4km-15-gb">devstral-small-2 (Dense 24B Q4_K_M, ~15 GB)</h4>
+<p>Mistral's instruction-tuned coding model, fine-tuned for agentic and</p>
+<p>multi-step coding tasks. ~42 tok/s on 24 GB hardware; expect similar on 16 GB.</p>
+<p>Tight fit (~1 GB KV at 16 GB) — effectively coding-only at this VRAM level.</p>
+<p>Good l6_full from-scratch score (38/40), strong multi-step instruction following.</p>
+
+<p><strong>Caveats:</strong> Tight KV headroom at 16 GB. q8_0 KV is fine (no precision issue).</p>
+
+<p><strong>Runner:</strong> llama-server preferred (2.6× faster than Ollama for this model).</p>
+
+<hr class="sep">
+
+<h2 id="24-gb-vram">24 GB VRAM</h2>
+
+<p>*Representative hardware: RTX 3090 24 GB, RTX 4090 24 GB*</p>
+
+<p>The sweet spot for local LLMs as of May 2026. All sub-20 GB models run fully</p>
+<p>VRAM-resident with comfortable KV headroom. Models at 20–22 GB fit but leave</p>
+<p>limited KV for large context windows.</p>
+
+<h3 id="top-5-for-24-gb">Top 5 for 24 GB</h3>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Rank</th><th>Model</th><th>Size</th><th>tok/s</th><th>Score</th><th>Skill</th><th>Peak</th><th>Best For</th></tr></thead><tbody><tr><td>1</td><td>**noctrex-qwen3.6:35b**</td><td>~13 GB</td><td>119</td><td>31/33</td><td>L5</td><td>L5</td><td>Best overall quality; ⚠ Ampere</td></tr><tr><td>2</td><td>**qwen3-coder:30b-1m**</td><td>~15 GB</td><td>150</td><td>30/33</td><td>L4</td><td>L5</td><td>Fastest coder; no special GPU</td></tr><tr><td>3</td><td>**qwen3.6:27b**</td><td>~19 GB</td><td>37</td><td>31/33</td><td>L5</td><td>L5</td><td>Best dense model; f16 KV required</td></tr><tr><td>4</td><td>**gemma4:26b**</td><td>~17 GB</td><td>110</td><td>~29/33</td><td>L4</td><td>L6</td><td>Fast generalist; MoE caveat</td></tr><tr><td>5</td><td>**qwen3.5:35b**</td><td>~21 GB</td><td>147</td><td>~28/33</td><td>L3</td><td>L5</td><td>Best reasoning/thinking</td></tr></tbody></table></div>
+
+<h4 id="noctrex-qwen3635b-moe-mxfp4-13-gb-119-toks">noctrex-qwen3.6:35b (MoE MXFP4, ~13 GB, ~119 tok/s)</h4>
+<p>Top of the leaderboard at 31/33 and 19/19 coding perfect. The ~13 GB</p>
+<p>footprint leaves ~11 GB for KV — comfortably handles 128k context with</p>
+<p>room to spare. The MXFP4 precision preserves quality that Q4_K_M quantization</p>
+<p>loses on precision-sensitive tasks. Passes both <code class="inline">csv_nordic_property</code> and</p>
+<p><code class="inline">node_csv_parser</code> where most MoE models fail.</p>
+
+<p><strong>Caveats:</strong> Requires Ampere+ GPU. MoE GGUF — llama-server only (vLLM fails</p>
+<p>to load). No spec decoding flags.</p>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=f16, cache_type_v=f16,
+flash_attn, batch_size=512, ubatch_size=128</code></pre>
+<p><strong>Runner:</strong> llama-server.</p>
+
+<h4 id="qwen3-coder30b-1m-moe-q4km-15-gb-150-toks">qwen3-coder:30b-1m (MoE Q4_K_M, ~15 GB, ~150 tok/s)</h4>
+<p>Fastest model to achieve perfect coding (19/19). The 1M-context variant</p>
+<p>behaves identically to the base on this benchmark — the extended context</p>
+<p>window requires 1M tokens of KV which is not achievable on 24 GB. Practical</p>
+<p>max context at 24 GB is ~32k (comfortable) or ~64k (functional).</p>
+<p>An outstanding choice for automated coding workflows where speed matters.</p>
+
+<p><strong>Caveats:</strong> Fails <code class="inline">node_para_entities</code> (L6 step 3) — MoE expert routing</p>
+<p>breaks the multi-step entity logic (same limitation as other MoE models).</p>
+<p>Fails csv_nordic (multi-step data task, MoE limitation). The "1M context"</p>
+<p>label refers to architecture max, not practical VRAM capacity.</p>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=f16, cache_type_v=f16,
+flash_attn, batch_size=512, ubatch_size=128</code></pre>
+<p><strong>Runner:</strong> llama-server (also available via Ollama at ~3× lower throughput).</p>
+
+<h4 id="qwen3627b-dense-q4km-19-gb-37-toks">qwen3.6:27b (Dense Q4_K_M, ~19 GB, ~37 tok/s)</h4>
+<p>The best dense model at 24 GB. Matches noctrex at 31/33 despite running at</p>
+<p>~3× lower speed. Passes everything noctrex passes and is the only dense model</p>
+<p>in the 24 GB tier. Dense architecture gives it a reasoning coherence advantage</p>
+<p>on multi-step data tasks (<code class="inline">csv_nordic_property</code>, <code class="inline">node_csv_parser</code>) that MoE</p>
+<p>models miss.</p>
+
+<p><strong>f16 KV is required</strong> — q8_0 KV causes a precision-boundary failure on</p>
+<p><code class="inline">python_hashmap</code> (the model omits <code class="inline">_EMPTY = None</code> from the tombstone hash map).</p>
+<p>This costs speed at 128k context: f16 KV spills heavily at 131k tokens,</p>
+<p>dropping to 6.8 tok/s vs ~18 tok/s with q8_0. Accept this trade-off; the</p>
+<p>alternative is a silent correctness failure on algorithmic tasks.</p>
+
+<p>Context window guide at 24 GB with f16 KV:</p>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Context</th><th>Speed</th><th>Notes</th></tr></thead><tbody><tr><td>8k</td><td>37 tok/s</td><td>Fast</td></tr><tr><td>32k</td><td>35 tok/s</td><td>Fast</td></tr><tr><td>64k</td><td>33 tok/s</td><td>Fast</td></tr><tr><td>128k</td><td>7 tok/s</td><td>Slow — f16 KV spills; passes within 3600s timeout</td></tr></tbody></table></div>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=f16, cache_type_v=f16,
+flash_attn, batch_size=512, ubatch_size=128</code></pre>
+<p><strong>Runner:</strong> llama-server (Ollama also works; both require f16 KV — Ollama uses</p>
+<p>its own internal format which avoids the q8_0 issue automatically).</p>
+
+<h4 id="gemma426b-moe-q4km-17-gb-110-toks">gemma4:26b (MoE Q4_K_M, ~17 GB, ~110 tok/s)</h4>
+<p>Google's mixture-of-experts model with only 4B active parameters. Extremely</p>
+<p>fast for its size. Excellent from-scratch architecture tasks (39/40 on the</p>
+<p>full Paratrooper game backend). Generates a verbose preamble before code on</p>
+<p>most tasks — requires <code class="inline">--num-predict 8000</code> to avoid budget exhaustion.</p>
+
+<p>Fails <code class="inline">csv_nordic_property</code> (multi-step data filtering — MoE limitation) and</p>
+<p>likely fails <code class="inline">node_csv_parser</code> on the same grounds. If your workload involves</p>
+<p>complex analytical data processing, prefer qwen3.6:27b. For architectural</p>
+<p>reasoning, generalist tasks, and fast responses, gemma4:26b excels.</p>
+
+<p><strong>Caveats:</strong> Verbose preamble on complex tasks — always use <code class="inline">--num-predict 8000</code>.</p>
+<p>MoE GGUF — llama-server only. L6 step 3 fails (node_para_entities: preamble</p>
+<p>exhausts budget at that prompt size even with 8000 tokens).</p>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=f16, cache_type_v=f16,
+flash_attn, batch_size=512, ubatch_size=128</code></pre>
+<p><strong>Runner:</strong> llama-server. Ollama available.</p>
+
+<h4 id="qwen3535b-thinking-moe-q4km-21-gb-147-toks">qwen3.5:35b (Thinking MoE Q4_K_M, ~21 GB, ~147 tok/s)</h4>
+<p>The best reasoning/thinking model for 24 GB. Wraps all answers in <code class="inline">&lt;think&gt;</code></p>
+<p>tags and reasons before producing output. Outstanding on complex architectural</p>
+<p>tasks (38/40 l6_full — the only model to pass L6 step 3 in a 5-model coding</p>
+<p>comparison). Over-reasons on simple tasks, consuming the token budget on</p>
+<p>trivial problems — use <code class="inline">--num-predict 16000</code> for algorithmic tasks,</p>
+<p><code class="inline">--num-predict 8000</code> is borderline for complex ones.</p>
+
+<p>At ~21 GB it leaves only ~3 GB for KV, limiting practical context to ~32k.</p>
+<p>Passes 128k context at 104 tok/s because retrieval questions are answered</p>
+<p>quickly before the reasoning budget runs out.</p>
+
+<p><strong>Caveats:</strong> <code class="inline">thinking</code> flag required in model config. Reasoning exhausts budget</p>
+<p>on <code class="inline">python_hashmap</code> even at 16000 tokens — consider 24000 for that task.</p>
+<p>~21 GB leaves little KV headroom; 64k+ context for long agentic sessions is</p>
+<p>impractical. q8_0 KV is fine at this size.</p>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=f16, cache_type_v=f16,
+flash_attn, batch_size=512, ubatch_size=128, thinking</code></pre>
+<p><strong>Runner:</strong> llama-server. Ollama available.</p>
+
+<hr class="sep">
+
+<h2 id="32-gb-vram">32 GB VRAM</h2>
+
+<p>*Representative hardware: RTX 6000 Ada 48 GB (more below), A6000 48 GB, or consumer RTX 5090 32 GB*</p>
+
+<p>At 32 GB the main new arrivals are the 32B-parameter dense models that barely</p>
+<p>didn't fit at 24 GB: <code class="inline">qwen2.5-coder:32b</code>, <code class="inline">qwq:32b</code>, and <code class="inline">deepseek-r1:32b</code>.</p>
+<p>All 24 GB models also run here with substantially more KV headroom —</p>
+<p><code class="inline">qwen3.6:27b</code> can now comfortably reach 128k without spilling.</p>
+
+<h3 id="top-5-for-32-gb">Top 5 for 32 GB</h3>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Rank</th><th>Model</th><th>Size</th><th>tok/s est.</th><th>Score</th><th>Best For</th></tr></thead><tbody><tr><td>1</td><td>**noctrex-qwen3.6:35b**</td><td>~13 GB</td><td>~119</td><td>31/33</td><td>Best quality; Ampere required</td></tr><tr><td>2</td><td>**qwen2.5-coder:32b**</td><td>~20 GB</td><td>~36</td><td>19/24†</td><td>Long-context coding; 64k+ unlocked</td></tr><tr><td>3</td><td>**qwq:32b**</td><td>~22 GB</td><td>~30–40</td><td>TBD</td><td>Strongest reasoning; impractical at 24 GB</td></tr><tr><td>4</td><td>**deepseek-r1:32b**</td><td>~20 GB</td><td>~29</td><td>18/19 coding</td><td>Reasoning + coding; avoids budget issues</td></tr><tr><td>5</td><td>**qwen3.6:27b**</td><td>~19 GB</td><td>~37</td><td>31/33</td><td>Dense best; 128k now fast</td></tr></tbody></table></div>
+
+<p>† 19/24 eligible — 3 tasks SKIPPED_CTX (context_64k, context_128k) on 24 GB because</p>
+<p>weights leave insufficient KV. On 32 GB all context tasks are available.</p>
+
+<h4 id="qwen25-coder32b-dense-q4km-20-gb-36-toks">qwen2.5-coder:32b (Dense Q4_K_M, ~20 GB, ~36 tok/s)</h4>
+<p>The coding-specialist upgrade from qwen2.5-coder:14b. At ~20 GB weights on a</p>
+<p>32 GB card there is ~12 GB for KV — comfortable at 64k context (~6 GB KV)</p>
+<p>with room for 128k depending on KV quantization. Passes all 19 coding tasks</p>
+<p>cleanly on 24 GB (no context tasks); unlocks the full 33-task set at 32 GB.</p>
+<p>A direct alternative to qwen3.6:27b for coding-heavy workloads.</p>
+
+<p><strong>Caveats:</strong> On 24 GB, context_32k and above timeout (KV overflow); 32 GB</p>
+<p>required to unlock long-context use. q8_0 KV is appropriate at this size —</p>
+<p>no python_hashmap precision issue confirmed.</p>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=q8_0, cache_type_v=q8_0,
+flash_attn, batch_size=512, ubatch_size=128, max_ctx=65536</code></pre>
+<p><strong>Runner:</strong> llama-server or vLLM (dense GGUF — vLLM works here).</p>
+
+<h4 id="qwq32b-dense-q5km-22-gb-3040-toks-est">qwq:32b (Dense Q5_K_M, ~22 GB, ~30–40 tok/s est.)</h4>
+<p>Qwen's strong reasoning model. At Q5_K_M (~22 GB) on a 24 GB card it</p>
+<p>thrashes — KV cache has under 2 GB headroom, the server silently caps</p>
+<p>context to 32k, and throughput collapses to ~6 tok/s. On 32 GB it becomes</p>
+<p>genuinely usable: ~10 GB for KV supports 64k context at reasonable speed.</p>
+<p>Competitive with deepseek-r1 on reasoning tasks.</p>
+
+<p><strong>Caveats:</strong> Q5_K_M preferred over Q4_K_M for reasoning quality. Need</p>
+<p><code class="inline">--num-predict 12000+</code> for thinking models. On 32 GB use <code class="inline">max_ctx=65536</code></p>
+<p>for safety. Results not yet benchmarked on this harness at 32 GB (24 GB</p>
+<p>result: 11/24, 6 tok/s — hardware-limited, not capability-limited).</p>
+
+<p><strong>Runner:</strong> llama-server. vLLM works (dense GGUF).</p>
+
+<h4 id="deepseek-r132b-thinking-dense-q4km-20-gb-29-toks">deepseek-r1:32b (Thinking Dense Q4_K_M, ~20 GB, ~29 tok/s)</h4>
+<p>DeepSeek's R1-Distill-Qwen-32B is a strong reasoning model with transparent</p>
+<p><code class="inline">&lt;think&gt;</code> chain-of-thought. 18/19 coding at 31.4 tok/s on 24 GB with</p>
+<p><code class="inline">max_ctx=32768</code>. One confirmed capability gap: <code class="inline">python_expr_eval</code> (enters an</p>
+<p>infinite "code is correct. But..." reasoning spiral — not fixable by increasing</p>
+<p>token budget). Strong on multihop retrieval tasks (~21 tok/s at 32k).</p>
+
+<p>At 32 GB, set <code class="inline">max_ctx=65536</code> to unlock context_64k and improve multihop.</p>
+<p>The <code class="inline">max_ctx=32768</code> hard cap on 24 GB was a hardware constraint, not an</p>
+<p>architecture limit.</p>
+
+<p><strong>Caveats:</strong> <code class="inline">python_expr_eval</code> is a structural capability gap — avoid that</p>
+<p>specific task. <code class="inline">thinking</code> flag required. On 32 GB use <code class="inline">max_ctx=65536</code>.</p>
+
+<p><strong>Optimal settings (llama-server):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=q8_0, cache_type_v=q8_0,
+flash_attn, batch_size=512, ubatch_size=128, max_ctx=65536, thinking</code></pre>
+<p><strong>Runner:</strong> llama-server or vLLM (dense GGUF).</p>
+
+<h4 id="qwen3627b-at-32-gb">qwen3.6:27b at 32 GB</h4>
+<p>The same model as in the 24 GB tier, but with ~13 GB of KV headroom.</p>
+<p>This means 128k context runs at full speed (no spill) — the 6.8 tok/s</p>
+<p>bottleneck that occurs at 24 GB disappears. With q8_0 KV (now safe since</p>
+<p>you have headroom to spare) 128k becomes practical at ~18+ tok/s.</p>
+
+<p>At 32 GB you can switch to q8_0 KV for 128k workloads if you accept the</p>
+<p>python_hashmap trade-off, or keep f16 KV for algorithmic correctness.</p>
+
+<hr class="sep">
+
+<h2 id="2-24-gb-vram-48-gb-total">2× 24 GB VRAM (48 GB total)</h2>
+
+<p>*Representative hardware: 2× RTX 3090 24 GB, 2× RTX 4090 24 GB*</p>
+
+<p>Tensor parallelism across two 24 GB cards opens the 40–70B parameter class.</p>
+<p>Use <strong>vLLM</strong> with <code class="inline">tp=2</code> for dense models (llama-server tensor parallelism</p>
+<p>support is more limited). MoE models that fit in 24 GB still run well on a</p>
+<p>single card — there is no benefit to splitting a 13 GB model across two GPUs.</p>
+
+<p>All benchmark numbers in this section are <strong>projected</strong> based on model size</p>
+<p>and single-GPU data; direct 2-GPU benchmarks not yet collected.</p>
+
+<h3 id="top-5-for-2-24-gb-48-gb">Top 5 for 2× 24 GB (48 GB)</h3>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Rank</th><th>Model</th><th>Size</th><th>tok/s est.</th><th>Best For</th></tr></thead><tbody><tr><td>1</td><td>**qwen3-coder-next**</td><td>~46 GB</td><td>~35–40</td><td>New-gen coder, 19/19 perfect; dense 72B</td></tr><tr><td>2</td><td>**llama3.3:70b**</td><td>~40 GB</td><td>~25–35</td><td>Strong generalist 70B; first 70B result</td></tr><tr><td>3</td><td>**gpt-oss:120b**</td><td>~60 GB</td><td>~35–45</td><td>Full GPU thinking model; RAM-bound at 24 GB</td></tr><tr><td>4</td><td>**qwen3-coder:30b-1m**</td><td>~15 GB</td><td>~150</td><td>Still single-GPU; now with 30+ GB KV headroom</td></tr><tr><td>5</td><td>**noctrex-qwen3.6:35b**</td><td>~13 GB</td><td>~119</td><td>Still single-GPU; extreme context headroom</td></tr></tbody></table></div>
+
+<h4 id="qwen3-coder-next-dense-72b-q4km-46-gb-3540-toks-projected">qwen3-coder-next (Dense ~72B Q4_K_M, ~46 GB, ~35–40 tok/s projected)</h4>
+<p>The headline addition for dual-GPU. Benchmarked at 16.6 tok/s on a single 24 GB</p>
+<p>card (52% RAM-resident) — already achieving perfect coding (19/19). On 48 GB</p>
+<p>both cards it would be fully VRAM-resident, expected to run at ~35–40 tok/s.</p>
+<p>At that speed with perfect coding it would become the strongest practical coder</p>
+<p>in the entire lineup. The 4-shard GGUF loads automatically from the first shard</p>
+<p>filename when using llama-server.</p>
+
+<p><strong>Caveats:</strong> Not yet benchmarked with <code class="inline">tp=2</code>. vLLM multi-shard GGUF support</p>
+<p>untested; recommend llama-server for initial runs. Use <code class="inline">cache_type_k=f16</code> to</p>
+<p>match the single-GPU confirmed settings.</p>
+
+<p><strong>Optimal settings (llama-server, 2-GPU):</strong></p>
+<pre class="code"><code>ngl=999, no_mmap, cache_type_k=f16, cache_type_v=f16,
+flash_attn, batch_size=512, ubatch_size=128</code></pre>
+<p><strong>Runner:</strong> llama-server (preferred until vLLM multi-shard GGUF validated).</p>
+
+<h4 id="llama3370b-dense-q4ks-40-gb-2535-toks-projected">llama3.3:70b (Dense Q4_K_S, ~40 GB, ~25–35 tok/s projected)</h4>
+<p>Meta's 70B instruction-tuned model. Strong generalist capability; confirmed</p>
+<p>9/10 coding tasks on a single 24 GB card at 2.5 tok/s (CPU-bound at ngl=45).</p>
+<p>Fully GPU-resident on 48 GB via <code class="inline">tp=2</code>. Pre-configured in <code class="inline">models/default.vllm</code>.</p>
+<p>Tokenizer is gated — set <code class="inline">HF_TOKEN</code> environment variable.</p>
+
+<p><strong>Caveats:</strong> Not yet benchmarked with <code class="inline">tp=2</code>. Gated tokenizer (Meta licence).</p>
+<p><code class="inline">max_ctx=32768</code> recommended for the first run.</p>
+
+<p><strong>Runner:</strong> vLLM with <code class="inline">tp=2</code> (pre-configured in <code class="inline">models/default.vllm</code>).</p>
+
+<h4 id="gpt-oss120b-mxfp4-moe-60-gb-3545-toks-projected">gpt-oss:120b (MXFP4 MoE, ~60 GB, ~35–45 tok/s projected)</h4>
+<p>Currently the RAM-bound thinking model on the test rig at ~17 tok/s. On 48 GB</p>
+<p>it would be fully GPU-resident (60 GB &gt; 48 GB — still spills slightly, but</p>
+<p>dramatically better). On a true 64 GB setup it would be fully resident.</p>
+<p>Strong thinking model when it has budget; non-deterministic reasoning length</p>
+<p>remains a caveat regardless of hardware.</p>
+
+<p><strong>Caveats:</strong> ~60 GB weights — still partially RAM-bound on 48 GB; fully</p>
+<p>resident on 64 GB. Variable reasoning length. <code class="inline">thinking</code> flag required.</p>
+<p><code class="inline">n_cpu_moe=35</code> offloads MoE expert layers to CPU — may not be needed at 48 GB.</p>
+
+<p><strong>Runner:</strong> llama-server (MoE GGUF; vLLM cannot load MoE GGUF).</p>
+
+<h4 id="qwen3-coder30b-1m-at-2-24-gb">qwen3-coder:30b-1m at 2× 24 GB</h4>
+<p>No change in model performance — it already runs fully GPU-resident on a</p>
+<p>single 24 GB card. The benefit on 48 GB is KV headroom: ~33 GB available for</p>
+<p>KV, enabling the 1M context window to actually be used (1M tokens of KV at</p>
+<p>f16 is ~100 GB — still beyond reach, but 200k context becomes practical).</p>
+
+<h4 id="noctrex-qwen3635b-at-2-24-gb">noctrex-qwen3.6:35b at 2× 24 GB</h4>
+<p>Same situation — single-card model, no speed gain from 2 GPUs. The second</p>
+<p>card frees KV headroom for very long context windows. Useful for embedding</p>
+<p>entire large codebases in context.</p>
+
+<hr class="sep">
+
+<h2 id="2-32-gb-vram-64-gb-total">2× 32 GB VRAM (64 GB total)</h2>
+
+<p>*Representative hardware: 2× RTX 6000 Ada, 2× A6000, 2× RTX 5090 (projected)*</p>
+
+<p>At 64 GB, all models in this document fit fully GPU-resident with substantial</p>
+<p>KV headroom. The main additions over 48 GB are gpt-oss:120b fully resident</p>
+<p>and the ability to use 1M+ context windows on smaller models.</p>
+
+<h3 id="top-5-for-2-32-gb-64-gb">Top 5 for 2× 32 GB (64 GB)</h3>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Rank</th><th>Model</th><th>Size</th><th>tok/s est.</th><th>Best For</th></tr></thead><tbody><tr><td>1</td><td>**qwen3-coder-next**</td><td>~46 GB</td><td>~40–50</td><td>Perfect coder; 20+ GB KV headroom</td></tr><tr><td>2</td><td>**gpt-oss:120b**</td><td>~60 GB</td><td>~40–55</td><td>Fully resident thinking model</td></tr><tr><td>3</td><td>**llama3.3:70b**</td><td>~40 GB</td><td>~30–40</td><td>Strong 70B generalist</td></tr><tr><td>4</td><td>**Devstral-2-123B**</td><td>~46 GB</td><td>~25–35</td><td>Large agentic model (not yet tested)</td></tr><tr><td>5</td><td>**qwq:32b or deepseek-r1:32b**</td><td>~20–22 GB</td><td>~60+</td><td>Single-card; massive KV headroom</td></tr></tbody></table></div>
+
+<p>*All numbers projected; no direct 64 GB benchmarks collected.*</p>
+
+<h4 id="qwen3-coder-next-at-2-32-gb">qwen3-coder-next at 2× 32 GB</h4>
+<p>Fully resident with ~18 GB of KV headroom — enough for ~64k context at f16 KV</p>
+<p>or ~128k at q8_0. The strongest coding model in the lineup with capacity for</p>
+<p>very long context windows. Likely the best coding model available locally by a</p>
+<p>significant margin once the hardware arrives.</p>
+
+<h4 id="gpt-oss120b-mxfp4-moe-60-gb-4055-toks-projected">gpt-oss:120b (MXFP4 MoE, ~60 GB, ~40–55 tok/s projected)</h4>
+<p>Fully GPU-resident for the first time. As a thinking model it reasons through</p>
+<p>problems step by step; the non-deterministic reasoning length caveat remains</p>
+<p>but the throughput improvement (from 17 tok/s RAM-bound to 40+ tok/s GPU)</p>
+<p>makes it practical for daily use. Exceptional at complex multi-step reasoning,</p>
+<p>weak on simple tasks (over-reasons and exhausts budget). Not recommended as</p>
+<p>a coding-only model — qwen3-coder-next is faster and specialised.</p>
+
+<h4 id="devstral-2-123b-not-yet-benchmarked">Devstral-2-123B (not yet benchmarked)</h4>
+<p>Mistral's 123B model (December 2025). At ~46 GB at Q4_K_M (estimated) it</p>
+<p>fits in 64 GB with meaningful KV headroom. Not benchmarked on this harness;</p>
+<p>candidate for evaluation when hardware arrives. Expected to excel at agentic</p>
+<p>multi-step coding workflows given the Devstral-Small-2 lineage.</p>
+
+<hr class="sep">
+
+<h2 id="cross-cutting-observations">Cross-Cutting Observations</h2>
+
+<h3 id="dense-models-beat-moe-on-multi-step-analytical-tasks">Dense models beat MoE on multi-step analytical tasks</h3>
+
+<p>Confirmed across two model generations:</p>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Task</th><th>MoE result</th><th>Dense equivalent</th><th>Dense result</th></tr></thead><tbody><tr><td>csv_nordic_property</td><td>qwen3.5:35b FAIL</td><td>qwen3.5:27b</td><td>PASS</td></tr><tr><td>csv_nordic_property</td><td>qwen3.6:35b FAIL</td><td>qwen3.6:27b</td><td>PASS</td></tr><tr><td>csv_nordic_property</td><td>gemma4:26b FAIL</td><td>gemma4:31b</td><td>PASS</td></tr><tr><td>node_csv_parser</td><td>qwen3.6:35b FAIL</td><td>qwen3.6:27b</td><td>PASS</td></tr><tr><td>L6 step 3 entities</td><td>gemma4:26b FAIL</td><td>gemma4:31b</td><td>PASS</td></tr><tr><td>L6 step 3 entities</td><td>qwen3-coder:30b FAIL</td><td>qwen3.6:27b</td><td>PASS</td></tr></tbody></table></div>
+
+<p>The cause is likely expert routing in MoE breaking the coherent multi-step</p>
+<p>context needed for complex data filtering or multi-entity game logic. For</p>
+<p>these tasks, pick a dense model. For pure coding speed, MoE wins.</p>
+
+<h3 id="the-pythonhashmap-precision-canary">The python_hashmap precision canary</h3>
+
+<p>The <code class="inline">python_hashmap</code> task (open-addressing hash map with tombstone deletion)</p>
+<p>is acutely sensitive to quantization precision. With q8_0 KV cache or GPTQ</p>
+<p>INT4 (C4 calibration), 27B dense models omit <code class="inline">_EMPTY = None</code> from the</p>
+<p>module-level definitions — a single wrong token at a precision boundary.</p>
+
+<p><strong>Rule:</strong> Use <code class="inline">cache_type_k=f16, cache_type_v=f16</code> for 27B dense models.</p>
+<p>For MoE and 32B+ models, q8_0 KV is safe.</p>
+
+<h3 id="thinking-models-need-budget">Thinking models need budget</h3>
+
+<p>Models with formal reasoning (<code class="inline">&lt;think&gt;</code> tags): qwen3.5:35b, deepseek-r1:32b,</p>
+<p>qwq:32b, gpt-oss:120b, phi4-reasoning-plus (incompatible — loops forever).</p>
+
+<p>Set <code class="inline">--num-predict 8000</code> as a minimum. Complex algorithmic tasks (L4/L5)</p>
+<p>benefit from 12000–24000. Reasoning tokens consume the budget before the</p>
+<p>answer appears — if a task produces NO_BLOCKS or TRUNCATED, increase the</p>
+<p>budget before concluding it is a capability failure.</p>
+
+<h3 id="moe-spec-decoding-breaks-determinism">MoE spec decoding breaks determinism</h3>
+
+<p>Models with MTP (Multi-Token Prediction) heads — carnice:35b, noctrex-qwen3.6:35b,</p>
+<p>and any <code class="inline">MTP</code> GGUF from bartowski (build 9180+) — have the MTP head bundled in</p>
+<p>the GGUF. Loading the GGUF is fine; <strong>do not</strong> pass <code class="inline">--spec-type draft-mtp</code>.</p>
+<p>Spec decoding with temperature=0 is non-deterministic and regresses quality.</p>
+<p>The benchmark confirmed python_hashmap fails with spec decoding enabled on</p>
+<p>the carnice variant.</p>
+
+<h3 id="the-l6full-ceiling">The l6_full ceiling</h3>
+
+<p>No model has ever passed test 33 ("freefall paratrooper landing kills landed</p>
+<p>paratroopers below") in the from-scratch game backend task. The rule is</p>
+<p>explicit in the stub. This is a capability gap: models implement the standard</p>
+<p>landing routine but miss the secondary same-tick crush check. The best scores</p>
+<p>are 39/40 (gemma4:26b, qwen3.6:35b-A3B). Scores of 38/40 are common for</p>
+<p>strong models. Not a spec ambiguity; do not change the test.</p>
+
+<hr class="sep">
+
+<h2 id="runner-quick-reference">Runner Quick Reference</h2>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Model type</th><th>Ollama</th><th>llama-server</th><th>vLLM</th></tr></thead><tbody><tr><td>Any MoE GGUF</td><td>✓ (slower)</td><td>✓ (best)</td><td>✗ (fails to load)</td></tr><tr><td>Dense GGUF ≤ 32B</td><td>✓</td><td>✓ (best)</td><td>✓</td></tr><tr><td>Dense GGUF 40–70B single-GPU</td><td>✓ (slow)</td><td>✓</td><td>✓</td></tr><tr><td>Dense 70B+ with tp=2</td><td>✗</td><td>Limited</td><td>✓ (best)</td></tr><tr><td>GPTQ / AWQ / safetensors</td><td>✗</td><td>✗</td><td>✓</td></tr><tr><td>Need precise KV quant control</td><td>✗</td><td>✓</td><td>Partial</td></tr><tr><td>Just want to try a model</td><td>✓</td><td>—</td><td>—</td></tr></tbody></table></div>
+
+<hr class="sep">
+
+<h2 id="appendix-benchmark-task-groups">Appendix: Benchmark Task Groups</h2>
+
+<div class="table-wrap"><table class="spec-table"><thead><tr><th>Group</th><th>Tasks</th><th>Difficulty</th><th>Notes</th></tr></thead><tbody><tr><td>coding</td><td>19 tasks</td><td>L1–L5</td><td>Python, Node, .NET, AWK, Java</td></tr><tr><td>context</td><td>6 tasks</td><td>L1–L3</td><td>8k / 16k / 32k / 64k / 128k / 256k needle</td></tr><tr><td>multihop</td><td>3 tasks</td><td>L2–L3</td><td>Two-hop retrieval; distractor variant</td></tr><tr><td>l6 (stepped)</td><td>4 tasks</td><td>L3–L6</td><td>Paratrooper game backend built up across 4 steps</td></tr><tr><td>l6_full</td><td>1 task (40 sub-tests)</td><td>L6</td><td>Same game from scratch; 39/40 is the current ceiling</td></tr></tbody></table></div>
+
+<p>*Generated 2026-05-29 from ollama-code-bench benchmark data.*</p>
+
+        <hr class="sep">
+        <h2 id="insights-summary">Insights summary</h2><p class="lede">High-signal takeaways from this May 2026 benchmark snapshot.</p><div class="insights-grid"><div class="insight-card"><h3>noctrex-qwen3.6:35b leads the 24GB tier</h3><p>It tops your leaderboard at 31/33 with 19/19 coding perfect while staying small (~13GB) and fast (~119 tok/s). It’s the best single‑GPU daily driver—on your 2×3090 rig it doesn’t benefit from TP, so keep it on llama-server.</p></div><div class="insight-card"><h3>Use two runners intentionally</h3><p>Your data supports a clean split: llama-server for MoE GGUF and anything needing precise KV control; vLLM mainly for dense models when you actually need tensor parallelism (e.g., 70B on 2×3090).</p></div><div class="insight-card"><h3>KV quantization can silently break correctness</h3><p>Your python_hashmap canary shows 27B dense models can fail with q8_0 KV (missing a single critical token). Keep f16 KV for 27B dense when correctness matters.</p></div><div class="insight-card"><h3>Best dense model is accurate but slower</h3><p>qwen3.6:27b matches noctrex on score (31/33) but runs ~3× slower (~37 tok/s). It’s a strong ‘correctness anchor’ when MoE routing harms multi-step coherence.</p></div><div class="insight-card"><h3>Dense beats MoE on multi-step analytical/data tasks</h3><p>Your cross-cutting table is a major finding: MoE models repeatedly fail complex data filtering / parsing / entity-logic steps that dense equivalents pass. Pick dense for data workflows; MoE for raw coding throughput.</p></div><div class="insight-card"><h3>Thinking models have an operational budget cost</h3><p>Models that emit &lt;think&gt; chains need larger num-predict (8k minimum; 12k–24k for L4/L5). Otherwise you’ll see truncation/NO_BLOCKS that looks like capability failure but is just budget exhaustion.</p></div></div>
+      </section>
+
+      <div class="footer">
+        Source: models-status-May-2026.md • Notes: MoE GGUF not supported by vLLM (per source report) • Layout: standalone, no external assets.
+      </div>
+    </main>
+  </div>
+
+
+</body></html>
