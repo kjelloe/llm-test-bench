@@ -53,8 +53,24 @@
 #   qwen3-coder:30b is a strong all-rounder: perfect coding + full retrieval/context coverage.
 
 qwen3.5:35b      Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf      ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
+# IQ2_M ~12 GB — aggressive quant for vLLM MoE GGUF debugging; not for benchmark results
+qwen3.5:35b-iq2  Qwen_Qwen3.5-35B-A3B-IQ2_M.gguf      ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
+# ⚠ hf: repo GONE per 2026-06-02 scout — file must be on disk; fetch-hf will fail
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf        ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+# noctrex MXFP4 variant of qwen3-coder:30b base — 15.9 GB.
+# Results (2026-06-02, llama-server, RTX 3090 24 GB, full 33-task run):
+#   29/33  58.9 tok/s avg  4302s  Skill L4  Peak L4
+#   Coding: 19/19 in isolated coding run — BUT python_hashmap inconsistent: passes
+#     in coding-only run (74.3 tok/s), fails in full run (76.1 tok/s). MXFP4 precision
+#     is right at the boundary for this architecture — not reliably above it.
+#   Fails: python_hashmap (inconsistent), node_para_entities (L6 step 3 — same ceiling
+#     as qwen3-coder:30b-1m), node_paratrooper (known L6 ceiling), context_256k (VRAM).
+#   Context: SLOW at 32k/64k/128k (205/713/1917s) — same KV spill pattern as other ~30B models.
+# VERDICT: NOT added to default.txt. Worse than qwen3-coder:30b-1m Q4_K_M on every dimension
+#   (29/33 vs 30/33, ~81 tok/s coding vs ~150 tok/s). noctrex MXFP4 only pays off when base
+#   quant has meaningful failures — qwen3-coder:30b-1m already handles csv_nordic + node_csv_parser.
+noctrex-qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE-GGUF
 
 # ── Qwen3-Coder-30B-A3B 1M context variant ───────────────────────────────────
 # Same A3B MoE architecture and weight size (~17.3 GB Q4_K_M) as qwen3-coder:30b.
@@ -327,6 +343,7 @@ nemotron-nano:30b-a3b  Nemotron-3-Nano-30B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cach
 #                                           exhausts 24k token budget ("code is correct.
 #                                           But..."); capability gap, not token budget
 devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256  hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
+# ⚠ hf: repo GONE per 2026-06-02 scout — file must be on disk; fetch-hf will fail
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
 # DeepSeek-R1-Distill-Qwen-32B: ~20 GB weights; q8_0 KV reduces pressure on 24 GB.
 # Thinking in <think> tags; llama-server extracts into reasoning_content. ~29–32 tok/s.
@@ -401,6 +418,7 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache
 #   at perfect coding. HIGH VALUE when hardware arrives — add to default.vllm for tp=2.
 # Skill: L5 (coding group only; full 33-task run not done; similar pattern expected to
 #   qwen3.6:27b given shared architecture generation)
+# ⚠ hf: repo GONE per 2026-06-02 scout (official Qwen repo — may have been renamed; verify before removing)
 qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:Qwen/Qwen3-Coder-Next-GGUF
 
 # ── gemma-4-31B (Q4_K_M, ~17.1 GB, likely dense 31B) ────────────────────────
@@ -435,6 +453,7 @@ qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004
 #
 # NOT added to default.txt: 18/19 coding (ESM syntax failure), similar speed to qwen3.6:27b
 # which scores 31/33. Useful reference for dense-vs-MoE capability analysis across generations.
+# ⚠ hf: repo GONE per 2026-06-02 scout — file must be on disk; fetch-hf will fail
 gemma4:31b  gemma-4-31B-it-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-31B-it-GGUF
 
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────

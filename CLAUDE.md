@@ -266,21 +266,41 @@ When asked to implement features:
   spec flags to benchmark runs. MTP layers in a GGUF (e.g. bartowski qwen3.6:27b b9180+)
   are harmless when spec flags are absent — the head loads but does not speculate.
 
-- **New model candidates (scout 2026-05-27)**:
+- **noctrex MXFP4 is architecture-selective** (finding 2026-06-02): MXFP4 only improves results
+  when the base quant has meaningful failures to fix. `noctrex-qwen3.6:35b` MXFP4 unlocked
+  csv_nordic + node_csv_parser + L6 step 3 (25/29→31/33) because standard Q4_K_M failed those.
+  `noctrex-qwen3-coder:30b` MXFP4 scored **29/33** (worse than qwen3-coder:30b-1m Q4_K_M 30/33)
+  because the 1M variant already handles those tasks — nothing to unlock. Additionally,
+  python_hashmap is **inconsistent**: passes in coding-only run but fails in full run — MXFP4
+  precision for this architecture is right at the boundary, not reliably above it. Do not
+  assume noctrex MXFP4 is a universal upgrade; check whether the base quant actually fails the
+  precision-sensitive tasks first.
+
+- **New model candidates (scout 2026-05-27 / 2026-06-02)**:
   - `Qwen3-Coder-Next` (Qwen/Qwen3-Coder-Next-GGUF) — BENCHMARKED 2026-05-28: **19/19 PERFECT**
     at 16.6 tok/s. ACTUAL SIZE: ~46 GB (4 shards: 15+14+14+3.3 GB) — ~72B dense; the "14.5 GB"
     estimate was shard 1 only. RAM-bound on 24 GB (52% VRAM). Not replacing qwen3-coder:30b-1m
     (9× faster at 150 tok/s). HIGH VALUE for dual-GPU: fully resident on 48 GB → ~35-40 tok/s.
     Added to default.vllm dual-GPU queue (commented).
+    ⚠ HF repo (Qwen/Qwen3-Coder-Next-GGUF) GONE per 2026-06-02 scout — may have been renamed.
   - `gemma-4-31B` (unsloth/gemma-4-31B-it-GGUF, ~17.1 GB Q4_K_M) — BENCHMARKED 2026-05-28:
     **18/19**, 34.6 tok/s. FAILS node_csv_parser (ESM syntax: `export function` in CJS context —
     model output format bias, not capability gap). PASSES csv_nordic_property — confirms
     dense-beats-MoE pattern in Gemma 4 generation (gemma4:26b MoE fails csv_nordic at 110 tok/s).
     Peak skill L5 (passes dijkstra + hashmap); Skill L2 due to node_csv_parser L3 wall.
     Not added to default.txt (18/19 at ~35 tok/s doesn't displace any current model).
+    ⚠ HF repo (unsloth/gemma-4-31B-it-GGUF) GONE per 2026-06-02 scout — file on disk.
+  - `noctrex-qwen3-coder:30b` (noctrex/Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE-GGUF, 15.9 GB)
+    — BENCHMARKED 2026-06-02: **29/33**, 58.9 tok/s avg, Skill L4. See MXFP4 note above.
+    Not added to default.txt.
+  - `Qwen3-Coder-480B-A35B` — 480B MoE, ~35B active, 36.6 GB Q4_K_M (lmstudio). Added to
+    default.vllm dual-GPU queue (commented). Needs MoE GGUF fix first.
   - Devstral-Small-2507/2505 — OLDER versions (July/May 2025); current is 2512. Skip.
   - Devstral-2-123B (46.5 GB) — needs dual GPU; note for when hardware arrives.
   - Qwen3.6-27B-MTP (unsloth) — skip; MTP harms determinism (same as carnice pattern).
+  - ⚠ Several unsloth gemma repos GONE per 2026-06-02 scout: unsloth/gemma-4-26B-A4B-it-GGUF
+    (active default.txt entry — file must be on disk) and unsloth/Qwen3.6-35B-A3B-GGUF
+    (experimental only). All flagged with comments in model config files.
 
 #### What NOT to do
 

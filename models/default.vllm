@@ -103,5 +103,16 @@ qwen2.5-coder:32b-q4km  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,
 # Single-GPU 24 GB: RAM-bound at 16.6 tok/s (52% VRAM-resident); 19/19 PERFECT coding confirmed.
 # Dual GPU: 23 GB/GPU → fully VRAM-resident; expected ~35-40 tok/s at perfect quality.
 # vLLM GGUF multi-shard not yet tested; use llama-server (ngl=999) on single GPU for now.
+# ⚠ hf: repo (Qwen/Qwen3-Coder-Next-GGUF) GONE per 2026-06-02 scout — verify/update before fetch.
 # Uncomment and validate when dual GPU arrives:
 # qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004.gguf  tp=2,dtype=auto,max_model_len=32768  hf:Qwen/Qwen3-Coder-Next-GGUF
+
+# qwen3-coder-480b — 480B MoE, ~35B active params (A35B). Multiple quant sources:
+#   unsloth/Qwen3-Coder-480B-A35B-Instruct-GGUF          Q4_K_M  46.5 GB (6 shards)
+#   lmstudio-community/Qwen3-Coder-480B-A35B-Instruct-GGUF Q4_K_M 36.6 GB (8 shards) — smaller quant
+#   unsloth/Qwen3-Coder-480B-A35B-Instruct-1M-GGUF        Q4_K_M  46.5 GB (1M context variant)
+# Dual GPU (48 GB): 46.5 GB fits with ~1.5 GB headroom — use lmstudio 36.6 GB for KV breathing room.
+# MoE: vLLM GGUF MoE loader currently broken (expert tensor mapping failure). Use llama-server tp=2
+# once llama.cpp multi-GPU MoE is validated. Pending vLLM MoE GGUF fix from coding ally.
+# Uncomment when dual GPU arrives AND backend supports MoE GGUF:
+# qwen3-coder-480b  Q4_K_M/Qwen3-Coder-480B-A35B-Instruct-Q4_K_M-00001-of-00008.gguf  tp=2,dtype=auto,max_model_len=32768  hf:lmstudio-community/Qwen3-Coder-480B-A35B-Instruct-GGUF
