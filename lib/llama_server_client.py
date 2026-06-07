@@ -9,6 +9,8 @@ by LlamaServerManager.ensure() before each task when the model or ctx-size chang
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
 import time
 import urllib.error
@@ -32,6 +34,54 @@ _BOOL_EMIT_VALUE: dict[str, str] = {
 _PORT = 8080
 _BASE_URL = f"http://127.0.0.1:{_PORT}"
 _HEALTH_URL = f"{_BASE_URL}/health"
+
+
+def _kill_port_occupant(port: int, timeout: int = 10) -> None:
+    """Kill any process already listening on *port* so we can bind it cleanly.
+
+    Uses /proc/net/tcp (Linux-only) to find the PID, then sends SIGTERM followed
+    by SIGKILL if the process hasn't exited within *timeout* seconds.
+    """
+    hex_port = f"{port:04X}"
+    try:
+        tcp_data = Path("/proc/net/tcp").read_text()
+    except OSError:
+        return  # not Linux — skip
+    pid: int | None = None
+    for line in tcp_data.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) < 10:
+            continue
+        local_addr = parts[1]
+        inode = parts[9]
+        if local_addr.endswith(f":{hex_port}"):
+            # find the PID that owns this inode via /proc/<pid>/fd symlinks
+            inode_target = f"socket:[{inode}]"
+            try:
+                for fd_path in Path("/proc").glob("*/fd/*"):
+                    try:
+                        if os.readlink(str(fd_path)) == inode_target:
+                            pid = int(fd_path.parts[2])
+                            break
+                    except (OSError, ValueError):
+                        continue
+            except Exception:
+                pass
+            break
+    if pid is None:
+        return
+    try:
+        os.kill(pid, signal.SIGTERM)
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                os.kill(pid, 0)  # probe: raises if process is gone
+            except ProcessLookupError:
+                return
+            time.sleep(0.5)
+        os.kill(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
 
 
 class LlamaServerManager:
@@ -116,6 +166,10 @@ class LlamaServerManager:
             else:
                 # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
                 cmd.extend([flag, str(val).replace("|", ",")])
+
+        # Evict any stale llama-server (or other process) already on our port.
+        # Without this, _wait_ready() may get a health-OK from the wrong server.
+        _kill_port_occupant(_PORT)
 
         # debug=True: inherit terminal so output streams live; useful for startup diagnosis.
         # debug=False: capture stderr so it can be shown on crash/timeout.

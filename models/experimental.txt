@@ -474,11 +474,57 @@ qwen3-coder:30b-480d  Qwen3-Coder-30B-A3B-Instruct-480B-Distill-V2-Fp32.i1-Q4_K_
 
 # ── JetBrains Mellum2 12B-A2.5B (~6.5 GB MXFP4_MOE) ────────────────────────────
 # JetBrains' coding-specialized model — IDE/code intelligence fine-tuning data.
-# 12B total, 2.5B active MoE, MXFP4_MOE format. Very fast (~150+ tok/s expected).
-# Both instruct and thinking variants available; instruct first to establish baseline.
-# f16 KV: conservative for MXFP4 at this size; switch to q8_0 if VRAM is tight.
-# Pending benchmark: quick coding run to establish capability baseline.
+# 12B total, 2.5B active MoE, MXFP4_MOE format.
+# Architecture: 'mellum' — requires llama.cpp >= commit 4fb16eccc (added 2026-06-07).
+# Both instruct and thinking variants available; instruct benchmarked first.
+#
+# Results (2026-06-07, llama-server 9552 8a963fc10, RTX 3090 24 GB, full 33-task run):
+#   23/33  144.5 tok/s avg  587.3s  Skill <L1  Peak L4
+#   Coding:   17/19 — FAILS csv_nordic_property (TESTS_STILL_FAIL) and node_csv_parser
+#             (TESTS_STILL_FAIL) — same MoE data-task ceiling as other A3B MoE models.
+#             All L4 coding PASS: ledger_bug, expr_eval, merge_intervals, para_turret.
+#             All L5 coding PASS: dijkstra, hashmap — python_hashmap passes cleanly,
+#             precision held in MXFP4 at 12B A2.5B (unlike noctrex/i1 at 30B A3B).
+#   L6 step:   2/4  — PASS node_para_core (step 1) and node_para_turret (step 2);
+#              FAIL node_para_entities (step 3) and node_para_combat (step 4). Same
+#              step-3 capability ceiling as qwen3-coder:30b-1m.
+#   node_paratrooper (L6 full): FAIL — expected; only qwen3.5:35b ever passed.
+#   Context:   PASS 8k/16k/32k at 206.9/205.8/196.2 tok/s — fast retrieval at normal ctx.
+#              FAIL context_64k (TESTS_STILL_FAIL — wrong answer, not truncated; hard retrieval limit).
+#              FAIL context_128k (NO_BLOCKS — emits raw answer without BEGIN_FILE at 141.8 tok/s).
+#              SKIP context_256k (SKIPPED_VRAM, min_vram_gb=48).
+#   Multihop:  FAIL forward + reverse — 12B cannot do 2-hop retrieval at 30k+ context.
+#   Distractor: PASS (1-hop retrieval at 64k ctx; 188.1 tok/s).
+#   Speed:    ~130 tok/s on coding, ~195 tok/s on context tasks.
+#             25.1s server startup time (MXFP4 loads fast).
+#
+# Comparison vs qwen2.5-coder:14b (23/33, ~68 tok/s):
+#   Same 23/33 score but at 2.1× the speed. Context_64k is a hard failure for mellum2
+#   (qwen2.5-coder:14b passes it). Mellum2 is faster but weaker at long-context retrieval.
+#
+# VERDICT: NOT added to default.txt.
+#   Strengths: fastest 12B model tested; MXFP4 precision holds for python_hashmap; good L4.
+#   Weaknesses: context_64k+ failure, multihop failure, csv_nordic/node_csv_parser ceiling.
+#   Skill <L1 (context_64k and context_128k failures pull Skill below L1 threshold).
+#   Useful for fast coding-only workloads at sub-30k context; not a general-purpose model.
+# Thinking variant pending after instruct baseline established.
 mellum2:12b  Mellum2-12B-A2.5B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:JetBrains/Mellum2-12B-A2.5B-Instruct-GGUF-MXFP4_MOE
+# Thinking variant — same size (~7.0 GB); adds reasoning tokens before answer.
+# Results (2026-06-08, llama-server 9552, RTX 3090 24 GB, full 33-task run):
+#   21/33  143.5 tok/s avg  714.7s  Skill <L1  Peak L4
+#   WORSE than instruct (23/33): reasoning tokens hurt more than they help.
+#   Gains vs instruct (+4): node_csv_parser PASS, node_para_combat PASS,
+#     multihop_forward PASS, multihop_reverse PASS — thinking unlocks 2-hop retrieval.
+#   Regressions vs instruct (-6): node_slugify, python_multifile_rename, node_memoize_bug,
+#     node_debounce, python_dijkstra, python_hashmap — all FAIL.
+#   python_hashmap (46s, 128 tok/s) vs instruct (15s, 132 tok/s): thinking tokens consume
+#     budget before the precise `_EMPTY = None` completion; precision boundary hit.
+#   node_para_turret: PASS TRUNCATED (64s) — reasoning nearly exhausted 8000 token budget.
+#   Token usage: 40.4k total (1.6× instruct at 24.7k) — thinking overhead is real.
+#   context_64k/128k: same failures as instruct — thinking doesn't help long-context retrieval.
+# VERDICT: instruct is the better general-purpose variant.
+#   Use thinking only if multihop tasks are the primary concern and coding accuracy is secondary.
+mellum2:12b-think  Mellum2-12B-A2.5B-Thinking-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:JetBrains/Mellum2-12B-A2.5B-Thinking-GGUF-MXFP4_MOE
 
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
 # Confirmed 2026-05-14: 2.5 tok/s at ngl=45; 9/10 coding tasks pass (86%) but
