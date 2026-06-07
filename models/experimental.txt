@@ -456,6 +456,30 @@ qwen3-coder-next  Qwen3-Coder-Next-Q4_K_M/Qwen3-Coder-Next-Q4_K_M-00001-of-00004
 # ⚠ hf: repo GONE per 2026-06-02 scout — file must be on disk; fetch-hf will fail
 gemma4:31b  gemma-4-31B-it-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-31B-it-GGUF
 
+# ── Qwen3-Coder-30B 480B-distill (~17.3 GB, same footprint as 30b-1m) ──────────
+# Distillation of the 480B-A35B coder model into the 30B-A3B architecture.
+# Results (2026-06-07, llama-server, RTX 3090 24 GB, full 33-task run):
+#   29/33  51.5 tok/s avg  4834s  Skill L4  Peak L4
+#   Coding: 19/19 at 800 token budget; python_hashmap FAILS in full run at 8000 tokens.
+#   i1 imatrix quant (mradermacher) has same precision boundary issue as noctrex MXFP4:
+#   passes in coding-only context, fails when run after heavier tasks in full sequence.
+#   node_para_entities (L6 step 3): FAIL — 480B distillation did NOT shift this ceiling.
+#   Context: SLOW at 32k/64k/128k (236/812/2133s) — same KV spill as other ~30B models.
+# VERDICT: NOT added to default.txt. Worse than qwen3-coder:30b-1m unsloth Q4_K_M (30/33,
+#   150 tok/s, reliable python_hashmap). Distillation hypothesis falsified: 480B knowledge
+#   didn't break node_para_entities ceiling; i1 quant introduced python_hashmap instability.
+# PATTERN: python_hashmap in full run discriminates quant quality for 30B A3B:
+#   unsloth Q4_K_M → consistent PASS; mradermacher i1 Q4_K_M → FAIL; noctrex MXFP4 → FAIL.
+qwen3-coder:30b-480d  Qwen3-Coder-30B-A3B-Instruct-480B-Distill-V2-Fp32.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:mradermacher/Qwen3-Coder-30B-A3B-Instruct-480B-Distill-V2-Fp32-i1-GGUF
+
+# ── JetBrains Mellum2 12B-A2.5B (~6.5 GB MXFP4_MOE) ────────────────────────────
+# JetBrains' coding-specialized model — IDE/code intelligence fine-tuning data.
+# 12B total, 2.5B active MoE, MXFP4_MOE format. Very fast (~150+ tok/s expected).
+# Both instruct and thinking variants available; instruct first to establish baseline.
+# f16 KV: conservative for MXFP4 at this size; switch to q8_0 if VRAM is tight.
+# Pending benchmark: quick coding run to establish capability baseline.
+mellum2:12b  Mellum2-12B-A2.5B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:JetBrains/Mellum2-12B-A2.5B-Instruct-GGUF-MXFP4_MOE
+
 # ── llama3.3:70b — NOT included (single 24 GB is infrastructure-limited) ─────
 # Confirmed 2026-05-14: 2.5 tok/s at ngl=45; 9/10 coding tasks pass (86%) but
 # 9 SKIPPED_CTX (max_ctx=8192 blocks all context/multihop tasks).
