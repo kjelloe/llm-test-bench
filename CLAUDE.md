@@ -302,6 +302,29 @@ When asked to implement features:
     (active default.txt entry — file must be on disk) and unsloth/Qwen3.6-35B-A3B-GGUF
     (experimental only). All flagged with comments in model config files.
 
+- **New model candidates (scout 2026-06-07)**:
+  - `qwen3-coder:30b-480d` (mradermacher i1 Q4_K_M, 480B distill) — BENCHMARKED 2026-06-07:
+    **29/33**, 51.5 tok/s, Skill L4. python_hashmap FAILS in full run (passes in coding-only run).
+    mradermacher i1 imatrix has the same precision boundary failure as noctrex MXFP4 at 30B A3B.
+    NOT added to default.txt. Pattern confirmed: for 30B A3B, only unsloth standard Q4_K_M
+    reliably passes python_hashmap in full-run context.
+  - `mellum2:12b` (JetBrains, MXFP4_MOE, 6.5 GB) — BENCHMARKED 2026-06-07: **23/33**,
+    144.5 tok/s avg, Skill \<L1, Peak L4. Architecture 'mellum' requires llama.cpp ≥ commit
+    4fb16eccc (PR #23966, "model: add Mellum architecture"). python_hashmap PASSES — MXFP4
+    precision holds at 12B A2.5B (unlike 30B A3B where it fails). Failures: csv_nordic_property,
+    node_csv_parser (MoE data ceiling), context_64k TESTS_STILL_FAIL (hard retrieval limit),
+    context_128k NO_BLOCKS, multihop both FAIL (12B cannot do 2-hop retrieval at 30k+ context).
+    Ties qwen2.5-coder:14b at 23/33 but at 2.1× the speed. NOT added to default.txt.
+  - `mellum2:12b-think` (JetBrains thinking variant, 7.0 GB) — BENCHMARKED 2026-06-08:
+    **21/33**, 143.5 tok/s. Worse than instruct: thinking regressions (-6) outweigh gains (+4).
+    Gains: node_csv_parser, node_para_combat, multihop_forward, multihop_reverse.
+    Regressions: node_slugify, python_multifile_rename, node_memoize_bug, node_debounce,
+    python_dijkstra, python_hashmap (reasoning tokens exhaust budget before _EMPTY = None).
+    Instruct is the better general-purpose variant; thinking only useful if multihop is priority.
+  - ⚠ Additional GONE repos per 2026-06-07 scout: noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
+    (default.txt entry) and unsloth/Qwen3-Coder-30B-A3B-Instruct-1M-GGUF (default.txt entry).
+    Both files must be on disk. All four default.txt GONE entries flagged with ⚠ comments.
+
 #### What NOT to do
 
 - Don't implement multi-turn autonomous "agent loops" in v1.
