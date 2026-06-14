@@ -139,42 +139,44 @@ if [[ -n "$CUDA_HOME" ]]; then
     export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
 
-# Detect GPU compute capability to decide how strict the CUDA version check is.
-GPU_SM=""
+# Detect all GPU compute capabilities. On mixed systems (e.g. RTX 4090 + RTX 5060 Ti)
+# cmake would otherwise try to compile for every detected architecture, including
+# Blackwell (sm_120+) which requires CUDA 12.8 and hard-fails with older nvcc.
+GPU_SMS=()
 if command -v nvidia-smi &>/dev/null; then
-    GPU_SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '.')
+    while IFS= read -r _cap; do
+        [[ -n "$_cap" ]] && GPU_SMS+=("$(echo "$_cap" | tr -d '.')")
+    done < <(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null || true)
 fi
-GPU_SM_MAJOR=$(echo "${GPU_SM:-0}" | cut -c1)
 
-# sm_120+ is Blackwell (RTX 5000 series) — requires CUDA 12.8, nvcc will hard-fail otherwise.
-# sm_89 and below is supported by CUDA 12.0+.
-if (( GPU_SM_MAJOR >= 12 )); then
-    MIN_MAJOR=12; MIN_MINOR=8
-else
-    MIN_MAJOR=12; MIN_MINOR=0
-fi
-CUDA_TOO_OLD=$(( CUDA_MAJOR < MIN_MAJOR || (CUDA_MAJOR == MIN_MAJOR && CUDA_MINOR < MIN_MINOR) ))
-
-if (( CUDA_TOO_OLD )); then
-    if (( GPU_SM_MAJOR >= 12 )); then
-        _reason="Blackwell GPU (sm_${GPU_SM}) requires CUDA 12.8+ — nvcc will fail with 'Unsupported gpu architecture compute_${GPU_SM}'"
+# Split into GPUs the current CUDA can handle vs. Blackwell (sm_120+) that need 12.8.
+SUPPORTED_SMS=()
+BLACKWELL_SMS=()
+CUDA_HAS_BLACKWELL_SUPPORT=$(( CUDA_MAJOR > 12 || (CUDA_MAJOR == 12 && CUDA_MINOR >= 8) ))
+for _sm in "${GPU_SMS[@]}"; do
+    if (( _sm >= 120 )) && (( ! CUDA_HAS_BLACKWELL_SUPPORT )); then
+        BLACKWELL_SMS+=("$_sm")
     else
-        _reason="CUDA ${MIN_MAJOR}.${MIN_MINOR}+ is required to build llama.cpp with CUDA support"
+        SUPPORTED_SMS+=("$_sm")
     fi
-    fail "CUDA $CUDA_VER is too old. $_reason"
-    fail ""
-    fail "  Upgrade CUDA toolkit on Ubuntu 24.04:"
-    fail "    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb"
-    fail "    sudo dpkg -i cuda-keyring_1.1-1_all.deb"
-    fail "    sudo apt-get update && sudo apt-get install cuda-toolkit-12-8"
-    fail "    export PATH=/usr/local/cuda-12.8/bin:\$PATH"
-    fail "    export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:\$LD_LIBRARY_PATH"
-    fail "    nvcc --version   # verify"
-    fail ""
-    fail "  For other Ubuntu versions replace 'ubuntu2404' with e.g. 'ubuntu2204'."
+done
+
+if [[ ${#GPU_SMS[@]} -gt 0 ]]; then
+    ok "GPUs detected: ${GPU_SMS[*]/#/sm_}"
+fi
+
+if [[ ${#BLACKWELL_SMS[@]} -gt 0 ]]; then
+    warn "Blackwell GPU(s) (sm_${BLACKWELL_SMS[*]}) excluded — CUDA $CUDA_VER < 12.8."
+    warn "  To enable RTX 5000-series GPUs, install CUDA 12.8+:"
+    warn "    sudo apt-get install cuda-toolkit-12-8   # if NVIDIA repo is configured"
+    warn "    or: https://developer.nvidia.com/cuda-downloads"
+fi
+
+if [[ ${#SUPPORTED_SMS[@]} -eq 0 ]]; then
+    fail "No GPUs supported by CUDA $CUDA_VER. All detected GPUs require CUDA 12.8+."
+    fail "  Install CUDA 12.8: https://developer.nvidia.com/cuda-downloads"
     exit 1
 fi
-[[ -n "$GPU_SM" ]] && ok "GPU compute capability: sm_${GPU_SM}"
 
 # ── 3. Source repo ────────────────────────────────────────────────────────────
 section "Source"
@@ -245,8 +247,14 @@ fi
 # ── 6. CMake build ────────────────────────────────────────────────────────────
 section "Build"
 JOBS=$(nproc)
+# Build only for the GPUs the installed CUDA actually supports.
+CUDA_ARCH_FLAG=""
+if [[ ${#SUPPORTED_SMS[@]} -gt 0 ]]; then
+    _arch_list=$(IFS=';'; echo "${SUPPORTED_SMS[*]/%/-real}")
+    CUDA_ARCH_FLAG="-DCMAKE_CUDA_ARCHITECTURES=${_arch_list}"
+fi
 info "Build dir : $BUILD_DIR"
-info "Flags     : -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release${NVCC_BIN:+ -DCMAKE_CUDA_COMPILER=$NVCC_BIN}"
+info "Flags     : -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release${NVCC_BIN:+ -DCMAKE_CUDA_COMPILER=$NVCC_BIN}${CUDA_ARCH_FLAG:+ $CUDA_ARCH_FLAG}"
 info "Cores     : $JOBS"
 echo
 
@@ -256,7 +264,8 @@ cmake \
     -DGGML_CUDA=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
-    ${NVCC_BIN:+-DCMAKE_CUDA_COMPILER="$NVCC_BIN"}
+    ${NVCC_BIN:+-DCMAKE_CUDA_COMPILER="$NVCC_BIN"} \
+    ${CUDA_ARCH_FLAG:+$CUDA_ARCH_FLAG}
 
 echo
 cmake --build "$BUILD_DIR" --config Release -j"$JOBS"
