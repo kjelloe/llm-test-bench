@@ -10,35 +10,53 @@
 # Single-24GB confirmed numbers are carried over where applicable.
 # NVLink vs PCIe between GPUs significantly affects 70B tensor-parallel throughput.
 
-# Speed index (est. unless noted):
-# qwen3-coder:30b      # ~160 tok/s  MoE; confirmed single 24 GB — KV headroom gained at 48 GB
-# qwen3.5:35b          # ~147 tok/s  MoE; confirmed single 24 GB — context_128k at full speed on 48 GB
-# gemma4:26b           # ~114 tok/s  MoE; confirmed single 24 GB — context_128k at full speed on 48 GB
-# qwen3.5:27b          #  ~35 tok/s  Dense 27B; context_128k SLOW 18.4 tok/s on single 24 GB (KV spill);
-#                                    on 48 GB full KV fits → should run at ~35 tok/s clean
-# qwen2.5-coder:32b    #  ~35 tok/s  dense 32B Q5_K_M; confirmed Q4_K_M coding-only at ~36 tok/s single 24 GB
+# Speed index (est. unless noted; single-GPU confirmed on RTX 3090 24 GB):
+# qwen3-coder:30b-1m   # ~160 tok/s  MoE; 1M-ctx variant; perfect coding 19/19
+# qwen3.5:35b          # ~147 tok/s  MoE; context_128k at full speed on 48 GB, thinking
+# noctrex-qwen3.6:35b  # ~120 tok/s  MoE+MXFP4; 31/33 BEST; perfect coding 19/19; Ampere+
+# qwen3.6:35b-A3B      # ~134 tok/s  MoE; thinking — confirmed 29/33 single 24 GB (new PC run)
+# gemma4:26b           # ~114 tok/s  MoE; context_128k at full speed on 48 GB
+# qwen2.5-coder:14b    #  ~68 tok/s  context_256k feasible at 48 GB
+# qwen3.6:27b          #  ~37 tok/s  Dense 27B; 31/33 BEST confirmed; ties noctrex; f16 KV required
+# qwen3.5:27b          #  ~35 tok/s  Dense 27B; context_128k SLOW on single 24 GB; fixed at 48 GB
+# devstral-small-2     #  ~42 tok/s  Dense 24B; 22/24 confirmed single 24 GB
+# qwen2.5-coder:32b    #  ~35 tok/s  dense 32B Q5_K_M; ctx=64k feasible at 48 GB
 # deepseek-r1:32b      #  ~30 tok/s  dense 32B Q5_K_M thinking; ctx≥64k feasible at 48 GB
-# qwq:32b              #  ~30 tok/s  dense 32B Q5_K_M thinking; KV thrashing killed it on single 24 GB
+# qwq:32b              #  ~30 tok/s  dense 32B Q5_K_M thinking; KV thrashing on single 24 GB fixed
 # llama3.3:70b         #  ~20 tok/s  dense 70B Q4_K_S; NOT benchmarked; NVLink preferred
 
 # ── Small models — included for context_256k coverage (min_vram_gb=48 met here) ──
 # These fit on a single GPU; no tensor_split needed. The key benefit at 48 GB is that
 # context_256k (auto-skipped below 48 GB) now runs. VRAM check uses total across all GPUs.
+# For max speed on these MoE/small models: CUDA_VISIBLE_DEVICES=<4090-index> — avoids
+# splitting layers to the slower 3090 (~936 GB/s vs 4090 ~1008 GB/s).
+#
 # gpt-oss:20b: ~12 GB weights → ~36 GB KV headroom; handles context_256k (~262k tokens) easily.
 #   (Already passes context_128k on 24 GB; 48 GB unlocks the 256k tier.)
 gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=262144  hf:unsloth/gpt-oss-20b-GGUF
 # qwen2.5-coder:14b: ~10 GB weights → ~38 GB KV headroom; context_256k feasible.
 #   On 24 GB was capped at max_ctx=32768 (skipped 64k/128k/256k); 48 GB removes all restrictions.
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=262144  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
+# devstral-small-2: dense 24B (~15 GB); 22/24 confirmed single 3090 24 GB at ~42 tok/s
+devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256  hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
+# qwen3.6:27b: dense 27B Q4_K_M (~17 GB); 31/33 BEST confirmed single 3090 at 36.6 tok/s.
+#   Ties noctrex-qwen3.6:35b at 31/33; no MXFP4 hardware requirement.
+#   f16 KV REQUIRED — q8_0 KV causes python_hashmap FAIL (_EMPTY omission at precision boundary).
+#   context_128k SLOW on single 24 GB (KV spill); on 48 GB full KV fits at clean speed.
+qwen3.6:27b  Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
 
 # ── Proven single-24GB MoE models — tensor_split removes 128k KV spill ──────────
-# qwen3-coder:30b: KV for 30B at ctx=131072 partially spills on single 24 GB (→ 3.8 tok/s, 1870s SLOW).
-# On 48 GB the full KV fits; should pass context_128k cleanly at normal speed.
-qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+# qwen3-coder:30b-1m: 1M-ctx variant; perfect coding 19/19; KV spills at 131k on single 24 GB.
+# On 48 GB the full KV fits; context_128k runs at normal speed.
+qwen3-coder:30b-1m  Qwen3-Coder-30B-A3B-Instruct-1M-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-1M-GGUF
 
-# qwen3.5:35b: MoE ~22 GB; context_128k runs at 104 tok/s on single 24 GB; on 48 GB KV fully split.
+# qwen3.5:35b: MoE ~9 GB active; context_128k runs at 104 tok/s on single 24 GB; on 48 GB KV fully split.
 # bartowski variant — passes context_128k; do not use HauhauCS (fails context_128k).
 qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
+
+# qwen3.6:35b-A3B: MoE ~9 GB; confirmed 29/33 on RTX 4090+5060Ti (new PC run 2026-06-14); thinking.
+# unsloth UD-Q4_K_M variant. Passes node_para_entities (L5) where qwen3.5 does not.
+qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 
 # gemma4:26b: MoE ~18 GB; context_128k at 84.5 tok/s on single 24 GB; KV splits cleanly on 48 GB.
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
@@ -48,7 +66,7 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,
 qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
 
 # noctrex-qwen3.6:35b: MXFP4+MTP; 31/33 at 118 tok/s on 24 GB; 19/19 coding PERFECT.
-# On 48 GB: full KV headroom, context_128k at full speed. Requires Ampere+ and MXFP4 llama.cpp.
+# On 48 GB: full KV headroom, context_128k at full speed. Requires Ampere+ (RTX 3090 qualifies).
 # Run WITHOUT spec flags — spec decoding breaks temp=0 determinism.
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
 
