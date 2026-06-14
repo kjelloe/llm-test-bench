@@ -247,10 +247,12 @@ fi
 # ── 6. CMake build ────────────────────────────────────────────────────────────
 section "Build"
 JOBS=$(nproc)
-# Build only for the GPUs the installed CUDA actually supports.
+# Build for supported GPUs. Omit the -real suffix so cmake also emits PTX alongside
+# native code; the driver then JIT-compiles it for any newer GPU at runtime (e.g.
+# a Blackwell card alongside the primary sm_89 GPU).
 CUDA_ARCH_FLAG=""
 if [[ ${#SUPPORTED_SMS[@]} -gt 0 ]]; then
-    _arch_list=$(IFS=';'; echo "${SUPPORTED_SMS[*]/%/-real}")
+    _arch_list=$(IFS=';'; echo "${SUPPORTED_SMS[*]}")
     CUDA_ARCH_FLAG="-DCMAKE_CUDA_ARCHITECTURES=${_arch_list}"
 fi
 info "Build dir : $BUILD_DIR"
