@@ -8,25 +8,34 @@ import warnings
 try:
     import pynvml
     pynvml.nvmlInit()
-    _handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    _num_gpus = pynvml.nvmlDeviceGetCount()
+    _handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(_num_gpus)]
     _available = True
 except Exception as exc:
     warnings.warn(f"pynvml unavailable — GPU snapshots disabled: {exc}", RuntimeWarning, stacklevel=2)
     _available = False
-    _handle = None
+    _handles = []
+    _num_gpus = 0
 
 
 def get_gpu_snapshot() -> dict | None:
-    """Capture vram_used_mb, gpu_util, mem_bandwidth_util for GPU 0. Returns None if unavailable."""
+    """Capture vram_used_mb, gpu_util, mem_bandwidth_util summed across all GPUs. Returns None if unavailable."""
     if not _available:
         return None
     try:
-        mem = pynvml.nvmlDeviceGetMemoryInfo(_handle)
-        rates = pynvml.nvmlDeviceGetUtilizationRates(_handle)
+        total_vram_mb = 0
+        max_util = 0
+        max_bw = 0
+        for handle in _handles:
+            mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            rates = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            total_vram_mb += int(mem.used // (1024 * 1024))
+            max_util = max(max_util, int(rates.gpu))
+            max_bw = max(max_bw, int(rates.memory))
         return {
-            "vram_used_mb": int(mem.used // (1024 * 1024)),
-            "gpu_util": int(rates.gpu),
-            "mem_bandwidth_util": int(rates.memory),
+            "vram_used_mb": total_vram_mb,
+            "gpu_util": max_util,
+            "mem_bandwidth_util": max_bw,
         }
     except Exception:
         return None
@@ -42,7 +51,7 @@ def wait_for_gpu_idle(
 ) -> dict | None:
     """
     Poll until all three conditions hold simultaneously:
-      - gpu_util < util_threshold
+      - gpu_util < util_threshold  (max across all GPUs)
       - vram_used_mb < baseline_vram_mb + vram_headroom_mb  (skipped if baseline_vram_mb is None)
       - vram_used_mb changed less than vram_stable_mb vs the previous poll
 

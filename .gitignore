@@ -12,3 +12,4 @@ output/
 /task_data/dotnet_sas/tests/*/obj/
 *.log
 llama_models
+.gpu-mode

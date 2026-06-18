@@ -25,7 +25,8 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 install.sh                Interactive installer: checks and installs missing dependencies
-run.sh                    Venv setup + bench.py entrypoint
+run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode if present and injects --single-gpu / CUDA_VISIBLE_DEVICES
+gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU mode; writes .gpu-mode (gitignored)
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
 compare-results.sh        Merges two result JSONs and prints speed summary + full task table for backend comparison; thin wrapper for lib/compare_results.py
@@ -188,7 +189,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` so `bench.py` can select either backend at startup.
 
-- **`LlamaServerManager`** — manages a single `llama-server` subprocess:
+- **`LlamaServerManager`** — manages a single `llama-server` subprocess. Constructor accepts `single_gpu_index: int = -1`; when ≥ 0, strips `tensor_split` from model params and sets `CUDA_VISIBLE_DEVICES=<index>` in the subprocess environment so llama-server sees only that device. Typically set via `bench.py --single-gpu` which is injected by `run.sh` from `.gpu-mode`.
   - `ensure(cfg, ctx_size, num_threads, startup_timeout=600)` — starts or restarts the server if the model changed or `ctx_size` grew beyond the running instance. Blocks until `/health` returns `{"status":"ok"}` (up to `startup_timeout` seconds, default 600; large RAM-bound models with `mlock` may take 300–600s). If the server exits before becoming ready, its full stderr output is captured and included in the raised `RuntimeError` for diagnosis.
   - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; closes the stderr pipe.
   - Tracks `_current_model` and `_current_ctx` to minimise unnecessary restarts (never downsizes ctx — a server running at 131072 tokens is fine for an 8192-token task).
@@ -250,7 +251,7 @@ Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value pa
 
 Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gracefully with a `RuntimeWarning` if pynvml is unavailable — all functions return `None` and the benchmark continues normally.
 
-- `get_gpu_snapshot() -> dict | None` — single point-in-time sample: `vram_used_mb`, `gpu_util`, `mem_bandwidth_util` for GPU 0.
+- `get_gpu_snapshot() -> dict | None` — single point-in-time sample: `vram_used_mb` (summed across all GPUs), `gpu_util` (max across all GPUs), `mem_bandwidth_util` (max across all GPUs). Multi-GPU aware — initialises handles for all devices returned by `nvmlDeviceGetCount()` at import time.
 - `wait_for_gpu_idle(timeout, baseline_vram_mb, …) -> dict | None` — polls every 500ms until all three conditions hold simultaneously: `gpu_util < 5%`, `vram_used_mb < baseline_vram_mb + 200`, and VRAM delta < 50 MB between consecutive polls. Hard timeout: 10s. On timeout: returns last snapshot with `"dirty": True`; clean exit returns snapshot with `"dirty": False`. Used between model loads to ensure `before_load` captures true idle baseline.
 - `launch_peak_poller(stop_event, poll_interval) -> (Thread, list)` — background thread that polls every 500ms until `stop_event` is set, then does one final poll. Records the sample with the highest `gpu_util` seen across all polls. Captures genuine peak GPU activity regardless of task duration (replaces the old fixed 5-second delayed snapshot which missed short tasks).
 

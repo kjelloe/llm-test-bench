@@ -289,6 +289,10 @@ def main() -> None:
                         help="Enable thinking/reasoning mode (ollama only; default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
                         help="Warm up each model before its first task (ollama only; default: off)")
+    parser.add_argument("--single-gpu", type=int, default=-1, metavar="INDEX",
+                        help="Run on a single GPU (device INDEX). Strips tensor_split from model params "
+                             "and sets CUDA_VISIBLE_DEVICES for the llama-server subprocess. "
+                             "-1 = use all GPUs (default). Usually set via gpu-mode.sh / .gpu-mode.")
     parser.add_argument("--set-power-limit", type=int, default=None, metavar="WATTS",
                         help="Set GPU power limit via 'sudo nvidia-smi -pl WATTS' before benchmarking")
     parser.add_argument("--out", default=None,
@@ -367,7 +371,8 @@ def main() -> None:
 
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
-        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path, debug=args.debug)
+        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path,
+                                            debug=args.debug, single_gpu_index=args.single_gpu)
 
     elif args.backend == "vllm":
         import shutil
@@ -455,9 +460,11 @@ def main() -> None:
         llama_server_bin=bin_path or None,
         models_dir=models_dir or None,
     )
+    # GPU VRAM is reported in MiB and is never exactly a round number (e.g. RTX 4090 = 24564 MiB,
+    # not 24576). Add 0.1 GB tolerance so 2× "24 GB" cards (49140 MiB = 47.99 GB) pass the 48 GB check.
     total_vram_gb: float = sum(
         g.get("vram_total_mb", 0) for g in (hw.get("gpu") or [])
-    ) / 1024.0
+    ) / 1024.0 + 0.1
 
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     results: list[dict] = []

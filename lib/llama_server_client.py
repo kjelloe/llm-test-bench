@@ -9,6 +9,7 @@ by LlamaServerManager.ensure() before each task when the model or ctx-size chang
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 import urllib.error
@@ -38,10 +39,11 @@ class LlamaServerManager:
     """Manages a single llama-server subprocess for the duration of a benchmark run."""
 
     def __init__(self, models_dir: str, bin_path: str = "llama-server",
-                 debug: bool = False) -> None:
+                 debug: bool = False, single_gpu_index: int = -1) -> None:
         self.models_dir = Path(models_dir)
         self.bin_path = bin_path
         self.debug = debug
+        self.single_gpu_index = single_gpu_index
         self._proc: subprocess.Popen | None = None
         self._current_model: str | None = None
         self._current_ctx: int = 0
@@ -106,6 +108,9 @@ class LlamaServerManager:
         if num_threads and num_threads > 0:
             cmd.extend(["--threads", str(num_threads)])
         for key, val in cfg.params.items():
+            if self.single_gpu_index >= 0 and key == "tensor_split":
+                # tensor_split is meaningless (and would error) when only one GPU is visible
+                continue
             cli_key = _PARAM_NAME_MAP.get(key, key.replace("_", "-"))
             flag = "--" + cli_key
             if val is True:
@@ -117,10 +122,19 @@ class LlamaServerManager:
                 # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
                 cmd.extend([flag, str(val).replace("|", ",")])
 
+        # single_gpu_index: pin the subprocess to one CUDA device.
+        # CUDA_VISIBLE_DEVICES is already exported by run.sh so this is redundant for the
+        # common path, but setting it explicitly here keeps llama-server correct even when
+        # bench.py is called directly without run.sh.
+        env = None
+        if self.single_gpu_index >= 0:
+            env = dict(os.environ)
+            env["CUDA_VISIBLE_DEVICES"] = str(self.single_gpu_index)
+
         # debug=True: inherit terminal so output streams live; useful for startup diagnosis.
         # debug=False: capture stderr so it can be shown on crash/timeout.
         stderr = None if self.debug else subprocess.PIPE
-        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr)
+        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr, env=env)
         self._current_model = cfg.ollama_name
         self._current_ctx = ctx_size
         try:

@@ -421,6 +421,12 @@ python3 bench.py --help
   --warmup                     Send a tiny prompt before the first task to force model
                                load (ollama only; no-op for llama-server — model loads
                                during server startup; enabled by default in compare.sh)
+  --single-gpu INDEX           Run on a single CUDA device (index 0, 1, …). Strips
+                               tensor_split from model params and sets
+                               CUDA_VISIBLE_DEVICES=INDEX for the llama-server
+                               subprocess. -1 = use all GPUs (default). Normally
+                               controlled via gpu-mode.sh / .gpu-mode rather than
+                               this flag directly.
   --out FILE                   Results JSON path (default: output/results.json)
   --keep-workdirs              Don't delete temp workdirs (useful for debugging)
 ```
@@ -549,6 +555,43 @@ To benchmark using [vLLM](https://github.com/vllm-project/vllm)'s `vllm serve` i
 
 ---
 
+## GPU mode (single vs. multi)
+
+`gpu-mode.sh` lets you toggle between using all GPUs and a single GPU without editing model files.
+
+```bash
+./gpu-mode.sh               # show detected GPUs and current mode
+./gpu-mode.sh toggle        # switch between single [GPU 0] and multi
+./gpu-mode.sh single        # use GPU 0 only
+./gpu-mode.sh single 1      # use GPU 1 only
+./gpu-mode.sh multi         # use all GPUs (default)
+```
+
+The chosen mode is saved in `.gpu-mode` (gitignored). `run.sh` sources this file automatically, so the mode applies to every subsequent `./run.sh` and `./compare.sh` call without any extra flags.
+
+**What changes in single-GPU mode:**
+
+- `CUDA_VISIBLE_DEVICES=N` is exported — all backends (llama-server, vLLM, Ollama) inherit it.
+- `tensor_split` is stripped from model params for llama-server (a multi-GPU split against a single-device server causes a startup error).
+- Models in `models/*.txt` that list `tensor_split=1|1` will start normally on the chosen single GPU.
+
+**Typical use cases:**
+
+```bash
+# Run candidates on 4090 only (avoids 3090 thermal load; all fit in 24 GB)
+./gpu-mode.sh single 0
+./run.sh --model-file models/candidates.txt --models noctrex-qwen3-coder:30b \
+  --task-group coding --backend llama-server --num-predict 8000 --warmup
+
+# Restore multi-GPU for 32B/70B models that need both cards
+./gpu-mode.sh multi
+./run.sh --model-file models/2x24gb.txt --models qwen2.5-coder:32b deepseek-r1:32b ...
+```
+
+> **Note:** vLLM with `tensor_parallel_size > 1` in the `.vllm` model file will fail when single-GPU mode is active — update `tp=1` in the model file for single-GPU vLLM runs.
+
+---
+
 ## Model files
 
 Models are defined in `models/*.txt`. Each line has up to three fields:
@@ -568,7 +611,7 @@ The `hf:` field is position-independent (may appear anywhere after the ollama na
 | `24gb.txt` | Models confirmed to run well on a single 24 GB GPU |
 | `32gb.txt` | Models requiring ~32 GB VRAM (e.g. 32B Q4_K_M + KV headroom) |
 | `16gb.txt` | Models that fit on a 16 GB card |
-| `2x24gb.txt` | Models needing dual 24 GB GPUs (e.g. 70B Q4_K_S) |
+| `2x24gb.txt` | Models for dual 24 GB GPUs (48 GB total); includes tensor_split=1|1 entries; use `gpu-mode.sh single` for models that fit in 24 GB |
 | `2x32gb.txt` | Models needing dual 32 GB GPUs |
 
 `.vllm` files mirror the GPU-tier `.txt` files but carry vLLM-specific params (`tp`, `enforce_eager`, `gpu_mem_util`):

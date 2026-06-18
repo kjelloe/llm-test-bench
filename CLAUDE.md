@@ -148,7 +148,8 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 ```
 bench.py            CLI runner
 install.sh          Interactive dependency installer
-run.sh              Venv setup + bench.py wrapper
+run.sh              Venv setup + bench.py wrapper; sources .gpu-mode and injects --single-gpu / CUDA_VISIBLE_DEVICES when single-GPU mode is active
+gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json)
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
@@ -163,7 +164,7 @@ lib/
   parsing.py              BEGIN_FILE/END_FILE parser + allow-list validator
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
-  gpu_monitor.py          pynvml GPU telemetry
+  gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
   history.py              Run history writer and header printer
 tests/
   test_parsing.py         Parser unit tests  →  python3 -m pytest tests/
