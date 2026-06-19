@@ -92,9 +92,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   devstral-small-2 (24B dense) similarly spills at ~5.2 tok/s (819s) at ctx=131072 on 24GB
   — wall_time_budget_s=300 flags it as PASS_BUT_SLOW. Speed on llama-server: ~45 tok/s
   (2.6× faster than ollama's ~17 tok/s for the same model at normal context sizes).
-  qwen2.5-coder:32b Q4_K_M (~20 GB weights) leaves only ~4 GB for KV on 24 GB — ctx=32768
-  causes TOOL_ERROR timeout (300s) on context_32k and multihop tasks; 15/15 coding tasks
-  pass cleanly at ~36 tok/s. Large-context tasks require a true 32 GB card.
+  qwen2.5-coder:32b Q4_K_M (~18.5 GB weights) leaves ~5 GB for KV on 24 GB — ctx=32768
+  causes TOOL_ERROR at the default 300s timeout; at compare.sh's 1200s timeout coding tasks
+  pass cleanly at ~40 tok/s on RTX 4090 (2026-06-18 confirmed, 9/10 on 10-task coding subset,
+  fails node_para_core L3 logic gap same as Q5_K_M). Passes python_hashmap with q8_0 KV —
+  the _EMPTY precision issue is specific to 27B dense models, not 32B. Large-context tasks
+  require 2×24 GB; use max_ctx=32768 in single-GPU configs. Added to models/24gb.txt.
   deepseek-r1:32b Q4_K_M (~20 GB): with max_ctx=32768 scores 23/29 (26 eligible) at ~29 tok/s
   (2026-05-22). 18/19 coding at 31.4 tok/s (2026-05-24 coding run, corrected flags) —
   python_expr_eval is a structural capability gap: model enters an infinite reasoning spiral
@@ -125,6 +128,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   wrong token at a precision boundary. With f16 KV (llama-server) or ollama's internal format,
   the same model passes cleanly. Use `cache_type_k=f16,cache_type_v=f16` for any 27B dense model
   whose python_hashmap fails with q8_0 KV. Do not change the task stub to paper over this.
+  This precision sensitivity is specific to 27B dense models (qwen3.6:27b confirmed). Dense 32B
+  Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18). Also a
+  capability discriminator: some models fail due to wrong tombstone logic regardless of
+  quantization (noctrex-qwen3-coder:30b TESTS_STILL_FAIL, qwen2.5-r1:32b TESTS_STILL_FAIL),
+  and thinking models exhaust their budget in reasoning before emitting code (mellum2:12b-thinking,
+  qwq:32b, gpt-oss:20b on this task).
 
 #### Edit Protocol Enforcement
 
