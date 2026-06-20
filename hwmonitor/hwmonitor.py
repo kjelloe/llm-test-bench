@@ -347,6 +347,9 @@ def parse_args() -> argparse.Namespace:
                    help="bench.py PID to abort on CRIT (auto-detected if omitted)")
     p.add_argument("--abort-timeout",  type=float, default=3.0,  metavar="S",
                    help="Seconds between SIGINT and SIGTERM (default: 3)")
+    p.add_argument("--quiet", action="store_true",
+                   help="Suppress data lines from stdout; send only WARN/CRIT/OK to stderr. "
+                        "Full data still written to log. Used when run.sh starts hwmonitor in background.")
     p.add_argument("--warn-gpu-temp",  type=float, default=85.0, metavar="C")
     p.add_argument("--crit-gpu-temp",  type=float, default=95.0, metavar="C")
     p.add_argument("--warn-junction",  type=float, default=90.0, metavar="C")
@@ -375,9 +378,16 @@ def main() -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_fh = log_path.open("a", encoding="utf-8")
 
-    def emit(msg: str) -> None:
-        print(msg, flush=True)
-        print(_strip(msg), file=log_fh, flush=True)
+    def emit(msg: str, data: bool = False) -> None:
+        """Print msg + write plain text to log.
+        In --quiet mode, data lines go to log only; alerts go to stderr."""
+        plain = _strip(msg)
+        print(plain, file=log_fh, flush=True)
+        if args.quiet:
+            if not data:
+                print(msg, file=sys.stderr, flush=True)
+        else:
+            print(msg, flush=True)
 
     hotspot = probe_hotspot()
     bench_pid: int | None = args.pid
@@ -415,7 +425,7 @@ def main() -> None:
                 ram_total_gb=ram_total,
             )
 
-            emit(format_line(s))
+            emit(format_line(s), data=True)
 
             alerts, states = check_thresholds(s, thresholds, states)
 

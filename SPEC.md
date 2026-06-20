@@ -63,7 +63,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - Prints a comparison table and failure detail on completion.
 
 2) Shell scripts
-- `run.sh`: creates/activates a venv, installs `requirements.txt`, sources `.gpu-mode` (written by `gpu-mode.sh`) if present — in single-GPU mode exports `CUDA_VISIBLE_DEVICES` and appends `--single-gpu INDEX` to the bench.py call; forwards all remaining args to `bench.py`.
+- `run.sh`: creates/activates a venv, installs `requirements.txt`, sources `.gpu-mode` (written by `gpu-mode.sh`) if present — in single-GPU mode exports `CUDA_VISIBLE_DEVICES` and appends `--single-gpu INDEX`; launches `bench.py` in the background and waits for it (preserving its exit code); auto-starts `hwmonitor/hwmonitor.py --quiet --pid <bench_pid>` in the background so WARN/CRIT appear on stderr while data lines go to `output/hwmonitor-<timestamp>.log`; stops hwmonitor when bench.py exits; pass `--no-hwmonitor` to skip watchdog startup (useful for quick single-task runs).
 - `gpu-mode.sh`: lists detected GPUs and toggles/sets single vs. multi-GPU mode. Writes `.gpu-mode` (gitignored) which is sourced by `run.sh`. Usage: `./gpu-mode.sh [show|toggle|single [N]|multi]`. In single-GPU mode, `bench.py` strips `tensor_split` from model params and sets `CUDA_VISIBLE_DEVICES` in the llama-server subprocess environment; `run.sh` also exports `CUDA_VISIBLE_DEVICES` so vLLM and ollama backends inherit it.
 - `compare.sh`: reads a model set from `models/<set-name>.txt`; sets `--num-predict 8000 --model-timeout 1200 --startup-timeout 600`; forwards extra args. Default set: `models/default.txt`. Named sets: `./compare.sh extended`, `./compare.sh full`. Prints HF repo names next to each model in the run header. Inherits GPU mode from `run.sh`.
 - `configure.sh`: prints current env variable state with per-variable set instructions — covers `OLLAMA_URL`, `LLAMA_SERVER_BIN` (auto-detects from PATH), `LLAMA_MODELS_DIR` (shows GGUF count), `BENCH_BACKEND`, `HF_TOKEN` (masked), `LLAMA_SRC_DIR`. Green ✓ for set, yellow ~ for unset, red ✗ for invalid path. Interactive wizard (Steps 1–7) collects values and prints a ready-to-paste `export` block. **Step 7** (llama-server only): invokes `lib/optimize_models.py` to suggest hardware-aware params for each GGUF model; also detects VRAM tier and suggests a `DEFAULT_CTX` value for the export block. Adjusts suggestions automatically when hardware changes (e.g. upgrading from 1×16 GB to 2×24 GB will suggest removing `n_cpu_moe` from models that now fit fully in VRAM and adding `split_mode=row`, `tensor_split`, and hardware-tiered `batch_size`/`ubatch_size`).
@@ -71,6 +71,18 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - `install.sh`: interactive installer; checks each dependency (Python, pytest, Node.js 20+, .NET 8, Ollama, models) and offers to install anything missing. Platform-aware: supports apt, dnf, pacman, brew.
 - `preflight.sh`: checks all dependencies before a run (GPU, Ollama, models from `models/default.txt`, Python, Node, .NET).
 - `fetch.sh`: pulls models by set name (`default`, `extended`), set file path, or bare model name.
+
+2b) Hardware watchdog (`hwmonitor/hwmonitor.py`)
+- Standalone script launched automatically by `run.sh` in `--quiet` mode.
+- Polls `nvidia-smi` (GPU temp/power/VRAM/util), `/sys/class/thermal` (CPU temp), `/proc/meminfo` (RAM) every `--interval` seconds (default: 2).
+- Threshold state machine: emits WARN/CRIT only on state transition (OK→WARN, WARN→CRIT, etc.) — no repeated noise while condition persists.
+- On first CRIT: sends `SIGINT` to `--pid` (bench.py); waits `--abort-timeout` seconds (default: 3); sends `SIGTERM` if still alive. Each PID is signalled at most once.
+- GPU junction/hotspot temp probed at startup via `nvidia-smi --query-gpu=temperature.gpu.hotspot`; if driver too old, falls back to core temp with a startup notice.
+- Output streams: `--quiet` routes data lines to log file only; WARN/CRIT/OK go to stderr; startup header to stderr. Without `--quiet`, all output goes to stdout.
+- Log written to `output/hwmonitor-<timestamp>.log` (path overridable with `--log`).
+- Default thresholds: GPU core 85°C WARN / 95°C CRIT; GPU junction 90°C WARN / 100°C CRIT; CPU 85°C WARN / 95°C CRIT; GPU power ≥95% of limit WARN; RAM ≥90% WARN.
+- CPU temp returns `N/A` on WSL2 (no kernel sensor access).
+- See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
 - Built-in tasks (33 total, difficulty L1–L6):

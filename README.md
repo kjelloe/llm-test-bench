@@ -592,6 +592,56 @@ The chosen mode is saved in `.gpu-mode` (gitignored). `run.sh` sources this file
 
 ---
 
+## Hardware monitor (hwmonitor)
+
+`run.sh` automatically starts `hwmonitor/hwmonitor.py` alongside every benchmark run. It watches GPU temperatures, power draw, and RAM — and aborts the benchmark cleanly if a critical threshold is breached (useful for long overnight runs where a fan failure could otherwise cook a card).
+
+**What you see during a run:**
+
+```
+[hwmonitor] started — log: output/hwmonitor-20260619-143200.log
+[i/1] qwen3-next:80b  python_safe_div ...
+WARN      14:32:03  GPU1[3090] junction temp °C 93 ≥ 90
+CRIT      14:32:05  GPU1[3090] junction temp °C 101 ≥ 100 — aborting bench.py PID 12345
+          → SIGINT → PID 12345
+          → PID 12345 exited after SIGINT
+[hwmonitor] stopped
+```
+
+Data lines go to the log file only; WARN/CRIT/OK appear on stderr so they interleave naturally with bench.py progress output.
+
+**Skip the watchdog for quick single-task runs:**
+
+```bash
+./run.sh --no-hwmonitor --models qwen3:14b --tasks python_safe_div
+```
+
+**Run standalone in a second terminal (more control):**
+
+```bash
+# Terminal 1 — monitor with custom thresholds
+./hwmonitor/hwmonitor.py --warn-junction 88 --crit-junction 98
+
+# Terminal 2 — run the benchmark
+./run.sh --no-hwmonitor --model-file models/candidates.txt ...
+```
+
+**Default thresholds** (all overridable via CLI flags):
+
+| Metric | WARN | CRIT |
+|---|---|---|
+| GPU core temp | 85 °C | 95 °C |
+| GPU junction/hotspot | 90 °C | 100 °C |
+| CPU package temp | 85 °C | 95 °C |
+| GPU power (% of limit) | 95 % | — |
+| RAM used | 90 % | — |
+
+**Log file location:** `output/hwmonitor-<YYYYMMDD-HHMMSS>.log` — one file per run, written automatically.
+
+See `hwmonitor/SPEC.md` for the full CLI reference and metric source table.
+
+---
+
 ## Model files
 
 Models are defined in `models/*.txt`. Each line has up to three fields:

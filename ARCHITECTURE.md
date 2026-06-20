@@ -258,6 +258,21 @@ Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gra
 - `wait_for_gpu_idle(timeout, baseline_vram_mb, …) -> dict | None` — polls every 500ms until all three conditions hold simultaneously: `gpu_util < 5%`, `vram_used_mb < baseline_vram_mb + 200`, and VRAM delta < 50 MB between consecutive polls. Hard timeout: 10s. On timeout: returns last snapshot with `"dirty": True`; clean exit returns snapshot with `"dirty": False`. Used between model loads to ensure `before_load` captures true idle baseline.
 - `launch_peak_poller(stop_event, poll_interval) -> (Thread, list)` — background thread that polls every 500ms until `stop_event` is set, then does one final poll. Records the sample with the highest `gpu_util` seen across all polls. Captures genuine peak GPU activity regardless of task duration (replaces the old fixed 5-second delayed snapshot which missed short tasks).
 
+#### `hwmonitor/hwmonitor.py` — Hardware Watchdog
+
+Standalone script launched automatically by `run.sh` in `--quiet` mode alongside every benchmark run. Stdlib-only; no additional dependencies beyond `nvidia-smi`.
+
+- `probe_hotspot() -> bool` — probes `nvidia-smi --query-gpu=temperature.gpu.hotspot` at startup; returns `False` if driver too old (falls back to core temp with a startup notice). Called once, result stored as `hotspot: bool` for the lifetime of the process.
+- `collect_gpu(hotspot) -> list[GpuSample]` — single `nvidia-smi` call per interval; queries 8 or 9 fields depending on hotspot support; returns `list[GpuSample]` (one per device). Returns `[]` on any error.
+- `collect_cpu_temp() -> float | None` — reads highest value from `/sys/class/thermal/thermal_zone*/temp`; returns `None` on WSL2 (directory absent) or any error.
+- `collect_ram() -> tuple[float, float]` — reads `MemTotal` / `MemAvailable` from `/proc/meminfo`; returns `(used_gb, total_gb)`.
+- `_eval(key, value, warn, crit, label, prev, out) -> str` — threshold state machine for one metric. Appends `(level, msg)` to `out` only on state transition (OK→WARN, WARN→CRIT, etc.). Returns the new level string. `crit=None` disables CRIT for that metric (power, RAM).
+- `check_thresholds(s, t, prev) -> (alerts, new_state)` — applies `_eval` across all GPU/CPU/RAM metrics in a `Sample`; returns transition alerts and the full updated state dict (including carried-forward unchanged keys).
+- `abort_bench(pid, abort_timeout, emit) -> None` — sends `SIGINT`; waits `abort_timeout` seconds polling `os.kill(pid, 0)`; sends `SIGTERM` if still alive. Handles `ProcessLookupError` and `PermissionError` gracefully.
+- `emit(msg, data=False)` (closure in `main()`) — writes plain text to log; in `--quiet` mode: data lines (`data=True`) go to log only, alert lines go to stderr.
+
+**Integration with `run.sh`:** `run.sh` backgrounds `bench.py`, captures its PID, starts `hwmonitor.py --pid <PID> --quiet --log output/hwmonitor-<ts>.log` in a second background process, waits for bench.py (preserving exit code), then kills/waits hwmonitor. Pass `--no-hwmonitor` to `run.sh` to skip.
+
 #### `parsing.py` — Edit Protocol Parser
 
 - `parse_file_blocks(text)` — regex over `BEGIN_FILE <path>\n…\nEND_FILE`; returns `list[FileEdit]`.
