@@ -157,13 +157,16 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 ```
 bench.py            CLI runner
 install.sh          Interactive dependency installer
-run.sh              Venv setup + bench.py wrapper; sources .gpu-mode and injects --single-gpu / CUDA_VISIBLE_DEVICES when single-GPU mode is active
+run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json)
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
 preflight.sh        Dependency checker
+hwmonitor/
+  hwmonitor.py      Live hardware watchdog: GPU temp/power/VRAM, CPU temp, RAM; WARN/CRIT on threshold breach; aborts bench.py on CRIT (SIGINT → SIGTERM)
+  SPEC.md           hwmonitor specification and threshold reference
 lib/
   tasks.py                Task definitions, prompt builder, subprocess helpers
   ollama_client.py        Ollama /api/chat client

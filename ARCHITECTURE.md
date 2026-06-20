@@ -25,7 +25,7 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 install.sh                Interactive installer: checks and installs missing dependencies
-run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode if present and injects --single-gpu / CUDA_VISIBLE_DEVICES
+run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip)
 gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU mode; writes .gpu-mode (gitignored)
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
@@ -48,6 +48,9 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
+hwmonitor/
+  hwmonitor.py            Standalone hardware watchdog: polls GPU (nvidia-smi), CPU (/sys/class/thermal), RAM (/proc/meminfo) at configurable interval; WARN/CRIT on threshold breach; on CRIT sends SIGINT → SIGTERM to bench.py; run.sh starts this automatically in --quiet mode (WARN/CRIT to stderr, data to log only)
+  SPEC.md                 hwmonitor specification, threshold reference, CLI flags, integration notes
   history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
   statistics.py           Dataset builder: default mode (one row per model/backend), --summary (context speed profile: pass% + tok/s per context size with TRUNC/SKIP/FAIL codes and auto-dropped ctx_256k column), --detail (one row per task); --sort-by COLUMN [asc|desc] with run_date desc default; HF scout enrichment (hf_downloads, hf_gguf_gb) cross-referenced from hf-scout-state.json; new summary fields: slow, skipped_vram, skipped_ctx
   compare_results.py      Merges two result JSONs and prints speed summary + full task comparison table
