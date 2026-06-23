@@ -10,7 +10,7 @@ Benchmarks local Ollama-served LLMs on coding tasks. Each model is given a broke
 - [Ollama](https://ollama.com) running locally (`ollama serve`)
 - Python 3.12+
 - Node.js 20+
-- .NET 8 SDK
+- .NET 9 SDK
 - The models you want to test pulled (`ollama pull <model>`)
 
 Run the interactive installer to set up any missing dependencies:
@@ -59,7 +59,7 @@ Example output:
   ✓  npm 10.8.2
 
 ── .NET ──
-  ✓  dotnet 8.0.126
+  ✓  dotnet 9.0.17
 
   PASS: 13   FAIL: 0   WARN: 1
   Preflight OK — ready to run ./compare.sh
@@ -164,6 +164,10 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | deepseek-r1:32b | 18/19 coding | 31 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval NO_BLOCKS (reasoning spiral — confirmed capability gap, not token budget) |
 | qwen3.6:27b | **31/33** | 37 | Dense 27B; Skill L5; **19/19 coding PERFECT** (llama-server 36.6 tok/s, f16 KV required); 4/4 L6 stepped PASS (incl. step 3); context_128k PASS 3.3 tok/s (ollama); node_paratrooper FAIL (8k budget); context_256k SKIP — **promoted to default.txt 2026-05-27** |
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
+| qwen2.5-coder:32b-q4 | **19/19 coding** | 40 | Dense 32B Q4_K_M (~18.5 GB), RTX 4090 single-GPU (2026-06-21); passes python_hashmap (q8_0 KV fine for 32B); max_ctx=32768; context tasks need 2×24 GB; added to 24gb.txt |
+| glm4.7-flash | 17/19 coding | 112 | MXFP4 MoE ~16 GB, RTX 4090 single-GPU (2026-06-22); Skill L4; fails python_hashmap + python_dijkstra (both L5, capability gap); added to 24gb.txt |
+| qwen3-next:80b | 9/10 subset | 76 | noctrex MXFP4 MoE 80B/A3B, ~41 GB, 2×24 GB tensor_split (2026-06-22); Skill L5; fails node_para_core (L3 game logic, consistent); passes python_hashmap |
+| north-mini-code | 6/10 subset | 141 | Cohere 30B MoE 3B active Q4_K_M, RTX 4090 single-GPU (2026-06-22); passes python_hashmap (L5); format non-compliant on complex tasks — agentic training preamble exhausts budget before BEGIN_FILE |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
 

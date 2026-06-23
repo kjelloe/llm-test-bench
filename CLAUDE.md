@@ -121,6 +121,30 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   CPU-bound on 24 GB VRAM; 109 GB weights live in RAM. Quality is high (19/24) but throughput
   is impractical. csv_nordic_property times out (model_timeout=600s at 3.3 tok/s ≈ 2000 max
   tokens). context_128k passes SLOW (1216s). Needs 64 GB+ VRAM to be GPU-resident and fast.
+  **glm4.7-flash** (Zhipu AI / noctrex, MXFP4 MOE, ~16 GB, single RTX 4090): 17/19 coding
+  at 112 tok/s (2026-06-22). Skill L4 — fails python_hashmap + python_dijkstra (both L5,
+  wrong output, capability gap). All other L1-L4 tasks PASS. Added to models/24gb.txt as the
+  fastest single-24GB model after the 30-35B MoE cluster. No format compliance issues.
+  **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
+  6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
+  generates verbose prose/markdown preamble before code, exhausting the 8000-token budget
+  before BEGIN_FILE on csv_nordic_property, python_tokenizer, and node_para_core (NO_BLOCKS).
+  Token efficiency: 46.3k generated for 6 passes = 0.130 p/k (worst seen). Passes
+  python_hashmap (L5) on tasks where format compliance holds. distractor_notes
+  TESTS_STILL_FAIL (retrieves wrong value). Do not benchmark further without format fix.
+  **qwen3-next:80b** (noctrex, 80B total / A3B active, MXFP4 MOE, 3-part ~41 GB):
+  9/10 at 76 tok/s on 2×24 GB tensor_split (2026-06-22, confirmed ×2). Fails node_para_core
+  (L3 game physics — consistent across both runs; abliteration may affect complex reasoning).
+  Passes python_hashmap (L5), csv_nordic_property, python_tokenizer. Skill L5. Requires
+  `./gpu-mode.sh multi` and `--model-timeout 1200`. Abliterated = uncensored.
+  **dotnet_sas net8→net9 fix (2026-06-21)**: both csproj files targeted `net8.0` but host
+  has .NET 9.0.17 — all prior dotnet_sas failures across all models were false negatives.
+  Fixed to `net9.0`; preflight.sh updated to require `.NET 9+`. Any model result predating
+  this fix that shows a dotnet_sas failure should be treated as a false negative.
+  **MoE weight quantization experiment (2026-06-22)**: qwen3.5:35b Q6_K vs Q4_K_M — same
+  failures (python_hashmap + python_tokenizer TESTS_STILL_FAIL), 36% slower (94.5 vs ~147
+  tok/s), requires dual GPU. Q4→Q6 weight precision changes nothing for MoE models; failures
+  are capability/reasoning gaps, not quantization artifacts. Do not repeat for other MoE models.
 - Always include the full contents of relevant files in prompts to prevent hallucinated file structure.
 - **`python_hashmap` is a precision canary**: this L5 task is acutely sensitive to KV cache and
   quantization precision. With q8_0 KV or GPTQ INT4 (C4 calibration), models omit `_EMPTY = None`
@@ -129,11 +153,14 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   the same model passes cleanly. Use `cache_type_k=f16,cache_type_v=f16` for any 27B dense model
   whose python_hashmap fails with q8_0 KV. Do not change the task stub to paper over this.
   This precision sensitivity is specific to 27B dense models (qwen3.6:27b confirmed). Dense 32B
-  Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18). Also a
-  capability discriminator: some models fail due to wrong tombstone logic regardless of
-  quantization (noctrex-qwen3-coder:30b TESTS_STILL_FAIL, qwen2.5-r1:32b TESTS_STILL_FAIL),
-  and thinking models exhaust their budget in reasoning before emitting code (mellum2:12b-thinking,
-  qwq:32b, gpt-oss:20b on this task).
+  Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18). MoE models:
+  Q4_K_M vs Q6_K confirmed identical scores for qwen3.5:35b (2026-06-22) — MoE weight
+  quantization does not affect task outcomes; do not use higher MoE quant to fix failures.
+  Also a capability discriminator: some models fail due to wrong tombstone logic regardless of
+  quantization (noctrex-qwen3-coder:30b TESTS_STILL_FAIL, qwen2.5-r1:32b TESTS_STILL_FAIL,
+  glm4.7-flash TESTS_STILL_FAIL, north-mini-code PASS), and thinking models exhaust their
+  budget in reasoning before emitting code (mellum2:12b-thinking, qwq:32b, gpt-oss:20b on
+  this task).
 
 #### Edit Protocol Enforcement
 
