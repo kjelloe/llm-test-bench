@@ -133,8 +133,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   python_hashmap (L5) on tasks where format compliance holds. distractor_notes
   TESTS_STILL_FAIL (retrieves wrong value). Do not benchmark further without format fix.
   **qwen3-next:80b** (noctrex, 80B total / A3B active, MXFP4 MOE, 3-part ~41 GB):
-  9/10 at 76 tok/s on 2×24 GB tensor_split (2026-06-22, confirmed ×2). Fails node_para_core
-  (L3 game physics — consistent across both runs; abliteration may affect complex reasoning).
+  9/10 at 109.6 tok/s avg on 2×24 GB tensor_split (2026-06-24, corrected full 10-task run).
+  Speed profile: ~115 tok/s at ctx=8192/16384; drops to ~88 tok/s at ctx=32768 (retrieval tasks).
+  Prior 76 tok/s (2026-06-22) was thermally throttled — 3090 junction reached 98°C (~33% reduction).
+  Fails node_para_core (L3 game physics — consistent across all runs; abliteration may affect complex reasoning).
   Passes python_hashmap (L5), csv_nordic_property, python_tokenizer. Skill L5. Requires
   `./gpu-mode.sh multi` and `--model-timeout 1200`. Abliterated = uncensored.
   **dotnet_sas net8→net9 fix (2026-06-21)**: both csproj files targeted `net8.0` but host

@@ -73,7 +73,7 @@ class Thresholds:
     crit_junction:  float = 100.0
     warn_cpu_temp:  float = 85.0
     crit_cpu_temp:  float = 95.0
-    warn_power_pct: float = 95.0
+    warn_power_pct: float = 98.0
     warn_ram_pct:   float = 90.0
 
 # ── GPU collection ────────────────────────────────────────────────────────────

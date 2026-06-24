@@ -6,6 +6,7 @@
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
+# quest:35b            # ~160 tok/s  GPU only (RL MXFP4 MOE, ~19 GB); 16/19 coding; Skill L6
 # noctrex-qwen3.6:35b  # ~118 tok/s  GPU only (MoE+MXFP4); 31/33 BEST — perfect coding 19/19; requires Ampere+
 # gpt-oss:20b          # ~197 tok/s  GPU only
 # qwen3-coder:30b      # ~160 tok/s  GPU only (MoE, fits in 24 GB)
@@ -19,10 +20,16 @@
 # speeds measured on RTX 3090 24 GB (2026-05-22, llama-server backend, 33-task run)
 # qwen2.5-coder:32b-q4 confirmed RTX 4090 single GPU (2026-06-18)
 # glm4.7-flash confirmed RTX 4090 single GPU (2026-06-22)
+# quest:35b confirmed RTX 4090 single GPU (2026-06-24)
 
 # GPU-only — fit fully in 24 GB VRAM
 # Run WITHOUT spec flags (--spec-type draft-mtp) — spec decoding breaks temp=0 determinism
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
+# quest:35b: RL-trained MXFP4 MOE (~19.3 GB); 16/19 coding at 160 tok/s on RTX 4090 (2026-06-24).
+# Skill L6 — passes both L5 tasks (python_hashmap + python_dijkstra) and L6 node_para_combat.
+# Faster than qwen3.6:35b (~160 vs ~128 tok/s). 3 failures: node_csv_parser (quoted-comma),
+# python_multifile_rename (L2, unexpected gap), node_paratrooper (L6). 4090 power spikes to TDP on long tasks.
+quest:35b  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/QUEST-35B-RL-MXFP4_MOE-GGUF
 gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/gpt-oss-20b-GGUF
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+_RUN_START=$(date +%s)
 echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"
 
 VENV=".venv"
@@ -72,5 +73,8 @@ if [[ -n "$_HW_PID" ]]; then
     wait "$_HW_PID" 2>/dev/null || true
     echo "[hwmonitor] stopped"
 fi
+
+_ELAPSED=$(( $(date +%s) - _RUN_START ))
+printf "Total runtime: %02d:%02d:%02d\n" $((_ELAPSED/3600)) $(((_ELAPSED%3600)/60)) $((_ELAPSED%60))
 
 exit "$_BENCH_EXIT"

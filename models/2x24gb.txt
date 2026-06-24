@@ -40,6 +40,9 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # devstral-small-2: dense 24B (~15 GB); 22/24 confirmed single 3090 24 GB at ~42 tok/s
 devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256  hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
 # qwen3.6:27b: dense 27B Q4_K_M (~17 GB); 31/33 BEST confirmed single 3090 at 36.6 tok/s.
+#   CONFIRMED 2026-06-24 dual GPU (2×24 GB): 10/10 at 41.5 tok/s — perfect score including
+#   python_hashmap (L5) and node_para_core (L3 game physics, passes unlike most 35B+ models).
+#   3090 power WARNs (333-344W/350W) are normal for dense tensor-split — no thermal impact.
 #   Ties noctrex-qwen3.6:35b at 31/33; no MXFP4 hardware requirement.
 #   f16 KV REQUIRED — q8_0 KV causes python_hashmap FAIL (_EMPTY omission at precision boundary).
 #   context_128k SLOW on single 24 GB (KV spill); on 48 GB full KV fits at clean speed.
@@ -82,6 +85,19 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q5_K_M.gguf  ngl=999,no_mmap,tenso
 # never emits BEGIN_FILE. Confirmed at both 8000 and 16000 num_predict (same wall time, 211s).
 # Structural capability gap on these tasks, not a budget issue.
 qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
+
+# ── 80B MXFP4 MoE — requires 2×24 GB ────────────────────────────────────────────
+# qwen3-next:80b: noctrex, 3-part ~41 GB; CONFIRMED 2026-06-24 (10-task, post-thermal-fix):
+# 9/10 at 109.6 tok/s avg (115 tok/s coding/16k; 88 tok/s at 32k retrieval tasks).
+# Fails node_para_core (L3 game physics — consistent, abliteration suspected).
+# Passes python_hashmap (L5), csv_nordic_property, node_csv_parser. Skill L5. Abliterated = uncensored.
+qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-GGUF  # 3-part model
+
+# ── MXFP4 MoE — single GPU but benefits from KV split on 2×24 GB ─────────────────
+# quest:35b: RL-trained MXFP4 MoE (~19.3 GB); CONFIRMED 2026-06-24: 16/19 coding at 160 tok/s.
+# Skill L6; passes both L5 tasks + node_para_combat (L6). Also in models/24gb.txt (single GPU).
+# 3 failures: node_csv_parser (quoted-comma), python_multifile_rename (L2), node_paratrooper (L6).
+quest:35b  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/QUEST-35B-RL-MXFP4_MOE-GGUF
 
 # ── 70B model ────────────────────────────────────────────────────────────────────
 # llama3.3:70b: Q4_K_S (~37 GB); confirmed 5/7 at 19.8 tok/s on RTX 4090+3090 (2026-06-14).
