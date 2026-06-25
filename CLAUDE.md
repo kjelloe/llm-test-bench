@@ -133,12 +133,17 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   python_hashmap (L5) on tasks where format compliance holds. distractor_notes
   TESTS_STILL_FAIL (retrieves wrong value). Do not benchmark further without format fix.
   **qwen3-next:80b** (noctrex, 80B total / A3B active, MXFP4 MOE, 3-part ~41 GB):
-  9/10 at 109.6 tok/s avg on 2×24 GB tensor_split (2026-06-24, corrected full 10-task run).
-  Speed profile: ~115 tok/s at ctx=8192/16384; drops to ~88 tok/s at ctx=32768 (retrieval tasks).
-  Prior 76 tok/s (2026-06-22) was thermally throttled — 3090 junction reached 98°C (~33% reduction).
-  Fails node_para_core (L3 game physics — consistent across all runs; abliteration may affect complex reasoning).
-  Passes python_hashmap (L5), csv_nordic_property, python_tokenizer. Skill L5. Requires
-  `./gpu-mode.sh multi` and `--model-timeout 1200`. Abliterated = uncensored.
+  29/32 eligible at 109.3 tok/s avg on 2×24 GB tensor_split (2026-06-24, full 33-task compare).
+  Speed: ~115 tok/s coding/16k, ~88 tok/s at 32k, ~26 tok/s at 128k.
+  Fails node_para_core (L3), node_para_entities (L5), node_paratrooper (L6). Skill L2.
+  context_256k OOM: ~41 GB weights leave insufficient KV headroom for ctx=262144 on 48 GB total;
+  `cudaMalloc failed: out of memory` allocating 3072 MiB on device 0. Use `max_ctx=131072` in model
+  config — bench.py emits SKIPPED_CTX instead of crashing. Already set in 2x24gb.txt and candidates.txt.
+  Requires `./gpu-mode.sh multi` and `--model-timeout 1200`. Abliterated = uncensored.
+  **2×24 GB compare (2026-06-24)**: qwen3.6:27b and noctrex-qwen3.6:35b both scored 32/33 at
+  40.2 and 121 tok/s respectively — the only failure is node_paratrooper (L6 full from-scratch,
+  universal wall). quest:35b scored 29/33 at 131.8 tok/s but Skill L1 due to python_multifile_rename
+  (L2) failure. context_256k: qwen3.6:27b 26 tok/s, noctrex 75 tok/s, quest:35b 73 tok/s.
   **dotnet_sas net8→net9 fix (2026-06-21)**: both csproj files targeted `net8.0` but host
   has .NET 9.0.17 — all prior dotnet_sas failures across all models were false negatives.
   Fixed to `net9.0`; preflight.sh updated to require `.NET 9+`. Any model result predating

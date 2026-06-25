@@ -6,19 +6,28 @@ benchmark process when a critical thermal or resource threshold is breached.
 
 ## Quick start
 
-```bash
-# Terminal 1 — start the monitor before the benchmark
-./hwmonitor/hwmonitor.py
+`run.sh` starts hwmonitor automatically alongside every benchmark run — no separate terminal needed:
 
-# Terminal 2 — run the benchmark normally
+```bash
 ./run.sh --model-file models/candidates.txt ...
+# [hwmonitor] started — log: output/hwmonitor-20260624-204415.log
+# WARN/CRIT appear on stderr; data goes to the log file only
 ```
 
-The monitor auto-detects a running `bench.py` process on first CRIT. To pin the PID
-explicitly (avoids a brief detection gap):
+Pass `--no-hwmonitor` to skip it for quick interactive runs:
 
 ```bash
-./run.sh ... & ./hwmonitor/hwmonitor.py --pid $!
+./run.sh --no-hwmonitor --models qwen3:14b --tasks python_safe_div
+```
+
+To run standalone in a second terminal with custom thresholds:
+
+```bash
+# Terminal 1
+./hwmonitor/hwmonitor.py --warn-junction 88 --crit-junction 98
+
+# Terminal 2
+./run.sh --no-hwmonitor --model-file models/candidates.txt ...
 ```
 
 ## Output format
@@ -55,7 +64,7 @@ do not re-send signals to an already-aborted process.
 | GPU core temp | 85°C | 95°C |
 | GPU junction/hotspot | 90°C | 100°C |
 | CPU package temp | 85°C | 95°C |
-| GPU power (% of limit) | 95% | — |
+| GPU power (% of limit) | 98% | — |
 | RAM used | 90% | — |
 
 All overridable via CLI flags.
@@ -73,7 +82,7 @@ All overridable via CLI flags.
 --crit-junction C     GPU junction crit threshold (default: 100)
 --warn-cpu-temp C     CPU warn threshold (default: 85)
 --crit-cpu-temp C     CPU crit threshold (default: 95)
---warn-power-pct PCT  GPU power-vs-limit warn threshold (default: 95)
+--warn-power-pct PCT  GPU power-vs-limit warn threshold (default: 98)
 --warn-ram-pct PCT    RAM usage warn threshold (default: 90)
 ```
 
@@ -94,10 +103,9 @@ All overridable via CLI flags.
 - `nvidia-smi` — already required by the project
 - Python 3.12 stdlib only — no additional packages beyond what the project already uses
 
-## Integration path (future)
+## Integration with run.sh
 
-bench.py will gain an `--hwmonitor` flag that spawns `hwmonitor.py` automatically and
-passes `--pid $$`. No changes to the standalone script are needed for that integration.
+`run.sh` backgrounds `bench.py`, captures its PID, then starts `hwmonitor.py --pid <PID> --quiet --log output/hwmonitor-<ts>.log` in a second background process. It waits for bench.py to complete (preserving its exit code), then kills/waits hwmonitor and prints total elapsed runtime (`HH:MM:SS`). Pass `--no-hwmonitor` to skip the watchdog entirely.
 
 ## Known limitations
 

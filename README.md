@@ -166,8 +166,10 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
 | qwen2.5-coder:32b-q4 | **19/19 coding** | 40 | Dense 32B Q4_K_M (~18.5 GB), RTX 4090 single-GPU (2026-06-21); passes python_hashmap (q8_0 KV fine for 32B); max_ctx=32768; context tasks need 2×24 GB; added to 24gb.txt |
 | glm4.7-flash | 17/19 coding | 112 | MXFP4 MoE ~16 GB, RTX 4090 single-GPU (2026-06-22); Skill L4; fails python_hashmap + python_dijkstra (both L5, capability gap); added to 24gb.txt |
-| qwen3-next:80b | 9/10 subset | 76 | noctrex MXFP4 MoE 80B/A3B, ~41 GB, 2×24 GB tensor_split (2026-06-22); Skill L5; fails node_para_core (L3 game logic, consistent); passes python_hashmap |
+| qwen3-next:80b | 9/10 subset | 109.6 avg | noctrex MXFP4 MoE 80B/A3B, ~41 GB, 2×24 GB tensor_split (corrected 2026-06-24; prior 76 tok/s was 3090 thermal throttle); ~115 tok/s coding/16k ctx, ~88 tok/s at 32k; Skill L5; fails node_para_core (consistent); passes python_hashmap (L5) |
 | north-mini-code | 6/10 subset | 141 | Cohere 30B MoE 3B active Q4_K_M, RTX 4090 single-GPU (2026-06-22); passes python_hashmap (L5); format non-compliant on complex tasks — agentic training preamble exhausts budget before BEGIN_FILE |
+| quest:35b | 16/19 coding | 160 | noctrex RL-trained MXFP4 MoE ~19 GB, RTX 4090 single-GPU (2026-06-24); Skill L6; passes both L5 tasks + node_para_combat (L6); fails node_csv_parser (quoted-comma), python_multifile_rename (L2), node_paratrooper; added to 24gb.txt |
+| qwen3.6:27b (dual GPU) | 10/10 subset | 41.5 | Dense 27B Q4_K_M, 2×24 GB (2026-06-24); perfect score including node_para_core (L3) + python_hashmap (L5); f16 KV required; 3090 runs at near-TDP during dense tensor-split (normal — no thermal issues) |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
 
@@ -614,6 +616,8 @@ CRIT      14:32:05  GPU1[3090] junction temp °C 101 ≥ 100 — aborting bench.
 
 Data lines go to the log file only; WARN/CRIT/OK appear on stderr so they interleave naturally with bench.py progress output.
 
+At the end of each run, `run.sh` prints the total elapsed wall time in `HH:MM:SS` format — useful for comparing run durations without a separate `time` command.
+
 **Skip the watchdog for quick single-task runs:**
 
 ```bash
@@ -637,7 +641,7 @@ Data lines go to the log file only; WARN/CRIT/OK appear on stderr so they interl
 | GPU core temp | 85 °C | 95 °C |
 | GPU junction/hotspot | 90 °C | 100 °C |
 | CPU package temp | 85 °C | 95 °C |
-| GPU power (% of limit) | 95 % | — |
+| GPU power (% of limit) | 98 % | — |
 | RAM used | 90 % | — |
 
 **Log file location:** `output/hwmonitor-<YYYYMMDD-HHMMSS>.log` — one file per run, written automatically.
