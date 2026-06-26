@@ -674,6 +674,8 @@ The `hf:` field is position-independent (may appear anywhere after the ollama na
 | `32gb.txt` | Models requiring ~32 GB VRAM (e.g. 32B Q4_K_M + KV headroom) |
 | `16gb.txt` | Models that fit on a 16 GB card |
 | `2x24gb.txt` | Models for dual 24 GB GPUs (48 GB total); includes tensor_split=1|1 entries; use `gpu-mode.sh single` for models that fit in 24 GB |
+| `3x24gb.txt` | Models for 3× 24 GB GPUs (72 GB total, PCIe); tensor_split=1|1|1; gpt-oss:120b and llama4-scout:17b GPU-resident at this tier |
+| `4x24gb.txt` | Models for 4× 24 GB GPUs (96 GB total, PCIe); tensor_split=1|1|1|1; qwen3-next:80b context_256k architecture test; dense 32B at max_ctx=262144 |
 | `2x32gb.txt` | Models needing dual 32 GB GPUs |
 
 `.vllm` files mirror the GPU-tier `.txt` files but carry vLLM-specific params (`tp`, `enforce_eager`, `gpu_mem_util`):
