@@ -12,7 +12,7 @@ Usage:
                             [--warn-gpu-temp 85] [--crit-gpu-temp 95]
                             [--warn-junction 90]  [--crit-junction 100]
                             [--warn-cpu-temp 85]  [--crit-cpu-temp 95]
-                            [--warn-power-pct 95] [--warn-ram-pct 90]
+                            [--warn-power-pct 98] [--warn-ram-pct 90]
                             [--abort-timeout 3]
 """
 from __future__ import annotations
@@ -356,7 +356,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--crit-junction",  type=float, default=100.0, metavar="C")
     p.add_argument("--warn-cpu-temp",  type=float, default=85.0, metavar="C")
     p.add_argument("--crit-cpu-temp",  type=float, default=95.0, metavar="C")
-    p.add_argument("--warn-power-pct", type=float, default=95.0, metavar="PCT")
+    p.add_argument("--warn-power-pct", type=float, default=98.0, metavar="PCT")
     p.add_argument("--warn-ram-pct",   type=float, default=90.0, metavar="PCT")
     return p.parse_args()
 

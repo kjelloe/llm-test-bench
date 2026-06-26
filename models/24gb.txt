@@ -12,7 +12,7 @@
 # qwen3-coder:30b      # ~160 tok/s  GPU only (MoE, fits in 24 GB)
 # qwen3.5:35b          # ~147 tok/s  GPU only (MoE, fits in 24 GB), thinking
 # gemma4:26b           # ~114 tok/s  GPU only (MoE, fits in 24 GB)
-# glm4.7-flash         # ~112 tok/s  GPU only (MoE+MXFP4, ~16 GB); 17/19 coding; Skill L4
+# glm4.7-flash         # ~111 tok/s  GPU only (MoE+MXFP4, ~16 GB); 29/33 full; passes L4+L6 stepped
 # qwen2.5-coder:14b    #  ~68 tok/s  GPU only
 # devstral-small-2     #  ~42 tok/s  GPU only (dense 24B); ~17 tok/s with ollama backend
 # qwen2.5-coder:32b-q4 # ~40 tok/s  GPU only (dense 32B Q4_K_M); coding only (context tasks need 2×24 GB)
@@ -34,9 +34,13 @@ gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_typ
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
-# glm4.7-flash: MXFP4 MOE (~16 GB); 17/19 coding at 112 tok/s on RTX 4090 (2026-06-22).
-# Skill L4 — fails python_hashmap + python_dijkstra (both L5 capability gaps, not precision).
-# Fastest single-24GB model per token after the 30-35B MoE cluster.
+# glm4.7-flash: MXFP4 MOE (~16 GB); CONFIRMED 2026-06-26 full 33-task run: 29/33, 110.9 tok/s avg.
+# Passes ALL L1–L4 tasks. Fails python_dijkstra (L5), python_hashmap (L5), node_paratrooper (L6 from-scratch), context_256k (capability gap — wrong answer after 476s, not OOM).
+# SURPRISING: passes node_para_entities (L5) and node_para_combat (L6) — full stepped chain through L6.
+# Context: 8k–128k all pass; 64k at 73.6 tok/s, 128k at 63.3 tok/s, 256k fails with wrong retrieval.
+# Effective Skill L4 (context_256k failure is a capability gap, not a hardware limit — on real 16 GB card it would be CTX_TRUNCATED instead).
+# NOTE: ~16 GB model needs 24 GB to run usefully — minimal KV headroom on 16 GB GPU.
+# NOTE: Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without tensor_split — use gpu-mode.sh single for clean single-GPU benchmarks.
 glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,n_cpu_moe=35,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model

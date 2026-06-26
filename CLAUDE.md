@@ -92,12 +92,19 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   devstral-small-2 (24B dense) similarly spills at ~5.2 tok/s (819s) at ctx=131072 on 24GB
   — wall_time_budget_s=300 flags it as PASS_BUT_SLOW. Speed on llama-server: ~45 tok/s
   (2.6× faster than ollama's ~17 tok/s for the same model at normal context sizes).
-  qwen2.5-coder:32b Q4_K_M (~18.5 GB weights) leaves ~5 GB for KV on 24 GB — ctx=32768
-  causes TOOL_ERROR at the default 300s timeout; at compare.sh's 1200s timeout coding tasks
-  pass cleanly at ~40 tok/s on RTX 4090 (2026-06-18 confirmed, 9/10 on 10-task coding subset,
-  fails node_para_core L3 logic gap same as Q5_K_M). Passes python_hashmap with q8_0 KV —
-  the _EMPTY precision issue is specific to 27B dense models, not 32B. Large-context tasks
-  require 2×24 GB; use max_ctx=32768 in single-GPU configs. Added to models/24gb.txt.
+  qwen2.5-coder:32b Q4_K_M (~18.5 GB weights): CONFIRMED 2026-06-26 full 33-task on 2×24 GB:
+  28/33 at 36.5 tok/s, Skill L2. CODING PERFECT (19/19) — the strongest coder tested; passes
+  csv_nordic_property, node_csv_parser, and python_expr_eval (deepseek-r1:32b loops on expr_eval
+  indefinitely; this model solves it cleanly). Passes node_para_turret (L4), node_para_entities (L5),
+  node_para_combat (L6), multihop+distractor (3/3). FAILS: node_para_core (L3 game logic gap —
+  same failure as qwen3-next:80b, quest:35b, Q5_K_M variant), node_paratrooper (L6 universal wall).
+  CONTEXT CEILING: server silently caps at ctx=32768 on 2×24 GB despite max_ctx=131072 config.
+  KV math predicts 65536 should fit (4 GB/GPU at q8_0 + 9.25 GB/GPU weights = 13.25 GB < 24 GB),
+  but server internally caps at 32768 (same behavior as single-GPU). Root cause unknown — likely
+  CUDA overhead or flash_attn workspace allocation. max_ctx=32768 set in 2x24gb.txt to match reality.
+  context_64k/128k → CTX_TRUNCATED; context_256k → SKIPPED_CTX (max_ctx=131072 arch limit).
+  Passes python_hashmap with q8_0 KV — the _EMPTY precision issue is specific to 27B dense models, not 32B.
+  Added to models/24gb.txt (single-GPU coding tasks only) and models/2x24gb.txt (full run).
   deepseek-r1:32b Q4_K_M (~20 GB): with max_ctx=32768 scores 23/29 (26 eligible) at ~29 tok/s
   (2026-05-22). 18/19 coding at 31.4 tok/s (2026-05-24 coding run, corrected flags) —
   python_expr_eval is a structural capability gap: model enters an infinite reasoning spiral
@@ -112,6 +119,18 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   codestral:22b (dense 22B, ~14 GB): ~50 tok/s, 15/24. Hard architecture limit of 32k
   tokens (Codestral v0.1) — CTX_TRUNCATED on context_64k, context_128k, multihop, and
   distractor tasks. No workaround; limit is baked into the weights.
+  **mellum2:12b-thinking** (JetBrains, MXFP4 MoE A2.5B active, ~6.5 GB, single RTX 4090):
+  CONFIRMED 2026-06-26 full 33-task: 20/33 at 254.1 tok/s; Skill L1. Fastest model benchmarked.
+  Context ceiling max_ctx=32768 — SKIPPED_CTX at 64k+ on real 8 GB hardware.
+  Coding (13/19): passes node_csv_parser (L3), python_expr_eval (L4), python_tokenizer (L4).
+  Fails: csv_nordic_property (L3), node_slugify (L2 — caps Skill at L1), python_multifile_rename (L2),
+  node_debounce (L3), python_dijkstra (L5), python_hashmap (L5 NO_BLOCKS TRUNCATED).
+  Para: passes node_para_core (L3) + node_para_turret (L4 TRUNCATED); fails node_para_entities (L5),
+  node_para_combat (L6). SURPRISE: node_para_core PASSES where qwen2.5-coder:32b-q4 FAILS.
+  node_csv_parser PASSES where qwen3-next:80b and quest:35b fail.
+  python_hashmap is a hard ceiling for thinking models — 12000-token budget entirely consumed
+  by reasoning; 12000 tokens of <think> with no BEGIN_FILE emitted. Not fixable by increasing budget.
+  Multihop: passes forward + distractor; fails reverse. Requires Ampere+ (MXFP4).
   phi4-reasoning-plus:14b (thinking, ~9 GB): ~58 tok/s but INCOMPATIBLE with this benchmark.
   Loops in a reasoning planning phase ("I'll produce the file content with the modifications"
   repeated indefinitely) and never emits BEGIN_FILE regardless of num_predict — confirmed at
@@ -122,9 +141,14 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   is impractical. csv_nordic_property times out (model_timeout=600s at 3.3 tok/s ≈ 2000 max
   tokens). context_128k passes SLOW (1216s). Needs 64 GB+ VRAM to be GPU-resident and fast.
   **glm4.7-flash** (Zhipu AI / noctrex, MXFP4 MOE, ~16 GB, single RTX 4090): 17/19 coding
-  at 112 tok/s (2026-06-22). Skill L4 — fails python_hashmap + python_dijkstra (both L5,
-  wrong output, capability gap). All other L1-L4 tasks PASS. Added to models/24gb.txt as the
-  fastest single-24GB model after the 30-35B MoE cluster. No format compliance issues.
+  at 112 tok/s (2026-06-22). CONFIRMED 2026-06-26 full 33-task run: 29/33 at 110.9 tok/s avg.
+  Effective Skill L4. Fails python_hashmap (L5), python_dijkstra (L5), node_paratrooper (L6
+  from-scratch), context_256k (capability gap — wrong answer after 476s at 45 tok/s, not OOM).
+  SURPRISE: passes node_para_entities (L5) and node_para_combat (L6) — full stepped chain through L6.
+  Context: passes 8k–128k cleanly (128k at 63.3 tok/s); 256k capability failure.
+  NOTE: ~16 GB model requires 24 GB VRAM to run with useful context — minimal KV headroom on 16 GB GPU.
+  Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without
+  tensor_split; use `./gpu-mode.sh single` for clean single-GPU benchmarks. Added to models/24gb.txt.
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
   generates verbose prose/markdown preamble before code, exhausting the 8000-token budget

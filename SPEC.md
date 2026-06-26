@@ -80,7 +80,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - GPU junction/hotspot temp probed at startup via `nvidia-smi --query-gpu=temperature.gpu.hotspot`; if driver too old, falls back to core temp with a startup notice.
 - Output streams: `--quiet` routes data lines to log file only; WARN/CRIT/OK go to stderr; startup header to stderr. Without `--quiet`, all output goes to stdout.
 - Log written to `output/hwmonitor-<timestamp>.log` (path overridable with `--log`).
-- Default thresholds: GPU core 85°C WARN / 95°C CRIT; GPU junction 90°C WARN / 100°C CRIT; CPU 85°C WARN / 95°C CRIT; GPU power ≥95% of limit WARN; RAM ≥90% WARN.
+- Default thresholds: GPU core 85°C WARN / 95°C CRIT; GPU junction 90°C WARN / 100°C CRIT; CPU 85°C WARN / 95°C CRIT; GPU power ≥98% of limit WARN; RAM ≥90% WARN.
 - CPU temp returns `N/A` on WSL2 (no kernel sensor access).
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 

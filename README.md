@@ -135,41 +135,45 @@ The header printed before each run shows estimated runtime from the previous run
 
 ## Benchmark results
 
-All results use the **llama-server backend**, RTX 3090 24 GB, AMD Ryzen 7 9800X3D, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
+All results use the **llama-server backend**, RTX 4090 24 GB + RTX 3090 24 GB, AMD Ryzen 9 9900X, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
 
-### Default set — 33 tasks (2026-05-25; llama-server, RTX 3090 24 GB, 8 models × 33 tasks)
+### Default set — 33 tasks (2026-06-24; llama-server, 2×24 GB, 4 models × 33 tasks)
 
 | Model | Pass | Avg tok/s | Skill | Notes |
 |---|---|---|---|---|
-| noctrex-qwen3.6:35b | **31/33** | 119 | L5 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper + context_256k FAIL |
-| gpt-oss:120b | **31/33** | 16 | L5 | RAM-bound (~1 tok/s coding); csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
-| qwen3-coder:30b-1m | 30/33 | 150 | L4 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.3 tok/s (KV spill drags avg); node_para_entities + node_paratrooper FAIL |
-| qwen3.5:35b | 30/33 | 135 | L2 | MoE 35B/3B active; python_hashmap + csv_nordic_property + node_paratrooper FAIL; all 4 L6 stepped PASS |
-| gemma4:26b | 29/33 | 105 | L2 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
-| devstral-small-2 | 29/33 | 40 | L1 | Dense 24B; node_slugify + node_para_entities + node_paratrooper FAIL |
-| qwen2.5-coder:14b | 23/33 | 64 | L2 | Dense 14B; csv_nordic_property + node_csv_parser + python_tokenizer + L6 FAIL |
-| gpt-oss:20b | **22/33** | 181 | **<L1** | Semi-thinking regression: verbose reasoning exhausts 8k budget before BEGIN_FILE on L4/L5 tasks; NO_BLOCKS on python_minheap/dijkstra/hashmap/tokenizer/para_combat; context_64k retrieval bug; non-deterministic between runs |
+| noctrex-qwen3.6:35b | **32/33** | 121 | L5 | MXFP4 MoE; 19/19 coding PERFECT; context_128k PASS 89 tok/s; node_paratrooper FAIL (universal wall) |
+| qwen3.6:27b | **32/33** | 40 | L5 | Dense 27B Q4_K_M; f16 KV required; 19/19 coding PERFECT; context_128k PASS; node_paratrooper FAIL |
+| quest:35b | 29/33 | 132 | L1 | noctrex RL-trained MXFP4 MoE; python_multifile_rename (L2) caps skill; passes both L5 + node_para_combat (L6) |
+| qwen3-next:80b | 29/33 | 109 | L2 | noctrex MXFP4 MoE 80B/A3B; ~115 tok/s at 16k ctx; fails node_para_core/entities; context_256k OOM |
 
 node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficient for the 40-test game (needs 24000). All models fail it at 8000 tokens; this is a budget constraint, not a capability ceiling. MoE models maintain high tok/s at large contexts due to minimal KV overhead; dense models spill at 128k.
 
-**Added 2026-05-27:** `qwen3.6:27b` (dense 27B, bartowski Q4_K_M, llama-server, f16 KV) — 31/33, 37 tok/s, Skill L5; 19/19 coding PERFECT; not yet in a full compare.sh run. See experimental table below.
+### Earlier default-set run — 33 tasks (2026-05-25; llama-server, RTX 3090 24 GB, 8 models)
 
-### Experimental models (llama-server, RTX 3090 24 GB)
+| Model | Pass | Avg tok/s | Skill | Notes |
+|---|---|---|---|---|
+| gpt-oss:120b | **31/33** | 16 | L5 | RAM-bound (~1 tok/s coding); csv_nordic_property + node_paratrooper FAIL; all L6 stepped PASS |
+| qwen3-coder:30b-1m | 30/33 | 150 | L4 | 1M-ctx MoE; 19/19 coding PERFECT; context_128k SLOW 3.3 tok/s; node_para_entities + node_paratrooper FAIL |
+| qwen3.5:35b | 30/33 | 135 | L2 | MoE 35B/3B active; python_hashmap + csv_nordic_property + node_paratrooper FAIL |
+| gemma4:26b | 29/33 | 105 | L2 | MoE 26B/4B active; csv_nordic_property + node_para_entities + node_paratrooper FAIL |
+| devstral-small-2 | 29/33 | 40 | L1 | Dense 24B; node_slugify + node_para_entities + node_paratrooper FAIL |
+| qwen2.5-coder:14b | 23/33 | 72 | L2 | Dense 14B Q4_K_M ~9 GB; ctx silently capped at 32k; passes both L5 coding tasks; fails csv_nordic_property + node_csv_parser (L3 parsing) |
+| gpt-oss:20b | **22/33** | 181 | **<L1** | Semi-thinking: verbose reasoning exhausts 8k budget on L4/L5 tasks; non-deterministic between runs |
+
+### Experimental models (llama-server, single RTX 4090 unless noted)
 
 | Model | Pass | Avg tok/s | Notes |
 |---|---|---|---|
+| mellum2:12b-thinking | 20/33 | 254 | MXFP4 MoE A2.5B active ~6.5 GB; 8 GB tier; Skill L1 (node_slugify L2 FAIL); FASTEST model benchmarked; passes node_para_core (L3) + node_csv_parser; python_hashmap NO_BLOCKS (thinking budget ceiling at any token count); ctx≤32k |
+| glm4.7-flash | **29/33** | 111 | MXFP4 MoE ~16 GB; Skill L4; 2026-06-26 full run; passes all L1–L4 + node_para_entities (L5) + node_para_combat (L6); fails python_hashmap + python_dijkstra (L5 capability gap) + context_256k (wrong answer); added to 24gb.txt |
+| qwen2.5-coder:14b | 23/33 | 72 | Dense 14B Q4_K_M ~9 GB; Skill L2; ctx silently capped at 32k (q8_0 KV on 24 GB GPU = real 12 GB card behavior); passes both L5 coding tasks (hashmap + dijkstra); fails csv_nordic_property + node_csv_parser (L3 parsing) |
+| qwen2.5-coder:32b-q4 | **28/33** | 36.5 | Dense 32B Q4_K_M ~18.5 GB; Skill L2; 2026-06-26 full run (2×24 GB); **19/19 coding PERFECT** (strongest coder tested; passes python_expr_eval, csv_nordic, node_csv_parser); passes para L4/L5/L6 stepped; FAILS node_para_core (L3 logic gap); ctx caps at 32k even on 48 GB; added to 24gb.txt |
 | qwen3-coder:30b (base) | 30/33 | 160 | Superseded by 1M variant; same L6 ceiling; slower on all tasks |
 | qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
 | deepseek-r1:32b | 18/19 coding | 31 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval NO_BLOCKS (reasoning spiral — confirmed capability gap, not token budget) |
-| qwen3.6:27b | **31/33** | 37 | Dense 27B; Skill L5; **19/19 coding PERFECT** (llama-server 36.6 tok/s, f16 KV required); 4/4 L6 stepped PASS (incl. step 3); context_128k PASS 3.3 tok/s (ollama); node_paratrooper FAIL (8k budget); context_256k SKIP — **promoted to default.txt 2026-05-27** |
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
-| qwen2.5-coder:32b-q4 | **19/19 coding** | 40 | Dense 32B Q4_K_M (~18.5 GB), RTX 4090 single-GPU (2026-06-21); passes python_hashmap (q8_0 KV fine for 32B); max_ctx=32768; context tasks need 2×24 GB; added to 24gb.txt |
-| glm4.7-flash | 17/19 coding | 112 | MXFP4 MoE ~16 GB, RTX 4090 single-GPU (2026-06-22); Skill L4; fails python_hashmap + python_dijkstra (both L5, capability gap); added to 24gb.txt |
-| qwen3-next:80b | 9/10 subset | 109.6 avg | noctrex MXFP4 MoE 80B/A3B, ~41 GB, 2×24 GB tensor_split (corrected 2026-06-24; prior 76 tok/s was 3090 thermal throttle); ~115 tok/s coding/16k ctx, ~88 tok/s at 32k; Skill L5; fails node_para_core (consistent); passes python_hashmap (L5) |
-| north-mini-code | 6/10 subset | 141 | Cohere 30B MoE 3B active Q4_K_M, RTX 4090 single-GPU (2026-06-22); passes python_hashmap (L5); format non-compliant on complex tasks — agentic training preamble exhausts budget before BEGIN_FILE |
-| quest:35b | 16/19 coding | 160 | noctrex RL-trained MXFP4 MoE ~19 GB, RTX 4090 single-GPU (2026-06-24); Skill L6; passes both L5 tasks + node_para_combat (L6); fails node_csv_parser (quoted-comma), python_multifile_rename (L2), node_paratrooper; added to 24gb.txt |
-| qwen3.6:27b (dual GPU) | 10/10 subset | 41.5 | Dense 27B Q4_K_M, 2×24 GB (2026-06-24); perfect score including node_para_core (L3) + python_hashmap (L5); f16 KV required; 3090 runs at near-TDP during dense tensor-split (normal — no thermal issues) |
+| north-mini-code | 6/10 subset | 141 | Cohere 30B MoE 3B active Q4_K_M; passes python_hashmap (L5); format non-compliant on complex tasks — agentic training preamble exhausts budget before BEGIN_FILE; rejected |
 
 ### L6 Paratrooper — from-scratch (node_paratrooper, num_predict=24000, 2026-05-20)
 

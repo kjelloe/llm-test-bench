@@ -1,0 +1,27 @@
+# 12 GB VRAM model set — RTX 4070 12GB, RTX 3080 12GB, RTX 4070 Ti (12GB variant), etc.
+# Target: models whose weights fit in ≤9 GB, leaving ≥3 GB for KV cache.
+#
+# Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
+#   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
+#   params     comma-separated llama-server flags
+#   hf:        HuggingFace repo for fetch-hf.sh download helper
+#
+# Context ceiling: 3 GB KV headroom at q8_0 for a 14B dense model (28 layers, 8 KV heads,
+# 128 dim) ≈ 96 KB/token → max ~32k tokens. On 24 GB hardware, llama-server silently caps
+# ctx to 32768 even when higher is requested — this matches what a real 12 GB card sees.
+# context_64k+ will CTX_TRUNCATED on real 12 GB hardware for 14B models.
+#
+# Speed index (confirmed on RTX 4090 24GB single GPU — speed portable to RTX 4070 class):
+# qwen2.5-coder:14b   # *72 tok/s  dense 14B Q4_K_M (~9 GB); Skill L2; Passes both L5 coding tasks
+# Confirmed 2026-06-26 full 33-task run: 23/33 at 71.8 tok/s; max ctx 32k (hardware cap on 12 GB).
+
+# ── 14B dense — best confirmed 12 GB model ─────────────────────────────────────
+# qwen2.5-coder:14b: Q4_K_M (~9 GB); CONFIRMED 2026-06-26 full 33-task: 23/33, Skill L2, 71.8 tok/s.
+# Server silently caps context at 32768 (q8_0 KV on 24 GB = same headroom as real 12 GB card).
+# PASSES: python_hashmap (L5), python_dijkstra (L5), node_para_entities (L5) — surprisingly strong.
+# FAILS: csv_nordic_property (L3 CSV ~5k rows), node_csv_parser (L3 quoted-comma),
+#        python_tokenizer (L4), node_para_core (L3 game logic), node_para_turret (L4),
+#        node_para_combat (L6), node_paratrooper (L6), context_64k+ (CTX_TRUNCATED).
+# q8_0 KV precision issue (python_hashmap _EMPTY omission) is specific to 27B dense models;
+# 14B passes cleanly with q8_0 KV.
+qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
