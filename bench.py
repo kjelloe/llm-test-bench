@@ -313,6 +313,7 @@ def main() -> None:
 
     # Accept comma-separated values in addition to space-separated, e.g.
     # --tasks "a,b,c" or --tasks a,b c  (any mix)
+    args.models = [m for tok in args.models for m in tok.split(",") if m]
     if args.tasks:
         args.tasks = [t for tok in args.tasks for t in tok.split(",") if t]
     if args.task_group:
