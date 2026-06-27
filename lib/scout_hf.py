@@ -15,30 +15,57 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Queries covering coding/instruction model families suitable for 24 GB VRAM.
-# Each is run against the HF GGUF library tag and results are deduped by repo_id.
+# Queries covering coding/instruction model families suitable for 24–96 GB VRAM.
+# MoE-specific queries are included to surface large-but-fast models suited for
+# 48 GB (2×24 GB) and 72 GB (3×24 GB) multi-GPU setups.
+# Each query runs against the HF GGUF library tag; results are deduped by repo_id.
 SCOUT_QUERIES: list[str] = [
+    # ── Proven single-24 GB coding families ──
     "qwen3 coder instruct",
     "qwen3 instruct moe",
     "qwen2.5 coder instruct",
     "devstral coding",
     "deepseek-r1 instruct",
     "deepseek coder instruct",
-    "llama4 instruct",
-    "llama3 coding instruct",
     "gemma4 instruct",
     "gpt-oss",
     "codestral",
     "phi4 coding instruct",
-    "mxfp4 gguf",
+    # ── MoE models targeting 48 GB / 72 GB tiers ──
+    "mixture of experts instruct gguf",  # generic MoE catch-all
+    "moe instruct gguf coding",          # coding-focused MoE
+    "qwen3 A3B instruct",                # Qwen3 MoE A3B active-param variants
+    "qwen3-next instruct",               # Qwen3-Next large MoE family
+    "deepseek moe gguf",                 # DeepSeek-V2/V3 MoE series
+    "glm instruct gguf",                 # GLM MoE (glm4.7-flash lineage)
+    "llama4 instruct",                   # Llama 4 Scout / Maverick MoE
+    "command-a gguf",                    # Cohere Command A (~111B MoE)
+    "mixtral instruct gguf",             # Mixtral family
+    "noctrex gguf",                      # noctrex MXFP4 MoE releases
+    "mxfp4 gguf",                        # MXFP4-quantized MoE models (Ampere+)
 ]
 
-_REPOS_PER_QUERY = 8
-_PREFERRED_QUANTS = ["Q4_K_M", "Q5_K_M", "Q4_K_S", "Q4_K", "Q8_0", "Q6_K"]
+_REPOS_PER_QUERY = 10
+_PREFERRED_QUANTS = ["Q4_K_M", "IQ4_XS", "Q5_K_M", "Q4_K_S", "Q4_K", "Q8_0", "Q6_K"]
 _MIN_FILE_BYTES = 100 * 1024 * 1024   # skip files < 100 MB (tiny header shards etc.)
-_VRAM_BUDGET_GB = 20.0                 # files > this flagged as "tight" on a 24 GB card
 _SHARD_RE = re.compile(r'(-\d{5})-of-(\d{5})\.gguf$', re.IGNORECASE)
 _QUANT_RE = re.compile(r'\b(IQ\d[_A-Z0-9]*|Q\d[_A-Z0-9]*|F16|BF16|MXFP4|FP8)\b', re.IGNORECASE)
+
+# VRAM tiers: (display_label, comfortable_ceiling_gb, hard_max_gb)
+# ✓ = fits with useful KV headroom, ~ = fits but KV is tight, ✗ = won't fit
+# Comfortable ceilings leave ~4 GB/GPU free after weights for KV cache.
+_VRAM_TIERS: list[tuple[str, float, float]] = [
+    ("24",  20.0, 23.0),
+    ("48",  44.0, 47.0),
+    ("72",  65.0, 71.0),
+    ("96",  90.0, 95.0),
+]
+
+# Substrings that indicate a MoE architecture (checked against repo_id + filenames).
+_MOE_MARKERS: frozenset[str] = frozenset({
+    "moe", "mixture", "expert", "a3b", "a2b", "a2.5b", "mxfp4", "sparse",
+    "scout", "maverick",   # Llama 4 MoE variants
+})
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -76,15 +103,36 @@ def _parse_shard(filename: str) -> tuple[str, int, int] | None:
     return filename[:m.start()], int(m.group(1).lstrip('-')), int(m.group(2))
 
 
-def _vram_label(size_bytes: int | None) -> str:
+def _vram_tiers_str(size_bytes: int | None) -> str:
+    """Return compact multi-tier VRAM fit string, e.g. '24✓ 48✓ 72~'."""
     if size_bytes is None:
         return ""
     gb = size_bytes / 1024 ** 3
-    if gb <= _VRAM_BUDGET_GB:
-        return "✓"
-    if gb <= 24.0:
-        return "~"   # tight — limited KV cache headroom
-    return "✗"       # needs multi-GPU or heavy CPU offload
+    parts: list[str] = []
+    for label, comfort, max_gb in _VRAM_TIERS:
+        if gb <= comfort:
+            parts.append(f"{label}✓")
+        elif gb <= max_gb:
+            parts.append(f"{label}~")
+        # else: doesn't fit this tier — omit to keep output compact
+    return " ".join(parts) if parts else "✗all"
+
+
+def _is_moe(repo_id: str, files: list[dict]) -> bool:
+    text = repo_id.lower() + " " + " ".join(f["name"].lower() for f in files)
+    return any(m in text for m in _MOE_MARKERS)
+
+
+def _total_size_for_suggested(files: list[dict], suggested_name: str | None) -> int | None:
+    """Return total bytes for the suggested quant (sums all shards if multi-part)."""
+    if not suggested_name:
+        return None
+    shard_info = _parse_shard(suggested_name)
+    if not shard_info:
+        return next((f["size"] for f in files if f["name"] == suggested_name), None)
+    base, _, _ = shard_info
+    total = sum(f.get("size") or 0 for f in files if _parse_shard(f["name"]) and _parse_shard(f["name"])[0] == base)
+    return total if total > 0 else None
 
 
 # ── GGUF file helpers ─────────────────────────────────────────────────────────
@@ -161,11 +209,15 @@ def _scout(api, queries: list[str], repos_per_query: int) -> dict[str, dict]:
             if not files:
                 continue
             suggested = _suggest_file(files)
+            sug_name = suggested["name"] if suggested else None
+            total_bytes = _total_size_for_suggested(files, sug_name)
             found[rid] = {
                 "downloads": getattr(repo, "downloads", None),
                 "likes": getattr(repo, "likes", None),
                 "files": files,
-                "suggested_file": suggested["name"] if suggested else None,
+                "suggested_file": sug_name,
+                "total_size_bytes": total_bytes,
+                "is_moe": _is_moe(rid, files),
                 "source_queries": [query],
             }
             added += 1
@@ -226,12 +278,14 @@ def _compute_diff(
 def _print_repo_line(rid: str, rec: dict, indent: str = "    ") -> None:
     dl = _fmt_dl(rec.get("downloads"))
     sug = rec.get("suggested_file", "")
-    size = _suggested_size(rec)
-    vram = _vram_label(size)
+    # Use total_size_bytes (shard-summed) when available, fall back to single-file size
+    size = rec.get("total_size_bytes") or _suggested_size(rec)
+    tiers = _vram_tiers_str(size)
     size_str = _fmt_size(size) if size else ""
+    moe_tag = " [MoE]" if rec.get("is_moe") else ""
     dl_str = f"  {dl}" if dl else ""
-    vram_str = f"  {size_str} {vram}" if size_str else ""
-    print(f"{indent}{rid}{dl_str}{vram_str}")
+    size_part = f"  {size_str}{moe_tag}  {tiers}" if size_str else (moe_tag.strip() or "")
+    print(f"{indent}{rid}{dl_str}{size_part}")
     if sug:
         print(f"{indent}  → {sug}")
 
@@ -335,7 +389,7 @@ def main() -> None:
             print("\n  Full list:")
             _print_full_list(new_repos)
     else:
-        print("\n  Full list (✓ fits 24 GB, ~ tight, ✗ needs multi-GPU):")
+        print("\n  Full list (VRAM tiers: 24/48/72/96 GB — ✓ comfortable, ~ tight KV, omitted = won't fit; [MoE] = MoE architecture):")
         _print_full_list(new_repos)
 
     # Preserve first_seen timestamps from prior state
