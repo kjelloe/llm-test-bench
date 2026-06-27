@@ -149,6 +149,39 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   NOTE: ~16 GB model requires 24 GB VRAM to run with useful context — minimal KV headroom on 16 GB GPU.
   Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without
   tensor_split; use `./gpu-mode.sh single` for clean single-GPU benchmarks. Added to models/24gb.txt.
+  **qwen3-30b:2507** (unsloth, Q4_K_M A3B MoE, ~17 GB, single RTX 4090): CONFIRMED 2026-06-27
+  18/19 coding at 185 tok/s; node_paratrooper TESTS_STILL_FAIL (3.6k tokens — constructor
+  correct, game loop wrong — universal L6 wall). July 2026 re-instruction fine-tune of
+  Qwen3-30B-A3B-Instruct. Passes all L1–L4 + python_dijkstra (L5); fails python_hashmap
+  (L5, capability gap — f16 KV enabled, so not precision). Skill L4 coding. Added to models/24gb.txt.
+  **qwen3-coder:30b-mxfp4** (Face314, MXFP4 A3B MoE, ~15.9 GB, Ampere+ required): CONFIRMED 2026-06-27
+  18/19 coding at 172 tok/s; node_paratrooper TESTS_STILL_FAIL (same universal L6 wall, 3.6k tokens).
+  Same Qwen3-Coder-30B-A3B architecture as qwen3-coder:30b-1m. Same coding failure as qwen3-30b:2507
+  (python_hashmap capability gap). MXFP4 is ~7% slower than Q4_K_M (172 vs 185 tok/s) — only
+  advantage is 1 GB smaller VRAM footprint. Skill L4 coding. Added to models/24gb.txt.
+  **MXFP4 vs Q4_K_M for A3B MoE on RTX 4090 (2026-06-27)**: for the Qwen3-30B-A3B architecture,
+  Q4_K_M is ~7% faster than MXFP4 (185 vs 172 tok/s). MXFP4 saves ~1 GB VRAM but produces no
+  quality difference. Prior noctrex experiments showed MXFP4 at no speed advantage over Q4_K_M for
+  Qwen3.5-35B (noctrex MXFP4 was 25% slower than bartowski Q4_K_M). Conclusion: for A3B MoE models,
+  Q4_K_M is the preferred format on RTX 4090 — smaller file size and faster inference.
+  **lfm2:8b** (Liquid AI, MXFP4 A1B MoE, ~4.5 GB, single RTX 4090): CONFIRMED 2026-06-27
+  3/10 at 320.8 tok/s — new speed record (fastest model ever benchmarked; beats mellum2:12b at
+  254 tok/s). Terrible quality: fails node_slugify (L2), csv_nordic_property, node_csv_parser (L3),
+  python_expr_eval (L4), python_hashmap (L5), node_paratrooper. node_para_core NO_BLOCKS (format
+  failure at L3 complexity). Not useful beyond L1 tasks. Do not add to any model set.
+  **ernie4.5:21b** (Baidu / noctrex, MXFP4 A3B MoE, ~11.5 GB): CONFIRMED 2026-06-27 5/10 at
+  190 tok/s. First Baidu model benchmarked. Fails node_slugify (L2), csv_nordic_property +
+  node_csv_parser (L3), python_hashmap. Cold-start 51s. Not competitive; rejected.
+  **granite4:small** (IBM Granite 4.0 H-Small / noctrex, MXFP4 MoE, ~18.5 GB): CONFIRMED 2026-06-27
+  7/10 at 77.6 tok/s — much slower than expected for MXFP4 (~110 est). Passes node_csv_parser +
+  node_para_core; fails csv_nordic_property, python_hashmap, node_paratrooper. Below threshold.
+  **qwen3-coder-reap:25b** (noctrex, MXFP4 A3B MoE, ~13.1 GB): CONFIRMED 2026-06-27 7/10 at
+  155 tok/s. REAP post-training; fails csv_nordic_property (L3), python_hashmap, node_paratrooper.
+  Inferior to qwen3-30b:2507 on both quality and speed. Rejected.
+  **qwen3-next:80b Q4_K_M** (bartowski, ~45 GB): CONFIRMED 2026-06-27 DOES NOT FIT on 2×24 GB.
+  cudaMalloc fails allocating 23.9 GB on device 0 with tensor_split=1|1 — model share exceeds
+  24 GB even before KV cache. Minimum tier: 3×24 GB (72 GB). The noctrex MXFP4 (~41 GB) fits
+  on 48 GB; this Q4_K_M does not. Use in models/3x24gb.txt with tensor_split=1|1|1.
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
   generates verbose prose/markdown preamble before code, exhausting the 8000-token budget
@@ -191,9 +224,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   quantization does not affect task outcomes; do not use higher MoE quant to fix failures.
   Also a capability discriminator: some models fail due to wrong tombstone logic regardless of
   quantization (noctrex-qwen3-coder:30b TESTS_STILL_FAIL, qwen2.5-r1:32b TESTS_STILL_FAIL,
-  glm4.7-flash TESTS_STILL_FAIL, north-mini-code PASS), and thinking models exhaust their
-  budget in reasoning before emitting code (mellum2:12b-thinking, qwq:32b, gpt-oss:20b on
-  this task).
+  glm4.7-flash TESTS_STILL_FAIL, deepseek-r1:32b TESTS_STILL_FAIL, qwen3-30b:2507
+  TESTS_STILL_FAIL, qwen3-coder:30b-mxfp4 TESTS_STILL_FAIL, north-mini-code PASS), and
+  thinking models exhaust their budget in reasoning before emitting code (mellum2:12b-thinking,
+  qwq:32b, gpt-oss:20b on this task).
 
 #### Edit Protocol Enforcement
 
