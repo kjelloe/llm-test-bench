@@ -11,20 +11,22 @@
 # RTX 4090 + RTX 3090 have NO NVLink — both use PCIe for inter-GPU tensor transfer.
 
 # Speed index (* = confirmed on RTX 4090+3090 48 GB dual-GPU; est. otherwise):
-# Context speeds format: 32k / 64k / 128k / 256k tok/s (2026-06-27 confirm run)
-# qwen3-coder:30b-1m   # ~115 tok/s  MoE; 1M-ctx variant; perfect coding 19/19; ctx: *80.6/54.4/39.4/19.5
-# qwen3.5:35b          # ~147 tok/s  MoE; thinking; ctx: *122.4/104.2/107.0/85.6
+# Coding tok/s = short-ctx coding tasks. Full-run avg lower (context tasks pull it down).
+# noctrex *121 is 33-task avg; coding-only speed is ~140+ (not directly measured here).
+# Context speeds: 32k / 64k / 128k / 256k tok/s (2026-06-27 confirm run)
+# qwen3.5:35b          # *153 tok/s  MoE; thinking; ctx: *122.4/104.2/107.0/85.6
+# qwen3.6:35b-A3B      # *146 tok/s  MoE; thinking; ctx: *122.8/94.0/87.6/82.1
 # noctrex-qwen3.6:35b  # *121 tok/s  MoE+MXFP4; 32/33 BEST; Ampere+ (3090 qualifies)
-# qwen3.6:35b-A3B      # ~120 tok/s  MoE; thinking; ctx: *122.8/94.0/87.6/82.1
+# qwen3-coder:30b-1m   # ~115 tok/s  MoE; 1M-ctx variant; perfect coding 19/19; ctx: *80.6/54.4/39.4/19.5
 # gemma4:26b           # ~114 tok/s  MoE; ctx: *98.8/82.0/86.6/68.9
 # qwen2.5-coder:14b    #  ~68 tok/s  ctx silently capped at 32k on 48 GB (same as qwen2.5-coder:32b-q4)
-# devstral-small-2     #  ~42 tok/s  Dense 24B; ctx: *40.0/32.9/26.0/17.6
-# qwen3.6:27b          #  *40 tok/s  Dense 27B; 32/33 ties noctrex; Skill L5; f16 KV required
-# qwen3.5:27b          #  ~35 tok/s  Dense 27B; ctx: *38.4/34.8/29.4/22.8 (was 18.4 slow on single 24 GB)
+# devstral-small-2     #  *44 tok/s  Dense 24B; ctx: *40.0/32.9/26.0/17.6; node_slugify FAIL
+# qwen3.5:27b          #  *42 tok/s  Dense 27B; passes hashmap with q8_0 KV; ctx: *38.4/34.8/29.4/22.8
+# qwen3.6:27b          #  *40 tok/s  Dense 27B; 32/33 ties noctrex; Skill L5; f16 KV required for hashmap
 # qwen2.5-coder:32b-q4 #  *37 tok/s  dense 32B Q4_K_M; 28/33 Skill L2; 19/19 coding PERFECT; ctx caps 32k
+# deepseek-r1:32b      #  *34 tok/s  dense 32B Q5_K_M thinking; hashmap TESTS_STILL_FAIL; ctx: *25.0/19.7; 128k+ NO_BLOCKS
 # qwen2.5-coder:32b    #  *33 tok/s  dense 32B Q5_K_M; 6/7 subset; ctx=64k feasible
 # qwq:32b              #  *32 tok/s  dense 32B Q5_K_M thinking; 4/7 subset; needs num_predict≥16000
-# deepseek-r1:32b      #  ~30 tok/s  dense 32B Q5_K_M thinking; ctx: *25.0/19.7 PASS; 128k+ NO_BLOCKS (thinking budget)
 # llama3.3:70b         #  *20 tok/s  dense 70B Q4_K_S; 5/7 subset; PCIe-bound (no NVLink)
 
 # ── Small models — included for context_256k coverage (min_vram_gb=48 met here) ──
@@ -71,8 +73,10 @@ qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
 
 # qwen3.5:27b: dense 27B Q4_K_M (~16 GB); 27/29 confirmed on single 24 GB, 15/15 coding.
-# context_128k: 18.4 tok/s SLOW on single 24 GB (KV spill); CONFIRMED 2026-06-27: 29.4 tok/s at 48 GB.
-# context_256k: 22.8 tok/s at 48 GB. All 7 context/multihop tasks PASS.
+# CONFIRMED 2026-06-27: coding *42 tok/s; python_hashmap PASS with q8_0 KV (unlike qwen3.6:27b which
+# needs f16 KV — hashmap precision canary is architecture-specific, not generic "27B").
+# context_128k: 18.4 tok/s SLOW on single 24 GB (KV spill) → 29.4 tok/s on 48 GB.
+# context_256k: 22.8 tok/s. All 7 context/multihop tasks PASS.
 qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
 
 # noctrex-qwen3.6:35b: MXFP4+MTP; 32/33 at 121 tok/s on RTX 4090+3090 (2026-06-24 full compare).
@@ -94,11 +98,11 @@ qwen2.5-coder:32b-q4  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,te
 # qwen2.5-coder:32b: Q5_K_M (~26 GB); confirmed 6/7 at 33.4 tok/s on RTX 4090+3090 (2026-06-14).
 # Passes python_hashmap; fails node_para_core (L3 logic). 64k context feasible on 48 GB.
 qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
-# deepseek-r1:32b: Q5_K_M (~26 GB) thinking. CONFIRMED 2026-06-27:
-#   context_32k PASS (32.5s, 25.0 tok/s), context_64k PASS (73.0s, 19.7 tok/s).
-#   context_128k NO_BLOCKS: thinking block at 128k prompt exhausts the generation budget before the answer
-#   is emitted (164s generating, 15.2 tok/s, zero usable output). Increasing num_predict helps coding tasks
-#   but the context_128k prompt is already 131k tokens — the thinking loop alone fills any reasonable budget.
+# deepseek-r1:32b: Q5_K_M (~26 GB) thinking. CONFIRMED 2026-06-27: coding *34 tok/s.
+#   python_hashmap TESTS_STILL_FAIL (wrong tombstone logic — capability gap, 7.7k thinking tokens generated,
+#   code produced but incorrect). Not a budget issue — same structural failure as qwq:32b on this task.
+#   context_32k PASS (25.0 tok/s), context_64k PASS (19.7 tok/s).
+#   context_128k NO_BLOCKS: thinking loop at 128k prompt fills budget before answer (164s, 15.2 tok/s).
 #   context_256k: not measured (run interrupted at server start).
 deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF
 # qwq:32b: Q5_K_M (~22 GB) thinking; confirmed 32.4 tok/s on RTX 4090+3090 (2026-06-14).

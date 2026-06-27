@@ -183,8 +183,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   wrong token at a precision boundary. With f16 KV (llama-server) or ollama's internal format,
   the same model passes cleanly. Use `cache_type_k=f16,cache_type_v=f16` for any 27B dense model
   whose python_hashmap fails with q8_0 KV. Do not change the task stub to paper over this.
-  This precision sensitivity is specific to 27B dense models (qwen3.6:27b confirmed). Dense 32B
-  Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18). MoE models:
+  This precision sensitivity is specific to the qwen3.6:27b architecture (NOT all 27B models):
+  qwen3.5:27b passes python_hashmap cleanly with q8_0 KV (confirmed 2026-06-27). Dense 32B
+  Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18).
+  Rule: use f16 KV only for qwen3.6:27b specifically; do not apply to other 27B models. MoE models:
   Q4_K_M vs Q6_K confirmed identical scores for qwen3.5:35b (2026-06-22) — MoE weight
   quantization does not affect task outcomes; do not use higher MoE quant to fix failures.
   Also a capability discriminator: some models fail due to wrong tombstone logic regardless of

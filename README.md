@@ -169,9 +169,9 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | qwen2.5-coder:14b | 23/33 | 72 | Dense 14B Q4_K_M ~9 GB; Skill L2; ctx silently capped at 32k (q8_0 KV on 24 GB GPU = real 12 GB card behavior); passes both L5 coding tasks (hashmap + dijkstra); fails csv_nordic_property + node_csv_parser (L3 parsing) |
 | qwen2.5-coder:32b-q4 | **28/33** | 36.5 | Dense 32B Q4_K_M ~18.5 GB; Skill L2; 2026-06-26 full run (2×24 GB); **19/19 coding PERFECT** (strongest coder tested; passes python_expr_eval, csv_nordic, node_csv_parser); passes para L4/L5/L6 stepped; FAILS node_para_core (L3 logic gap); ctx caps at 32k even on 48 GB; added to 24gb.txt |
 | qwen3-coder:30b (base) | 30/33 | 160 | Superseded by 1M variant; same L6 ceiling; slower on all tasks |
-| qwen3.6:35b-A3B | 25/29 | 134 | Q4_K_M MoE; passes python_hashmap + python_expr_eval; node_csv_parser blind spot |
+| qwen3.6:35b-A3B | 25/29 | **146** ✓ | Q4_K_M MoE; coding *146 tok/s (2026-06-27); passes python_hashmap + python_expr_eval; ctx: 122.8/94.0/87.6/82.1 tok/s (32k/64k/128k/256k); node_csv_parser blind spot |
 | nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
-| deepseek-r1:32b | 18/19 coding | 31 | context_64k+ SKIPPED (max_ctx=32768); python_expr_eval NO_BLOCKS (reasoning spiral — confirmed capability gap, not token budget) |
+| deepseek-r1:32b | 18/19 coding | **34** ✓ | coding *34 tok/s (2026-06-27); context_32k PASS 25.0 tok/s, context_64k PASS 19.7 tok/s; context_128k NO_BLOCKS (thinking budget exhaustion — structural, not fixable with more tokens); python_hashmap TESTS_STILL_FAIL (wrong tombstone logic — capability gap); python_expr_eval NO_BLOCKS (reasoning spiral) |
 | carnice:35b | 17/19 coding | 41 | MTP fine-tune coding-only (full run 27 tok/s, 96 min); csv_nordic_property FAIL wrong answers; python_merge_intervals NO_BLOCKS at 8000 tokens; context_128k SLOW 6.2 tok/s |
 | north-mini-code | 6/10 subset | 141 | Cohere 30B MoE 3B active Q4_K_M; passes python_hashmap (L5); format non-compliant on complex tasks — agentic training preamble exhausts budget before BEGIN_FILE; rejected |
 
