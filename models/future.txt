@@ -1,0 +1,37 @@
+# models/future.txt — Models requiring hardware not yet available
+# These entries are placeholders for future evaluation. Download when hardware is ready.
+#
+# Download:  ./fetch-hf.sh models/future.txt
+# Run:       ./run.sh --model-file models/future.txt --backend llama-server --tasks ...
+#
+# Format: <ollama-name>  <gguf-file>  <params>  hf:<owner/repo>
+
+# Hardware tiers for this file:
+#   Current:  86 GB DDR5 + 48 GB VRAM = ~115 GB usable → max Q3_K_M (112 GB), too tight for KV
+#   Future:  192 GB DDR5 + 48 GB VRAM = ~215 GB usable → Q4_K_M (142 GB) recommended
+#
+# 1-bit quants (54-70 GB) fit current hardware but quality is below capability-eval threshold.
+# Q6_K (193 GB) is too tight for 192 GB RAM after OS + KV overhead.
+#
+# 2DPC speed penalty (AM5, Ryzen 9 9900X):
+#   2×48 GB @ DDR5-6400 (1 DIMM/channel): ~102 GB/s → est. 5-7 tok/s for Qwen3-235B
+#   4×48 GB @ DDR5-5000 (2 DIMM/channel): ~80 GB/s → est. 4-5 tok/s (~22% slower)
+#   Penalty applies only to RAM-resident layers. Models ≤48 GB (fully in VRAM): zero penalty.
+#   For Qwen3-235B with ~48 GB in VRAM and ~94 GB in RAM: effective penalty ~12-16%.
+
+# ── 192 GB RAM tier ──────────────────────────────────────────────────────────
+# Requires ~192 GB system RAM. With 2×24 GB VRAM, ~48 GB of layers load to GPU;
+# remainder runs in DDR5. Expected ~3-8 tok/s (RAM-bandwidth bound, 22B active / 235B total).
+# Capability is unaffected by speed — use --model-timeout 3600 for long tasks.
+
+# Qwen3-VL-235B-A22B-Instruct Q4_K_M (unsloth, 142 GB, 3 parts).
+# VL = Vision-Language multimodal variant. Vision encoder is inert for text-only tasks;
+# text generation capability equivalent to pure-text Qwen3-235B-A22B.
+# Frontier Qwen3 model — 22B active MoE. Expected GPT-4o-class capability.
+# First model that may pass node_paratrooper (L6 universal wall) and node_para_core.
+# RAM-bound at ~3-8 tok/s on 2×24 GB VRAM + 192 GB DDR5.
+# Q4_K_M chosen: 98 GB headroom after weights — comfortable KV + OS margin on 192 GB RAM.
+# Q5_K_M (167 GB) is an upgrade option; Q6_K (193 GB) is too tight.
+# GGUF lives in Q4_K_M/ subdir in the repo — fetch_hf.py passes subdir path to hf_hub_download,
+# which downloads to $LLAMA_MODELS_DIR/Q4_K_M/<filename>. llama-server path must include subdir.
+qwen3-vl-235b  Q4_K_M/Qwen3-VL-235B-A22B-Instruct-Q4_K_M-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Qwen3-VL-235B-A22B-Instruct-GGUF  # 3-part model
