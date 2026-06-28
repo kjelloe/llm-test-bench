@@ -182,6 +182,19 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   cudaMalloc fails allocating 23.9 GB on device 0 with tensor_split=1|1 — model share exceeds
   24 GB even before KV cache. Minimum tier: 3×24 GB (72 GB). The noctrex MXFP4 (~41 GB) fits
   on 48 GB; this Q4_K_M does not. Use in models/3x24gb.txt with tensor_split=1|1|1.
+  **Qwen3-VL-235B-A22B Q3_K_M** (unsloth, 112 GB, capability preview 2026-06-28):
+  Run on current hardware (86 GB DDR5 + 48 GB VRAM) at ngl=30→37, tensor_split=1|1, 2.7–2.8 tok/s.
+  VRAM split: ~20 GB on RTX 4090 + ~17 GB on RTX 3090 = 37 GB GPU-resident; ~75 GB in DDR5.
+  PASS: python_hashmap (L5) — definitive at Q3; correctly implements tombstone algorithm.
+    All benchmarked models below 80B (glm4.7-flash, qwen3-next:80b, both qwen3-30b variants,
+    deepseek-r1:32b, etc.) fail this task. 235B passes cleanly.
+  PASS: node_para_core (L3) — passes where qwen3-next:80b, quest:35b, qwen2.5-coder:32b-q4 all fail.
+  FAIL: node_paratrooper (L6) — TESTS_STILL_FAIL at ngl=37, 1588s, 3.8k tokens; constructor correct
+    (initial state tests pass), game loop logic wrong. Same universal L6 wall as all other models.
+    NOT a timeout — generation completed at 2.8 tok/s; the model simply cannot solve this task.
+  Speed: 2.8 tok/s at Q3 with ngl=37. 72s startup.
+  Capability verdict: clearly higher tier than all benchmarked <80B models on python_hashmap and
+    node_para_core discriminators, but hits the same node_paratrooper wall as every other model tested.
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
   generates verbose prose/markdown preamble before code, exhausting the 8000-token budget

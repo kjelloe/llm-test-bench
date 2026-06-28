@@ -7,7 +7,7 @@
 # Format: <ollama-name>  <gguf-file>  <params>  hf:<owner/repo>
 
 # Hardware tiers for this file:
-#   Current:  86 GB DDR5 + 48 GB VRAM = ~115 GB usable → max Q3_K_M (112 GB), too tight for KV
+#   Current:  86 GB DDR5 + 48 GB VRAM = ~115 GB usable → max Q3_K_M (112 GB), ngl=37 max
 #   Future:  192 GB DDR5 + 48 GB VRAM = ~215 GB usable → Q4_K_M (142 GB) recommended
 #
 # 1-bit quants (54-70 GB) fit current hardware but quality is below capability-eval threshold.
@@ -22,16 +22,29 @@
 # ── 192 GB RAM tier ──────────────────────────────────────────────────────────
 # Requires ~192 GB system RAM. With 2×24 GB VRAM, ~48 GB of layers load to GPU;
 # remainder runs in DDR5. Expected ~3-8 tok/s (RAM-bandwidth bound, 22B active / 235B total).
-# Capability is unaffected by speed — use --model-timeout 3600 for long tasks.
+# Capability is unaffected by speed — use --model-timeout 10800 for node_paratrooper.
 
 # Qwen3-VL-235B-A22B-Instruct Q4_K_M (unsloth, 142 GB, 3 parts).
 # VL = Vision-Language multimodal variant. Vision encoder is inert for text-only tasks;
 # text generation capability equivalent to pure-text Qwen3-235B-A22B.
 # Frontier Qwen3 model — 22B active MoE. Expected GPT-4o-class capability.
-# First model that may pass node_paratrooper (L6 universal wall) and node_para_core.
-# RAM-bound at ~3-8 tok/s on 2×24 GB VRAM + 192 GB DDR5.
+# Q3 preview (2026-06-28): PASS python_hashmap (L5) + node_para_core (L3) — confirmed higher tier.
 # Q4_K_M chosen: 98 GB headroom after weights — comfortable KV + OS margin on 192 GB RAM.
 # Q5_K_M (167 GB) is an upgrade option; Q6_K (193 GB) is too tight.
 # GGUF lives in Q4_K_M/ subdir in the repo — fetch_hf.py passes subdir path to hf_hub_download,
 # which downloads to $LLAMA_MODELS_DIR/Q4_K_M/<filename>. llama-server path must include subdir.
 qwen3-vl-235b  Q4_K_M/Qwen3-VL-235B-A22B-Instruct-Q4_K_M-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Qwen3-VL-235B-A22B-Instruct-GGUF  # 3-part model
+
+# ── 86 GB RAM tier (current hardware) ────────────────────────────────────────
+# Capability preview before 192 GB RAM upgrade.
+# CONFIRMED 2026-06-28: python_hashmap PASS (L5), node_para_core PASS (L3) at Q3.
+# CONFIRMED 2026-06-28: node_paratrooper TESTS_STILL_FAIL (1588s, 3.8k tokens, 2.8 tok/s, ngl=37).
+#   Constructor correct, game loop logic wrong. Universal L6 wall — 235B does not break it at Q3.
+#   NOT a timeout: generation completed cleanly. Capability result is final.
+# ngl=37 + parallel=1: confirmed safe (no OOM at startup, 72s load time).
+# If OOM: drop to ngl=35.
+
+# Qwen3-VL-235B-A22B-Instruct Q3_K_M (unsloth, 112 GB, 3 parts).
+# Same model as qwen3-vl-235b above at lower quant — fits current 86 GB DDR5 + 48 GB VRAM.
+# GGUF lives in Q3_K_M/ subdir — downloads to $LLAMA_MODELS_DIR/Q3_K_M/<filename>.
+qwen3-vl-235b-q3  Q3_K_M/Qwen3-VL-235B-A22B-Instruct-Q3_K_M-00001-of-00003.gguf  ngl=37,no_mmap,tensor_split=1|1,parallel=1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Qwen3-VL-235B-A22B-Instruct-GGUF  # 3-part model; if OOM drop to ngl=35
