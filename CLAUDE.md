@@ -195,6 +195,15 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Speed: 2.8 tok/s at Q3 with ngl=37. 72s startup.
   Capability verdict: clearly higher tier than all benchmarked <80B models on python_hashmap and
     node_para_core discriminators, but hits the same node_paratrooper wall as every other model tested.
+  **equinox:31b** (jashepp, dense 31B MXFP4 Q8_0-Imatrix, ~16.4 GB, single RTX 4090, Ampere+ required):
+  CONFIRMED 2026-06-30 20-task coding: 18/20 at 37.0 tok/s. Skill L4. Unknown base model.
+  PASS: all L1–L4 (including python_multifile_rename L2, csv_nordic_property L3, node_csv_parser L3),
+    python_dijkstra (L5), python_hashmap (L5), node_para_combat (L6).
+  FAIL: node_para_entities (L5 — unusual: passes steps 1-2 and 4 but not step 3), node_paratrooper (L6).
+  Speed: ~40-43 tok/s at ctx=8192, ~32-36 tok/s at ctx=32768. 4090 power spikes to 350W TDP (normal
+    for dense 31B fully GPU-resident). f16 KV used (unknown architecture, safe default).
+  Notable: passes python_hashmap (L5) and both CSV tasks (L3) — only model besides qwen2.5-coder:32b-q4
+    to achieve this on single 24 GB. ADDED TO 24gb.txt.
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
   generates verbose prose/markdown preamble before code, exhausting the 8000-token budget
