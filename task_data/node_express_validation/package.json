@@ -1,0 +1,10 @@
+{
+  "name": "node-express-validation",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.0",
+    "supertest": "^7.0.0"
+  }
+}

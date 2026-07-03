@@ -50,7 +50,7 @@ Extra options are forwarded to bench.py (run.sh --help for the full list).
   -h, --help                    show this help and exit
 
 Forwarded to bench.py (selection):
-  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop
+  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop | web
   --tasks TASK_ID [...]         explicit task subset
   --backend ollama|llama-server|vllm  inference backend (default: ollama)
   --num-predict INT             max output tokens (compare.sh default: 8000)

@@ -99,10 +99,10 @@ The header printed before each run shows estimated runtime from the previous run
 ./run.sh --models qwen2.5-coder:7b --tasks python_safe_div
 ```
 
-### Run only coding tasks (or context / multihop)
+### Run only coding tasks (or context / multihop / web)
 
 ```bash
-# 15 coding tasks only (useful for large RAM-bound models where context tasks are impractical)
+# 19 coding tasks only (useful for large RAM-bound models where context tasks are impractical)
 ./compare.sh --task-group coding
 ./run.sh --models qwen2.5-coder:7b --task-group coding
 
@@ -117,6 +117,9 @@ The header printed before each run shows estimated runtime from the previous run
 
 # 3 multihop + distractor tasks only
 ./compare.sh --task-group multihop
+
+# 4 web tasks (Express/FastAPI; slower due to npm install / pip install setup)
+./run.sh --models <model> --task-group web --backend llama-server --model-file models/24gb.txt
 
 # Combine groups
 ./compare.sh --task-group coding l6
@@ -192,6 +195,22 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | nemotron-nano:30b | 0/40 | ES module export failure (no `export` keyword on class) |
 
 Run with `--task-group l6_full --num-predict 24000 --model-timeout 1800`. compare.sh default (8000 tokens) is insufficient. Test 33 is the universal failure wall across all models. **Thinking does not help** — non-thinking gemma4 and devstral outperform thinking qwen3.5.
+
+### Web group — 4 tasks (2026-07-02/03; llama-server, single RTX 4090)
+
+```bash
+./run.sh --models <model> --task-group web --backend llama-server \
+  --model-file models/24gb.txt --num-predict 8000
+```
+
+| Model | Pass | Avg tok/s | python_fastapi_endpoint | Notes |
+|---|---|---|---|---|
+| noctrex-qwen3.6:35b | **4/4** | 116.7 | PASS | 35B MoE; field_validator + .strip() |
+| equinox:31b | **4/4** | 40.3 | PASS | 31B dense; field_validator + .strip() |
+| qwen3-30b:2507 | 3/4 | 162.1 | FAIL | 30B MoE; Field(min_length=1) passes "   " |
+| glm4.7-flash | 3/4 | 112.8 | FAIL | 16B MoE; Field(min_length=1) passes "   " |
+
+`python_fastapi_endpoint` is the discriminator task: all other web tasks pass for all models. The whitespace-name validator requires `field_validator` with `.strip()` — the spec says "non-blank after stripping whitespace". Smaller/lower-tier MoE models use `Field(min_length=1)` which accepts `"   "` (length=3). The cutoff appears to be model capability/scale, not MoE vs dense architecture.
 
 ---
 

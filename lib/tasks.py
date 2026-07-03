@@ -749,6 +749,90 @@ JAVA_WORD_FREQ = Task(
     min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
+PYTHON_CONFIG_LOADER = Task(
+    id="python_config_loader",
+    difficulty=2,
+    description=(
+        "load_config() in config.py reads APP_HOST, APP_PORT, APP_DEBUG, APP_MAX_CONN, and APP_NAME "
+        "from environment variables with typed defaults. It has two bugs: "
+        "(1) string values are not stripped of leading/trailing whitespace before use or conversion, "
+        "so APP_PORT='  9000  ' causes a ValueError in int(); "
+        "(2) an environment variable explicitly set to an empty string is not treated as absent — "
+        "the caller's default is ignored and the empty string is used instead. "
+        "Fix config.py so all tests pass."
+    ),
+    subdir="python_config_loader",
+    editable_files=["config.py"],
+    context_files=["tests/test_config_loader.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=8000,
+)
+
+BASH_PREFLIGHT = Task(
+    id="bash_preflight",
+    difficulty=2,
+    description=(
+        "preflight.sh checks that required commands (git, python3, curl) are on PATH "
+        "and that required environment variables (DATABASE_URL, APP_SECRET) are set and non-empty. "
+        "It has two bugs: "
+        "(1) it always prints 'OK' even when checks fail; "
+        "(2) it always exits 0 regardless of whether any checks failed. "
+        "Fix preflight.sh so it prints 'OK' and exits 0 only when all checks pass, "
+        "and exits 1 with MISSING_VAR / MISSING_CMD messages to stderr when any check fails."
+    ),
+    subdir="bash_preflight",
+    editable_files=["preflight.sh"],
+    context_files=["tests/test_preflight.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=8000,
+)
+
+NODE_EXPRESS_VALIDATION = Task(
+    id="node_express_validation",
+    difficulty=3,
+    description=(
+        "The POST /items route in src/router.js has four bugs: "
+        "(1) returns HTTP 200 instead of 201 on success; "
+        "(2) does not validate that price is a number (accepts strings like 'free'); "
+        "(3) does not validate that price is positive (accepts zero and negative values); "
+        "(4) does not reject whitespace-only names (accepts '   ' as a valid name). "
+        "The stored item's name should be the trimmed value. "
+        "Fix src/router.js so all tests pass. Do not modify src/app.js, tests/router.test.js, or package.json."
+    ),
+    subdir="node_express_validation",
+    editable_files=["src/router.js"],
+    context_files=["src/app.js", "tests/router.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/router.test.js"],
+    test_timeout=30,
+    setup_cmd=["npm", "install", "--prefer-offline"],
+    setup_timeout=120,
+    min_predict=8000,
+)
+
+PYTHON_FASTAPI_ENDPOINT = Task(
+    id="python_fastapi_endpoint",
+    difficulty=3,
+    description=(
+        "The products API in products.py has three bugs: "
+        "(1) POST /products returns HTTP 200 instead of 201 (missing status_code=201 on the decorator); "
+        "(2) GET /products/{product_id} returns None for missing IDs causing a 500 — it should raise HTTPException(404); "
+        "(3) POST /products accepts zero, negative, and whitespace-only names — "
+        "price must be > 0 and name must be non-blank after stripping whitespace. "
+        "Use Pydantic field constraints / validators for price and name. "
+        "Fix products.py so all tests pass."
+    ),
+    subdir="python_fastapi_endpoint",
+    editable_files=["products.py"],
+    context_files=["tests/test_products.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short", "-W", "ignore::DeprecationWarning"],
+    test_timeout=30,
+    setup_cmd=["python3", "-m", "pip", "install", "-q", "fastapi", "httpx"],
+    setup_timeout=120,
+    min_predict=8000,
+)
+
 BUILTIN_TASKS: list[Task] = [
     CSV_NORDIC_PROPERTY,
     NODE_SLUGIFY,
@@ -769,6 +853,10 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_MERGE_INTERVALS,
     AWK_CSV_STATS,
     JAVA_WORD_FREQ,
+    PYTHON_CONFIG_LOADER,
+    BASH_PREFLIGHT,
+    NODE_EXPRESS_VALIDATION,
+    PYTHON_FASTAPI_ENDPOINT,
     NODE_PARATROOPER,
     NODE_PARA_CORE,
     NODE_PARA_TURRET,
@@ -810,5 +898,11 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "multihop": [
         "multihop_forward", "multihop_reverse", "distractor_notes",
+    ],
+    "web": [
+        "python_config_loader",
+        "bash_preflight",
+        "node_express_validation",
+        "python_fastapi_endpoint",
     ],
 }

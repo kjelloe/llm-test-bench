@@ -204,6 +204,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     for dense 31B fully GPU-resident). f16 KV used (unknown architecture, safe default).
   Notable: passes python_hashmap (L5) and both CSV tasks (L3) — only model besides qwen2.5-coder:32b-q4
     to achieve this on single 24 GB. ADDED TO 24gb.txt.
+  **web task group results (2026-07-02/03, --task-group web, llama-server, 4 tasks)**:
+  - noctrex-qwen3.6:35b: 4/4 at 116.7 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
+  - equinox:31b: 4/4 at 40.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
+  - glm4.7-flash: 3/4 at 112.8 tok/s — FAIL python_fastapi_endpoint (uses Field(min_length=1), passes "   " as valid name instead of rejecting it)
+  - qwen3-30b:2507: 3/4 at 162.1 tok/s — same FAIL as glm4.7-flash (same Field(min_length=1) approach)
+  - python_fastapi_endpoint whitespace-name validator discriminates by model capability/scale, not MoE vs dense: noctrex-qwen3.6:35b (35B MoE) and equinox:31b (31B dense) both pass; qwen3-30b:2507 (30B MoE) and glm4.7-flash (16B MoE) both fail. Smaller/lower-tier MoE models take the Field shortcut; stronger models apply field_validator with .strip().
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
   generates verbose prose/markdown preamble before code, exhausting the 8000-token budget

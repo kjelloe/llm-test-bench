@@ -85,7 +85,13 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (33 total, difficulty L1–L6):
+- Built-in tasks (37 total, difficulty L1–L6):
+
+  **Web tasks (4) — select with `--task-group web`:**
+  - `python_config_loader` (L2) — `load_config()` in `config.py` reads five environment variables with typed defaults; bugs: no whitespace-stripping on values (causing `int()` errors), and empty-string env values don't fall back to defaults. Fix so `APP_PORT='  9000  '` and `APP_NAME=''` behave correctly. `pytest`
+  - `bash_preflight` (L2) — `preflight.sh` checks required commands and env vars; bugs: always prints `OK` and always exits 0 even when checks fail. Fix so exit code is 1 and `OK` is not printed on failure. `pytest` (subprocess).
+  - `node_express_validation` (L3) — Express `POST /items` route has four bugs: returns 200 instead of 201, accepts non-numeric prices, accepts negative/zero prices, and accepts whitespace-only names. `setup_cmd: npm install --prefer-offline`. `node --test` with `supertest`.
+  - `python_fastapi_endpoint` (L3) — FastAPI products API has three bugs: `POST /products` returns 200 instead of 201, `GET /products/{id}` returns 500 for missing IDs instead of 404, and no validation prevents zero/negative prices or blank names. `setup_cmd: pip install fastapi httpx`. `pytest` with `fastapi.testclient.TestClient`.
 
   **Data tasks (1):**
   - `csv_nordic_property` (L3) — 5 000-row Norwegian residential property dataset (SSB 06726); Nordic CSV (`;`-separated, UTF-8, `..` = missing value), 103 columns (region + 3 metrics × 34 years 1992–2025). Model implements `solution.py` from a skeleton: `answer_questions()` returns 10 scalar answers written to `answers.txt`; `transform()` selects bottom-25% and top-25% of regions by 2023 total purchase sum, outputs a 7-column Nordic CSV (`output.csv`) with only the 1992 and 2022 year-columns, sorted ascending. `num_ctx=16384` (prompt alone is ~6 400 tokens; the 8192 default left only ~1 700 tokens for generation — models started BEGIN_FILE but were cut off before END_FILE); `min_predict=12000` (thinking models exhaust 8000 mid-output; all 6 models still failed at 8000); `model_timeout=600` (cold-start + 12000-token generation exceeds run.sh's 300s default). Known: llama4-scout:17b TOOL_ERROR timeout at 600s (3.3 tok/s ≈ 2000 max tokens, insufficient for full solution). `pytest`
