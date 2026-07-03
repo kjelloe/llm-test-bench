@@ -16,7 +16,7 @@ import pytest
 from bench import run_one
 from lib.ollama_client import OllamaMetrics, OllamaResponse
 from lib.reporting import _INFRA_ERROR_KINDS, _skill_level, print_comparison_table
-from lib.tasks import PYTHON_SAFE_DIV
+from lib.tasks import PYTHON_SAFE_DIV, TASK_MAP, TASK_GROUPS
 
 # Use python3 explicitly so the test works on systems where 'python' is not on PATH
 TASK = dataclasses.replace(
@@ -294,6 +294,19 @@ def test_is_thinking_true_uses_after_reasoning_message():
     )
     sys_msg2 = captured2["messages"][0]["content"]
     assert sys_msg2.startswith("Output ONLY"), repr(sys_msg2)
+
+
+def test_task_groups_all_ids_in_task_map():
+    for group, ids in TASK_GROUPS.items():
+        for tid in ids:
+            assert tid in TASK_MAP, f"TASK_GROUPS[{group!r}] contains unknown task {tid!r}"
+
+
+def test_web_group_npm_fastapi_tasks_have_setup_cmd():
+    needs_setup = {"node_express_validation", "python_fastapi_endpoint"}
+    for tid in needs_setup:
+        assert tid in TASK_MAP, f"{tid} missing from TASK_MAP"
+        assert TASK_MAP[tid].setup_cmd is not None, f"{tid} must have setup_cmd"
 
 
 def test_is_thinking_false_uses_plain_message():
