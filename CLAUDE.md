@@ -288,12 +288,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 ```
 bench.py            CLI runner
 install.sh          Interactive dependency installer
-run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip)
+run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
-compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json)
+compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
+scout-hf.sh         Periodic HF Hub scanner; diffs against saved state (output/hf-scout-state.json); use --vllm for AWQ/GPTQ/FP8 transformers repos (state: output/hf-scout-vllm-state.json); --no-save for dry-run; --show-all to include unchanged repos
 preflight.sh        Dependency checker
 hwmonitor/
   hwmonitor.py      Live hardware watchdog: GPU temp/power/VRAM, CPU temp, RAM; WARN/CRIT on threshold breach; aborts bench.py on CRIT (SIGINT → SIGTERM)
@@ -309,6 +310,9 @@ lib/
   hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
   gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
   history.py              Run history writer and header printer
+logs/
+  run-NN.log          Per-run output (tee from run.sh); keeps last 10; run-latest.log symlink
+  compare-NN.log      Per-compare output (tee from compare.sh); compare-latest.log symlink
 tests/
   test_parsing.py         Parser unit tests  →  python3 -m pytest tests/
   test_model_config.py    Model config parser unit tests

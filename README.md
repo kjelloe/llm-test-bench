@@ -785,6 +785,16 @@ Requires `huggingface_hub` (included in `requirements.txt`; installed when you f
 
 Each repo entry shows downloads, the recommended GGUF file, and a VRAM fit indicator: ✓ ≤20 GB (fits with KV headroom on a 24 GB card), `~` 20–24 GB (tight, limited KV cache), ✗ >24 GB (multi-GPU needed). State is saved to `output/hf-scout-state.json`.
 
+**vLLM scout mode (`--vllm`):** Instead of GGUF repos, scans for AWQ/GPTQ/FP8 HuggingFace transformers repos suitable for `vllm serve`. Detects quantization type from `config.json` (AWQ > GPTQ > FP8; name-based detection takes priority to avoid `compressed-tensors` false positives). Estimates tensor-parallel degree from VRAM fit (24 GB/rank, constrained by `num_kv_heads % tp == 0`). Filters out vision-language models. State saved to `output/hf-scout-vllm-state.json`.
+
+```bash
+# Scan for vLLM-compatible AWQ/GPTQ/FP8 repos
+./scout-hf.sh --vllm
+
+# Dry-run vLLM scout without saving state
+./scout-hf.sh --vllm --no-save
+```
+
 ---
 
 ## Exporting results
