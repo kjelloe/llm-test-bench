@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Console logging ───────────────────────────────────────────────────────────
+# Skipped when called from compare.sh (BENCH_NO_LOG=1) to avoid double-logging.
+if [[ "${BENCH_NO_LOG:-0}" -eq 0 ]]; then
+    _LOG_DIR="$_SCRIPT_DIR/logs"
+    mkdir -p "$_LOG_DIR"
+    _log_num=0
+    for _f in "$_LOG_DIR"/run-[0-9]*.log; do
+        [[ -f "$_f" ]] || continue
+        _n="${_f##*/run-}"; _n="${_n%.log}"
+        [[ "$_n" =~ ^[0-9]+$ ]] && [[ "$_n" -gt "$_log_num" ]] && _log_num=$_n || true
+    done
+    _log_num=$(( _log_num + 1 ))
+    _LOG_FILE="$_LOG_DIR/run-$(printf '%02d' "$_log_num").log"
+    exec > >(tee "$_LOG_FILE") 2>&1
+    ls -t "$_LOG_DIR"/run-[0-9]*.log 2>/dev/null | tail -n +11 | xargs -r rm -f
+    ln -sf "$(basename "$_LOG_FILE")" "$_LOG_DIR/run-latest.log"
+fi
+
 _RUN_START=$(date +%s)
 echo "Started: $(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -14,8 +34,6 @@ fi
 source "$VENV/bin/activate"
 
 pip install --quiet -r requirements.txt
-
-_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Strip --no-hwmonitor before forwarding args to bench.py ─────────────────
 _NO_HWMONITOR=0

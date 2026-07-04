@@ -5,10 +5,11 @@ set -euo pipefail
 # (new repos, updated file lists, repos that disappeared).
 #
 # Usage:
-#   ./scout-hf.sh                          # run with default queries
+#   ./scout-hf.sh                          # GGUF scout with default queries
+#   ./scout-hf.sh --vllm                  # vLLM scout (AWQ/GPTQ/FP8 transformers)
 #   ./scout-hf.sh --no-save               # dry-run, do not update state
 #   ./scout-hf.sh --show-all              # also print full repo list on re-runs
-#   ./scout-hf.sh --limit 12             # more repos per query (default: 8)
+#   ./scout-hf.sh --limit 12             # more repos per query (default: 10)
 #   ./scout-hf.sh --token hf_xxx         # explicit token (or set HF_TOKEN env var)
 #   ./scout-hf.sh --queries "qwen3" "llama3 instruct"  # custom queries
 #
