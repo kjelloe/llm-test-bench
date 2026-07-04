@@ -149,11 +149,16 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   NOTE: ~16 GB model requires 24 GB VRAM to run with useful context — minimal KV headroom on 16 GB GPU.
   Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without
   tensor_split; use `./gpu-mode.sh single` for clean single-GPU benchmarks. Added to models/24gb.txt.
-  **qwen3-30b:2507** (unsloth, Q4_K_M A3B MoE, ~17 GB, single RTX 4090): CONFIRMED 2026-06-27
-  18/19 coding at 185 tok/s; node_paratrooper TESTS_STILL_FAIL (3.6k tokens — constructor
-  correct, game loop wrong — universal L6 wall). July 2026 re-instruction fine-tune of
-  Qwen3-30B-A3B-Instruct. Passes all L1–L4 + python_dijkstra (L5); fails python_hashmap
-  (L5, capability gap — f16 KV enabled, so not precision). Skill L4 coding. Added to models/24gb.txt.
+  **qwen3-30b:2507** (unsloth, Q4_K_M A3B MoE, ~17 GB, single RTX 4090): CONFIRMED 2026-07-03
+  full 37-task run: 32/37 at ~163 tok/s avg. July 2026 re-instruction fine-tune of Qwen3-30B-A3B-Instruct.
+  Skill L2 (full run: python_fastapi_endpoint L3 TESTS_STILL_FAIL caps it; Skill L4 in coding-only context).
+  Coding: 18/19 (python_hashmap L5 capability gap). Web: 3/4 (python_fastapi_endpoint FAIL).
+  L6 stepped: passes core/turret/combat; FAILS node_para_entities (L5, step 3 gap). node_paratrooper FAIL (universal L6 wall).
+  Context: PASS 8k/16k/32k/64k; FAIL 128k (TOOL_ERROR 3600s, 0 tok/s — KV exhaustion at 131072 ctx on 24 GB);
+  256k also fails. Multihop: 3/3 PASS at 65536 ctx (16-17 tok/s).
+  Speed: ~160-175 tok/s at coding ctx; 9.2 tok/s at 64k (KV spill); 16-17 tok/s at multihop 65k ctx.
+  Context ceiling: max_ctx=65536 set in 24gb.txt — 128k/256k become SKIPPED_CTX.
+  Added to models/24gb.txt.
   **qwen3-coder:30b-mxfp4** (Face314, MXFP4 A3B MoE, ~15.9 GB, Ampere+ required): CONFIRMED 2026-06-27
   18/19 coding at 172 tok/s; node_paratrooper TESTS_STILL_FAIL (same universal L6 wall, 3.6k tokens).
   Same Qwen3-Coder-30B-A3B architecture as qwen3-coder:30b-1m. Same coding failure as qwen3-30b:2507
@@ -196,20 +201,24 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Capability verdict: clearly higher tier than all benchmarked <80B models on python_hashmap and
     node_para_core discriminators, but hits the same node_paratrooper wall as every other model tested.
   **equinox:31b** (jashepp, dense 31B MXFP4 Q8_0-Imatrix, ~16.4 GB, single RTX 4090, Ampere+ required):
-  CONFIRMED 2026-06-30 20-task coding: 18/20 at 37.0 tok/s. Skill L4. Unknown base model.
-  PASS: all L1–L4 (including python_multifile_rename L2, csv_nordic_property L3, node_csv_parser L3),
-    python_dijkstra (L5), python_hashmap (L5), node_para_combat (L6).
-  FAIL: node_para_entities (L5 — unusual: passes steps 1-2 and 4 but not step 3), node_paratrooper (L6).
-  Speed: ~40-43 tok/s at ctx=8192, ~32-36 tok/s at ctx=32768. 4090 power spikes to 350W TDP (normal
-    for dense 31B fully GPU-resident). f16 KV used (unknown architecture, safe default).
-  Notable: passes python_hashmap (L5) and both CSV tasks (L3) — only model besides qwen2.5-coder:32b-q4
-    to achieve this on single 24 GB. ADDED TO 24gb.txt.
+  CONFIRMED 2026-07-04 37-task full run: 32/37 at 35.5 tok/s avg. Skill L4.
+  Coding PERFECT: 19/19 (all L1–L4 + python_dijkstra + python_hashmap (L5) + node_para_combat (L6)).
+  Web PERFECT: 4/4 (including python_fastapi_endpoint — field_validator + .strip()).
+  Only single-24 GB model with 19/19 coding + 4/4 web simultaneously. Dense ≥31B is the cutoff for fastapi_endpoint.
+  FAIL: node_para_entities (L5 step 3 gap — passes steps 1-2 and 4 but not step 3), node_paratrooper (L6 universal wall).
+  Context ceiling: 32k on single 24 GB. f16 KV on dense 31B: ~5.5 GB at 32k (fits), ~11 GB at 64k + 16.4 GB weights ≈ 27.4 GB > 24 GB.
+  max_ctx=32768 in 24gb.txt: context_64k/128k/256k and multihop/distractor → SKIPPED_CTX. For 64k+ context use 2×24 GB.
+  Speed: ~40-43 tok/s at ctx=8192, ~32-36 tok/s at ctx=32768. 4090 power spikes to 350W TDP (normal for dense 31B fully GPU-resident). f16 KV (unknown architecture, safe default).
   **web task group results (2026-07-02/03, --task-group web, llama-server, 4 tasks)**:
   - noctrex-qwen3.6:35b: 4/4 at 116.7 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - equinox:31b: 4/4 at 40.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
+  - qwen2.5-coder:32b-q4: 4/4 at 33.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
+  - qwen3-coder:30b-1m: 2/4 at 150.8 tok/s — FAIL python_config_loader (L2) + FAIL python_fastapi_endpoint (L3); partial-method-completion likely drops module-level env-var logic
+  - quest:35b: 2/4 at 131.2 tok/s — FAIL python_config_loader (L2) + FAIL python_fastapi_endpoint (L3); "35B" is total params, A3B active = same MoE tier as failing cluster; RL training does not compensate
   - glm4.7-flash: 3/4 at 112.8 tok/s — FAIL python_fastapi_endpoint (uses Field(min_length=1), passes "   " as valid name instead of rejecting it)
   - qwen3-30b:2507: 3/4 at 162.1 tok/s — same FAIL as glm4.7-flash (same Field(min_length=1) approach)
-  - python_fastapi_endpoint whitespace-name validator discriminates by model capability/scale, not MoE vs dense: noctrex-qwen3.6:35b (35B MoE) and equinox:31b (31B dense) both pass; qwen3-30b:2507 (30B MoE) and glm4.7-flash (16B MoE) both fail. Smaller/lower-tier MoE models take the Field shortcut; stronger models apply field_validator with .strip().
+  - python_fastapi_endpoint: cutoff is dense ≥31B or Qwen3.6-35B arch specifically; all A3B-active MoE models fail regardless of total param count.
+  - python_config_loader: second discriminator — fails for models with Python structural gaps: qwen3-coder:30b-1m (partial-method-completion) and quest:35b (also fails python_multifile_rename on full benchmark). These two share a gap with Python module-level/structural editing, not just method bodies.
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
   generates verbose prose/markdown preamble before code, exhausting the 8000-token budget
@@ -342,6 +351,7 @@ When asked to implement features:
 - **MoE GGUF not supported**: `--load-format gguf` fails for any MoE / A3B model with
   `Failed to map GGUF parameters: model.layers.X.mlp.experts.*`. Affects qwen3-coder:30b,
   qwen3.5:35b-A3B, qwen3.6:35b-A3B, noctrex. Dense models (14B, 32B, 70B) work fine.
+  MoE models already perform excellently on llama-server; do not attempt vLLM for MoE.
 - **Single-GPU 24 GB ceiling for 32B Q4_K_M**: `max_model_len=8192` with `enforce_eager` +
   `gpu_mem_util=0.94`. Thinking models (deepseek-r1, qwq) hit a 7 680-token effective output
   cap (`max_model_len − 512`) which exhausts the reasoning budget before `BEGIN_FILE` on L3+
@@ -356,6 +366,20 @@ When asked to implement features:
   graph Mamba-block allocation errors. AxisQuant GPTQ: 18/19 coding, 23 tok/s — worse than
   bartowski GGUF on llama-server (19/19, 36 tok/s) on both quality and speed. GPTQ INT4
   calibrated on C4 generic text fails `python_hashmap` (same `_EMPTY` omission as q8_0 KV).
+  **AWQ preferred over GPTQ**: AWQ calibration is more representative than C4-calibrated GPTQ
+  for coding tasks. Priority AWQ candidates: Qwen3.6-27B-AWQ (avoids Mamba/SSM config.json
+  misdetection), Gemma4-26B-AWQ. Repo IDs to confirm before adding to model files.
+- **FP8 KV cache**: param `kv_cache_dtype=fp8` → `--kv-cache-dtype fp8`. Halves KV memory,
+  enabling longer contexts (e.g. deepseek-r1:32b 32k→64k on tp=2). **Caution**: verify
+  `python_hashmap` does not regress — the task is precision-sensitive at KV boundaries. If it
+  fails with fp8 KV, revert that model to `kv_cache_dtype=auto` (fp16 effective).
+- **Prefix caching**: param `enable_prefix_caching` (bare boolean) → `--enable-prefix-caching`.
+  Always enable for coding benchmarks — reduces TTFT on repeated system prompts. No quality impact.
+- **Recommended baseline params for tp=2 coding workloads** (not yet tested on this bench):
+  `tp=2,dtype=auto,kv_cache_dtype=fp8,enable_prefix_caching,gpu_mem_util=0.94,max_model_len=65536`
+- **Concurrency strength**: vLLM's primary advantage over llama-server is multi-request scheduling.
+  A concurrency benchmark (1/2/4/8 simultaneous coding requests; measure aggregate tok/s, TTFT,
+  per-request latency) would capture what llama-server single-request benchmarks cannot show.
 - **WSL2 mirrored-mode**: startup uses log-based readiness detection; inference uses LAN IP
   fallback. See `lib/vllm_client.py` `_wait_ready()` and `_detect_connect_url()`.
 

@@ -173,7 +173,8 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | qwen2.5-coder:32b-q4 | **28/33** | 36.5 | Dense 32B Q4_K_M ~18.5 GB; Skill L2; 2026-06-26 full run (2×24 GB); **19/19 coding PERFECT** (strongest coder tested; passes python_expr_eval, csv_nordic, node_csv_parser); passes para L4/L5/L6 stepped; FAILS node_para_core (L3 logic gap); ctx caps at 32k even on 48 GB; added to 24gb.txt |
 | qwen3-coder:30b (base) | 30/33 | 160 | Superseded by 1M variant; same L6 ceiling; slower on all tasks |
 | qwen3.6:35b-A3B | 25/29 | **146** ✓ | Q4_K_M MoE; coding *146 tok/s (2026-06-27); passes python_hashmap + python_expr_eval; ctx: 122.8/94.0/87.6/82.1 tok/s (32k/64k/128k/256k); node_csv_parser blind spot |
-| qwen3-30b:2507 | 18/19 coding | **185** | Q4_K_M A3B MoE ~17 GB; July 2026 re-instruction fine-tune; fails python_hashmap (L5 cap gap) + node_paratrooper (universal L6 wall, 3.6k tokens); passes python_dijkstra (L5); Skill L4; added to 24gb.txt |
+| equinox:31b | **32/37** | **36** avg | Dense 31B MXFP4 ~16.4 GB, Ampere+; Skill L4; 2026-07-04 full 37-task; **19/19 coding PERFECT + 4/4 web PERFECT**; passes python_hashmap + python_dijkstra (L5) + node_para_combat (L6); fails node_para_entities (L5 step 3), node_paratrooper; ctx 8k–32k PASS, 64k+ SKIPPED_CTX (f16 KV fills 24 GB at 64k); max_ctx=32768 |
+| qwen3-30b:2507 | **32/37** | **163** avg | Q4_K_M A3B MoE ~17 GB; Skill L2 (full: fastapi_endpoint L3 caps it; L4 coding-only); full 37-task 2026-07-03; 18/19 coding (hashmap fails); 3/4 web (fastapi fails); L6 stepped passes core/turret/combat, fails node_para_entities; multihop 3/3; ctx 8k–64k PASS, 128k TOOL_ERROR (KV exhaustion at 131k), max_ctx=65536 |
 | qwen3-coder:30b-mxfp4 | 18/19 coding | 172 | MXFP4 A3B MoE ~15.9 GB, Ampere+; same failures as qwen3-30b:2507; Q4_K_M is ~7% faster for same arch; Skill L4; added to 24gb.txt |
 | lfm2:8b | 3/10 subset | **321** | Liquid AI A1B MXFP4 MoE ~4.5 GB; **new speed record**; terrible quality at L2+ (node_slugify, CSV, python_expr_eval all fail); node_para_core NO_BLOCKS (format failure); not useful beyond L1 |
 | nemotron-nano:30b-a3b | 16/19 coding | 176 | Mamba-2 hybrid; passes python_expr_eval; consistent 3-task fails: node_slugify (L2) + python_dijkstra + python_hashmap (L5); max_ctx=65536 |
@@ -205,12 +206,15 @@ Run with `--task-group l6_full --num-predict 24000 --model-timeout 1800`. compar
 
 | Model | Pass | Avg tok/s | python_fastapi_endpoint | Notes |
 |---|---|---|---|---|
-| noctrex-qwen3.6:35b | **4/4** | 116.7 | PASS | 35B MoE; field_validator + .strip() |
-| equinox:31b | **4/4** | 40.3 | PASS | 31B dense; field_validator + .strip() |
-| qwen3-30b:2507 | 3/4 | 162.1 | FAIL | 30B MoE; Field(min_length=1) passes "   " |
-| glm4.7-flash | 3/4 | 112.8 | FAIL | 16B MoE; Field(min_length=1) passes "   " |
+| noctrex-qwen3.6:35b | **4/4** | 116.7 | PASS | PASS | 35B MoE (Qwen3.6 arch); field_validator + .strip() |
+| equinox:31b | **4/4** | 40.3 | PASS | PASS | 31B dense; field_validator + .strip() |
+| qwen2.5-coder:32b-q4 | **4/4** | 33.3 | PASS | PASS | 32B dense; field_validator + .strip() |
+| qwen3-30b:2507 | 3/4 | 162.1 | PASS | FAIL | 30B A3B MoE; Field(min_length=1) passes "   " |
+| glm4.7-flash | 3/4 | 112.8 | PASS | FAIL | 16B A3B MoE; Field(min_length=1) passes "   " |
+| qwen3-coder:30b-1m | 2/4 | 150.8 | FAIL | FAIL | 30B A3B MoE; also fails python_config_loader (partial-method-completion) |
+| quest:35b | 2/4 | 131.2 | FAIL | FAIL | 35B total / A3B active MoE; also fails python_config_loader (Python structural gap) |
 
-`python_fastapi_endpoint` is the discriminator task: all other web tasks pass for all models. The whitespace-name validator requires `field_validator` with `.strip()` — the spec says "non-blank after stripping whitespace". Smaller/lower-tier MoE models use `Field(min_length=1)` which accepts `"   "` (length=3). The cutoff appears to be model capability/scale, not MoE vs dense architecture.
+Two discriminators: **`python_fastapi_endpoint`** — cutoff is dense ≥31B or Qwen3.6-35B architecture; A3B-active MoE models all fail regardless of total param count. **`python_config_loader`** — additionally fails for models with Python structural/module-level gaps (qwen3-coder partial-method-completion, quest:35b which also fails `python_multifile_rename` on the full benchmark).
 
 ---
 
