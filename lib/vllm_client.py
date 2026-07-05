@@ -188,13 +188,18 @@ class VLLMManager:
             self._current_ctx = 0
             raise
 
-    def _read_log(self, tail: int = 8000) -> str:
+    def _read_log(self, tail: int = 30000) -> str:
         if not self._log_path:
             return ""
         try:
             with open(self._log_path, errors="replace") as f:
                 content = f.read()
-            return content[-tail:] if len(content) > tail else content
+            if len(content) <= tail:
+                return content
+            # Show head + tail so the root-cause exception (near top of crash log)
+            # is visible alongside the propagation chain (at the bottom).
+            head = content[:4000]
+            return f"{head}\n...[{len(content) - tail - 4000} chars omitted]...\n{content[-tail:]}"
         except Exception:
             return ""
 

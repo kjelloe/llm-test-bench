@@ -12,7 +12,7 @@ if [[ "${BENCH_NO_LOG:-0}" -eq 0 ]]; then
     for _f in "$_LOG_DIR"/run-[0-9]*.log; do
         [[ -f "$_f" ]] || continue
         _n="${_f##*/run-}"; _n="${_n%.log}"
-        [[ "$_n" =~ ^[0-9]+$ ]] && [[ "$_n" -gt "$_log_num" ]] && _log_num=$_n || true
+        [[ "$_n" =~ ^[0-9]+$ ]] && [[ "10#$_n" -gt "$_log_num" ]] && _log_num=$(( 10#$_n )) || true
     done
     _log_num=$(( _log_num + 1 ))
     _LOG_FILE="$_LOG_DIR/run-$(printf '%02d' "$_log_num").log"
