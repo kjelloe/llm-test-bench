@@ -16,7 +16,7 @@ These are not competitors. They optimize for different workloads.
 |---|---|---|
 | **Primary strength** | Single-user, interactive, frequent model swaps | Concurrent requests, always-on serving |
 | **Model format** | GGUF (broad ecosystem, aggressive low-bit quants) | HF safetensors or GGUF (dense models only) |
-| **MoE support** | Excellent — all A3B/A22B MoE GGUFs work | GGUF MoE fails (`mlp.experts.*` not mapped); use native FP8 HF format |
+| **MoE support** | Excellent — all A3B/A22B MoE GGUFs work | GGUF MoE works with patched `--quantization gguf` flag (confirmed 31.2 tok/s tp=1); stock vLLM still fails with `mlp.experts.*` error; use AWQ/FP8 HF format with stock vLLM |
 | **Startup time** | Fast — model swaps in seconds | Slow — CUDA graph capture ~400s for 32B; `enforce_eager` saves ~1 GB VRAM at ~20% speed cost |
 | **KV cache** | `q8_0` or `f16` per model flag | FP8 (`kv_cache_dtype=fp8`) halves memory; FP16 default |
 | **Prefix caching** | Not available | Built-in; significant TTFT wins on repeated system prompts |
@@ -106,9 +106,10 @@ No new model class unlocks at 96 GB that 72 GB doesn't handle. Not a priority up
 
 ### 3. Recommended vLLM Runtime Defaults
 
-> **[NOT YET VALIDATED]** — these are the recommended starting parameters based on vLLM
-> documentation and architecture math. Confirmed vLLM benchmark runs are planned (see
-> `next-runs.md` runs #9–12). Update this section once runs complete.
+> **[PARTIALLY VALIDATED]** — baseline params confirmed on AWQ (tp=1/tp=2) and GGUF (tp=1)
+> for Qwen3-Coder-30B-A3B (confirmed 2026-07-05/06). FP8 KV and tp=2 performance not confirmed
+> on this hardware (FP8 arm dead on RTX 3090 Ampere). Update remaining `est.` values once
+> additional runs complete.
 
 ```bash
 # Baseline profile for tp=2 coding workloads on 2× 24 GB
@@ -116,7 +117,7 @@ vllm serve <model-id> \
   --tensor-parallel-size 2 \        # TP across GPUs; TP size must divide num_attention_heads
   --dtype auto \                     # let vLLM pick bf16/fp16
   --kv-cache-dtype fp8 \             # halves KV memory; verify python_hashmap passes (precision canary)
-  --gpu-memory-utilization 0.94 \    # start here; raise to 0.97 if stable; lower if OOM at startup
+  --gpu-memory-utilization 0.88 \    # 0.88 confirmed safe with display adapter; 0.94 exceeded free VRAM
   --enable-prefix-caching \          # faster TTFT on repeated system prompts; no quality impact
   --max-model-len 32768              # per model; see tier notes below
 ```
@@ -134,8 +135,8 @@ tolerates the mismatch far better because it pipelines layer transfers asynchron
 
 | Tier | Dense 32B | Dense 32B (FP8 KV) | MoE 30B | Dense 70B |
 |---|---|---|---|---|
-| Single 24 GB | 8 192 | 16 384 est. | N/A (GGUF MoE unsupported) | does not fit |
-| 2× 24 GB | 32 768–65 536 | 65 536–131 072 | 32 768 (native FP8 HF) | 32 768 |
+| Single 24 GB | 8 192 | 16 384 est. | 8 192 (GGUF patched vLLM; KV ceiling ~13 760) | does not fit |
+| 2× 24 GB | 32 768–65 536 | 65 536–131 072 | 32 768 (AWQ HF; or GGUF patched) | 32 768 |
 
 ---
 
@@ -331,7 +332,8 @@ Confirmed scores from `models/24gb.txt` (single RTX 4090) and `models/2x24gb.txt
 | Best 48 GB all-round | `qwen3.6:27b` | llama-server | \*40.2 | 32/33 Skill L5; 256k at 26 tok/s |
 | Speed + quality, 48 GB | `noctrex-qwen3.6:35b` | llama-server | \*121 | 32/33; 256k at 75 tok/s |
 | Large review (3×24 GB) | `gpt-oss:120b` | llama-server | ~90 est. | GPU-resident at 72 GB; was 17 tok/s RAM-bound |
-| vLLM native FP8, 48 GB | `Qwen3-Coder-30B-A3B-Instruct-FP8` | vLLM tp=2 | pending | Primary vLLM candidate; run #9 |
+| vLLM AWQ, single GPU | `cpatonn/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit` | vLLM tp=1 | \*28.5 | 18/19; python_hashmap FAIL (base gap); 4× slower than llama-server |
+| vLLM GGUF (patched), single GPU | Q4_K_M via `--quantization gguf` (patched vLLM) | vLLM tp=1 | \*31.2 | 15/16 eligible; ctx≤8192 on single 24 GB; ~10% faster than AWQ |
 
 **Rejected models (do not add to regular sets):**
 

@@ -51,6 +51,18 @@ qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,ma
 #   max_num_seqs=1 as belt-and-suspenders. Benchmark sends 1 request at a time → no impact.
 qwen3.6:27b-gptq  -  tp=1,dtype=auto,max_model_len=32768,enforce_eager,max_num_seqs=1  hf:AxisQuant/Qwen3.6-27b-gptq-int4
 
+# ── GGUF MoE tp=1 — patched vLLM fused-expert kernel test ────────────────────
+# Uses --quantization gguf (patched flag) instead of --load-format gguf.
+# No dtype/enforce_eager per ally's step-1 correctness test params.
+# If this still throws width error, the down_proj patch was insufficient.
+qwen3-coder:30b-gguf  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  tp=1,gpu_mem_util=0.88,max_model_len=8192  hf:Qwen/Qwen3-Coder-30B-A3B-Instruct
+
+# ── AWQ single-GPU — Qwen3-Coder-30B-A3B tp=1 for throughput comparison ──────
+# Same cpatonn AWQ as 2x24gb.vllm but tp=1; eliminates PCIe all-reduce overhead.
+# Model fits in 24 GB at AWQ Int4 (~15 GB weights). gpu_mem_util=0.88 for display headroom.
+# Baseline comparison: tp=2 got 16.6 tok/s; tp=1 should approach llama-server (~115 tok/s).
+qwen3-coder:30b-awq  -  tp=1,gpu_mem_util=0.88,enforce_eager,enable_prefix_caching,max_model_len=32768  hf:cpatonn/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit
+
 # ── AWQ candidates — HF-format, no GGUF, no Mamba/SSM config.json issue ─────
 # AWQ calibration is more representative than C4-calibrated GPTQ for coding tasks.
 # Verify HF repo IDs before uncommenting — search HuggingFace for community AWQ uploads.

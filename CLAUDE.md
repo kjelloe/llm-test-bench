@@ -350,12 +350,27 @@ When asked to implement features:
 - Add at least one test for any non-trivial parser or scoring logic.
 - Update `SPEC.md` / `ARCHITECTURE.md` if behavior changes.
 
-#### vLLM backend constraints (2026-05-27, vLLM with GGUF)
+#### vLLM backend constraints (updated 2026-07-06)
 
-- **MoE GGUF not supported**: `--load-format gguf` fails for any MoE / A3B model with
-  `Failed to map GGUF parameters: model.layers.X.mlp.experts.*`. Affects qwen3-coder:30b,
-  qwen3.5:35b-A3B, qwen3.6:35b-A3B, noctrex. Dense models (14B, 32B, 70B) work fine.
-  MoE models already perform excellently on llama-server; do not attempt vLLM for MoE.
+- **MoE GGUF — patched vLLM** (2026-07-06): `--quantization gguf` (ally's patched flag, not
+  stock `--load-format gguf`) successfully loads Qwen3-Coder-30B-A3B MoE GGUF. Results:
+  15/16 eligible tasks PASS at 31.2 tok/s (tp=1, single RTX 4090). python_hashmap TESTS_STILL_FAIL
+  (base model gap — same as AWQ; see below). KV headroom caps at ~13760 tokens on single 24 GB
+  due to GGUF loader workspace overhead (~5 GB); max_model_len=8192 is the practical ceiling.
+  Speed: ~10% faster than AWQ tp=1 (28.5 tok/s) but 4× slower than llama-server (115 tok/s);
+  gap is engine-level, not format. Harness uses `--quantization gguf` by default for GGUF mode;
+  set `gguf_load_format=legacy` in model params to revert to `--load-format gguf` (legacy).
+  Stock vLLM still fails with `Failed to map GGUF parameters: model.layers.X.mlp.experts.*` for
+  any MoE / A3B model — the patch is required. Dense models (14B, 32B, 70B) work with stock vLLM.
+- **vLLM single-request speed**: ~31 tok/s (GGUF tp=1) / ~28 tok/s (AWQ tp=1) vs llama-server
+  ~115 tok/s for the same A3B MoE model — 4× engine-level gap confirmed on both GGUF and AWQ
+  paths. tp=2 PCIe adds all-reduce overhead (16.6 tok/s). Crossover point: vLLM wins only at
+  concurrent requests (continuous batching). For single-user coding workloads, llama-server is
+  the clear choice. AWQ tp=1 is preferred over tp=2 on mismatched PCIe GPUs.
+- **python_hashmap and vLLM**: TESTS_STILL_FAIL on AWQ (cpatonn standard base) and GGUF Q4_K_M
+  (standard base). Confirms the PASS in qwen3-coder:30b-1m (llama-server) is specific to the 1M
+  fine-tune checkpoint — not a GGUF/llama-server precision artifact. Do not apply f16 KV to
+  paper over this; it is a base model capability gap.
 - **Single-GPU 24 GB ceiling for 32B Q4_K_M**: `max_model_len=8192` with `enforce_eager` +
   `gpu_mem_util=0.94`. Thinking models (deepseek-r1, qwq) hit a 7 680-token effective output
   cap (`max_model_len − 512`) which exhausts the reasoning budget before `BEGIN_FILE` on L3+
