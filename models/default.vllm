@@ -51,6 +51,12 @@ qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,ma
 #   max_num_seqs=1 as belt-and-suspenders. Benchmark sends 1 request at a time → no impact.
 qwen3.6:27b-gptq  -  tp=1,dtype=auto,max_model_len=32768,enforce_eager,max_num_seqs=1  hf:AxisQuant/Qwen3.6-27b-gptq-int4
 
+# seed-oss:36b-int4 — ByteDance Seed architecture, GPTQ Int4, ~18 GB, novel family (no GGUF).
+# enforce_eager precaution: novel architecture may trigger Mamba/SSM handler like AxisQuant GPTQ.
+# max_model_len=16384: ~18 GB weights on 24 GB at gpu_mem_util=0.88 → ~3 GB KV headroom;
+# vLLM will report actual max at startup if 16384 is too large; lower to 8192 if it fails.
+seed-oss:36b-int4  -  tp=1,gpu_mem_util=0.88,enforce_eager,max_model_len=16384  hf:ByteDance-Seed/Seed-OSS-36B-PT-GPTQ-Int4
+
 # ── GGUF MoE tp=1 — patched vLLM fused-expert kernel test ────────────────────
 # Uses --quantization gguf (patched flag) instead of --load-format gguf.
 # No dtype/enforce_eager per ally's step-1 correctness test params.

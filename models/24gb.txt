@@ -6,6 +6,7 @@
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 
+# qwopus3.6:35b        # ~162 tok/s  GPU only (Coder MXFP4 MOE Q8_0-Imatrix ~19.8 GB, Ampere+); 19/19 coding PERFECT — fastest perfect-score model; Skill ≥L5 (web/context pending)
 # quest:35b            # ~160 tok/s  GPU only (RL MXFP4 MOE, ~19 GB); 16/19 coding; Skill L6
 # noctrex-qwen3.6:35b  # ~118 tok/s  GPU only (MoE+MXFP4); 31/33 BEST — perfect coding 19/19; requires Ampere+
 # gpt-oss:20b          # ~197 tok/s  GPU only
@@ -26,6 +27,15 @@
 
 # GPU-only — fit fully in 24 GB VRAM
 # Run WITHOUT spec flags (--spec-type draft-mtp) — spec decoding breaks temp=0 determinism
+# qwopus3.6:35b: jashepp Qwopus3.6-35B-A3B-Coder MXFP4 MOE Q8_0-Imatrix (~19.8 GB, Ampere+ required).
+# CONFIRMED 2026-07-20 coding 19/19 at 161.8 tok/s avg — fastest model with perfect coding score.
+# PERFECT on all L1–L5 tasks including python_hashmap + python_dijkstra (both L5).
+# Base model: Qwen3.6-35B-A3B (same as noctrex) + jashepp coder fine-tune. +34% faster than noctrex (162 vs 121 tok/s).
+# node_paratrooper FAIL (universal L6 wall). Web: 3/4 (python_fastapi_endpoint FAIL — coder fine-tune breaks whitespace validation).
+# Para stepped: core PASS (L3), turret PASS (L4). node_para_entities GPU-freezes during prefill at ctx=32768 (~0.7 GB compute headroom).
+# Context_8k PASS (134 tok/s), context_16k PASS (130 tok/s) confirmed 2026-07-22. ctx=32768 tasks (32k, multihop, distractor, entities) need 2×24 GB.
+# f16 KV (A3B MoE architecture). Power spikes to 350W TDP. max_ctx=32768: context_64k/128k/256k → SKIPPED_CTX. Skill L4 (confirmed 2026-07-22).
+qwopus3.6:35b  Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Hybrid-Imatrix-GGUF
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
 # quest:35b: RL-trained MXFP4 MOE (~19.3 GB); 16/19 coding at 160 tok/s on RTX 4090 (2026-06-24).
 # Skill L6 — passes both L5 tasks (python_hashmap + python_dijkstra) and L6 node_para_combat.

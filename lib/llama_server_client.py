@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import time
 import urllib.error
@@ -33,6 +34,19 @@ _BOOL_EMIT_VALUE: dict[str, str] = {
 _PORT = 8080
 _BASE_URL = f"http://127.0.0.1:{_PORT}"
 _HEALTH_URL = f"{_BASE_URL}/health"
+
+
+def _wait_port_free(port: int, timeout: float = 8.0) -> None:
+    """Block until the TCP port is no longer in use (or timeout expires)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.1)
+            try:
+                s.connect(("127.0.0.1", port))
+            except (ConnectionRefusedError, socket.timeout, OSError):
+                return  # port is free
+        time.sleep(0.3)
 
 
 class LlamaServerManager:
@@ -86,6 +100,7 @@ class LlamaServerManager:
         self._proc = None
         self._current_model = None
         self._current_ctx = 0
+        _wait_port_free(_PORT)
 
     def _start(self, cfg: ModelConfig, ctx_size: int,
                num_threads: int | None = None, startup_timeout: int = 600) -> None:

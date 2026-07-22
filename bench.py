@@ -677,8 +677,11 @@ def main() -> None:
             # llama-server silently caps ctx when VRAM is insufficient; subsequent
             # requests against the same server process hang or error. Force a clean
             # restart before the next task so needs_restart() picks it up.
-            if record.get("error_kind") == "CTX_TRUNCATED" and llama_manager is not None:
-                print(f"  [{args.backend}] CTX_TRUNCATED — stopping server for fresh restart on next task",
+            # Also restart after TOOL_ERROR: a timeout often means the server GPU
+            # kernel is frozen (process alive but unresponsive). Without a restart
+            # all subsequent tasks send to the hung server and also time out.
+            if record.get("error_kind") in ("CTX_TRUNCATED", "TOOL_ERROR") and llama_manager is not None:
+                print(f"  [{args.backend}] {record['error_kind']} — stopping server for fresh restart on next task",
                       flush=True)
                 llama_manager.stop()
 
