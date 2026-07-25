@@ -72,10 +72,10 @@ Example output:
 ### Run the canonical benchmark (9 models)
 
 ```bash
-./compare.sh
+./compare.sh --backend llama-server
 ```
 
-Runs all models defined in `models/default.txt` (`noctrex-qwen3.6:35b`, `gpt-oss:20b`, `qwen2.5-coder:14b`, `qwen3-coder:30b-1m`, `gemma4:26b`, `qwen3.5:35b`, `gpt-oss:120b`, `devstral-small-2`, `qwen3.6:27b`) against all thirty-three tasks (19 coding, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare.json`.
+Runs all models defined in `models/default.txt` (`qwen3-30b:2507`, `noctrex-qwen3.6:35b`, `glm4.7-flash`, `gpt-oss:20b`, `qwen3.5:35b`, `qwen2.5-coder:14b`, `qwen3.6:27b`, `equinox:31b`, `gpt-oss:120b`) against all thirty-seven tasks (19 coding, 4 web, 4 L6 stepped, 1 L6 full, 6 context, 3 multihop). Writes results to `output/results-compare-ls.json`. All models are llama-server GGUF only — `--backend llama-server` is required.
 
 ### Run the extended benchmark (10 models)
 
@@ -102,11 +102,16 @@ The header printed before each run shows estimated runtime from the previous run
 ### Run only coding tasks (or context / multihop / web)
 
 ```bash
+# 10-task spot check (standard candidate evaluation subset)
+./run.sh --models <model> --task-group spot --backend llama-server --model-file models/candidates.txt
+
 # 19 coding tasks only (useful for large RAM-bound models where context tasks are impractical)
 ./compare.sh --task-group coding
 ./run.sh --models qwen2.5-coder:7b --task-group coding
 
 # 4 stepped L6 Paratrooper tasks (incremental difficulty; solvable without thinking mode)
+# 'para' is an alias for 'l6'
+./compare.sh --task-group para
 ./compare.sh --task-group l6
 
 # Full L6 (implement entire Paratrooper game from scratch; needs thinking model + large token budget)
@@ -122,7 +127,7 @@ The header printed before each run shows estimated runtime from the previous run
 ./run.sh --models <model> --task-group web --backend llama-server --model-file models/24gb.txt
 
 # Combine groups
-./compare.sh --task-group coding l6
+./compare.sh --task-group coding para
 ./compare.sh --task-group coding multihop
 ```
 
@@ -139,6 +144,23 @@ The header printed before each run shows estimated runtime from the previous run
 ## Benchmark results
 
 All results use the **llama-server backend**, RTX 4090 24 GB + RTX 3090 24 GB, AMD Ryzen 9 9900X, 86 GB RAM. Temperature=0, seed=1, num-predict=8000, model-timeout=1200.
+
+### Default set — 37 tasks (2026-07-23; llama-server 10094, single RTX 4090, 8 models × 37 tasks)
+
+gpt-oss:120b was not run (GGUF not yet downloaded). Scores on prior binary would be +1 for noctrex and glm4.7-flash (see regression notes below).
+
+| Model | Pass | Avg tok/s | Skill | Notes |
+|---|---|---|---|---|
+| qwen3.6:27b | **35/37** | 44 | L5 | Dense 27B; f16 KV required; node_paratrooper FAIL only |
+| noctrex-qwen3.6:35b | 34/37 | 141 | L2† | MXFP4 MoE Ampere+; 19/19 coding + 4/4 web PERFECT; †csv_nordic_property regression on llama-server 10094 (was 35/37 L5 on prior binary) |
+| qwen3.5:35b | 33/37 | 160 | L2 | MoE thinking; python_tokenizer + fastapi + node_para_entities + node_paratrooper FAIL |
+| equinox:31b | 32/37 | 41 | L4 | Dense 31B MXFP4 Ampere+; 19/19 coding + 4/4 web PERFECT; 3 SKIPPED_CTX (64k+) |
+| qwen3-30b:2507 | 31/37 | 177 | L2 | Q4_K_M A3B MoE; 2 SKIPPED_CTX (128k/256k); python_hashmap + fastapi FAIL |
+| glm4.7-flash | 31/37 | 132 | L1† | MXFP4 MoE Ampere+; passes node_para_entities (L5) + node_para_combat (L6); †python_config_loader regression on llama-server 10094 (was 32/37 L4 on prior binary) |
+| qwen2.5-coder:14b | 27/37 | 83 | L2 | Dense 14B; 3 SKIPPED_CTX (64k+); passes both L5 coding tasks |
+| gpt-oss:20b | 25/37 | 228 | <L1 | Semi-thinking; 9 NO_BLOCKS (reasoning exhausts budget); non-deterministic between runs |
+
+†Regressions confirmed on llama-server 10094 (kq-mask f16 change #25370). Cross-failure pattern: noctrex fails csv_nordic_property, glm4.7-flash fails python_config_loader — different tasks per model.
 
 ### Default set — 33 tasks (2026-06-24; llama-server, 2×24 GB, 4 models × 33 tasks)
 
@@ -174,6 +196,7 @@ node_paratrooper (l6_full) uses `num_predict=8000` in compare.sh — insufficien
 | qwen3-coder:30b (base) | 30/33 | 160 | Superseded by 1M variant; same L6 ceiling; slower on all tasks |
 | qwen3.6:35b-A3B | 25/29 | **146** ✓ | Q4_K_M MoE; coding *146 tok/s (2026-06-27); passes python_hashmap + python_expr_eval; ctx: 122.8/94.0/87.6/82.1 tok/s (32k/64k/128k/256k); node_csv_parser blind spot |
 | equinox:31b | **32/37** | **36** avg | Dense 31B MXFP4 ~16.4 GB, Ampere+; Skill L4; 2026-07-04 full 37-task; **19/19 coding PERFECT + 4/4 web PERFECT**; passes python_hashmap + python_dijkstra (L5) + node_para_combat (L6); fails node_para_entities (L5 step 3), node_paratrooper; ctx 8k–32k PASS, 64k+ SKIPPED_CTX (f16 KV fills 24 GB at 64k); max_ctx=32768 |
+| gemma4:31b-qat | **31/37** | **42** avg | Dense 31B QAT Q4_0 ~16.4 GB, **no Ampere+ required**; Skill L4; 2026-07-24/25 full equivalent; **18/19 coding + 4/4 web PERFECT**; passes python_hashmap + python_dijkstra (L5); FAIL node_csv_parser (L3, ESM export syntax conflict); FAIL node_para_entities (L5 step 3, same as equinox); csv_nordic_property PASS (Gemma4 A4B MoE structural fix); ctx 8k–32k PASS (32k at 0.7 tok/s — bandwidth-saturated), 64k+ SKIPPED_CTX; max_ctx=32768 |
 | qwen3-30b:2507 | **32/37** | **163** avg | Q4_K_M A3B MoE ~17 GB; Skill L2 (full: fastapi_endpoint L3 caps it; L4 coding-only); full 37-task 2026-07-03; 18/19 coding (hashmap fails); 3/4 web (fastapi fails); L6 stepped passes core/turret/combat, fails node_para_entities; multihop 3/3; ctx 8k–64k PASS, 128k TOOL_ERROR (KV exhaustion at 131k), max_ctx=65536 |
 | qwen3-coder:30b-mxfp4 | 18/19 coding | 172 | MXFP4 A3B MoE ~15.9 GB, Ampere+; same failures as qwen3-30b:2507; Q4_K_M is ~7% faster for same arch; Skill L4; added to 24gb.txt |
 | lfm2:8b | 3/10 subset | **321** | Liquid AI A1B MXFP4 MoE ~4.5 GB; **new speed record**; terrible quality at L2+ (node_slugify, CSV, python_expr_eval all fail); node_para_core NO_BLOCKS (format failure); not useful beyond L1 |
@@ -207,14 +230,15 @@ Run with `--task-group l6_full --num-predict 24000 --model-timeout 1800`. compar
 | Model | Pass | Avg tok/s | python_fastapi_endpoint | Notes |
 |---|---|---|---|---|
 | noctrex-qwen3.6:35b | **4/4** | 116.7 | PASS | PASS | 35B MoE (Qwen3.6 arch); field_validator + .strip() |
-| equinox:31b | **4/4** | 40.3 | PASS | PASS | 31B dense; field_validator + .strip() |
+| equinox:31b | **4/4** | 40.3 | PASS | PASS | 31B dense MXFP4 (unknown arch, Ampere+); field_validator + .strip() |
+| gemma4:31b-qat | **4/4** | 42.2 | PASS | PASS | 31B dense QAT Q4_0 (Gemma 4 arch, no Ampere+); confirms dense ≥31B cutoff cross-architecture |
 | qwen2.5-coder:32b-q4 | **4/4** | 33.3 | PASS | PASS | 32B dense; field_validator + .strip() |
 | qwen3-30b:2507 | 3/4 | 162.1 | PASS | FAIL | 30B A3B MoE; Field(min_length=1) passes "   " |
 | glm4.7-flash | 3/4 | 112.8 | PASS | FAIL | 16B A3B MoE; Field(min_length=1) passes "   " |
 | qwen3-coder:30b-1m | 2/4 | 150.8 | FAIL | FAIL | 30B A3B MoE; also fails python_config_loader (partial-method-completion) |
 | quest:35b | 2/4 | 131.2 | FAIL | FAIL | 35B total / A3B active MoE; also fails python_config_loader (Python structural gap) |
 
-Two discriminators: **`python_fastapi_endpoint`** — cutoff is dense ≥31B or Qwen3.6-35B architecture; A3B-active MoE models all fail regardless of total param count. **`python_config_loader`** — additionally fails for models with Python structural/module-level gaps (qwen3-coder partial-method-completion, quest:35b which also fails `python_multifile_rename` on the full benchmark).
+Two discriminators: **`python_fastapi_endpoint`** — cutoff is dense ≥31B (confirmed across Qwen2.5, equinox unknown base, Gemma 4) or noctrex-qwen3.6:35b (full instruction fine-tune); A3B-active MoE models all fail regardless of total param count or base model. **`python_config_loader`** — additionally fails for models with Python structural/module-level gaps (qwen3-coder partial-method-completion, quest:35b which also fails `python_multifile_rename` on the full benchmark).
 
 ---
 

@@ -14,15 +14,18 @@
 # Coding tok/s = short-ctx coding tasks. Full-run avg lower (context tasks pull it down).
 # noctrex *121 is 33-task avg; coding-only speed is ~140+ (not directly measured here).
 # Context speeds: 32k / 64k / 128k / 256k tok/s (2026-06-27 confirm run)
+# qwen3-30b:2507       # ~163 tok/s  MoE A3B Q4_K_M ~17 GB; 32/37 full run Skill L4; ctx_128k PASS *63.4 tok/s (2026-07-22)
 # qwen3.5:35b          # *153 tok/s  MoE; thinking; ctx: *122.4/104.2/107.0/85.6
 # qwen3.6:35b-A3B      # *146 tok/s  MoE; thinking; ctx: *122.8/94.0/87.6/82.1
 # noctrex-qwen3.6:35b  # *121 tok/s  MoE+MXFP4; 32/33 BEST; Ampere+ (3090 qualifies)
 # qwen3-coder:30b-1m   # ~115 tok/s  MoE; 1M-ctx variant; perfect coding 19/19; ctx: *80.6/54.4/39.4/19.5
 # gemma4:26b           # ~114 tok/s  MoE; ctx: *98.8/82.0/86.6/68.9
+# glm4.7-flash         # ~111 tok/s  MoE+MXFP4 ~16 GB; 29/33 Skill L4; ctx 128k PASS; 256k capability gap; Ampere+
 # qwen2.5-coder:14b    #  ~68 tok/s  ctx silently capped at 32k on 48 GB (same as qwen2.5-coder:32b-q4)
 # devstral-small-2     #  *44 tok/s  Dense 24B; ctx: *40.0/32.9/26.0/17.6; node_slugify FAIL
 # qwen3.5:27b          #  *42 tok/s  Dense 27B; passes hashmap with q8_0 KV; ctx: *38.4/34.8/29.4/22.8
 # qwen3.6:27b          #  *40 tok/s  Dense 27B; 32/33 ties noctrex; Skill L5; f16 KV required for hashmap
+# equinox:31b          #  *35 tok/s  dense 31B MXFP4 ~16.4 GB; 19/19+4/4 Skill L4; ctx: *31.1/27.3 tok/s (64k/128k) CONFIRMED 2026-07-22
 # qwen2.5-coder:32b-q4 #  *37 tok/s  dense 32B Q4_K_M; 28/33 Skill L2; 19/19 coding PERFECT; ctx caps 32k
 # deepseek-r1:32b      #  *34 tok/s  dense 32B Q5_K_M thinking; hashmap TESTS_STILL_FAIL; ctx: *25.0/19.7 PASS; 128k NO_BLOCKS; 256k arch limit (n_ctx_train=131072)
 # qwen2.5-coder:32b    #  *33 tok/s  dense 32B Q5_K_M; 6/7 subset; ctx=64k feasible
@@ -55,6 +58,14 @@ devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mma
 qwen3.6:27b  Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
 
 # ── Proven single-24GB MoE models — tensor_split removes 128k KV spill ──────────
+# qwen3-30b:2507: Q4_K_M A3B MoE (~17 GB); CONFIRMED 2026-07-03 37-task full run: 32/37 at ~163 tok/s. Skill L4.
+# July 2026 re-instruction fine-tune of Qwen3-30B-A3B-Instruct. Passes all L1–L4 coding + python_dijkstra (L5),
+# all web except fastapi_endpoint, node_para_core/turret/combat, context_8k–64k, multihop 3/3.
+# Fails: python_hashmap (L5 cap gap), python_fastapi_endpoint (L3), node_para_entities (L5 step 3), node_paratrooper.
+# context_128k: CONFIRMED PASS 2026-07-22 at 63.4 tok/s (2×24 GB tensor_split resolves single-GPU KV exhaustion).
+# context_256k: SKIPPED_CTX — architecture limit n_ctx_train=131072 (not a VRAM constraint; 2 GPUs don't help).
+qwen3-30b:2507  Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
+
 # qwen3-coder:30b-1m: 1M-ctx variant; perfect coding 19/19. CONFIRMED 2026-06-27 (7/7 context tasks):
 # ctx speeds: 80.6 / 54.4 / 39.4 / 19.5 tok/s (32k/64k/128k/256k). All multihop+distractor PASS.
 qwen3-coder:30b-1m  Qwen3-Coder-30B-A3B-Instruct-1M-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-1M-GGUF
@@ -70,7 +81,18 @@ qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 
 # gemma4:26b: MoE ~18 GB. CONFIRMED 2026-06-27 (7/7): 98.8/82.0/86.6/68.9 tok/s (32k/64k/128k/256k).
+# Architecture-level coding failures (confirmed 2026-07-22 on noctrex MXFP4_MOE variant, same base model):
+#   csv_nordic_property (L3, TESTS_STILL_FAIL), node_csv_parser (L3, TRUNCATED — verbose preamble
+#   exhausts 16k token budget). python_hashmap (L5) PASSES; context tasks unaffected.
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
+
+# glm4.7-flash: MXFP4 MoE (~16 GB, Ampere+); CONFIRMED 2026-06-26 full 33-task: 29/33 at 110.9 tok/s. Skill L4.
+# Context (single 24 GB): 8k–128k all pass; 64k at 73.6 tok/s, 128k at 63.3 tok/s.
+# 256k CAPABILITY GAP (wrong retrieval — not a VRAM failure; 2×24 GB will not fix it).
+# Passes node_para_entities (L5) + node_para_combat (L6) — only 16 GB model in set to achieve L6 stepped.
+# GLM architecture fails python_hashmap + python_dijkstra (both L5) regardless of precision.
+# tensor_split: optional (fits single GPU); included for KV headroom symmetry in multi-model runs.
+glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 
 # qwen3.5:27b: dense 27B Q4_K_M (~16 GB); 27/29 confirmed on single 24 GB, 15/15 coding.
 # CONFIRMED 2026-06-27: coding *42 tok/s; python_hashmap PASS with q8_0 KV (unlike qwen3.6:27b which
@@ -85,11 +107,21 @@ qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cach
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
 
 # ── 31B dense — single-24GB KV ceiling removed at 48 GB ──────────────────────────
-# equinox:31b: Dense 31B MXFP4 Q8_0-Imatrix (~16.4 GB, Ampere+). UNCONFIRMED on 2×24 GB.
+# equinox:31b: Dense 31B MXFP4 Q8_0-Imatrix (~16.4 GB, Ampere+). CONFIRMED 2026-07-22 on 2×24 GB (6/6 PASS).
 # Single-24GB: max_ctx=32768 (f16 KV: ~5.5 GB at 32k fits; ~11 GB at 64k + 16.4 GB weights ≈ 27.4 GB > 24 GB).
-# 2×24GB KV math: ~8.2 GB/GPU weights + ~5.5 GB/GPU KV at 65536 = 13.7 GB/GPU → fits; at 131072 ≈ 19.2 GB/GPU → fits.
-# Proposed params below — run context_64k and python_hashmap to verify before trusting.
-# equinox:31b  Equinox-31B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:jashepp/Equinox-31B-i1-MXFP4-GGUF
+# 2×24GB context speeds: ctx_64k *31.1 tok/s, ctx_128k *27.3 tok/s, multihop/distractor *34.3 tok/s.
+# python_hashmap: *37.8 tok/s PASS — no regression at tensor_split (f16 KV maintained).
+# KV math confirmed: ~8.2 GB/GPU weights + 19.2 GB/GPU KV at 131072 → fits on 24 GB/GPU (tight but clean).
+equinox:31b  Equinox-31B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:jashepp/Equinox-31B-i1-MXFP4-GGUF
+
+# gemma4:31b-qat: Dense 31B QAT Q4_0 (~16.4 GB, no Ampere+ required). Same KV footprint as equinox:31b.
+# Single-24GB: max_ctx=32768; context_32k at 0.7 tok/s (bandwidth-saturated); 64k/128k SKIPPED_CTX.
+# CONFIRMED 2026-07-25 on 2×24 GB (5/6 PASS):
+#   ctx_8k *34.5 tok/s, ctx_16k *34.6 tok/s, ctx_32k *32.4 tok/s (vs 0.7 tok/s single GPU),
+#   ctx_64k *30.9 tok/s, ctx_128k *27.9 tok/s SLOW (492s — same tier as equinox:31b 27.3 tok/s).
+#   context_256k SKIPPED_CTX (architecture limit max_ctx=131072; same as equinox:31b).
+# 31/37 full run on single GPU (2026-07-24/25), Skill L4.
+gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:lmstudio-community/gemma-4-31B-it-QAT-GGUF
 
 # ── 32B models — ctx≥32k was KV-limited on single 24 GB; 48 GB removes that cap ──
 # qwen2.5-coder:32b-q4: Q4_K_M (~18.5 GB); CONFIRMED 2026-06-26 full 33-task: 28/33, Skill L2, 36.5 tok/s.

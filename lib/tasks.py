@@ -889,8 +889,16 @@ TASK_GROUPS: dict[str, list[str]] = {
     "l6": [
         "node_para_core", "node_para_turret", "node_para_entities", "node_para_combat",
     ],
+    "para": [
+        "node_para_core", "node_para_turret", "node_para_entities", "node_para_combat",
+    ],
     "l6_full": [
         "node_paratrooper",
+    ],
+    "spot": [
+        "python_safe_div", "node_slugify", "python_lru_cache", "csv_nordic_property",
+        "node_csv_parser", "python_tokenizer", "python_expr_eval", "python_hashmap",
+        "node_para_core", "node_paratrooper",
     ],
     "context": [
         "context_8k", "context_16k", "context_32k",

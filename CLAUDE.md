@@ -153,16 +153,22 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   NOTE: ~16 GB model requires 24 GB VRAM to run with useful context — minimal KV headroom on 16 GB GPU.
   Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without
   tensor_split; use `./gpu-mode.sh single` for clean single-GPU benchmarks. Added to models/24gb.txt.
+  REGRESSION NOTE (2026-07-23, llama-server 10094, CONFIRMED 2026-07-23 re-run): python_config_loader FAIL
+  (L2 TESTS_STILL_FAIL — previously PASS in 2026-06-26 33-task run). Caps Skill at L1 on this binary.
+  csv_nordic_property PASS (still passes). Also context_256k TOOL_ERROR (7200s, no max_ctx cap — fixed:
+  max_ctx=131072 now set in default.txt). Root cause: kq-mask f16 change (#25370) in llama-server 10094.
   **qwen3-30b:2507** (unsloth, Q4_K_M A3B MoE, ~17 GB, single RTX 4090): CONFIRMED 2026-07-03
   full 37-task run: 32/37 at ~163 tok/s avg. July 2026 re-instruction fine-tune of Qwen3-30B-A3B-Instruct.
   Skill L2 (full run: python_fastapi_endpoint L3 TESTS_STILL_FAIL caps it; Skill L4 in coding-only context).
   Coding: 18/19 (python_hashmap L5 capability gap). Web: 3/4 (python_fastapi_endpoint FAIL).
   L6 stepped: passes core/turret/combat; FAILS node_para_entities (L5, step 3 gap). node_paratrooper FAIL (universal L6 wall).
-  Context: PASS 8k/16k/32k/64k; FAIL 128k (TOOL_ERROR 3600s, 0 tok/s — KV exhaustion at 131072 ctx on 24 GB);
-  256k also fails. Multihop: 3/3 PASS at 65536 ctx (16-17 tok/s).
-  Speed: ~160-175 tok/s at coding ctx; 9.2 tok/s at 64k (KV spill); 16-17 tok/s at multihop 65k ctx.
-  Context ceiling: max_ctx=65536 set in 24gb.txt — 128k/256k become SKIPPED_CTX.
-  Added to models/24gb.txt.
+  Context (single 24 GB): PASS 8k/16k/32k/64k; FAIL 128k (TOOL_ERROR 3600s, 0 tok/s — KV exhaustion at 131072 ctx);
+  256k SKIPPED_CTX (arch limit 131072). Multihop: 3/3 PASS at 65536 ctx (16-17 tok/s).
+  Context (2×24 GB): context_128k CONFIRMED PASS at 63.4 tok/s (2026-07-22) — tensor_split resolves KV exhaustion.
+  context_256k SKIPPED_CTX (architecture hard limit n_ctx_train=131072, not a VRAM constraint).
+  Speed: ~160-175 tok/s at coding ctx; 9.2 tok/s at 64k (KV spill single GPU); 16-17 tok/s at multihop 65k ctx.
+  Context ceiling: max_ctx=65536 set in 24gb.txt — 128k/256k become SKIPPED_CTX. max_ctx=131072 in 2x24gb.txt.
+  Added to models/24gb.txt and models/2x24gb.txt.
   **qwen3-coder:30b-mxfp4** (Face314, MXFP4 A3B MoE, ~15.9 GB, Ampere+ required): CONFIRMED 2026-06-27
   18/19 coding at 172 tok/s; node_paratrooper TESTS_STILL_FAIL (same universal L6 wall, 3.6k tokens).
   Same Qwen3-Coder-30B-A3B architecture as qwen3-coder:30b-1m. Same coding failure as qwen3-30b:2507
@@ -212,7 +218,8 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     Root cause: max_ctx=32768 leaves ~0.7 GB VRAM free; longer prompts (step 3 ~7k+ tokens) exhaust compute headroom during prefill.
     node_para_entities and node_para_combat need 2×24 GB for reliable results. node_paratrooper TESTS_STILL_FAIL (L6 universal wall).
   Context (max_ctx=32768): context_64k/128k/256k → SKIPPED_CTX. Context_8k PASS (134 tok/s), context_16k PASS (130 tok/s) confirmed 2026-07-22.
-    context_32k, multihop, distractor at ctx=32768 — same VRAM pressure risk as node_para_entities; 2×24 GB recommended.
+    context_32k PASS (106 tok/s), multihop_forward PASS (102 tok/s), multihop_reverse PASS (103 tok/s), distractor_notes PASS (101 tok/s) — confirmed 2026-07-22 with both GPUs visible.
+    VRAM hang is specific to long prefill prompts (node_para_entities step 3 ~7k tokens); does NOT affect context tasks even at ctx=32768.
   Added to models/24gb.txt. f16 KV. 4090 power spikes to 350W TDP. max_ctx=32768 set (VRAM constraint).
   agents-a1:35b (same jashepp family, different base model): FAIL csv_nordic_property (L3), 7/10, 159.8 tok/s, Skill L2 — rejected.
   Comparison: qwopus3.6 base (Qwen3.6-35B-A3B) accounts for the quality gap vs agents-a1 (unknown base).
@@ -224,17 +231,56 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   FAIL: node_para_entities (L5 step 3 gap — passes steps 1-2 and 4 but not step 3), node_paratrooper (L6 universal wall).
   Context ceiling: 32k on single 24 GB. f16 KV on dense 31B: ~5.5 GB at 32k (fits), ~11 GB at 64k + 16.4 GB weights ≈ 27.4 GB > 24 GB.
   max_ctx=32768 in 24gb.txt: context_64k/128k/256k and multihop/distractor → SKIPPED_CTX. For 64k+ context use 2×24 GB.
+  2×24 GB (CONFIRMED 2026-07-22, 6/6 PASS): context_64k *31.1 tok/s, context_128k *27.3 tok/s, multihop/distractor *34.3 tok/s.
+  python_hashmap PASS at 37.8 tok/s on 2×24 GB — no regression at tensor_split=1|1 (f16 KV maintained). max_ctx=131072 in 2x24gb.txt.
   Speed: ~40-43 tok/s at ctx=8192, ~32-36 tok/s at ctx=32768. 4090 power spikes to 350W TDP (normal for dense 31B fully GPU-resident). f16 KV (unknown architecture, safe default).
-  **web task group results (2026-07-02/03, --task-group web, llama-server, 4 tasks)**:
+  **gemma4:31b-qat** (lmstudio-community, dense 31B QAT Q4_0, ~16.4 GB, single RTX 4090, no Ampere+ required):
+  CONFIRMED 2026-07-24/25 complete: 31/37, Skill L4. QAT = quantization-aware training on Q4_0, strictly
+  better than PTQ Q4_K_M at same bit rate. No Ampere+ requirement (Q4_0, not MXFP4).
+  Coding: 18/19 at 42.3 tok/s. FAIL node_csv_parser (L3 — generates 'export function parseCSV' which
+    conflicts with existing declaration in stub; ESM syntax conflict; consistent gap, not fluke).
+  PASS csv_nordic_property (L3) — dense architecture fixes the Gemma4 A4B MoE structural gap.
+  PASS python_dijkstra + python_hashmap (both L5) — QAT int4 preserves L5 precision at f16 KV.
+  Web: 4/4 PERFECT at 42.2 tok/s — including python_fastapi_endpoint (field_validator + .strip()).
+    Dense ≥31B cutoff for python_fastapi_endpoint confirmed for Gemma 4 architecture.
+  L6 stepped: 3/4 — core (L3) PASS, turret (L4) PASS, entities (L5) FAIL (NO_BLOCKS at ctx=8192;
+    step 3 prompt truncates mid-output — same failure mechanism as equinox:31b), combat (L6) PASS.
+  Multihop+distractor: 3/3 PASS at 36.8 tok/s (ctx=32768).
+  Context (single 24 GB): 8k PASS (37.8 tok/s), 16k PASS (38.2 tok/s), 32k PASS (0.7 tok/s —
+    bandwidth-saturated on single GPU); 64k/128k/256k SKIPPED_CTX. max_ctx=32768.
+  Context (2×24 GB): CONFIRMED 2026-07-25 (5/6 PASS): ctx_8k *34.5, ctx_16k *34.6, ctx_32k *32.4
+    (vs 0.7 tok/s single GPU), ctx_64k *30.9, ctx_128k *27.9 tok/s SLOW (492s — same tier as
+    equinox:31b 27.3 tok/s). context_256k SKIPPED_CTX (architecture limit max_ctx=131072). max_ctx=131072.
+  Speed: ~40-43 tok/s at coding ctx — same tier as equinox:31b (~40 tok/s). f16 KV (unknown arch).
+  Identical capability profile to equinox:31b except node_csv_parser. Added to 24gb.txt + 2x24gb.txt.
+  **qwen3-48b:a4b** (DavidAU, Qwen3-48B-A4B 12-expert distill, Q4_K_M, ~19 GB, single RTX 4090):
+  CONFIRMED REJECTED 2026-07-25: 4/10, node_slugify (L2) FAIL caps Skill at L1.
+  csv_nordic_property TOOL_ERROR (600s, 0 tok/s) — server froze during prefill at ctx=32768 (VRAM exhaustion;
+  same GPU kernel stall as qwopus3.6:35b on node_para_entities). Speed collapse: 145 tok/s at ctx=8192
+  → 35 tok/s at ctx=32768 → 13.2 tok/s for long generation (severe KV thrash). DavidAU 12-expert distill
+  merge degrades quality. Do not retry.
+  **huihui-60b** (noctrex, Huihui-MoE-60B-A3B MXFP4 MOE, 2-part ~30.3 GB, 2×24 GB, Ampere+ required):
+  CONFIRMED REJECTED 2026-07-25: 4/10, 154.4 tok/s on 2×24 GB.
+  node_slugify NO_BLOCKS — model wraps entire output in '[thinking: BEGIN_FILE ...]' format; parser never
+  finds standalone BEGIN_FILE. Even if format were fixed, remaining A3B capability ceiling failures
+  (csv_nordic_property, node_csv_parser, python_tokenizer, python_hashmap, node_paratrooper) cap at 5/10.
+  155-168 tok/s on 2×24 GB but quality does not justify; A3B architecture failures identical to
+  qwen3-30b:2507/ornith:35b pattern. Do not retry.
+  **web task group results (2026-07-02/03 + 2026-07-24, --task-group web, llama-server, 4 tasks)**:
   - noctrex-qwen3.6:35b: 4/4 at 116.7 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - equinox:31b: 4/4 at 40.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - qwen2.5-coder:32b-q4: 4/4 at 33.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
+  - gemma4:31b-qat: 4/4 at 42.2 tok/s — PASS python_fastapi_endpoint. Dense 31B QAT (Gemma 4 arch).
+    Confirms dense ≥31B cutoff is architectural, not specific to Qwen base models.
   - qwen3-coder:30b-1m: 2/4 at 150.8 tok/s — FAIL python_config_loader (L2) + FAIL python_fastapi_endpoint (L3); partial-method-completion likely drops module-level env-var logic
   - quest:35b: 2/4 at 131.2 tok/s — FAIL python_config_loader (L2) + FAIL python_fastapi_endpoint (L3); "35B" is total params, A3B active = same MoE tier as failing cluster; RL training does not compensate
   - glm4.7-flash: 3/4 at 112.8 tok/s — FAIL python_fastapi_endpoint (uses Field(min_length=1), passes "   " as valid name instead of rejecting it)
   - qwen3-30b:2507: 3/4 at 162.1 tok/s — same FAIL as glm4.7-flash (same Field(min_length=1) approach)
   - qwopus3.6:35b: 3/4 at 161.8 tok/s — FAIL python_fastapi_endpoint; same cluster as glm4.7-flash + qwen3-30b:2507 despite sharing Qwen3.6-35B-A3B base with noctrex (which passes). Confirms failure is fine-tune dependent, not architecture.
-  - python_fastapi_endpoint: cutoff is dense ≥31B or specifically noctrex-qwen3.6:35b (full instruction fine-tune); all A3B coder/RL/agent fine-tunes fail regardless of base model or param count.
+  - python_fastapi_endpoint: cutoff is dense ≥31B or specifically noctrex-qwen3.6:35b (full instruction
+    fine-tune); all A3B coder/RL/agent fine-tunes fail regardless of base model or param count.
+    gemma4:31b-qat PASS (2026-07-24) confirms the ≥31B dense cutoff holds across architectures (Gemma 4,
+    Qwen2.5, unknown equinox base — all dense ≥31B pass; all A3B MoE fine-tunes fail).
   - python_config_loader: second discriminator — fails for models with Python structural gaps: qwen3-coder:30b-1m (partial-method-completion) and quest:35b (also fails python_multifile_rename on full benchmark). These two share a gap with Python module-level/structural editing, not just method bodies.
   **north-mini-code** (Cohere, 30B MoE 3B active, Q4_K_M, ~18 GB, single RTX 4090):
   6/10 at 141 tok/s (2026-06-22). Format non-compliant on complex tasks — agentic training
@@ -275,6 +321,25 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   40.2 and 121 tok/s respectively — the only failure is node_paratrooper (L6 full from-scratch,
   universal wall). quest:35b scored 29/33 at 131.8 tok/s but Skill L1 due to python_multifile_rename
   (L2) failure. context_256k: qwen3.6:27b 26 tok/s, noctrex 75 tok/s, quest:35b 73 tok/s.
+  **2026-07-23 default.txt single-GPU compare (./compare.sh --backend llama-server, llama-server 10094)**:
+  8/9 models run; gpt-oss:120b SKIPPED — FileNotFoundError (GGUF not downloaded; run ./fetch-hf.sh models/default.txt first).
+  | Model                | Pass/37 | Avg tok/s | Skill | Key notes |
+  |---|---|---|---|---|
+  | qwen3.6:27b          | 35/37 | 43.9 | L5 | context_256k TOOL_ERROR 7200s (max_ctx cap now fixed in default.txt) |
+  | noctrex-qwen3.6:35b  | 34/37 | 140.9 | L2 | csv_nordic_property UNEXPECTED FAIL (was PASS 2026-06-24, 2026-07-03) |
+  | qwen3.5:35b          | 33/37 | 159.9 | L2 | python_tokenizer, fastapi_endpoint, node_para_entities, paratrooper |
+  | equinox:31b          | 32/37 | 40.5 | L4 | 3 SKIPPED_CTX (64k+), node_para_entities + paratrooper FAIL |
+  | qwen3-30b:2507       | 31/37 | 177.3 | L2 | 2 SKIPPED_CTX (128k/256k max_ctx=65536); same failures as 2026-07-03 |
+  | glm4.7-flash         | 31/37 | 131.8 | L1 | python_config_loader UNEXPECTED FAIL; context_256k TOOL_ERROR 7200s |
+  | qwen2.5-coder:14b    | 27/37 | 83.2 | L2 | 7 TESTS_STILL_FAIL, 3 SKIPPED_CTX |
+  | gpt-oss:20b          | 25/37 | 227.8 | <L1 | 9 NO_BLOCKS, 2 TESTS_STILL_FAIL, 1 SKIPPED_CTX |
+  | gpt-oss:120b         | — | — | — | SKIPPED (FileNotFoundError: GGUF not downloaded) |
+  Regressions vs prior runs — CONFIRMED (re-run 2026-07-23, same binary):
+  - noctrex-qwen3.6:35b csv_nordic_property: FAIL (was PASS 2026-06-24, 2026-07-03). python_config_loader PASS.
+  - glm4.7-flash python_config_loader: FAIL (was PASS 2026-06-26). csv_nordic_property PASS.
+  Cross-pattern: each model fails a different task — rules out task-level flakiness. llama-server 10094
+  kq-mask f16 change (#25370) shifted attention in a model-architecture-specific way. Not fixable without
+  a new binary or bisect. Scores on prior binary: noctrex 34/37→35/37, glm4.7-flash 31/37→32/37.
   **dotnet_sas net8→net9 fix (2026-06-21)**: both csproj files targeted `net8.0` but host
   has .NET 9.0.17 — all prior dotnet_sas failures across all models were false negatives.
   Fixed to `net9.0`; preflight.sh updated to require `.NET 9+`. Any model result predating
@@ -300,11 +365,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   quantization (noctrex-qwen3-coder:30b TESTS_STILL_FAIL, qwen2.5-r1:32b TESTS_STILL_FAIL,
   glm4.7-flash TESTS_STILL_FAIL, deepseek-r1:32b TESTS_STILL_FAIL, qwen3-30b:2507
   TESTS_STILL_FAIL, qwen3-coder:30b-mxfp4 TESTS_STILL_FAIL, glm4-tulu:32b TESTS_STILL_FAIL,
-  north-mini-code PASS, gemma4:26b PASS), and thinking models exhaust their budget in reasoning
-  before emitting code (mellum2:12b-thinking, qwq:32b, gpt-oss:20b on this task).
+  qwen3-48b:a4b TESTS_STILL_FAIL, huihui-60b TESTS_STILL_FAIL,
+  north-mini-code PASS, gemma4:26b PASS, gemma4:31b-qat PASS), and thinking models exhaust their
+  budget in reasoning before emitting code (mellum2:12b-thinking, qwq:32b, gpt-oss:20b on this task).
   Note: glm4-tulu:32b (dense 32B) fails despite being larger than glm4.7-flash (MoE 16 GB) which
-  also fails — dense scale does not fix this gap for the GLM architecture. Gemma4 A4B passes at
-  15.4 GB (MXFP4 MOE), confirmed 2026-07-22 at f16 KV.
+  also fails — dense scale does not fix this gap for the GLM architecture. Gemma4 A4B (MXFP4 MOE)
+  passes at 15.4 GB (confirmed 2026-07-22 at f16 KV). Gemma4 dense 31B QAT also PASS (confirmed
+  2026-07-24 at f16 KV) — dense Gemma 4 architecture preserves L5 precision at Q4_0.
 
 #### Edit Protocol Enforcement
 
@@ -362,6 +429,14 @@ task_data/
   context_8k/             L1 context retrieval at ~5.5k tokens (6 context tasks total)
   multihop_forward/       L3 two-hop retrieval (2 multihop tasks)
   distractor_notes/       L2 decoy-resistant retrieval
+Task groups (--task-group):
+  coding    19 coding tasks (L1–L5)
+  web       4 web tasks (Express/FastAPI)
+  l6 / para 4 stepped Paratrooper tasks (L3–L6; 'para' is alias for 'l6')
+  l6_full   1 from-scratch Paratrooper task (node_paratrooper; needs --num-predict 24000)
+  context   6 context retrieval tasks (8k–256k)
+  multihop  3 multihop + distractor tasks
+  spot      10-task candidate spot check (standard evaluation subset)
 ```
 
 #### How to Run

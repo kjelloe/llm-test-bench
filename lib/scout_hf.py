@@ -31,6 +31,7 @@ SCOUT_QUERIES: list[str] = [
     "deepseek-r1 instruct",
     "deepseek coder instruct",
     "gemma4 instruct",
+    "gemma4 qat",                        # QAT int4 Gemma 4 (dense 27B primarily — better quality than PTQ)
     "gpt-oss",
     "codestral",
     "phi4 coding instruct",
@@ -46,6 +47,12 @@ SCOUT_QUERIES: list[str] = [
     "mixtral instruct gguf",             # Mixtral family
     "noctrex gguf",                      # noctrex MXFP4 MoE releases
     "mxfp4 gguf",                        # MXFP4-quantized MoE models (Ampere+)
+    "huihui moe gguf",                   # noctrex Huihui MoE family (60B-A3B confirmed, others may exist)
+    # ── 72 GB (3×24 GB) and 192 GB DDR5 hybrid tiers ──
+    "mistral large gguf",                # Mistral Large 2 123B dense; Q4 ~69 GB fits 72 GB; Q3 ~46 GB fits 48 GB
+    "qwq 72b gguf",                      # QwQ-72B dense thinking; Q4 ~41 GB fits 48 GB; new reasoning tier
+    "qwen3 235b instruct",               # Qwen3-235B-A22B non-VL; Q2 ~75 GB (72 GB tier), Q3 ~112 GB (192 GB DDR5)
+    "deepseek v3 gguf",                  # DeepSeek-V3 671B; IQ1/IQ2 ~100-170 GB for 192 GB DDR5 hybrid
 ]
 
 _REPOS_PER_QUERY = 10
