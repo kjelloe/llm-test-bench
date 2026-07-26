@@ -187,6 +187,15 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   **ernie4.5:21b** (Baidu / noctrex, MXFP4 A3B MoE, ~11.5 GB): CONFIRMED 2026-06-27 5/10 at
   190 tok/s. First Baidu model benchmarked. Fails node_slugify (L2), csv_nordic_property +
   node_csv_parser (L3), python_hashmap. Cold-start 51s. Not competitive; rejected.
+  **Moonlight-16B-A3B** (Kimi / noctrex, MXFP4 A3B MoE, ~8.7 GB, single RTX 4090, Ampere+ required):
+  CONFIRMED 2026-07-26 spot check: 4/10 at 175.7 tok/s. REJECTED.
+  PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), node_para_core (L3 — same
+    surprise pass as mellum2:12b; Kimi architecture handles game-state logic at L3).
+  FAIL: node_slugify (L2) caps Skill at L1; csv_nordic_property + node_csv_parser (L3);
+    python_expr_eval (L4), python_hashmap (L5), node_paratrooper (L6).
+  Speed is impressive for 8.7 GB (125–197 tok/s, avg 175.7) but capability is below threshold.
+  Same A3B active-param ceiling as ernie4.5:21b and lfm2:8b. New architecture family (Kimi MoE)
+  but does not outperform established A3B models on coding tasks. Do not benchmark further.
   **granite4:small** (IBM Granite 4.0 H-Small / noctrex, MXFP4 MoE, ~18.5 GB): CONFIRMED 2026-06-27
   7/10 at 77.6 tok/s — much slower than expected for MXFP4 (~110 est). Passes node_csv_parser +
   node_para_core; fails csv_nordic_property, python_hashmap, node_paratrooper. Below threshold.
@@ -214,13 +223,18 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   CONFIRMED 2026-07-22 full 37-task run: Skill L4 (effective). 160.0 tok/s avg — fastest model with perfect coding score.
   Coding PERFECT: 19/19 at 161.8 tok/s. Web: 3/4 (python_fastapi_endpoint FAIL — coder fine-tune breaks whitespace validation).
   Base model: Qwen3.6-35B-A3B (same as noctrex-qwen3.6:35b which scores 32/33); jashepp's Q8_0-Imatrix recipe runs +34% faster.
-  Para: node_para_core PASS (L3), node_para_turret PASS (L4). node_para_entities: server GPU froze during prefill (0 tok/s, 3600s wall).
-    Root cause: max_ctx=32768 leaves ~0.7 GB VRAM free; longer prompts (step 3 ~7k+ tokens) exhaust compute headroom during prefill.
-    node_para_entities and node_para_combat need 2×24 GB for reliable results. node_paratrooper TESTS_STILL_FAIL (L6 universal wall).
-  Context (max_ctx=32768): context_64k/128k/256k → SKIPPED_CTX. Context_8k PASS (134 tok/s), context_16k PASS (130 tok/s) confirmed 2026-07-22.
-    context_32k PASS (106 tok/s), multihop_forward PASS (102 tok/s), multihop_reverse PASS (103 tok/s), distractor_notes PASS (101 tok/s) — confirmed 2026-07-22 with both GPUs visible.
-    VRAM hang is specific to long prefill prompts (node_para_entities step 3 ~7k tokens); does NOT affect context tasks even at ctx=32768.
-  Added to models/24gb.txt. f16 KV. 4090 power spikes to 350W TDP. max_ctx=32768 set (VRAM constraint).
+  Para (single 24 GB): node_para_core PASS (L3), node_para_turret PASS (L4). node_para_entities: GPU froze during prefill
+    (0 tok/s, 3600s wall) — max_ctx=32768 leaves ~0.7 GB VRAM free; step-3 prompt ~7k tokens exhausts compute headroom.
+  Para (2×24 GB): CONFIRMED 2026-07-26 4/4 PASS at 122.7 tok/s avg — tensor_split resolves VRAM headroom completely.
+    node_para_entities *133.9 tok/s, node_para_combat *130.6 tok/s. node_paratrooper TESTS_STILL_FAIL (L6 universal wall).
+  Context (single 24 GB, max_ctx=32768): context_64k/128k/256k → SKIPPED_CTX. 8k PASS (134 tok/s), 16k PASS (130 tok/s),
+    32k PASS (106 tok/s), multihop_forward PASS (102 tok/s), multihop_reverse PASS (103 tok/s), distractor_notes PASS (101 tok/s).
+    VRAM hang is specific to long prefill prompts; does NOT affect context tasks at ctx=32768.
+  Context (2×24 GB, max_ctx=131072): CONFIRMED 2026-07-26 5/6 PASS. ctx_64k *114.7 tok/s PASS (113s);
+    ctx_128k PASS (214s wall — 128k prefill dominates); ctx_256k SKIPPED_CTX (arch limit 131072).
+    ctx_8k/16k/32k PASS but reported tok/s anomalous (0.7/0.4/0.3 — prefill-dominated wall-time avg for ~20 output tokens;
+    actual generation speed confirmed 88–138 tok/s from L6 run).
+  Added to models/24gb.txt + 2x24gb.txt. f16 KV. 4090 power spikes to 350W TDP. max_ctx=32768 (single GPU), max_ctx=131072 (2×24 GB).
   agents-a1:35b (same jashepp family, different base model): FAIL csv_nordic_property (L3), 7/10, 159.8 tok/s, Skill L2 — rejected.
   Comparison: qwopus3.6 base (Qwen3.6-35B-A3B) accounts for the quality gap vs agents-a1 (unknown base).
   **equinox:31b** (jashepp, dense 31B MXFP4 Q8_0-Imatrix, ~16.4 GB, single RTX 4090, Ampere+ required):

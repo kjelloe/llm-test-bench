@@ -32,10 +32,11 @@
 # PERFECT on all L1–L5 tasks including python_hashmap + python_dijkstra (both L5).
 # Base model: Qwen3.6-35B-A3B (same as noctrex) + jashepp coder fine-tune. +34% faster than noctrex (162 vs 121 tok/s).
 # node_paratrooper FAIL (universal L6 wall). Web: 3/4 (python_fastapi_endpoint FAIL — coder fine-tune breaks whitespace validation).
-# Para stepped: core PASS (L3), turret PASS (L4). node_para_entities GPU-freezes during prefill at ctx=32768 (~0.7 GB compute headroom).
+# Para stepped: core PASS (L3), turret PASS (L4). node_para_entities GPU-freezes on single GPU (VRAM headroom ~0.7 GB).
+#   2×24 GB: 4/4 PASS CONFIRMED 2026-07-26 (tensor_split resolves; see 2x24gb.txt).
 # Context_8k PASS (134 tok/s), context_16k PASS (130 tok/s), context_32k PASS (106 tok/s) confirmed 2026-07-22.
 # Multihop+distractor PASS (~101-103 tok/s) at ctx=32768 with both GPUs visible — no VRAM hang for short-prompt tasks.
-# VRAM hang (GPU kernel freeze) is specific to long-prompt prefill (node_para_entities step 3 ~7k tokens); node_para_entities needs 2×24 GB.
+# VRAM hang is specific to long-prompt prefill (node_para_entities step 3 ~7k tokens); does NOT affect context tasks at ctx=32768.
 # f16 KV (A3B MoE architecture). Power spikes to 350W TDP. max_ctx=32768: context_64k/128k/256k → SKIPPED_CTX. Skill L4 (confirmed 2026-07-22).
 qwopus3.6:35b  Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Hybrid-Imatrix-GGUF
 # REGRESSION (llama-server 10094): csv_nordic_property FAIL — CONFIRMED 2026-07-23. Was PASS on prior binary.
