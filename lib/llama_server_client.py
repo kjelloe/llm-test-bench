@@ -203,10 +203,17 @@ def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
     prompt_tokens      = usage.get("prompt_tokens", 0)
     completion_tokens  = usage.get("completion_tokens", 0)
 
-    timings      = body.get("timings") or {}
-    predicted_ms = timings.get("predicted_ms")
-    prompt_ms    = timings.get("prompt_ms")
-    if predicted_ms is not None and predicted_ms > 0:
+    timings         = body.get("timings") or {}
+    predicted_ms    = timings.get("predicted_ms")
+    predicted_per_s = timings.get("predicted_per_second")
+    prompt_ms       = timings.get("prompt_ms")
+    # Prefer predicted_per_second (server-native tok/s) because predicted_ms can be
+    # 0.0 for very short generations during long prefill, which causes a spurious
+    # fallback to wall-clock time and misleadingly low rates on context tasks.
+    if predicted_per_s and predicted_per_s > 0 and completion_tokens > 0:
+        eval_duration_ns        = int(completion_tokens / predicted_per_s * 1e9)
+        prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
+    elif predicted_ms is not None and predicted_ms > 0:
         eval_duration_ns        = int(predicted_ms * 1e6)
         prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
     else:

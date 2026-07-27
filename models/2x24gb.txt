@@ -176,6 +176,7 @@ qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-o
 #   ctx_128k PASS (214s wall — 128k prefill dominates). context_256k SKIPPED_CTX (arch limit 131072).
 #   NOTE: generation speed confirmed correct at 88–138 tok/s from L6 run (1000+ output tokens; tok/s accurate there).
 #   Short-output context tasks (20 tokens) show wall-time-averaged rates that understate actual generation speed.
+# NOTE: jashepp HF repo deleted 2026-07-26 — hf: line is dead; local GGUF in allmodels/ still usable.
 qwopus3.6:35b  Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:jashepp/Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Hybrid-Imatrix-GGUF
 
 # quest:35b: RL-trained MXFP4 MoE (~19.3 GB); CONFIRMED 2026-06-24: 16/19 coding at 160 tok/s.

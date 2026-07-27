@@ -528,7 +528,7 @@ To benchmark using [llama.cpp](https://github.com/ggerganov/llama.cpp)'s `llama-
 
 **CTX_TRUNCATED recovery:** If a task returns `CTX_TRUNCATED` (server silently capped the context because VRAM was insufficient), the harness stops the llama-server immediately so the next task gets a clean restart rather than hanging against an undersized server.
 
-**Timing:** `tok_per_s` for llama-server uses llama.cpp's `timings.predicted_ms` field (generation phase only, same precision as Ollama). Falls back to `completion_tokens / wall_time` on older builds that omit `timings`.
+**Timing:** `tok_per_s` for llama-server uses `timings.predicted_per_second` (server-native rate, most accurate) when present, falling back to `timings.predicted_ms` (generation-phase ms), then to `completion_tokens / wall_time` on older builds that omit timings entirely. The `predicted_per_second` path is needed for context tasks where `predicted_ms` can be `0.0` despite generating 20+ tokens (spuriously triggering wall-clock fallback and producing misleadingly low rates like 0.3 tok/s).
 
 **Comparing backends side by side:** `compare.sh` auto-names output files by backend (`results-compare.json` for ollama, `results-compare-ls.json` for llama-server). Use `compare-results.sh` to merge and compare them:
 
@@ -752,7 +752,7 @@ BENCH_BACKEND=llama-server ./compare.sh --model-file models/experimental.txt
 
 ## Downloading GGUF models
 
-`fetch-hf.sh` downloads GGUF files from HuggingFace Hub into `$LLAMA_MODELS_DIR`. `search-hf.sh` searches the Hub and suggests the best file and `models/*.txt` line to paste.
+`fetch-hf.sh` downloads GGUF files from HuggingFace Hub into `$LLAMA_MODELS_DIR`. `search-hf.sh` searches the Hub and suggests the best file and `models/*.txt` line to paste. Before downloading, `fetch-hf.sh` pre-checks each configured repo for existence and warns about deleted or private repos (with a suggestion to update the `hf:` line) instead of silently failing mid-download.
 
 Add an `hf:` field to any model line (position-independent after the ollama name):
 
@@ -913,15 +913,19 @@ Pull one or more Ollama models by name or set:
 
 ### powerlimit.sh — GPU power cap
 
-Set or query the GPU power limit. On WSL2 (where `nvidia-smi` power management is blocked inside the VM) the script detects this and prints the exact PowerShell command to run in an elevated Windows terminal instead.
+Set or query GPU power limits. On WSL2 (where `nvidia-smi` power management is blocked inside the VM) the script detects this and prints the exact commands to run in an elevated Windows terminal instead.
 
 ```bash
-./powerlimit.sh             # set to $POWER_LIMIT env var, or 350 W default
-./powerlimit.sh 300         # explicit wattage
+./powerlimit.sh             # uniform: use $POWER_LIMIT env var, or 350 W default
+./powerlimit.sh 300         # uniform: explicit wattage for all GPUs
 ./powerlimit.sh --query     # show current limits without changing anything
+./powerlimit.sh --per-gpu   # per-model limits: RTX 4090→300W, RTX 3090→280W
+./powerlimit.sh --per-gpu --reset  # restore each GPU to its hardware maximum
 ```
 
-`compare.sh` calls this automatically at the start of each run. Export `POWER_LIMIT=<watts>` in your `.bashrc` to change the default.
+`compare.sh` calls this automatically (uniform mode) at the start of each run. Export `POWER_LIMIT=<watts>` in your `.bashrc` to change the default.
+
+`--per-gpu` is designed for mixed-GPU setups where different models have different TDP budgets. Budget: 2 GPUs (4090+3090) → ≈755 W, 3 GPUs (4090+3090+3090) → ≈1035 W against a 1200 W PSU.
 
 ### show-all-models.sh — inspect Ollama model details
 

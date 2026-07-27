@@ -38,6 +38,7 @@
 # Multihop+distractor PASS (~101-103 tok/s) at ctx=32768 with both GPUs visible — no VRAM hang for short-prompt tasks.
 # VRAM hang is specific to long-prompt prefill (node_para_entities step 3 ~7k tokens); does NOT affect context tasks at ctx=32768.
 # f16 KV (A3B MoE architecture). Power spikes to 350W TDP. max_ctx=32768: context_64k/128k/256k → SKIPPED_CTX. Skill L4 (confirmed 2026-07-22).
+# NOTE: jashepp HF repo deleted 2026-07-26 — hf: line is dead; local GGUF in allmodels/ still usable.
 qwopus3.6:35b  Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Hybrid-Imatrix-GGUF
 # REGRESSION (llama-server 10094): csv_nordic_property FAIL — CONFIRMED 2026-07-23. Was PASS on prior binary.
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF

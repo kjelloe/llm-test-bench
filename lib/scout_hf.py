@@ -48,6 +48,8 @@ SCOUT_QUERIES: list[str] = [
     "noctrex gguf",                      # noctrex MXFP4 MoE releases
     "mxfp4 gguf",                        # MXFP4-quantized MoE models (Ampere+)
     "huihui moe gguf",                   # noctrex Huihui MoE family (60B-A3B confirmed, others may exist)
+    "kimi moonlight instruct gguf",      # Moonshot AI Kimi MoE architecture variants
+    "gpt-oss fable distilled",           # Microsoft GPT-oss Fable distilled family
     # ── 72 GB (3×24 GB) and 192 GB DDR5 hybrid tiers ──
     "mistral large gguf",                # Mistral Large 2 123B dense; Q4 ~69 GB fits 72 GB; Q3 ~46 GB fits 48 GB
     "qwq 72b gguf",                      # QwQ-72B dense thinking; Q4 ~41 GB fits 48 GB; new reasoning tier
