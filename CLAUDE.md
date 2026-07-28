@@ -187,6 +187,18 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   **ernie4.5:21b** (Baidu / noctrex, MXFP4 A3B MoE, ~11.5 GB): CONFIRMED 2026-06-27 5/10 at
   190 tok/s. First Baidu model benchmarked. Fails node_slugify (L2), csv_nordic_property +
   node_csv_parser (L3), python_hashmap. Cold-start 51s. Not competitive; rejected.
+  **Huihui-MoE-24B-A8B** (mradermacher, i1-Q4_K_M MoE, ~13.9 GB, single RTX 4090, no Ampere+ required):
+  CONFIRMED 2026-07-28 spot check: 4/10 at 132.6 tok/s. REJECTED.
+  PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), python_expr_eval (L4).
+  FAIL: node_slugify (L2, NO_BLOCKS — 73s in <think> block, never emits BEGIN_FILE; format pathology),
+    csv_nordic_property (L3, TESTS_STILL_FAIL — 120s wrong solution; capability gap),
+    node_csv_parser (L3, NO_BLOCKS TRUNCATED — 219s, 16k budget exhausted in think block),
+    python_hashmap (L5, TESTS_STILL_FAIL — 30s, capability gap not format issue),
+    node_para_core (L3), node_paratrooper (L6).
+  24B total / 8B active. A8B active-param tier does NOT outperform A3B (qwen3-30b:2507 scores 8/10 at
+  181 tok/s with A3B active). Architecture/training dominates over active parameter count. The <think>
+  block format pathology (never emits BEGIN_FILE on complex tasks) is the same root cause as huihui-60b's
+  [thinking: BEGIN_FILE...] wrapper — different encoding, same non-compliant format family. Do not retry.
   **Moonlight-16B-A3B** (Kimi / noctrex, MXFP4 A3B MoE, ~8.7 GB, single RTX 4090, Ampere+ required):
   CONFIRMED 2026-07-26 spot check: 4/10 at 175.7 tok/s. REJECTED.
   PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), node_para_core (L3 — same
@@ -280,6 +292,23 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   (csv_nordic_property, node_csv_parser, python_tokenizer, python_hashmap, node_paratrooper) cap at 5/10.
   155-168 tok/s on 2×24 GB but quality does not justify; A3B architecture failures identical to
   qwen3-30b:2507/ornith:35b pattern. Do not retry.
+  **laguna-s-2.1:118b** (Poolside, 118B MoE A8B, wimmmm IQ3_XXS, ~42.1 GB, 2×24 GB):
+  CONFIRMED 2026-07-27 full 19-task coding: 17/19 at 96.1 tok/s avg. Skill L3 (coding, IQ3_XXS).
+  Poolside-AI's coding + agentic model; ~8B active params per token — largest A8B tier benchmarked.
+  IQ4_XS (58.4 GB) OOM on 2×24 GB (29.2 GB/GPU → cudaMalloc fail on RTX 4090). IQ3_XXS (42.1 GB)
+  fits fully GPU-resident on 48 GB. IQ4_XS on 3×24 GB is the definitive test; file at allmodels/.
+  PASS (17): all L1–L2 (node_slugify, python_safe_div, dotnet_sas, python_multifile_rename), all L3
+    except CSV pair (python_lfu_cache, python_minheap, node_memoize_bug, python_ledger_bug, node_debounce,
+    awk_csv_stats, java_word_freq), python_lru_cache, python_expr_eval (L4), python_tokenizer (L4),
+    python_merge_intervals (L4), python_dijkstra (L5), python_hashmap (L5!).
+  FAIL: csv_nordic_property (L3, TESTS_STILL_FAIL — 68s full generation, wrong solution; capability gap,
+    NOT IQ3_XXS precision loss), node_csv_parser (L3, TESTS_STILL_FAIL — 9.5s quick fail; quoted-comma edge case).
+  Speed: 96–105 tok/s; python_dijkstra anomaly at 38.3 tok/s (KV pressure during long generation).
+  python_hashmap PASS at IQ3_XXS is a strong quality signal — L5 precision preserved at 3-bit quantization.
+  csv_nordic_property failure is structural (68s full generation = model tried and produced wrong logic), not
+    quant precision — IQ4_XS is unlikely to flip it. node_csv_parser also structural (same 9.5s quick-fail
+    as qwen3-next:80b and many A3B models on this task). IQ4_XS remains worth testing for completeness.
+  REQUIRES: ./gpu-mode.sh multi and --model-timeout 1200.
   **web task group results (2026-07-02/03 + 2026-07-24, --task-group web, llama-server, 4 tasks)**:
   - noctrex-qwen3.6:35b: 4/4 at 116.7 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - equinox:31b: 4/4 at 40.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())

@@ -90,6 +90,35 @@ if [[ -n "$_HW_PID" ]]; then
     kill "$_HW_PID" 2>/dev/null || true
     wait "$_HW_PID" 2>/dev/null || true
     echo "[hwmonitor] stopped"
+    if [[ -f "$_HW_LOG" ]]; then
+        python3 - "$_HW_LOG" <<'PYEOF'
+import sys, re
+from collections import defaultdict
+core = defaultdict(list)
+jct  = defaultdict(list)
+n = 0
+with open(sys.argv[1]) as fh:
+    for line in fh:
+        if not re.match(r'^\d{2}:\d{2}:\d{2}', line):
+            continue
+        n += 1
+        for m in re.finditer(r'GPU(\d+)\[[^\]]+\]\s+(\d+)°C(?:\s+jct:(\d+)°C)?', line):
+            idx = m.group(1)
+            core[idx].append(float(m.group(2)))
+            if m.group(3):
+                jct[idx].append(float(m.group(3)))
+if not core:
+    sys.exit(0)
+parts = []
+for idx in sorted(core):
+    v = core[idx]
+    parts.append(f'GPU{idx} core {min(v):.0f}/{sum(v)/len(v):.0f}/{max(v):.0f}°C')
+    if idx in jct:
+        v = jct[idx]
+        parts.append(f'GPU{idx} jct {min(v):.0f}/{sum(v)/len(v):.0f}/{max(v):.0f}°C')
+print(f'[hwmonitor] temps (min/avg/max, {n} samples): ' + '  '.join(parts))
+PYEOF
+    fi
 fi
 
 _ELAPSED=$(( $(date +%s) - _RUN_START ))
