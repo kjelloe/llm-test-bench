@@ -169,6 +169,14 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Speed: ~160-175 tok/s at coding ctx; 9.2 tok/s at 64k (KV spill single GPU); 16-17 tok/s at multihop 65k ctx.
   Context ceiling: max_ctx=65536 set in 24gb.txt — 128k/256k become SKIPPED_CTX. max_ctx=131072 in 2x24gb.txt.
   Added to models/24gb.txt and models/2x24gb.txt.
+  **qwen3-30b:deepseek** (noctrex, Qwen3-30B-A3B DeepSeek-Distill-2507 MXFP4 MoE, ~15.9 GB, Ampere+):
+  CONFIRMED 2026-08-05 spot check: 7/10 at 185.9 tok/s — REJECTED (below 8/10 threshold).
+  PASS: python_safe_div (L1), node_slugify (L2), python_lru_cache (L2), node_csv_parser (L3),
+    python_tokenizer (L4), python_expr_eval (L4), node_para_core (L3).
+  FAIL: csv_nordic_property (L3, TESTS_STILL_FAIL — qwen3-30b:2507 PASSES this; distillation regressed it),
+    python_hashmap (L5, same base gap), node_paratrooper (L6, universal wall).
+  No reasoning spiral on python_expr_eval (PASS, 8.4s clean — distillation did NOT introduce DeepSeek spiral).
+  Speed 186 tok/s (+14% vs 163 tok/s for 2507 base) irrelevant given quality regression. Do not use.
   **qwen3-coder:30b-mxfp4** (Face314, MXFP4 A3B MoE, ~15.9 GB, Ampere+ required): CONFIRMED 2026-06-27
   18/19 coding at 172 tok/s; node_paratrooper TESTS_STILL_FAIL (same universal L6 wall, 3.6k tokens).
   Same Qwen3-Coder-30B-A3B architecture as qwen3-coder:30b-1m. Same coding failure as qwen3-30b:2507
@@ -199,6 +207,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   181 tok/s with A3B active). Architecture/training dominates over active parameter count. The <think>
   block format pathology (never emits BEGIN_FILE on complex tasks) is the same root cause as huihui-60b's
   [thinking: BEGIN_FILE...] wrapper — different encoding, same non-compliant format family. Do not retry.
+  **GroveMoE-Inst** (inclusionAI / noctrex, MXFP4 MoE, ~17.1 GB, single RTX 4090, Ampere+ required):
+  CONFIRMED 2026-07-28 spot check: 0/10 at 124.7 tok/s — REJECTED (inference corruption, NOT a capability failure).
+  ALL 10 tasks NO_BLOCKS: model outputs `!!!...!!!` (exclamation-mark garbage) on every prompt — 154k tokens
+  generated in 26:09 with zero useful output. Architecture: inclusionAI GroveMoE, up-cycled from
+  Qwen3-30B-A3B-Base with "adjugate experts" (shared expert computation reuse); 33B total / ~3.14-3.28B active
+  (A3B tier). Root cause: `grovemoe` architecture type not correctly supported by llama-server 10094.
+  Do not retry on this binary — would need a llama-server build that adds `grovemoe` arch support.
   **Moonlight-16B-A3B** (Kimi / noctrex, MXFP4 A3B MoE, ~8.7 GB, single RTX 4090, Ampere+ required):
   CONFIRMED 2026-07-26 spot check: 4/10 at 175.7 tok/s. REJECTED.
   PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), node_para_core (L3 — same
@@ -309,7 +324,19 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     quant precision — IQ4_XS is unlikely to flip it. node_csv_parser also structural (same 9.5s quick-fail
     as qwen3-next:80b and many A3B models on this task). IQ4_XS remains worth testing for completeness.
   REQUIRES: ./gpu-mode.sh multi and --model-timeout 1200.
-  **web task group results (2026-07-02/03 + 2026-07-24, --task-group web, llama-server, 4 tasks)**:
+  **qwen3-coder-rtpurbo:30b** (mradermacher, Qwen3-Coder-30B-A3B RTPurbo fine-tune, i1-Q4_K_M, ~17.3 GB [MoE], single RTX 4090, no Ampere+ required):
+  CONFIRMED 2026-08-05: 18/19 coding at 211.4 tok/s, 2/4 web. Added to 24gb.txt.
+  Coding PASS (18): all L1–L4 + python_dijkstra (L5). csv_nordic_property + node_csv_parser (both L3) PASS
+    — base qwen3-coder:30b-1m fails both; RTPurbo post-training fixed them.
+  Coding FAIL (1): python_hashmap (L5, base Qwen3-Coder capability gap shared by all qwen3-coder variants).
+  Web PASS: bash_preflight (L2), node_express_validation (L3).
+  Web FAIL: python_config_loader (L2, partial-method-completion, same gap as qwen3-coder:30b-1m),
+    python_fastapi_endpoint (L3, A3B coder fine-tune pattern — Field(min_length=1), not field_validator+.strip()).
+  Speed: 211.4 tok/s coding avg — new single-GPU speed record at 18/19 quality tier;
+    31% faster than qwopus3.6:35b (161.8 tok/s, 19/19). Token efficiency 2.308 p/k.
+  GLM-4.7-Flash-REAP (same scout run): 6/10 REJECTED — REAP degraded csv_nordic_property + node_csv_parser
+    (both were PASS in base glm4.7-flash); post-training can regress L3 CSV capability.
+  **web task group results (2026-07-02/03 + 2026-07-24 + 2026-08-05, --task-group web, llama-server, 4 tasks)**:
   - noctrex-qwen3.6:35b: 4/4 at 116.7 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - equinox:31b: 4/4 at 40.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - qwen2.5-coder:32b-q4: 4/4 at 33.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
@@ -320,6 +347,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   - glm4.7-flash: 3/4 at 112.8 tok/s — FAIL python_fastapi_endpoint (uses Field(min_length=1), passes "   " as valid name instead of rejecting it)
   - qwen3-30b:2507: 3/4 at 162.1 tok/s — same FAIL as glm4.7-flash (same Field(min_length=1) approach)
   - qwopus3.6:35b: 3/4 at 161.8 tok/s — FAIL python_fastapi_endpoint; same cluster as glm4.7-flash + qwen3-30b:2507 despite sharing Qwen3.6-35B-A3B base with noctrex (which passes). Confirms failure is fine-tune dependent, not architecture.
+  - qwen3-coder-rtpurbo:30b: 2/4 at 192.9 tok/s — FAIL python_config_loader (L2) + FAIL python_fastapi_endpoint (L3). Same 2-task failure pattern as qwen3-coder:30b-1m. Confirms RTPurbo shares the base coder model's structural Python gap.
   - python_fastapi_endpoint: cutoff is dense ≥31B or specifically noctrex-qwen3.6:35b (full instruction
     fine-tune); all A3B coder/RL/agent fine-tunes fail regardless of base model or param count.
     gemma4:31b-qat PASS (2026-07-24) confirms the ≥31B dense cutoff holds across architectures (Gemma 4,
@@ -401,7 +429,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   This precision sensitivity is specific to the qwen3.6:27b architecture (NOT all 27B models):
   qwen3.5:27b passes python_hashmap cleanly with q8_0 KV (confirmed 2026-06-27). Dense 32B
   Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18).
-  Rule: use f16 KV only for qwen3.6:27b specifically; do not apply to other 27B models. MoE models:
+  Rule: use f16 KV only for qwen3.6:27b specifically; do not apply to other 27B models. bf16 KV has
+  wider dynamic range at the same memory cost but has not been tested here — f16 has been stable and
+  sufficient. Only worth trying if a model fails with f16 KV in an unexpected way. MoE models:
   Q4_K_M vs Q6_K confirmed identical scores for qwen3.5:35b (2026-06-22) — MoE weight
   quantization does not affect task outcomes; do not use higher MoE quant to fix failures.
   Also a capability discriminator: some models fail due to wrong tombstone logic regardless of

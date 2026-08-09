@@ -27,6 +27,17 @@
 
 # GPU-only — fit fully in 24 GB VRAM
 # Run WITHOUT spec flags (--spec-type draft-mtp) — spec decoding breaks temp=0 determinism
+# qwen3-coder-rtpurbo:30b: mradermacher i1-Q4_K_M Qwen3-Coder-30B-A3B RTPurbo fine-tune (~17.3 GB [MoE]).
+# CONFIRMED 2026-08-05: 18/19 coding at 211.4 tok/s — fastest single-GPU model at 18/19 quality tier.
+# CODING PASS (18): all L1–L4 + python_dijkstra (L5). csv_nordic_property + node_csv_parser PASS
+#   (base qwen3-coder:30b-1m fails both; RTPurbo post-training fixed them).
+# CODING FAIL (1): python_hashmap (L5, base Qwen3-Coder capability gap shared by all qwen3-coder variants).
+# WEB: 2/4 — python_config_loader FAIL (partial-method-completion, same as qwen3-coder:30b-1m),
+#   python_fastapi_endpoint FAIL (A3B coder fine-tune pattern). bash_preflight + node_express_validation PASS.
+# Speed: 211.4 tok/s coding avg, 31% faster than qwopus3.6:35b (161.8 tok/s, 19/19). Token efficiency 2.308 p/k.
+# No Ampere+ required (Q4_K_M, not MXFP4). f16 KV (A3B MoE). max_ctx=32768.
+qwen3-coder-rtpurbo:30b  Qwen3-Coder-30B-A3B-Instruct-RTPurbo.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mradermacher/Qwen3-Coder-30B-A3B-Instruct-RTPurbo-i1-GGUF
+
 # qwopus3.6:35b: jashepp Qwopus3.6-35B-A3B-Coder MXFP4 MOE Q8_0-Imatrix (~19.8 GB, Ampere+ required).
 # CONFIRMED 2026-07-20 coding 19/19 at 161.8 tok/s avg — fastest model with perfect coding score.
 # PERFECT on all L1–L5 tasks including python_hashmap + python_dijkstra (both L5).

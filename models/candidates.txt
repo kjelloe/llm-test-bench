@@ -1,0 +1,529 @@
+# models/candidates.txt — New models for evaluation (2026-06-15, updated 2026-08-05)
+# RTX 4090 24 GB + RTX 3090 24 GB (48 GB total)
+# Most fit in 24 GB. MXFP4 MOE requires Ampere+ (both GPUs qualify).
+# qwen3-next:80b requires 2×24 GB (3-part, ~41 GB total).
+#
+# Download:  ./fetch-hf.sh models/candidates.txt
+# Run:       ./run.sh --model-file models/candidates.txt --backend llama-server --tasks ...
+#
+# Format: <ollama-name>  <gguf-file>  <params>  hf:<owner/repo>
+
+# ── Download now: clear value ─────────────────────────────────────────────────
+
+# noctrex MXFP4 Qwen3-Coder-30B: same approach as noctrex-qwen3.6:35b (128.5 tok/s confirmed).
+# CONFIRMED 2026-06-18: 17/19 coding at ~160 tok/s on single RTX 4090.
+# Fails dotnet_sas (L1 C# — training/quantization blindspot; Skill drops to <L1).
+# Fails python_hashmap (TESTS_STILL_FAIL — wrong tombstone logic, not a precision/budget issue).
+# MXFP4 gives NO speed advantage vs qwen3-coder:30b-1m Q4_K_M (both ~160 tok/s).
+# Not the 1M-ctx variant — base 30B context window only.
+# noctrex-qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE-GGUF
+
+# gpt-oss:20b MXFP4: faster than Q4_K_M (which runs at ~197 tok/s single 3090).
+# CONFIRMED 2026-06-18: 9/10 at 193 tok/s on single RTX 4090.
+# NO speed advantage over Q4_K_M (~197 tok/s). python_hashmap: NO_BLOCKS (reasoning spiral,
+# same semi-thinking behavior as Q4_K_M). Not worth adding as a separate benchmark entry.
+# gpt-oss:20b-mxfp4  gpt-oss-20b-mxfp4.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:ggml-org/gpt-oss-20b-GGUF
+
+# ── Interesting: worth benchmarking ──────────────────────────────────────────
+
+# JetBrains Mellum2 12B A2.5B Thinking (MXFP4 MOE, 6.5 GB).
+# CONFIRMED 2026-06-18: 12/19 coding at 217 tok/s. FORMAT COMPLIANT — no planning loop.
+# Coding: passes L1-L2 + python_ledger_bug (L4), node_para_core (L6 step1). Fails dotnet_sas (L1 C#).
+# python_hashmap NO_BLOCKS (reasoning fills budget before BEGIN_FILE).
+# CONFIRMED 2026-06-20: 5/9 context+multihop at 176 tok/s.
+# Context ceiling: ~32k (PASS 8k/16k/32k; TESTS_STILL_FAIL at 64k — retrieval degrades ~40k tokens).
+# Architecture limit: 131072 tokens (256k CTX_TRUNCATED: "exceeds context size 131072").
+# context_128k: NO_BLOCKS — format compliance breaks at max ctx (outputs prose instead of BEGIN_FILE).
+# multihop_forward: PASS; multihop_reverse: FAIL (TESTS_STILL_FAIL — expected 12B limitation).
+# distractor_notes: PASS. max_ctx=131072 added to skip context_256k cleanly.
+# Summary: fast coding assistant at ~200 tok/s but limited retrieval depth; not suitable for 64k+ tasks.
+# mellum2:12b-thinking  Mellum2-12B-A2.5B-Thinking-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:JetBrains/Mellum2-12B-A2.5B-Thinking-GGUF-MXFP4_MOE
+
+# NVIDIA Nemotron-3-Elastic 30B A3B MXFP4 MOE (Brunobkr wrapper, 16.7 GB).
+# CONFIRMED 2026-06-18: 5/10 at 177 tok/s on single RTX 4090. DO NOT ADD TO DEFAULT SET.
+# Unusual capability profile: PASSES python_hashmap (L5!) but FAILS node_csv_parser (L3).
+# Also fails: node_slugify, csv_nordic_property (TESTS_STILL_FAIL), python_tokenizer, multihop_forward.
+# Too many L3 failures to be useful. Interesting architecture but quality is mediocre.
+# NOTE: actual GGUF filename uses Cyrillic — fetch_hf.py uses hf_hub_download so this works fine.
+# nemotron-elastic:30b  FПӨЯDΣΣЯ_MXFP4_MOE_NVIDIA-Nemotron-Labs-3-Elastic-30B-A3B.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:Brunobkr/FNORDEER_MXFP4_MOE_NVIDIA-Nemotron-Labs-3-Elastic-30B-A3B.gguf
+
+# Qwen2.5-Coder-32B Q4_K_M (18.5 GB vs Q5_K_M 22.2 GB already in 2x24gb.txt).
+# CONFIRMED 2026-06-21: 18/19 coding at ~40 tok/s on single RTX 4090.
+# Passes: everything except dotnet_sas — but dotnet_sas was broken (net8 task on net9 host).
+# Effectively 19/19 after task fix. Best single-24GB coding model tested.
+# Passes python_hashmap (q8_0 KV fine for 32B — precision issue only affects 27B dense).
+# Max ctx=32768 on single 24 GB. Context tasks (64k+) need 2×24 GB.
+# qwen2.5-coder:32b-q4  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
+
+# Qwen2.5-32B R1-distilled thinking (i1-Q4_K_M, 18.5 GB, fits single 24 GB).
+# CONFIRMED 2026-06-18: 7/10 at 39 tok/s on single RTX 4090. NOT RECOMMENDED.
+# Same speed as qwen2.5-coder:32b-q4 but worse quality (7 vs 9 passes). R1 distillation
+# hurt coding quality vs the pure coder model. python_hashmap TESTS_STILL_FAIL (capability
+# gap, not budget — generates code quickly but wrong). node_csv_parser, csv_nordic_property
+# also TESTS_STILL_FAIL. i1 = imatrix quantisation (slightly better quality than standard Q4_K_M).
+# qwen2.5-r1:32b  Qwen2.5-32B-DeepSeek-R1-Instruct.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:mradermacher/Qwen2.5-32B-DeepSeek-R1-Instruct-i1-GGUF
+
+# ── New candidates 2026-06-21 ────────────────────────────────────────────────
+
+# Cohere North-Mini-Code 1.0 (30B MoE, 3B active, Q4_K_M ≈ 18-19 GB, single RTX 4090).
+# CONFIRMED 2026-06-22: 6/10 at 141.2 tok/s. DO NOT ADD TO DEFAULT SET.
+# PASSES: python_safe_div, dotnet_sas, node_csv_parser, python_lru_cache,
+#         python_hashmap (L5! — passes where many models fail), multihop_forward.
+# FAILS:
+#   NO_BLOCKS TRUNCATED: csv_nordic_property, python_tokenizer, node_para_core.
+#     Root cause: agentic training → verbose prose/markdown-fenced preamble before code;
+#     exhausts 8000-token budget before BEGIN_FILE on complex tasks (46.3k generated / 0.130 p/k).
+#   TESTS_STILL_FAIL: distractor_notes (outputs structured answer but retrieves wrong value).
+# Speed is excellent (150-158 tok/s on simple tasks) but format compliance breaks for large outputs.
+# Not competitive: 6/10 vs glm4.7-flash 17/19 at similar weight size.
+# north-mini-code  North-Mini-Code-1.0-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/North-Mini-Code-1.0-GGUF
+
+# ── New candidates 2026-06-24 ────────────────────────────────────────────────
+
+# noctrex QUEST-35B-RL MXFP4 MoE with MTP head (~19.3 GB, single RTX 4090).
+# CONFIRMED 2026-06-24: 8/10 at 134.3 tok/s (dual-GPU auto-split; single GPU likely faster ~150+ tok/s).
+# PASSES: python_safe_div (L1), dotnet_sas (L1), python_lru_cache (L2), python_hashmap (L5!),
+#         python_tokenizer (L4), node_para_core (L3!), distractor_notes (L2), multihop_forward (L3).
+# FAILS: node_csv_parser (L3, TESTS_STILL_FAIL — quoted field with commas edge case),
+#        csv_nordic_property (L3, TESTS_STILL_FAIL).
+# Notable: passes node_para_core (qwen3-next:80b, qwen3.5:35b, qwen2.5-coder:32b-q4 all fail this).
+# Notable: passes python_hashmap (L5) — RL training preserves/improves code reasoning.
+# Temps (2026-06-24): 4090 peak 57°C, 3090 peak 69°C — healthy post-thermal-fix.
+# MTP spec-decode heads disabled — use same config as noctrex-qwen3.6:35b (no --spec-type).
+# CONFIRMED 2026-06-24 (19-task coding, single RTX 4090): 16/19 at 160.1 tok/s. ADDED TO 24gb.txt.
+# Passes: node_slugify, python_safe_div, dotnet_sas, python_lru_cache, python_minheap, python_lfu_cache,
+#   python_ledger_bug, node_memoize_bug, python_expr_eval, python_dijkstra (L5!), python_hashmap (L5!),
+#   node_para_core, node_para_turret, node_para_entities (L5!), node_para_combat (L6!), python_tokenizer.
+# Fails: node_csv_parser (L3, quoted-comma edge case), python_multifile_rename (L2, unexpected),
+#   node_paratrooper (L6). 4090 power spikes to 350W TDP on long tasks (brief, recovers).
+# quest:35b  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/QUEST-35B-RL-MXFP4_MOE-GGUF
+
+# ── Dense 70B tier — dual GPU (2×24 GB) ──────────────────────────────────────
+
+# Llama-3.3-70B-Instruct Q4_K_M (~40 GB, dual GPU required).
+# CONFIRMED 2026-06-23: 6/10 at 17.4 tok/s (avg; ~19.5 at ctx=8192, ~11-12 at ctx=32768). DO NOT ADD.
+# PASSES: python_safe_div (L1), dotnet_sas (L1), python_lru_cache (L2), python_tokenizer (L4),
+#         distractor_notes (L2), multihop_forward (L3).
+# FAILS: node_csv_parser (L3, TESTS_STILL_FAIL), python_hashmap (L5, TESTS_STILL_FAIL),
+#        csv_nordic_property (L3, TESTS_STILL_FAIL), node_para_core (L3, TESTS_STILL_FAIL).
+# Profile: passes retrieval L3 (multihop) but fails 3/4 coding L3 tasks + python_hashmap (L5).
+# PCIe-bound at ~19 tok/s — slower than qwen3-next:80b (76 tok/s) and worse quality (6 vs 9).
+# Skill: L2-3 mixed ceiling. The 70B parameter count does not compensate for PCIe bandwidth limit.
+# Same failure set as Q4_K_S run from 2026-06-14. Confirmed: not worth adding.
+# llama3.3:70b-q4  Llama-3.3-70B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
+
+# Qwen2.5-72B-Instruct Q4_K_M (~41 GB, dual GPU required).
+# Qwen's best general model (non-coder). Likely stronger than qwen2.5-coder:32b on complex reasoning.
+# CONFIRMED 2026-06-23/24: 4/8 at ~17 tok/s (8 tasks only; 32k tasks skipped — see below). DO NOT ADD.
+# PASSES: python_safe_div (L1), dotnet_sas (L1), node_csv_parser (L3), python_lru_cache (L2).
+# FAILS: python_hashmap (L5), csv_nordic_property (L3), python_tokenizer (L4), node_para_core (L3).
+# VRAM constraint: ~41 GB weights leave < 1.47 GB free on CUDA0; q4_0 KV at ctx=32768
+#   needs ~1.47 GB/GPU minimum (q4_0 blocks = 0.5625 bytes/element, not 0.5).
+#   ctx=32768 physically impossible on 48 GB for this model — not fixable via tensor_split or parallel.
+#   max_ctx=16384; distractor_notes + multihop_forward skipped (need 32k).
+# parallel=1: reduces wasted KV pre-allocation (auto=4 wastes 3 extra slots); ~17 tok/s vs ~11-14 without.
+# Verdict: PCIe-bound, inferior to qwen3-next:80b (9/10, 76 tok/s). Not competitive on 48 GB.
+# qwen2.5:72b-q4  Qwen2.5-72B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q4_0,cache_type_v=q4_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384,parallel=1  hf:bartowski/Qwen2.5-72B-Instruct-GGUF
+
+# ── Quant delta experiments ───────────────────────────────────────────────────
+
+# qwen3.5:35b Q6_K — higher-quant variant of the existing Q4_K_M in 24gb.txt.
+# CONFIRMED 2026-06-22: 8/10 at 94.5 tok/s on dual GPU. SAME FAILURES AS Q4_K_M.
+# Fails: python_hashmap (TESTS_STILL_FAIL), python_tokenizer (TESTS_STILL_FAIL).
+# Q4→Q6 weight precision changes NOTHING — failures are reasoning/capability gaps, not
+# quantization artifacts. Q6_K is 36% slower AND needs dual GPU. Not worth it.
+# Conclusion: MoE higher-quant experiments closed. Do not repeat for other MoE models.
+# qwen3.5:35b-q6  Qwen_Qwen3.5-35B-A3B-Q6_K.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
+
+# ── New candidates from scout 2026-06-29 ─────────────────────────────────────
+# Source: ./scout-hf.sh; 163 repos found (+1 since 2026-06-27)
+
+# Qwen3-Next-256E-Abliterated-Instruct Q4_K_M (mradermacher, 23.3 GB, 2×24 GB required).
+# Most novel entry this scout: 256 experts vs the usual small-expert A3B MoE family.
+# Unknown capability profile. Same abliterated pattern as qwen3-next:80b (noctrex).
+# Needs 2×24 GB: 23.3 GB too large for single 24 GB with useful KV.
+# max_ctx=65536 conservative start — adjust after first run if KV allows more.
+# qwen3-next:256e  Qwen3-Next-256E-Abliterated-Instruct.Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:mradermacher/Qwen3-Next-256E-Abliterated-Instruct-GGUF
+
+# Equinox-31B MXFP4 Q8_0-Imatrix (jashepp, 16.4 GB, single RTX 4090, Ampere+ required).
+# 31B dense MXFP4. jashepp has also made Qwable-v1 (below). Unknown base model.
+# Q8_0 imatrix chosen over Q6_K (15.9 GB) — minimal VRAM difference, better weight precision.
+# equinox:31b  Equinox-31B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Equinox-31B-i1-MXFP4-GGUF
+
+# Qwable-v1-35B-A3B MXFP4 MOE Q8_0-Imatrix (jashepp, 18.9 GB, single RTX 4090, Ampere+ required).
+# 35B-A3B MoE, same architecture tier as quest:35b. Worth testing if CSV parsing gaps close.
+# Low priority vs 256E + Equinox — 4K downloads, uncertain base model.
+# qwable:35b  Qwable-v1-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Qwable-v1-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
+
+# ── New candidates from scout 2026-06-27 ─────────────────────────────────────
+# Source: ./scout-hf.sh; 162 repos found (87 new vs previous run)
+
+# Qwen3-30B-A3B-Instruct-2507 (~17 GB MoE A3B, single RTX 4090).
+# July 2026 re-instruction fine-tune of Qwen3-30B-A3B; 660K downloads — highest-traffic new entry.
+# Same architecture as qwen3-coder:30b-1m but general-purpose. Test vs qwen3-coder:30b-1m on coding tasks.
+# f16 KV (MoE A3B — same rule as other A3B models in this file).
+# qwen3-30b:2507  Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
+
+# Qwen3-Coder-30B-A3B-Instruct MXFP4 MOE (Face314, ~15.9 GB, single RTX 4090, Ampere+ required).
+# MXFP4 variant of qwen3-coder:30b-1m — smaller footprint (15.9 vs 17.4 GB) but requires Ampere+.
+# Test: does MXFP4 give a speed advantage over Q4_K_M for A3B MoE? (noctrex data suggests it may not).
+# qwen3-coder:30b-mxfp4  Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:Face314/Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE
+
+# noctrex Qwen3-Coder-REAP-25B-A3B MXFP4 MOE (~13.1 GB, single RTX 4090, Ampere+ required).
+# New noctrex coding-specialized model; 25B total / A3B active. "REAP" = reinforcement-aligned post-training.
+# Smaller than qwen3-coder:30b variants; more KV headroom. Could be faster than quest:35b at coding.
+# qwen3-coder-reap:25b  Qwen3-Coder-REAP-25B-A3B-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3-Coder-REAP-25B-A3B-MXFP4_MOE-GGUF
+
+# noctrex ERNIE-4.5-21B-A3B MXFP4 MOE (Baidu, ~11.5 GB, single RTX 4090, Ampere+ required).
+# Entirely new model family — Baidu ERNIE 4.5. A3B active parameters, MXFP4. 11.5 GB leaves ~12 GB for KV.
+# Unknown coding quality — first benchmark of ERNIE on this harness.
+# ernie4.5:21b  ERNIE-4.5-21B-A3B-PT-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/ERNIE-4.5-21B-A3B-PT-MXFP4_MOE-GGUF
+
+# noctrex Granite-4.0-H-Small MXFP4 MOE (IBM, ~18.5 GB, single RTX 4090, Ampere+ required).
+# IBM Granite 4.0 H Small with MoE architecture, MXFP4. New architecture family. 18.5 GB leaves ~5 GB for KV.
+# granite4:small  Granite-4.0-H-Small-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Granite-4.0-H-Small-MXFP4_MOE-GGUF
+
+# noctrex LFM2-8B-A1B MXFP4 MOE (Liquid AI, ~4.5 GB, single RTX 4090, Ampere+ required).
+# Liquid Foundation Model 2: 8B total / A1B active. Even smaller active-param count than mellum2:12b (A2.5B).
+# 4.5 GB leaves ~19 GB for KV. Potentially the fastest model in the lineup. Unknown coding quality.
+# Benchmark against mellum2:12b-thinking to characterise the 8 GB sub-tier.
+# lfm2:8b  LFM2-8B-A1B-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/LFM2-8B-A1B-MXFP4_MOE-GGUF
+
+# Qwen3-Next-80B-A3B-Instruct Q4_K_M — official non-abliterated release (~45 GB).
+# CONFIRMED 2026-06-27: DOES NOT FIT on 2×24 GB (48 GB total).
+# OOM: cudaMalloc fails allocating 23.9 GB on device 0 — model share exceeds GPU VRAM even with tensor_split=1|1.
+# noctrex MXFP4 (~41 GB) fits on 48 GB; this Q4_K_M (~45 GB) does not.
+# Minimum tier: 3×24 GB (72 GB) — use tensor_split=1|1|1.
+# qwen3-next:80b-q4  Qwen_Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:bartowski/Qwen_Qwen3-Next-80B-A3B-Instruct-GGUF
+
+# ── New candidates from scout 2026-07-04 ─────────────────────────────────────
+
+# jashepp Ornith-1.0-35B-A3B MXFP4 MOE Hybrid Imatrix (~18.4 GB, single RTX 4090, Ampere+ required).
+# CONFIRMED 2026-07-22: 8/10 at 160.4 tok/s — SKIP. Not Qwen3.6-35B-A3B base (python_hashmap fails).
+# Identical 10-task profile to qwen3-30b:2507. Full run est. ~18/19 at 160 tok/s.
+# Dominated by qwopus3.6:35b (19/19, 162 tok/s). Not worth adding to 24gb.txt.
+# ornith:35b  Ornith-1.0-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.0-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
+
+# jashepp QUEST-35B-RL-A3B MXFP4 MOE Hybrid (~18.4 GB, single RTX 4090, Ampere+ required).
+# CONFIRMED 2026-07-22: 7/10 at 158.5 tok/s — SKIP. Below 8/10 threshold.
+# PASSES: python_safe_div, node_slugify, python_lru_cache, csv_nordic_property, python_tokenizer,
+#         python_expr_eval, python_hashmap (L5! — confirms QUEST-35B-RL base preserves RL reasoning).
+# FAILS: python_multifile_rename (L2 TESTS_STILL_FAIL — same gap as noctrex quest:35b; jashepp
+#        hybrid+Imatrix does NOT fix this; baked into QUEST-35B-RL base model, caps Skill L1),
+#        node_csv_parser (L3 TESTS_STILL_FAIL — quoted-comma edge case, same as noctrex),
+#        node_paratrooper (L6 universal wall).
+# Identical failure pattern and speed (~158-160 tok/s) to noctrex quest:35b. No reason to prefer.
+# quest:35b-jsh  QUEST-35B-RL-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/QUEST-35B-RL-A3B-MXFP4_MOE_Hybrid-GGUF
+
+# ── New candidates from scout 2026-07-19 ─────────────────────────────────────
+# Eval command (single RTX 4090, 10-task spot check):
+#   TASKS=python_safe_div,node_slugify,python_lru_cache,csv_nordic_property,node_csv_parser,python_tokenizer,python_expr_eval,python_hashmap,node_para_core,node_paratrooper
+#   ./gpu-mode.sh single
+#   ./run.sh --model-file models/candidates.txt --models <name> --backend llama-server --tasks $TASKS --num-predict 16000
+
+# jashepp Agents-A1-35B-A3B MXFP4 MOE Q8_0-Imatrix (~19.8 GB, single RTX 4090, Ampere+ required).
+# Same author as equinox:31b (19/19 coding + 4/4 web) and ornith:35b.
+# "Agents" instruction fine-tune of 35B-A3B MoE base. Unknown base model.
+# Uses MXFP4_MOE_Q8_0-Imatrix recipe — same hybrid precision as equinox and ornith.
+# High prior given jashepp track record. Threshold: ≥8/10 → full 19-task coding + web group.
+# CONFIRMED 2026-07-22: 7/10 at 159.8 tok/s — SKIP. FAIL csv_nordic_property (L3), same jashepp family.
+# agents-a1:35b  Agents-A1-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Agents-A1-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
+
+# jashepp Qwopus3.6-35B-A3B-Coder MXFP4 MOE Q8_0-Imatrix (~19.8 GB, single RTX 4090, Ampere+ required).
+# "Qwopus3.6" implies Qwen3.6-35B-A3B base — same architecture as noctrex-qwen3.6:35b (32/33, 121 tok/s).
+# Coder-specialized fine-tune of that base; jashepp hybrid precision.
+# Key question: does coder tuning improve on noctrex-qwen3.6:35b's one failure (node_paratrooper)?
+# Or does it trade general quality for coding at the cost of some tasks?
+# CONFIRMED 2026-07-22 full 37-task: 36/37 at 160.0 tok/s — PERFECT coding 19/19 + web 3/4.
+# FAIL: python_fastapi_endpoint (coder fine-tune breaks whitespace validation); node_paratrooper (L6 wall).
+# node_para_entities GPU freeze at max_ctx=32768 (prefill exhausts VRAM headroom at ~7k+ token prompt).
+# ADDED TO 24gb.txt. Dominated by equinox:31b on fastapi; dominates equinox on speed (160 vs 40 tok/s).
+# qwopus3.6:35b  Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Hybrid-Imatrix-GGUF
+
+# noctrex Gemma-4-26B-A4B MXFP4 MOE (~15.4 GB, single RTX 4090, Ampere+ required).
+# CONFIRMED 2026-07-22: 7/10 at 124.4 tok/s — SKIP. Below 8/10 threshold.
+# PASSES: python_safe_div (L1), node_slugify (L2), python_lru_cache (L2), python_tokenizer (L4),
+#         python_expr_eval (L4), python_hashmap (L5! — Gemma4 A4B passes the canary), node_para_core (L3).
+# FAILS:
+#   csv_nordic_property (L3, TESTS_STILL_FAIL — wrong solution at 22s/2600 tokens).
+#   node_csv_parser (L3, TESTS_STILL_FAIL TRUNCATED — 135s, all 16000 token budget consumed by
+#     verbose preamble before completion; same behavior documented in CLAUDE.md for prior Gemma4 runs).
+#   node_paratrooper (L6, universal wall).
+# Notable: python_hashmap PASS (L5) is the first confirmed Gemma4 result on this discriminator.
+# Both CSV L3 failures cap it below the promotion threshold — verbose-preamble issue is structural.
+# gemma4:26b  gemma-4-26B-A4B-it-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/gemma-4-26B-A4B-it-MXFP4_MOE-GGUF
+
+# ZhipuAI GLM-4-32B Tulu Instruct i1-Q4_K_M (mradermacher, ~19.7 GB, single RTX 4090).
+# CONFIRMED 2026-07-22: 6/10 at 40.6 tok/s — SKIP. Well below 8/10 threshold.
+# PASSES: python_safe_div (L1), node_slugify (L2), python_lru_cache (L2), node_csv_parser (L3),
+#         python_tokenizer (L4), python_expr_eval (L4).
+# FAILS: csv_nordic_property (L3, TESTS_STILL_FAIL), python_hashmap (L5, TESTS_STILL_FAIL —
+#   key question answered: dense GLM-4-32B does NOT pass the hashmap canary), node_para_core (L3),
+#   node_paratrooper (L6 universal wall).
+# Notable: node_csv_parser PASSES (quoted-comma edge case handled, unlike gemma4:26b/quest:35b).
+# Completely dominated by glm4.7-flash (29/33, 111 tok/s) despite 4 GB more VRAM.
+# Tulu fine-tune does not help with hashmap, csv_nordic_property, or node_para_core. Rejected.
+# glm4-tulu:32b  GLM-4-32B-Tulu-Instruct.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mradermacher/GLM-4-32B-Tulu-Instruct-i1-GGUF
+
+# ── New candidates from scout 2026-06-19 ─────────────────────────────────────
+
+# noctrex MXFP4 Qwen3.5-35B-A3B: MXFP4 upgrade of qwen3.5:35b.
+# CONFIRMED 2026-06-21: 7/10 at ~110 tok/s on single RTX 4090 (3 runs, fully deterministic).
+# SLOWER than bartowski Q4_K_M at ~147 tok/s — MXFP4 gives NO speed advantage AND is ~25% slower.
+# Fails: dotnet_sas (L1 C# — task was broken net8→9; all models failed), python_hashmap (TESTS_STILL_FAIL
+#   — wrong tombstone logic, same as noctrex-qwen3-coder:30b), csv_nordic_property (TESTS_STILL_FAIL).
+# Note: dotnet_sas results unreliable until task is re-run with net9.0 fix applied.
+# Speed at ctx=32768: drops to ~80-103 tok/s (KV cache effect). Bartowski Q4_K_M is better on all metrics.
+# DO NOT ADD TO DEFAULT SET — inferior to qwen3.5:35b Q4_K_M in both speed and quality.
+# noctrex-qwen3.5:35b  Qwen3.5-35B-A3B-MXFP4_MOE_BF16.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:noctrex/Qwen3.5-35B-A3B-MXFP4_MOE-GGUF
+
+# GLM-4.7-Flash MXFP4 MOE (Zhipu AI, ~16 GB, fits 24 GB comfortably).
+# CONFIRMED 2026-06-22: 17/19 coding at 112.2 tok/s. Skill L4. ADDED TO 24gb.txt AND default.txt.
+# PASSES: all L1-L4 tasks (17/19). python_expr_eval (L4), python_ledger_bug (L4) both PASS.
+# FAILS: python_hashmap (L5, wrong tombstone logic) + python_dijkstra (L5, wrong output).
+#   Both L5 tasks fail — ceiling firmly at L4, not a single-task quirk.
+# Speed: ~112 tok/s on coding tasks (ctx=16384 start). Fastest single-24GB model for coding.
+# REGRESSION (llama-server 10094): python_config_loader FAIL — CONFIRMED 2026-07-23. Was PASS on prior binary.
+# glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
+
+# noctrex Huihui-Qwen3-Next-80B-A3B MXFP4 MOE (3-part, ~41 GB total — requires 2×24 GB).
+# CONFIRMED 2026-06-24 full 33-task compare: 29/32 eligible at 109.3 tok/s avg.
+# Speed: 115 tok/s coding/16k, 88 tok/s at 32k, 26 tok/s at 128k.
+# FAILS: node_para_core (L3), node_para_entities (L5), node_paratrooper (L6). Skill L2.
+# context_256k OOM: ~41 GB model leaves <7 GB for KV; 262k ctx allocates 3 GB/GPU on CUDA0 → fails.
+# max_ctx=131072 required — prevents harness crash on context_256k (becomes SKIPPED_CTX).
+# Abliterated = uncensored. REQUIRES: ./gpu-mode.sh multi  and  --model-timeout 1200
+# qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-GGUF  # 3-part model
+
+# ── New candidates from scout 2026-07-22 ─────────────────────────────────────
+# 3×24 GB tier (72 GB) and new 24 GB/2×24 GB candidates.
+# 10-task spot check:
+#   TASKS=python_safe_div,node_slugify,python_lru_cache,csv_nordic_property,node_csv_parser,python_tokenizer,python_expr_eval,python_hashmap,node_para_core,node_paratrooper
+
+# noctrex Huihui-MoE-60B-A3B MXFP4 MOE (2-part, ~30.3 GB [MoE], 2×24 GB, Ampere+ required).
+# 60B total / A3B active. New model family; different from Qwen3-Next-80B-A3B architecture.
+# 30.3 GB leaves ~18 GB for KV on 48 GB — max_ctx=131072 feasible with f16 KV for A3B MoE.
+# CONFIRMED REJECTED 2026-07-25: 4/10 at 154.4 tok/s — below 8/10 threshold.
+# PASS: python_safe_div (L1), python_lru_cache (L2), python_expr_eval (L4), node_para_core (L3).
+# FAIL: node_slugify (L2, NO_BLOCKS — model wraps output in custom '[thinking: BEGIN_FILE ...]' format;
+#   parser never finds standalone BEGIN_FILE; format compliance issue, not capability gap — but even
+#   fixing this, remaining failures cap score at 5/10), csv_nordic_property (TESTS_STILL_FAIL 140s,
+#   132.5 tok/s), node_csv_parser (TESTS_STILL_FAIL 5.8s — generates wrong output instantly),
+#   python_tokenizer (TESTS_STILL_FAIL), python_hashmap (TESTS_STILL_FAIL — standard A3B cap gap),
+#   node_paratrooper (universal wall).
+# Speed: 155-168 tok/s on 2×24 GB — fast, but quality doesn't justify; inferior to noctrex-qwen3.6:35b.
+# A3B architecture failures identical to qwen3-30b:2507/ornith:35b pattern. Do not retry.
+# REQUIRES: ./gpu-mode.sh multi
+# huihui-60b  Huihui-MoE-60B-A3B-abliterated-MXFP4_MOE-00001-of-00002.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/Huihui-MoE-60B-A3B-abliterated-MXFP4_MOE-GGUF  # 2-part model
+
+# DavidAU Qwen3-48B-A4B distill (~19.0 GB, single RTX 4090, Q4_K_M — no Ampere+ required).
+# 48B total / A4B active MoE. New architecture tier between 35B-A3B and 80B.
+# CONFIRMED REJECTED 2026-07-25: 4/10 at 92.6 tok/s avg — well below 8/10 threshold.
+# PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), node_para_core (L3).
+# FAIL: node_slugify (L2! — caps Skill at L1), csv_nordic_property (TOOL_ERROR 600s, 0 tok/s — server
+#   froze during prefill at ctx=32768, VRAM exhaustion), node_csv_parser (L3), python_expr_eval (38.2 tok/s —
+#   4× slower than ctx=8192, KV thrash), python_hashmap (35.5 tok/s), node_paratrooper (1155s, 13.2 tok/s — severe KV thrash).
+# Speed collapse at ctx=32768: 145 tok/s at ctx=8192 → 33-38 tok/s at ctx=32768 → 13.2 tok/s during long generation.
+# DavidAU 12-expert distill merge degrades quality below usable level. Do not retry.
+# qwen3-48b:a4b  Qwen3-48B-A4B-Savant-Commander-Dstll-12X-Cl-Op-Hrtic-Uncen-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:DavidAU/Qwen3-48B-A4B-Savant-Commander-Distill-12X-Closed-Open-Heretic-Uncensored-GGUF
+
+# ── 3×24 GB tier (72 GB) — requires a third GPU ──────────────────────────────
+# Needs: ./gpu-mode.sh multi (3 GPUs), tensor_split=1|1|1, --model-timeout 1800
+
+# Cohere c4ai-command-a-03-2025 Q4_K_M (bartowski, 2-part, ~62.5 GB, 3×24 GB required).
+# 111B parameters; architecture dense vs MoE unconfirmed (no [MoE] tag in scout).
+# 62.5 GB weights + ~9.5 GB KV headroom on 72 GB. Cohere's strongest model (March 2025).
+# HF files in subdirectory CohereForAI_c4ai-command-a-03-2025-Q4_K_M/ within repo.
+# max_ctx=16384 conservative if dense; increase to 65536+ if MoE after first run.
+# command-a:111b  CohereForAI_c4ai-command-a-03-2025-Q4_K_M/CohereForAI_c4ai-command-a-03-2025-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384  hf:bartowski/CohereForAI_c4ai-command-a-03-2025-GGUF  # 2-part model; 3×24 GB
+
+# Meta Llama-4-Scout-17B-16E Q4_K_M (unsloth, 2-part, ~60.9 GB [MoE], 3×24 GB required).
+# 17B active / 16 experts MoE (~109B total). Previously tested CPU-bound (3.3 tok/s, 19/24).
+# GPU-resident on 3×24 GB expected ~50-80 tok/s.
+# HF files in subdirectory Q4_K_M/ within repo.
+# llama4-scout:17b  Q4_K_M/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF  # 2-part model; 3×24 GB
+
+# ── Dense Gemma 4 candidates ─────────────────────────────────────────────────
+
+# Smoffyy Gemma4-31B-Instruct-Pure Q4_K_M (~17.4 GB, single RTX 4090).
+# Dense Gemma 4 27B/31B — different architecture from the MoE E4B we tested (noctrex 26B).
+# MoE E4B has verbose preamble issue; dense variant should not. 17.4 GB fits 24 GB with ~6 GB KV.
+# "31B" naming uncertain — may be the standard Gemma 4 27B dense or a slightly larger fine-tune.
+# Not QAT (standard PTQ Q4_K_M). Test before QAT variant is available.
+# max_ctx=32768 (17.4 GB + ~5.5 GB f16 KV = ~23 GB on 24 GB).
+# No Ampere+ requirement (Q4_K_M, not MXFP4).
+# Superseded by gemma4:31b-qat (QAT int4 is strictly better than this PTQ Q4_K_M for the same base model).
+# gemma4:31b  Gemma4-31B-q4_k_m.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:Smoffyy/Gemma4-31B-Instruct-Pure-GGUF
+
+# ── New candidates from scout 2026-07-24 ─────────────────────────────────────
+# Source: ./scout-hf.sh; 211 repos (+47 new since 2026-07-24)
+
+# ── Gemma 4 QAT — quantization-aware trained variants ────────────────────────
+# QAT int4 = trained with Q4_0 quantization in mind; better than PTQ Q4_K_M at same bit rate.
+# unsloth QAT repos (gemma-4-31B-it-qat-GGUF etc.) contain only MTP auxiliary heads (400-500 MB)
+# — NOT the main model. Use lmstudio-community or google repos for actual GGUFs.
+# All QAT files use Q4_0 format (older than Q4_K_M but purpose-trained; llama-server supports it).
+
+# Gemma 4 31B dense QAT (lmstudio-community, 16.4 GB, single RTX 4090).
+# Dense 31B — different architecture from the MoE E4B (A4B active) we tested.
+# No verbose preamble expected (that was specific to MoE behavior). Same VRAM as equinox:31b.
+# SPOT CHECK (2026-07-24): 8/10 at ~40 tok/s — PROMOTED.
+# FULL CODING (2026-07-24): 18/19 at 42.3 tok/s — ADDED TO 24gb.txt.
+# PASS ALL: csv_nordic_property (L3!), node_slugify, python_safe_div, dotnet_sas, python_lru_cache,
+#   python_lfu_cache (L3), python_minheap (L3), python_multifile_rename (L2), node_memoize_bug (L3),
+#   python_ledger_bug (L4), python_expr_eval (L4), python_dijkstra (L5!), python_hashmap (L5!),
+#   python_tokenizer (L4), node_debounce (L3), python_merge_intervals (L4), awk_csv_stats (L3),
+#   java_word_freq (L3).
+# FAIL: node_csv_parser (L3, TESTS_STILL_FAIL — ESM 'export function parseCSV' syntax conflict;
+#   SyntaxError: Identifier 'parseCSV' already declared; consistent across both runs; capability gap).
+# KEY: csv_nordic_property PASS — dense architecture fixes what all Gemma4 A4B MoE variants fail.
+# KEY: python_hashmap + python_dijkstra PASS — QAT int4 preserves L5 precision.
+# Speed ~42 tok/s — marginally faster than equinox:31b (~40-43 tok/s), same tier.
+# WEB (2026-07-24): 4/4 PERFECT at 42.2 tok/s — all web tasks PASS including python_fastapi_endpoint.
+# L6 STEPPED (2026-07-24): 3/4 — node_para_core (L3) PASS, node_para_turret (L4) PASS,
+#   node_para_entities (L5) FAIL (NO_BLOCKS at ctx=8192 — step 3 prompt truncates mid-output, same as equinox:31b),
+#   node_para_combat (L6) PASS. Exact same stepped profile as equinox:31b. Context tasks: TBD.
+# max_ctx=32768 (16.4 GB + ~5.5 GB f16 KV = ~22 GB at ctx=32k — fits 24 GB).
+# No Ampere+ requirement (Q4_0, not MXFP4). f16 KV cautious default for unknown arch.
+# gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:lmstudio-community/gemma-4-31B-it-QAT-GGUF
+
+# Gemma 4 26B A4B MoE QAT (lmstudio-community, 13.4 GB, single RTX 4090).
+# Same MoE A4B architecture as noctrex 26B we tested (7/10 SKIP). QAT may improve precision
+# but will NOT fix csv_nordic_property capability gap or node_csv_parser verbose preamble.
+# Test only if 31B QAT shows structural improvement worth the follow-up.
+# max_ctx=65536 (13.4 GB + ~2 GB f16 KV at A4B active = ~15.5 GB — plenty of room).
+# gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
+
+# Gemma 4 12B dense QAT (official Google release, 6.5 GB, single RTX 4090).
+# GONE 2026-07-30: lmstudio-community/gemma-4-12B-it-QAT-GGUF deleted from HuggingFace. Do not download.
+# Dense 12B — small baseline; was low priority anyway (12B unlikely to beat A3B MoE on L3+ tasks).
+# gemma4:12b-qat  gemma-4-12b-it-qat-q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:google/gemma-4-12B-it-qat-q4_0-gguf
+
+# ── 72 GB (3×24 GB) tier ─────────────────────────────────────────────────────
+# Needs: ./gpu-mode.sh multi (3 GPUs), tensor_split=1|1|1, --model-timeout 1800
+
+# Mistral Large 2 Instruct 2407 IQ4_XS (legraphista iMat, 60.9 GB, 3-part, 3×24 GB required).
+# Dense 123B. THE only Mistral Large variant with 72✓ (real KV headroom) vs 72~ (all Q4_K_M at 68.2 GB).
+# IQ4_XS iMat quality slightly below Q4_K_M but fits with ~11 GB headroom for KV at 72 GB.
+# KV at ctx=8192 for 123B dense: ~2-3 GB → practical for coding tasks. ctx=32768 needs ~10 GB → tight.
+# Note: GGUF files in subdirectory Mistral-Large-Instruct-2407.IQ4_XS/ within repo.
+# mistral-large:iq4xs  Mistral-Large-Instruct-2407.IQ4_XS/Mistral-Large-Instruct-2407.IQ4_XS-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=8192  hf:legraphista/Mistral-Large-Instruct-2407-IMat-GGUF  # 3-part model; 3×24 GB
+
+# mradermacher Qwen3-Next-80B-A3B-Instruct Decensored i1-Q4_K_M (45.1 GB [MoE], 3×24 GB required).
+# Scout 2026-07-30: 186 downloads, 48~ (borderline — same size class as bartowski Q4_K_M that OOMed on 48 GB),
+# 72✓. i1 = imatrix quantization (slightly better quality than standard PTQ Q4_K_M at same bit rate).
+# "Decensored" vs noctrex "abliterated" — different uncensoring approach, likely same capability tier.
+# At 45.1 GB, same hard wall as bartowski Q4_K_M: cudaMalloc fails on 2×24 GB. Use tensor_split=1|1|1.
+# Prefer this over bartowski Q4_K_M for 3×24 GB run — i1 imatrix gives slightly better quality.
+# qwen3-next:80b-i1  Qwen3-Next-80B-A3B-Instruct-Decensored.i1-Q4_K_M-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:mradermacher/Qwen3-Next-80B-A3B-Instruct-Decensored-i1-GGUF  # 3-part model; 3×24 GB
+
+# noctrex Huihui-gpt-oss-120b abliterated MXFP4 MOE (4-part, ~59.0 GB [MoE], 3×24 GB required).
+# Abliterated (uncensored) variant of gpt-oss-120b MXFP4 — same quality tier as ggml-org version.
+# Use as a drop-in replacement in 3×24 GB runs if censored outputs are a problem.
+# huihui-120b  Huihui-gpt-oss-120b-abliterated-MXFP4_MOE-00001-of-00004.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:noctrex/Huihui-gpt-oss-120b-abliterated-MXFP4_MOE-GGUF  # 4-part model; 3×24 GB
+
+# ── Moonlight-16B-A3B — new architecture family ───────────────────────────────
+
+# noctrex Moonlight-16B-A3B-Instruct MXFP4 MOE (~8.7 GB [MoE], single RTX 4090, Ampere+ required).
+# Kimi (Moonshot AI) MoE model — new architecture family not yet benchmarked.
+# A3B active params, same capability tier as qwen3-30b:2507. Half the VRAM footprint.
+# SCOUT 2026-07-26: new repo, 51 downloads.
+# CONFIRMED 2026-07-26: 4/10 at 175.7 tok/s. REJECTED.
+# PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), node_para_core (L3).
+# FAIL: node_slugify (L2) caps Skill at L1; csv_nordic_property + node_csv_parser (L3);
+#   python_expr_eval (L4), python_hashmap (L5), node_paratrooper (L6).
+# Speed impressive (125–197 tok/s, ~8.7 GB) but capability too low — same A3B ceiling pattern.
+# moonlight:16b  Moonlight-16B-A3B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:noctrex/Moonlight-16B-A3B-Instruct-MXFP4_MOE-GGUF
+
+# ── Laguna S 2.1 — Poolside 118B MoE A8B ────────────────────────────────────
+# Source: poolside-ai. wimmmm GGUF conversions (7K downloads).
+# 118B total / ~8B active per token (A8B MoE). Poolside's coding + agentic focus.
+# Key discriminator vs all A3B models: 8B active = much larger reasoning capacity per token.
+# Not a thinking model (no <think> tokens). Standard num_predict=8000 sufficient.
+#
+# CONFIRMED 2026-07-27: IQ4_XS (58.4 GB) DOES NOT FIT on 2×24 GB.
+# tensor_split=1|1 assigns 29.2 GB per GPU → OOM on RTX 4090 24 GB (cudaMalloc fail).
+# Same hard wall as qwen3-next:80b Q4_K_M (~45 GB). IQ4_XS requires 3×24 GB.
+# For 3×24 GB: use IQ4_XS (58.4 GB), tensor_split=1|1|1 — leaves ~14 GB for KV.
+# laguna-s-2.1:118b-iq4  laguna-s-2.1-IQ4_XS.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:wimmmm/poolside-Laguna-S-2.1-GGUF
+#
+# For 2×24 GB: IQ3_XXS (42.1 GB) — 21.05 GB per GPU, ~3 GB KV headroom each.
+# CONFIRMED 2026-07-27 spot (10 tasks): 7/10 at ~97 tok/s; CONFIRMED 2026-07-27 full coding: 17/19 at 96.1 tok/s.
+# CODING PASS (17): all L1–L2, python_lru_cache, python_lfu_cache, python_minheap, node_memoize_bug,
+#   python_ledger_bug, dotnet_sas, python_expr_eval (L4), python_tokenizer (L4), python_merge_intervals (L4),
+#   node_debounce, awk_csv_stats, java_word_freq, python_dijkstra (L5), python_hashmap (L5! — A8B quality).
+# CODING FAIL (2): csv_nordic_property (L3, TESTS_STILL_FAIL — 68s full generation, wrong solution;
+#   capability gap NOT IQ3_XXS precision), node_csv_parser (L3, TESTS_STILL_FAIL — 9.5s quick fail, quoted-comma).
+# Speed: 96–105 tok/s; python_dijkstra anomaly 38.3 tok/s (KV pressure during long generation).
+# python_hashmap PASS at IQ3_XXS is a high quality signal — L5 precision preserved at 3-bit.
+# csv_nordic_property failure is structural (68s full gen = tried and wrong) — IQ4_XS unlikely to fix.
+# IQ4_XS on 3×24 GB remains in pending runs for completeness. File: allmodels/laguna-s-2.1-IQ4_XS.gguf.
+# REQUIRES: ./gpu-mode.sh multi  and  --model-timeout 1200
+# laguna-s-2.1:118b  laguna-s-2.1-IQ3_XXS.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:wimmmm/poolside-Laguna-S-2.1-GGUF
+
+# ── Unknown noctrex models worth investigating ────────────────────────────────
+
+# inclusionAI GroveMoE Instruct — up-cycled from Qwen3-30B-A3B-Base with "adjugate experts".
+# 33B total / ~3.14-3.28B active per token — effectively A3B tier same as qwen3-30b:2507.
+# CONFIRMED 2026-07-28 spot check: 0/10 at 124.7 tok/s — REJECTED (inference corruption).
+# ALL 10 tasks NO_BLOCKS: model outputs !!!!!!!!!!!!!!!!!...!!!!!!! on every prompt (154k tokens total).
+# Root cause: 'grovemoe' architecture not correctly supported by llama-server 10094.
+# Not a capability or format issue — complete inference failure. Do not retry on this binary.
+# noctrex MXFP4 MOE ~17.1 GB, single RTX 4090, Ampere+ required.
+# grove-moe  GroveMoE-Inst-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:noctrex/GroveMoE-Inst-MXFP4_MOE-GGUF
+
+# noctrex Qwen3-30B-A3B DeepSeek-Distill 2507 MXFP4 MOE (~15.9 GB [MoE], single RTX 4090, Ampere+).
+# CONFIRMED 2026-08-05 spot check: 7/10 at 185.9 tok/s — REJECTED (below 8/10 threshold).
+# PASS: python_safe_div (L1), node_slugify (L2), python_lru_cache (L2), node_csv_parser (L3),
+#   python_tokenizer (L4), python_expr_eval (L4), node_para_core (L3).
+# FAIL: csv_nordic_property (L3, TESTS_STILL_FAIL — qwen3-30b:2507 PASSES this; distillation regressed it),
+#   python_hashmap (L5, same gap as 2507 base), node_paratrooper (L6, universal wall).
+# No reasoning spiral on python_expr_eval (PASS, 8.4s clean — distillation did not introduce spiral).
+# Strictly inferior to qwen3-30b:2507 (8/10). Speed 186 tok/s (+14% vs 163 base) irrelevant given regression.
+# qwen3-30b:deepseek  Qwen3-30B-A3B-Deepseek-Distill-Instruct-2507-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:noctrex/Qwen3-30B-A3B-Deepseek-Distill-Instruct-2507-MXFP4_MOE-GGUF
+
+# ── New candidates from scout 2026-08-04 ─────────────────────────────────────
+# 10-task spot check command:
+#   TASKS=python_safe_div,node_slugify,python_lru_cache,csv_nordic_property,node_csv_parser,python_tokenizer,python_expr_eval,python_hashmap,node_para_core,node_paratrooper
+#   ./gpu-mode.sh single
+#   ./run.sh --model-file models/candidates.txt --models <name> --backend llama-server --tasks $TASKS --num-predict 16000
+
+# noctrex GLM-4.7-Flash-REAP-23B-A3B MXFP4 MOE (~12.6 GB [MoE], single RTX 4090, Ampere+ required).
+# CONFIRMED 2026-08-05: 6/10 at 128.4 tok/s — REJECTED. REAP degraded the model.
+# PASS: python_safe_div (L1), node_slugify (L2), python_lru_cache (L2), python_tokenizer (L4),
+#   python_expr_eval (L4), node_para_core (L3).
+# FAIL: csv_nordic_property (L3, TESTS_STILL_FAIL — was PASS in base glm4.7-flash),
+#   node_csv_parser (L3, TESTS_STILL_FAIL — was PASS in base), python_hashmap (L5, same as base),
+#   node_paratrooper (L6, universal wall).
+# REAP post-training explicitly regressed L3 CSV tasks. Base glm4.7-flash scores 17/19 coding;
+# REAP drops to ≤6/10 by losing csv_nordic_property and node_csv_parser. Do not use.
+# Speed 128 tok/s (vs 111 tok/s base) due to smaller 12.6 GB footprint — irrelevant given regression.
+# glm4.7-reap  GLM-4.7-Flash-REAP-23B-A3B-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:noctrex/GLM-4.7-Flash-REAP-23B-A3B-MXFP4_MOE-GGUF
+
+# mradermacher Qwen3-Coder-30B-A3B-Instruct-RTPurbo i1-Q4_K_M (~17.3 GB [MoE], single RTX 4090).
+# CONFIRMED 2026-08-05 spot (10 tasks): 8/10 at 200.5 tok/s — PROMOTED.
+# CONFIRMED 2026-08-05 full coding (19 tasks): 18/19 at 211.4 tok/s. ADDED TO 24gb.txt.
+# CONFIRMED 2026-08-05 web (4 tasks): 2/4 at 192.9 tok/s.
+# CODING PASS (18): all L1–L4 + python_dijkstra (L5). csv_nordic_property + node_csv_parser (L3) PASS
+#   — base qwen3-coder:30b-1m fails both consistently; RTPurbo fixes them.
+# CODING FAIL (1): python_hashmap (L5, TESTS_STILL_FAIL — base Qwen3-Coder capability gap).
+# WEB PASS: bash_preflight (L2), node_express_validation (L3).
+# WEB FAIL: python_config_loader (L2, same partial-method-completion gap as qwen3-coder:30b-1m),
+#   python_fastapi_endpoint (L3, A3B coder fine-tune pattern — Field(min_length=1) not field_validator+.strip()).
+# SPEED: 211.4 tok/s avg coding — new single-GPU speed record; 31% faster than qwopus3.6:35b (161.8 tok/s).
+# i1 = mradermacher imatrix recipe. No Ampere+ required (Q4_K_M). max_ctx=32768.
+# qwen3-coder-rtpurbo:30b  Qwen3-Coder-30B-A3B-Instruct-RTPurbo.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mradermacher/Qwen3-Coder-30B-A3B-Instruct-RTPurbo-i1-GGUF
+
+# ── Huihui-MoE-24B-A8B — different active-param tier ─────────────────────────
+
+# CONFIRMED 2026-07-28 spot check: 4/10 at 132.6 tok/s — REJECTED.
+# PASS: python_safe_div (L1), python_lru_cache (L2), python_tokenizer (L4), python_expr_eval (L4).
+# FAIL: node_slugify (L2, NO_BLOCKS — 73s in <think> block, never emits BEGIN_FILE; format pathology),
+#       csv_nordic_property (L3, TESTS_STILL_FAIL — 120s, wrong solution),
+#       node_csv_parser (L3, NO_BLOCKS TRUNCATED — 219s, 16k budget exhausted in think block),
+#       python_hashmap (L5, TESTS_STILL_FAIL — 30s, capability gap),
+#       node_para_core (L3, TESTS_STILL_FAIL — 31s), node_paratrooper (L6, universal wall).
+# A8B active-param hypothesis NOT confirmed — A3B models (qwen3-30b:2507, 8/10, 181 tok/s) outperform.
+# node_slugify/node_csv_parser failures are format compliance (think block never closes), not capability.
+# mradermacher Huihui-MoE-24B-A8B abliterated i1-Q4_K_M (~13.9 GB [MoE], single RTX 4090).
+# huihui-24b:a8b  Huihui-MoE-24B-A8B-abliterated.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:mradermacher/Huihui-MoE-24B-A8B-abliterated-i1-GGUF
