@@ -28,9 +28,9 @@
 # qwen3-coder:30b-1m   # ~160 tok/s  tensor_split, MoE ~15 GB; 19/19 coding PERFECT
 # qwen3.5:35b          # ~147 tok/s  tensor_split, MoE thinking
 # qwen3.6:35b-A3B      # ~134 tok/s  tensor_split, MoE thinking
-# gpt-oss:120b         #  ~90 tok/s  tensor_split, MXFP4 MoE 120B GPU-resident (est.; was ~17 RAM-bound)
-# qwen3-next:80b       # *109 tok/s  tensor_split, MoE MXFP4 80B; 29/32 Skill L2
-# llama4-scout:17b     #  ~60 tok/s  tensor_split, MoE 109B GPU-resident (est.; was 3.3 RAM-bound)
+# gpt-oss:120b         #  *55 tok/s  tensor_split, MXFP4 MoE 120B ~60 GB GPU-resident; 32/34 eligible, Skill L6 (2026-08-11)
+# qwen3-next:80b       # *109 tok/s  tensor_split, MoE MXFP4 80B; 29/32 Skill L2; no improvement from 3rd GPU
+# llama4-scout:17b     # 10-29 tok/s  tensor_split, MoE 109B GPU-resident (was 3.3 RAM-bound); REJECTED 2026-08-11 7/10
 # qwen2.5-coder:14b    #  ~72 tok/s  single GPU
 # devstral-small-2     #  ~42 tok/s  single GPU, dense 24B
 # qwen3.6:27b          #  *40 tok/s  tensor_split, dense 27B; f16 KV required; 32/33 Skill L5
@@ -102,11 +102,12 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|
 # Fails: node_para_core (L3 logic gap), node_paratrooper (L6 universal wall).
 qwen2.5-coder:32b-q4  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
 
-# qwen2.5-coder:32b Q5_K_M (~26 GB): confirmed 6/7 at 33.4 tok/s on 2×24 GB (2026-06-14).
-qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
+# qwen2.5-coder:32b Q5_K_M (~26 GB): SKIP — Q4_K_M already present and scores 19/19 coding; no practical gain.
+# qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
 
 # deepseek-r1:32b: thinking; python_expr_eval is a structural spiral (avoid that task).
-deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF
+# NOTE: using Q4_K_M (already downloaded); Q5_K_M would not fix python_expr_eval (structural, not precision).
+deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF
 
 # qwq:32b: Q5_K_M thinking; confirmed 32.4 tok/s on 2×24 GB. Reasoning spiral on some tasks.
 qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/QwQ-32B-GGUF
@@ -119,29 +120,30 @@ qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8
 # Abliterated = uncensored. Requires --model-timeout 1200.
 qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-GGUF  # 3-part model
 
-# ── Dense 70B — PCIe-bound but now 3-way split; slightly better than 2×24 GB ─
+# ── Dense 70B — SKIPPED; not worth downloading ───────────────────────────────
 # llama3.3:70b Q4_K_M (~40 GB): confirmed 6/10 at 17.4 tok/s on 2×24 GB (2026-06-23).
-# On 72 GB 3-way split: ~13.3 GB/GPU → 10.7 GB/GPU for KV; est. ~22-25 tok/s (PCIe bound).
-# Capability gaps: node_csv_parser, python_hashmap, csv_nordic_property, node_para_core FAIL.
-# Not recommended over qwen3-next:80b (better quality AND faster at 109 tok/s on same hardware).
-llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
+# On 72 GB: ~22-25 tok/s est. (PCIe bound). Capability gaps: node_csv_parser, python_hashmap,
+# csv_nordic_property, node_para_core FAIL. Dominated by qwen3-next:80b (better quality + faster).
+# SKIP — do not download.
+# llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
 
-# qwen2.5:72b-q4 Q4_K_M (~41 GB): on 48 GB was ctx=16384 max (no real KV headroom).
-# On 72 GB 3-way split: ~13.7 GB/GPU → 10.3 GB/GPU for KV → ctx=65536 feasible at q8_0.
-# Confirmed quality: 4/8 on 48 GB (node_csv_parser PASS; fails python_hashmap, csv_nordic_property,
-# python_tokenizer, node_para_core). Capability gaps persist regardless of VRAM.
-# Remove parallel=1 restriction (was needed on 48 GB to save KV slots; no longer needed).
-qwen2.5:72b-q4  Qwen2.5-72B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:bartowski/Qwen2.5-72B-Instruct-GGUF
+# qwen2.5:72b-q4 Q4_K_M (~41 GB): 4/8 quality on 48 GB; capability gaps (python_hashmap,
+# csv_nordic_property, python_tokenizer, node_para_core) persist regardless of VRAM.
+# ~22 tok/s PCIe-bound. Not worth 41 GB download given quality ceiling.
+# SKIP — do not download.
+# qwen2.5:72b-q4  Qwen2.5-72B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:bartowski/Qwen2.5-72B-Instruct-GGUF
 
 # ── 120B+ — GPU-resident for the first time on 72 GB ─────────────────────────
-# gpt-oss:120b: MXFP4 MoE ~60 GB; 3-part model.
-# On single 24 GB: required n_cpu_moe=35 (CPU offload) → ~17 tok/s RAM-bound.
-# On 72 GB: fully GPU-resident; remove n_cpu_moe. Per-GPU: 60/3 = 20 GB weights, 4 GB for KV.
-# Estimated ~80-100 tok/s GPU-resident (similar MXFP4 MoE A3B to qwen3-next:80b at 109 tok/s).
-# max_ctx=32768 conservative given tight per-GPU KV (4 GB/GPU at 3-way split).
-# Confirmed quality (24 GB partial-GPU): 31/33, Skill L5; csv_nordic_property + node_paratrooper FAIL.
-# Remove mlock — no longer needed when fully GPU-resident.
-gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model
+# gpt-oss:120b: MXFP4 MoE ~60 GB; single-file model.
+# CONFIRMED 2026-08-11 full 37-task (3×24 GB): 32/34 eligible, Skill L6.
+# PERFECT: 19/19 coding + 4/4 web. PASSES full L6 stepped chain (core/turret/entities/combat).
+# FAILS: node_paratrooper (from-scratch L6, universal wall). context_16k TOOL_ERROR (transient restart).
+# Speed: ~55 tok/s coding avg, 8-26 tok/s para (long generation), ~60 tok/s context.
+# SKIPPED context_64k/128k/256k at max_ctx=32768 — increased to 65536 to enable context_64k.
+# On 72 GB: 60 GB weights / 3 = 20 GB/GPU, ~4 GB/GPU available for KV at q8_0.
+# KV at ctx=65536: ~8 GB total / 3 = ~2.7 GB/GPU — should fit; revert if OOM.
+# Temps: GPU0 42°C avg, GPU1 49°C avg, GPU2 56°C avg (all healthy).
+gpt-oss:120b  gpt-oss-120b-MXFP4.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536,thinking  hf:ggml-org/gpt-oss-120b-GGUF
 
 # llama4-scout:17b (Meta Llama 4 Scout, MoE 17B active / 109B total, Q4_K_M ~60 GB); 3-GPU only.
 # On single 24 GB: RAM-bound at 3.3 tok/s (weights in system RAM); context_128k took 1216s.
@@ -149,4 +151,4 @@ gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,no_mmap,tensor_spl
 # Quality at 3.3 tok/s on 24 GB: 19/24 eligible (csv_nordic_property TOOL_ERROR timeout; ctx≥64k SKIPPED).
 # Similar per-GPU KV to gpt-oss:120b: ~4 GB/GPU → max_ctx=32768 conservative.
 # Requires --model-timeout 1200 (csv_nordic_property may still time out even at faster speed).
-llama4-scout:17b  Llama-4-Scout-17B-16E-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Llama-4-Scout-17B-16E-Instruct-GGUF
+llama4-scout:17b  Q4_K_M/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF  # 2-part model

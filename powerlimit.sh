@@ -94,7 +94,7 @@ if $PER_GPU; then
             else
                 echo "  GPU $idx: $name — unrecognized model, skipping" >&2
             fi
-            ((idx++))
+            ((++idx))
         done < <(nvidia-smi --query-gpu=name,power.max_limit --format=csv,noheader,nounits)
     }
 

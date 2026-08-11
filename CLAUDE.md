@@ -144,6 +144,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   CPU-bound on 24 GB VRAM; 109 GB weights live in RAM. Quality is high (19/24) but throughput
   is impractical. csv_nordic_property times out (model_timeout=600s at 3.3 tok/s ≈ 2000 max
   tokens). context_128k passes SLOW (1216s). Needs 64 GB+ VRAM to be GPU-resident and fast.
+  CONFIRMED 2026-08-11 (3×24 GB spot check): 7/10, 10-29 tok/s — REJECTED for 3x24gb.txt.
+  Speed: 28-29 tok/s at ctx=8192, 10-21 tok/s at ctx=32768 (KV pressure even GPU-resident).
+  FAIL: csv_nordic_property (TESTS_STILL_FAIL at 237s — prior TOOL_ERROR was timeout; now
+    confirmed structural capability gap, not solvable by speed), python_hashmap (L5, 17 tok/s),
+    node_paratrooper (L6 universal wall). PASS: node_csv_parser (L3), python_expr_eval (L4),
+    node_para_core (L3). Prior "19/24" result was inflated by SKIPs — actual capability ≈ 7/10.
+  Not worth adding to 3x24gb.txt: same VRAM footprint (~60 GB) as gpt-oss:120b, far lower quality.
   **glm4.7-flash** (Zhipu AI / noctrex, MXFP4 MOE, ~16 GB, single RTX 4090): 17/19 coding
   at 112 tok/s (2026-06-22). CONFIRMED 2026-06-26 full 33-task run: 29/33 at 110.9 tok/s avg.
   Effective Skill L4. Fails python_hashmap (L5), python_dijkstra (L5), node_paratrooper (L6
@@ -336,6 +343,23 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     31% faster than qwopus3.6:35b (161.8 tok/s, 19/19). Token efficiency 2.308 p/k.
   GLM-4.7-Flash-REAP (same scout run): 6/10 REJECTED — REAP degraded csv_nordic_property + node_csv_parser
     (both were PASS in base glm4.7-flash); post-training can regress L3 CSV capability.
+  **gpt-oss:120b** (OpenAI, MXFP4 MoE single-file ~60 GB, ggml-org, 3×24 GB required):
+  CONFIRMED 2026-08-11 full 37-task (3×24 GB, tensor_split=1|1|1): **32/34 eligible, Skill L6**.
+  **PERFECT 19/19 coding + PERFECT 4/4 web** — first model to achieve both simultaneously.
+  **First model to complete the full L6 stepped chain**: node_para_core (L3) + node_para_turret (L4)
+    + node_para_entities (L5) + node_para_combat (L6) ALL PASS. node_paratrooper (L6 from-scratch) FAIL
+    (universal wall — no model of any size has passed this task).
+  Context: context_8k PASS (62 tok/s), context_16k TOOL_ERROR (1200s transient restart; context_32k
+    immediately after PASS — not a capability issue), context_32k PASS (58 tok/s).
+    context_64k/128k/256k SKIPPED_CTX (max_ctx=32768 — fixed to 65536 post-run; context_64k rerun pending).
+  Multihop: forward/reverse/distractor all PASS (~55 tok/s).
+  Speed: ~55 tok/s coding avg, 8.8-26 tok/s on para tasks (long generation), 58-73 tok/s context.
+    node_para_combat: 829s at 8.8 tok/s — very long output on L6 game-state task.
+    python_tokenizer: 53s at 24 tok/s. Slower than estimated 90 tok/s — model generates lengthy outputs.
+  thinking=true confirmed working — no planning loops at 3×24 GB.
+  Temps: GPU0 34/42/54°C (min/avg/max), GPU1 38/49/66°C, GPU2 41/56/66°C — all healthy.
+  On single 24 GB: required n_cpu_moe=35 CPU offload → ~17 tok/s RAM-bound. On 3×24 GB: fully GPU-resident.
+  max_ctx=65536 now set in 3x24gb.txt (was 32768; q8_0 KV at ~4 GB/GPU should fit ctx=65536 on 12 GB total).
   **web task group results (2026-07-02/03 + 2026-07-24 + 2026-08-05, --task-group web, llama-server, 4 tasks)**:
   - noctrex-qwen3.6:35b: 4/4 at 116.7 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
   - equinox:31b: 4/4 at 40.3 tok/s — PASS python_fastapi_endpoint (field_validator with .strip())
@@ -404,7 +428,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   | glm4.7-flash         | 31/37 | 131.8 | L1 | python_config_loader UNEXPECTED FAIL; context_256k TOOL_ERROR 7200s |
   | qwen2.5-coder:14b    | 27/37 | 83.2 | L2 | 7 TESTS_STILL_FAIL, 3 SKIPPED_CTX |
   | gpt-oss:20b          | 25/37 | 227.8 | <L1 | 9 NO_BLOCKS, 2 TESTS_STILL_FAIL, 1 SKIPPED_CTX |
-  | gpt-oss:120b         | — | — | — | SKIPPED (FileNotFoundError: GGUF not downloaded) |
+  | gpt-oss:120b         | — | — | — | SKIPPED (FileNotFoundError: GGUF not downloaded); CONFIRMED 2026-08-11 3×24 GB: 32/34 eligible, Skill L6, perfect coding+web, full L6 stepped PASS |
   Regressions vs prior runs — CONFIRMED (re-run 2026-07-23, same binary):
   - noctrex-qwen3.6:35b csv_nordic_property: FAIL (was PASS 2026-06-24, 2026-07-03). python_config_loader PASS.
   - glm4.7-flash python_config_loader: FAIL (was PASS 2026-06-26). csv_nordic_property PASS.

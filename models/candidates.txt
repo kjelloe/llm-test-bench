@@ -392,7 +392,7 @@
 # but will NOT fix csv_nordic_property capability gap or node_csv_parser verbose preamble.
 # Test only if 31B QAT shows structural improvement worth the follow-up.
 # max_ctx=65536 (13.4 GB + ~2 GB f16 KV at A4B active = ~15.5 GB — plenty of room).
-# gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
+gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
 
 # Gemma 4 12B dense QAT (official Google release, 6.5 GB, single RTX 4090).
 # GONE 2026-07-30: lmstudio-community/gemma-4-12B-it-QAT-GGUF deleted from HuggingFace. Do not download.
