@@ -406,7 +406,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     ls 10094 overhead; identical speed tier to equinox:31b (23.1 tok/s avg) — both dense 31B plateau at ~23 tok/s.
     context_256k SKIPPED_CTX (architecture limit max_ctx=131072). max_ctx=131072.
   node_paratrooper (CONFIRMED 2026-08-13): TESTS_STILL_FAIL at 32.3 tok/s (97.1s, 2.9k tokens) on 2×24 GB.
-    Constructor tests PASS; game loop wrong. Universal L6 from-scratch wall holds.
+    Constructor tests PASS; game loop wrong. Universal L6-full wall holds.
   Speed: ~40-43 tok/s at coding ctx — same tier as equinox:31b (~40 tok/s). f16 KV (unknown arch).
   Updated capability profile vs equinox:31b: both 31B dense, both ~42 tok/s, identical coding/web/context — BUT
     gemma4:31b-qat completes full L6 stepped chain (entities PASS at ctx=32768) while equinox:31b fails entities.
@@ -481,8 +481,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Temps: GPU0 max 52°C, GPU1 max 64°C, GPU2 max 64°C. Re-confirms 2026-08-11 result on ls 10094 binary.
   **PERFECT 19/19 coding + PERFECT 4/4 web** — first model to achieve both simultaneously.
   **First model to complete the full L6 stepped chain**: node_para_core (L3) + node_para_turret (L4)
-    + node_para_entities (L5) + node_para_combat (L6) ALL PASS. node_paratrooper (L6 from-scratch) FAIL
-    (universal wall — no model of any size has passed this task).
+    + node_para_entities (L5) + node_para_combat (L6) ALL PASS. node_paratrooper (L6-full) FAIL
+    (was the universal wall at the time of this run — first broken by qwen3.8:27b on 2026-08-15,
+    see that model's entry below).
   Context: context_8k PASS (62 tok/s), context_16k PASS (62 tok/s; rerun 2026-08-11 confirmed transient
     TOOL_ERROR — not a capability issue), context_32k PASS (58 tok/s), context_64k PASS (53.4 tok/s;
     CONFIRMED 2026-08-11 at max_ctx=65536). context_128k PASS (39.6 tok/s, 166s; CONFIRMED 2026-08-12
@@ -505,7 +506,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   java_word_freq (L3) PASS at 37.9 tok/s — gemma4:26b-qat (otherwise 18/19) fails this task specifically.
   csv_nordic_property PASS at 16.1 tok/s (196s — thinking tokens + large CSV prefill; same behaviour as gpt-oss:120b).
   python_expr_eval PASS at 25.2 tok/s — no infinite spiral (unlike deepseek-r1:32b which loops forever).
-  node_paratrooper FAIL (TESTS_STILL_FAIL at 15.7 tok/s, 319.8s — universal L6 from-scratch wall; no model passes).
+  node_paratrooper FAIL (TESTS_STILL_FAIL at 15.7 tok/s, 319.8s — L6-full wall, first broken by qwen3.8:27b on 2026-08-15).
   Speed: ~37–54 tok/s coding tasks (range: csv_nordic_property 16.1 tok/s long-prefill → awk_csv_stats 53.6 tok/s).
     37.4 tok/s avg is slower than gpt-oss:120b (~55 tok/s) — A10B active is more compute-heavy than gpt-oss MoE.
     Consistent with A3B→A10B scale ratio: A3B gets ~109-160 tok/s; 3.3× more active params → ~37 tok/s expected.
@@ -526,8 +527,155 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     max_ctx=131072 set in 3x24gb.txt.
   Multihop (CONFIRMED 2026-08-13): **3/3 PASS at 43.6 tok/s avg** — forward *43.4, reverse *43.6, distractor *43.7. Temps GPU2 max 66°C.
   Full capability profile (2026-08-13): **19/19 coding + 4/4 web + 4/4 L6 stepped + 5/5 context (8k–128k) + 3/3 multihop**.
-    node_paratrooper FAIL (universal L6 from-scratch wall; no model of any size has passed). context_256k OOM (VRAM ceiling).
+    node_paratrooper FAIL (L6-full wall, first broken by qwen3.8:27b on 2026-08-15). context_256k OOM (VRAM ceiling).
   Requires ./gpu-mode.sh multi (3 GPUs) and --model-timeout 1200.
+  **qwen3.8:27b** (unsloth, Qwen3.8-27B Q4_K_M, ~18.4 GB, single RTX 4090, no Ampere+ required, thinking=true, f16 KV):
+  NEW Gated DeltaNet hybrid architecture — 64 layers: 16 Gated Attention (GQA 24Q/4KV/128dim) + 48 Gated DeltaNet
+    (linear recurrent layers). Only 16/64 layers accumulate KV cache → ~16 KB/token at f16 vs ~128 KB/token for standard dense.
+    At ctx_64k (56722 tokens): ~937 MB total KV. At max_ctx=131072: ~2.1 GB. Fixed-size recurrent state in DeltaNet layers
+    (does NOT grow with context). Prefill rate: 56722 tokens in 32.2s = 1760 tok/s (confirmed 2026-08-15).
+  REQUIRES llama-server build ≥ 2026-08-13 (qwen35.cpp merged commit 0d0bfcd4f, binary commit 27df9199d).
+    Binary 10094 (Jul 22) predates this — rebuild with ./my-build.sh first before running qwen3.8.
+  **CODING (single 24 GB, CONFIRMED 2026-08-15)**: **PERFECT 19/19 at 44.9 tok/s avg**. All tasks 43.1–46.0 tok/s.
+    python_hashmap PASS (f16 KV required — same precision rule as qwen3.6:27b; q8_0 causes _EMPTY omission).
+    csv_nordic_property PASS (45.6 tok/s, 70s, 6429 prompt tokens, 3.6s prefill at 1788 tok/s prefill rate).
+  **WEB (single 24 GB, CONFIRMED 2026-08-15)**: **4/4 PASS at 45.5 tok/s avg** — python_config_loader (47.0),
+    bash_preflight (44.1), node_express_validation (45.3), python_fastapi_endpoint (45.5).
+    Dense architecture confirms fastapi PASS rule (vendor-agnostic, applies to DeltaNet hybrid too).
+  **L6 STEPPED (single 24 GB, DEFAULT ctx=8192, CONFIRMED 2026-08-15)**: **4/4 PASS at 45.6 tok/s avg** —
+    node_para_core (46.4, 37s), node_para_turret (45.9, 42s), node_para_entities (45.0, 64s), node_para_combat (45.3, 91s).
+    DeltaNet's tiny KV footprint allows step-3 prompt (~5-7k tokens) to fit within DEFAULT ctx=8192 — unlike all other
+    completers which require --num-ctx 32768. This is unique to DeltaNet's KV architecture.
+  **node_paratrooper (L6 FROM-SCRATCH, CONFIRMED 2026-08-15): FIRST PASS BY ANY MODEL** — 45.5 tok/s, 103s,
+    default ctx=8192 on single RTX 4090. Determinism CONFIRMED: two independent runs (det-run-A and det-run-B) produced
+    identical MD5 output at temp=0, seed=1. Constructor logic correct + game loop correct — both pass cleanly.
+    All previous models (including qwen3.5-122b:a10b, gpt-oss:120b, Qwen3-VL-235B-A22B Q3) had correct constructors
+    but wrong game loop logic. DeltaNet's linear-recurrent layers may provide different inductive bias for
+    iterative state-update reasoning. The L6-full wall is broken.
+  **CONTEXT (single 24 GB, CONFIRMED 2026-08-15)**:
+    ctx_8k PASS (36.9 tok/s, 5s, 7336 prompt tokens, 4.0s prefill)
+    ctx_16k PASS (35.5 tok/s, 8s, 14392 prompt tokens, 7.6s prefill)
+    ctx_32k PASS (36.0 tok/s, 16s, 28455 prompt tokens, 15.0s prefill)
+    ctx_64k PASS (34.1 tok/s, 33s, 56722 prompt tokens, 32.2s prefill — 1760 tok/s prefill rate; VRAM delta only +64 MB)
+    ctx_128k: **RE-RUN CONFIRMED 2026-08-15 (isolated, single GPU): PASS but SLOW — 10.2 tok/s, 1542.3s (25.7 min).**
+      Original TOOL_ERROR (3600s timeout) was a server-sharing ARTIFACT: context bench.py (PID 525005) and multihop
+      bench.py (PID 527358) shared the same llama-server on port 8080. Isolated re-run confirms this was NOT a
+      capability failure — the task PASSES, but the ~64s estimate (extrapolated from the ctx_64k prefill rate) was
+      badly wrong: real single-GPU throughput at 128k context is only ~10 tok/s, not the ~1760 tok/s prefill rate
+      seen at 64k. Slots API showed n_prompt_tokens growing at only ~44-160 tok/s during prefill (GPU0 100% util
+      but only ~106-113W of 350W TDP — memory-bandwidth-bound, not compute-bound). **CONTRADICTS the DeltaNet
+      linear-scaling assumption** — throughput degrades much faster than linear between 64k and 128k on a single GPU.
+      **However**: the identical task on 2×24 GB (3-GPU auto-dist, no tensor_split) PASSED context_256k — DOUBLE
+      the token count — in 358.4s at 19.0 tok/s (CONFIRMED 2026-08-15), i.e. 4× faster wall-clock than the
+      single-GPU 128k run despite 2× the tokens. This strongly suggests the single-GPU 128k slowdown is a
+      single-GPU-specific bottleneck (bandwidth/compute contention on one card), not a fundamental architecture
+      or DeltaNet scaling limit — spreading the same model across 3 GPUs (even without tensor_split explicitly
+      splitting layers) relieved it. Root cause not further diagnosed; flag for anyone using qwen3.8:27b for
+      128k+ context work on a single GPU — expect ~10 tok/s, not the ~34 tok/s seen at 64k.
+    ctx_256k: SKIPPED_CTX on single GPU (max_ctx=131072 set as conservative limit). **CONFIRMED PASS on 2×24 GB
+      (3-GPU auto-dist, max_ctx=262144, 2026-08-15): 19.0 tok/s, 358.4s.** GPU temps healthy (GPU2 max 72°C).
+      DeltaNet KV at 262144 ctx fits comfortably even split across 3 GPUs without tensor_split.
+  **MULTIHOP (single 24 GB, CONFIRMED 2026-08-15)**:
+    multihop_forward PASS — server-sharing artifact: true speed is ~45 tok/s; 0.1 tok/s wall reflects concurrent
+      ctx_128k prefill consuming GPU time (1296s wall, 1040s prefill for 29k tokens; true 1760 tok/s prefill rate
+      confirms the artifact — actual test was unaffected, PASS result is valid)
+    multihop_reverse PASS — same artifact, PASS result valid (1392s wall, 1094s prefill)
+    distractor_notes: **RE-RUN CONFIRMED 2026-08-15 (isolated): PASS — 30.7 tok/s, 18.5s.** Original TOOL_ERROR
+      (310s) was the server being KILLED when the concurrent context bench.py process finished — a test artifact
+      (server death), NOT a capability failure. Isolated run passes cleanly, consistent with chain_5/cross_5 speeds.
+    multihop_chain_5 PASS (44.4 tok/s, 1.3s — fresh server, true speed)
+    multihop_cross_5 PASS (44.1 tok/s, 1.9s — fresh server, true speed)
+  **node_paratrooper IS CONFIG-SENSITIVE ACROSS GPU SPLITS (CONFIRMED 2026-08-15) — CORRECTS earlier "cross-config
+    confirmed" claim.** Three configs tested:
+    - Single RTX 4090: **PASS**, 45.5 tok/s, 103s (determinism confirmed: 2 runs, identical MD5).
+    - 2×24 GB, 3-GPU auto-dist (no explicit tensor_split, llama-server spreads layers across all 3 visible GPUs):
+      **PASS**, 10.1 tok/s, 453.3s.
+    - 2×24 GB, explicit `tensor_split=1|1` (the config now in `2x24gb.txt`): **FAIL (TESTS_STILL_FAIL)** —
+      reproducibly, 2 independent runs: 28.3 tok/s/158.6s and 28.2 tok/s/159.0s (near-identical timing/speed,
+      confirming this is deterministic-per-config, not a flake).
+    **Interpretation:** the model has the underlying capability (2 of 3 configs pass), but the result is sensitive
+    to the exact GPU partition — almost certainly a floating-point reduction-order effect from tensor-split
+    aggregation flipping a close logit decision at some point in the 40-test game generation. This is a genuine
+    reproducibility caveat for anyone using `tensor_split` with this model on this task, not a capability
+    regression. **`models/2x24gb.txt`'s current config (`tensor_split=1|1`) will FAIL node_paratrooper** — use
+    single-GPU (`24gb.txt`) if you need to reproduce the L6-full pass. GPU temps healthy across all three
+    configs (max 74°C on GPU1 during the tensor_split=1|1 context_256k run).
+    context_256k is NOT similarly config-sensitive: PASS on both 3-GPU auto-dist (19.0 tok/s, 358.4s) and true
+    2-GPU tensor_split=1|1 (17.4 tok/s, 292.4s) — retrieval tasks with a single correct answer appear robust to
+    this effect where complex multi-token game-logic generation is not.
+  **ROOT CAUSE CONFIRMED (CONFIRMED 2026-08-15) — diagnostic diff of the actual generated `game.js`**: re-ran
+    both single-GPU (PASS, 45.5 tok/s, 103.8s — 3rd confirmation) and tensor_split=1|1 (FAIL, 28.2 tok/s, 159.2s
+    — 3rd confirmation) with `--keep-workdirs` and diffed the two generated files.
+    **Lines 1-268 (constructor, spawning, input handling) are byte-identical between the two runs.** The first
+    divergence is at line 269 — the projectile-update loop, where the PASS output consistently names the loop
+    variable `pr` while the FAIL output switches between `p` and `proj`. This stylistic/naming divergence then
+    cascades autoregressively (each token conditions on the full prior sequence) through the rest of the file,
+    landing on genuinely different logic for the historically hardest test (test 33, freefall-lands-on-landed
+    paratrooper): the PASS version correctly checks horizontal distance only, tracks `killedLanded`, and sets
+    the freefaller to `'dead'`; the FAIL version checks full 2D distance, has no kill tracking, and sets the
+    freefaller to `'landed'` instead (functionally wrong — this is the exact rule every model failed on before
+    qwen3.8:27b broke the wall).
+    **Isolated the trigger**: ran a third config, `tensor_split=1|0` (routes 100% of the model to GPU0, but
+    through the multi-GPU/tensor-split code path rather than `--single-gpu`) — result: **PASS, 45.4 tok/s,
+    104.1s, and the generated `game.js` is BYTE-IDENTICAL (same MD5) to the true single-GPU output.** This
+    proves the divergence is NOT caused by "using the tensor_split parameter" per se — it requires an *actual*
+    cross-GPU split (real data partitioned across ≥2 physical devices, forcing cross-device floating-point
+    reduction on every forward pass). A degenerate 1-GPU split through the same code path is numerically
+    identical to true single-GPU. **Conclusion**: cross-GPU tensor-split introduces a tiny floating-point
+    reduction-order difference (summing partial activations from multiple devices is not bit-identical to
+    single-device summation) that is usually invisible, but at greedy decoding (top_k=1, confirmed via the
+    /slots API) it can flip an extremely close top-1 token choice — here, apparently at an early stylistic
+    decision point, which then cascades to a different (and here, wrong) implementation of a hard rule later
+    in the same generation. Not a capability defect; a known class of numerical non-reproducibility in
+    multi-GPU LLM inference that this benchmark happened to make visible via a binary pass/fail test.
+  **2×24 GB FULL CODING+WEB+L6-STEPPED CONFIRMATION (CONFIRMED 2026-08-15, true tensor_split=1|1)**:
+    ran all 19 coding + 4 web + 4 L6-stepped tasks (27 total, `--task-group coding web l6`) on the exact
+    `models/2x24gb.txt` config. **27/27 PASS at 29.9 tok/s avg, 758.8s total.** Confirms the assumption
+    that these groups transfer unchanged from single-GPU was correct — the config-sensitivity is specific
+    to node_paratrooper (the from-scratch task with the longest, most complex generation); the 4-task
+    stepped chain (shorter per-step generations) and all coding/web tasks are unaffected. GPU temps
+    healthy throughout (GPU1 max 66°C).
+  **OTHER L6 COMPLETER SPOT-CHECK (CONFIRMED 2026-08-15)**: tested whether other models' node_paratrooper
+    FAIL is similarly config-sensitive, by re-running them on a GPU config different from their documented
+    one. qwen3.6:27b (documented FAIL on 3-GPU auto-dist) **also FAILS on single GPU** (44.0 tok/s, 101s,
+    TESTS_STILL_FAIL). noctrex-qwen3.6:35b (documented FAIL on 2×24 GB tensor_split=1|1) **also FAILS on
+    single GPU** (122.3 tok/s, 37.5s, TESTS_STILL_FAIL). Both confirm — as expected — that these are
+    genuine, large capability gaps (correct constructor, wrong game loop) rather than close-call config
+    sensitivity like qwen3.8:27b's; the config-sensitivity finding is specific to qwen3.8:27b's near-miss,
+    not a general property of this task. GPU temps healthy (max 67°C).
+  **BINARY REGRESSION SPOT-CHECK (2026-08-15, same build used for qwen3.8:27b, commit 27df9199d)**:
+    Checked whether the newer build (required for DeltaNet support) shifted results for unrelated models —
+    similar to how the ls10094 kq-mask change (#25370) flipped csv_nordic_property/config_loader for other models.
+    qwen3.6:27b python_hashmap: **PASS, 44.4 tok/s — no drift** (brief GPU0 power WARN 349W/350W, transient, harmless).
+    noctrex-qwen3.6:35b csv_nordic_property: **still FAILS (TESTS_STILL_FAIL), 117.6 tok/s** — the kq-mask
+    regression is stable across binaries, not something newly introduced. No further spot-checks needed;
+    2/2 sampled results match documented baselines exactly.
+  **DENSE-27B COMPARISON AT CTX_128K SINGLE GPU (CONFIRMED 2026-08-15, same binary, same hardware)**: ran
+    qwen3.6:27b (standard dense attention, no DeltaNet, f16 KV) at context_128k on single GPU as a control —
+    **PASS (SLOW), only 4.6 tok/s, 2275.9s (~38 min)** — actually WORSE than qwen3.8:27b's 10.2 tok/s at the
+    identical context depth. **This resolves the "root cause undiagnosed" note from the earlier ctx_128k
+    slowdown finding**: the single-GPU throughput collapse past 64k is NOT specific to qwen3.8:27b's DeltaNet
+    architecture — it is a general pattern for large-KV models near VRAM saturation on a single 24 GB GPU
+    (both models hit ~100% GPU util but only ~100-110W of 350W TDP — memory-bandwidth-bound, not compute-bound).
+    If anything, DeltaNet's smaller KV footprint gives qwen3.8:27b ~2.2× better throughput than standard dense
+    attention at the same context depth on the same hardware. GPU0 stayed at 45-53°C throughout (healthy).
+  f16 KV required — same rule as qwen3.6:27b; q8_0 causes python_hashmap `_EMPTY` omission (density/precision boundary).
+  max_ctx=131072 in 24gb.txt; max_ctx=262144 in 2x24gb.txt (DeltaNet KV fits even at 262k tokens, CONFIRMED PASS on 2×24 GB).
+  Speed: ~45 tok/s consistently across all task types up to ctx_64k (narrow range 43-47 tok/s, unlike standard dense 27B
+    which bandwidth-throttles to ~12 tok/s at ctx=32768 with f16 KV). **CAVEAT (CONFIRMED 2026-08-15)**: this dramatic
+    DeltaNet KV benefit does NOT extend past 64k on a single GPU — ctx_128k drops to ~10 tok/s (not the ~34 tok/s
+    the 8k-64k trend would predict), but this is NOT DeltaNet-specific: dense qwen3.6:27b is even slower (4.6 tok/s)
+    at the same context depth on the same single-GPU setup (see DENSE-27B COMPARISON above). Both models handle the
+    same context comfortably faster on 2×24 GB — the bottleneck is single-GPU VRAM-saturation-general, not
+    architecture-specific.
+  Skill: L6-full — first paratrooper pass on single GPU (45.5 tok/s, 103s, determinism confirmed) and on 2×24 GB
+    3-GPU auto-dist (10.1 tok/s, 453s). **CONFIG-SENSITIVE, ROOT CAUSE CONFIRMED**: reproducibly FAILS with
+    explicit `tensor_split=1|1` on 2×24 GB (3 runs, 28.2-28.3 tok/s, TESTS_STILL_FAIL) due to cross-GPU
+    floating-point reduction non-determinism (confirmed via output diff) — see node_paratrooper section above.
+    **All other groups CONFIRMED unaffected**: 27/27 PASS (19 coding + 4 web + 4 L6-stepped) on the exact
+    2×24 GB tensor_split=1|1 config. Treat the node_paratrooper pass as confirmed capability, not a
+    config-independent guarantee; use single-GPU for reproduction. Added to models/24gb.txt and
+    models/2x24gb.txt 2026-08-15.
   **qwen3.5:27b** (bartowski, Qwen3.5-27B dense Q4_K_M, ~16 GB, 2×24 GB recommended, thinking=true, q8_0 KV):
   CONFIRMED 2026-08-13 complete profile — **Skill L6** (all task groups perfect):
   Coding: **PERFECT 19/19 at 28.4 tok/s avg** (373.6s total). python_hashmap PASS with q8_0 KV —
@@ -543,7 +691,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     64k *23.6 (55.8s), 128k *21.2 (116.0s), 256k *16.4 (334.4s). Architecture supports full 262144 ctx at 2×24 GB.
   Multihop: **3/3 PASS at 26.9 tok/s avg** — forward *26.7 (26.1s), reverse *27.6 (27.5s), distractor *26.5 (29.6s).
   Full capability (2026-08-13): **19/19 + 4/4 web + 4/4 L6 + 6/6 ctx (8k–256k) + 3/3 multihop**.
-    node_paratrooper FAIL (L6 from-scratch universal wall). node_para_entities PASS (dense arch advantage).
+    node_paratrooper FAIL (L6-full universal wall). node_para_entities PASS (dense arch advantage).
   Speed: ~28 tok/s across all task groups at 2×24 GB with q8_0 KV. Dramatically faster than qwen3.6:27b at ctx=32768
     (~12 tok/s with f16 KV) — q8_0 KV gives 2× memory efficiency at 32k ctx, preserves hashmap precision on this model.
   Use max_ctx=131072 in 2x24gb.txt. q8_0 KV (NOT f16 — f16 KV rule applies only to qwen3.6:27b).
@@ -732,6 +880,16 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     Skill L6 (from L6 stepped chain). node_paratrooper FAIL (universal L6 wall). python_hashmap FAIL (ls 10094 regression).
   tensor_split=1|1 added to 2x24gb.txt model config — prior missing config was root cause of 3-GPU auto-dist.
   Full L6 chain completer list (confirmed with current task definition):
+  - **🏆 node_paratrooper (L6-full) FIRST PASS: qwen3.8:27b, 2026-08-15, ~45 tok/s, single 24 GB, default ctx=8192**
+    (PASS also on 2×24 GB / 3-GPU auto-dist, no tensor_split: 10.1 tok/s, 453.3s — not a single-GPU-only fluke.
+    **BUT CONFIG-SENSITIVE**: reproducibly FAILS with explicit tensor_split=1|1 on 2×24 GB (3 runs: 28.3/158.6s,
+    28.2/159.0s, 28.2/159.2s tok/s, TESTS_STILL_FAIL every time). **ROOT CAUSE CONFIRMED via output diff
+    (2026-08-15)**: generated `game.js` is byte-identical between single-GPU and `tensor_split=1|0` (a
+    degenerate split that keeps 100% on one GPU) — proving true cross-GPU computation (not "using
+    tensor_split" per se) is the trigger. Diverges from single-GPU output at line 269 (a naming choice),
+    cascades autoregressively, lands on wrong logic for the hardest game rule (test 33) by the end. This is
+    floating-point reduction-order non-determinism in cross-GPU aggregation, not a capability regression.
+    Use single-GPU to reproduce reliably. See qwen3.8:27b's full entry above for complete diagnostic detail.)
   - 3×24 GB: gpt-oss:120b (~55 tok/s), qwen3.5-122b:a10b (~17 tok/s), laguna-s-2.1:118b-iq4 (~21 tok/s)
   - 2×24 GB (--num-ctx 32768): noctrex-qwen3.6:35b (~91 tok/s), qwen3.6:35b-A3B unsloth (~97 tok/s),
       qwopus3.6:35b (~123 tok/s), gemma4:26b-qat (~82 tok/s), gemma4:31b-qat (~32 tok/s),
@@ -739,6 +897,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
       qwen3.5:27b (~27 tok/s, q8_0 KV),
       quest:35b (~97 tok/s CONFIRMED with tensor_split=1|1; model-timeout 600 for combat at ctx=32768)
   - 1×24 GB (default ctx): glm4.7-flash (~111 tok/s)
+  - 1×24 GB (default ctx, **L6-full — paratrooper PASS**): qwen3.8:27b (~45 tok/s, f16 KV, new binary ≥ 2026-08-13)
   Note: qwen3.6:27b's ~12 tok/s for L6 tasks makes it practical only as a capability test.
   Note: qwen3.5:27b at ~27 tok/s is faster for L6 despite older Qwen generation — q8_0 KV vs f16.
   Entities gap is A3B MoE specific: Qwen3.5 A3B MoE (qwen3.5:35b, qwen3-30b:2507,
@@ -810,10 +969,11 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   wrong token at a precision boundary. With f16 KV (llama-server) or ollama's internal format,
   the same model passes cleanly. Use `cache_type_k=f16,cache_type_v=f16` for any 27B dense model
   whose python_hashmap fails with q8_0 KV. Do not change the task stub to paper over this.
-  This precision sensitivity is specific to the qwen3.6:27b architecture (NOT all 27B models):
-  qwen3.5:27b passes python_hashmap cleanly with q8_0 KV (confirmed 2026-06-27). Dense 32B
-  Q4_K_M with q8_0 KV passes cleanly (qwen2.5-coder:32b-q4 confirmed 2026-06-18).
-  Rule: use f16 KV only for qwen3.6:27b specifically; do not apply to other 27B models. bf16 KV has
+  This precision sensitivity is specific to the qwen3.6:27b and qwen3.8:27b architectures (NOT all 27B models):
+  qwen3.5:27b passes python_hashmap cleanly with q8_0 KV (confirmed 2026-06-27). qwen3.8:27b (DeltaNet hybrid)
+  requires f16 KV for the same reason — confirmed 2026-08-15. Dense 32B Q4_K_M with q8_0 KV passes cleanly
+  (qwen2.5-coder:32b-q4 confirmed 2026-06-18).
+  Rule: use f16 KV for qwen3.6:27b and qwen3.8:27b; do not apply to other 27B models. bf16 KV has
   wider dynamic range at the same memory cost but has not been tested here — f16 has been stable and
   sufficient. Only worth trying if a model fails with f16 KV in an unexpected way. MoE models:
   Q4_K_M vs Q6_K confirmed identical scores for qwen3.5:35b (2026-06-22) — MoE weight

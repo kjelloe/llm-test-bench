@@ -74,7 +74,7 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # MULTIHOP chain_5 PASS (37 tok/s). cross_5 PASS (36 tok/s). Full 5/5 multihop. Dense 24B passes both.
 devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256,max_ctx=131072  hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
 # qwen3.6:27b: dense 27B Q4_K_M (~17 GB); CONFIRMED 2026-06-24 full 33-task compare:
-#   32/33 at 40.2 tok/s. Only fails node_paratrooper (L6 from-scratch — universal wall; all models fail).
+#   32/33 at 40.2 tok/s. Only fails node_paratrooper (L6-full — universal wall; all models fail).
 #   Ties noctrex-qwen3.6:35b at 32/33. Skill L5. Passes node_para_combat (L6 stepped), context_256k.
 #   3090 power at 333-344W/350W (95-98%) is normal for dense tensor-split — not a thermal concern.
 #   f16 KV REQUIRED — q8_0 KV causes python_hashmap FAIL (_EMPTY omission at precision boundary).
@@ -170,6 +170,64 @@ glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cac
 # MULTIHOP: 3/3 PASS at 26.9 tok/s. max_ctx=262144 (arch limit; 256k confirmed at 334s, 16.4 tok/s).
 # MULTIHOP chain_5 PASS (30 tok/s). cross_5 PASS (32 tok/s). Full 5/5 multihop.
 qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=262144  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
+
+# qwen3.8:27b: Alibaba Qwen3.8-27B Q4_K_M (~18.4 GB, single RTX 4090 sufficient — 2×24 GB for ctx_256k).
+# REQUIRES llama-server build ≥ 2026-08-13 (qwen35.cpp merged commit 0d0bfcd4f, binary 27df9199d).
+# DeltaNet KV footprint: 16 attention layers × 4 KV heads × 128 dim × 2 bytes (f16) = ~16 KB/token.
+#   At max_ctx=262144: ~4.2 GB KV + 18.4 GB weights = ~22.6 GB — fits single GPU.
+# f16 KV: required for python_hashmap (dense 27B architecture rule; same as qwen3.6:27b).
+#
+# ⚠ WARNING (CONFIRMED 2026-08-15): node_paratrooper (L6-full) REPRODUCIBLY FAILS with this
+#   exact config (tensor_split=1|1) — 3 independent runs, TESTS_STILL_FAIL every time (28.3/158.6s,
+#   28.2/159.0s, 28.2/159.2s tok/s, near-identical timing = deterministic-per-config, not a flake).
+#   The model DOES have the capability (PASSES on single GPU at 45.5 tok/s and on 3-GPU auto-dist
+#   at 10.1 tok/s — see 24gb.txt and history below).
+#   **ROOT CAUSE CONFIRMED 2026-08-15** by diffing the actual generated game.js (--keep-workdirs):
+#   ran single-GPU (PASS) vs tensor_split=1|1 (FAIL) and diffed — lines 1-268 (constructor, spawning,
+#   input handling) are byte-identical; first divergence at line 269 (a projectile-loop variable
+#   name, pr vs p/proj — a token-level tie-break), which cascades autoregressively to a wrong
+#   implementation of test 33 (the hardest rule) by the end. Isolated the actual trigger with a
+#   fourth config, tensor_split=1|0 (100% of the model on GPU0 via the multi-GPU code path): PASS,
+#   45.4 tok/s, and the generated file is BYTE-IDENTICAL (same MD5) to the true single-GPU output —
+#   proving it's genuine cross-GPU computation (real weights split across ≥2 physical devices), not
+#   merely the tensor_split parameter, that triggers the divergence. Cross-device floating-point
+#   reduction is not bit-identical to single-device summation; at greedy decoding (top_k=1) this
+#   occasionally flips an extremely close top-1 token choice. Not a capability regression — a known
+#   class of multi-GPU numerical non-determinism. Use models/24gb.txt (single GPU) to reproduce the
+#   paratrooper PASS reliably. context_256k is NOT affected by this — confirmed PASS with this exact
+#   tensor_split=1|1 config at 17.4 tok/s (292.4s), and also PASS on 3-GPU auto-dist at 19.0 tok/s
+#   (358.4s). Retrieval tasks with one correct answer appear robust to this effect; complex
+#   multi-token generation is not.
+#
+# CONFIRMED 2026-08-15 (single GPU, build 27df9199d): 19/19 coding + 4/4 web + 4/4 L6 (default ctx) +
+#   node_paratrooper PASS (45.5 tok/s, 103s, determinism confirmed 2 runs) + ctx 8k-64k PASS
+#   (34-37 tok/s) + multihop 5/5 PASS.
+#   ctx_128k ISOLATED RE-RUN CONFIRMED: PASS but SLOW — only 10.2 tok/s, 1542s (25.7 min). NOT
+#   DeltaNet-specific: dense qwen3.6:27b is even slower (4.6 tok/s, 2276s) at the same context depth
+#   on the same single-GPU setup — this is a general single-GPU VRAM-saturation bottleneck for
+#   large-KV models past 64k, not an architecture defect. Both models handle the same context
+#   comfortably faster on 2×24 GB.
+# CONFIRMED 2026-08-15 (3-GPU auto-dist, no tensor_split): node_paratrooper PASS at 10.1 tok/s
+#   (453s). context_256k PASS at 19.0 tok/s (358s) — faster wall-clock than the single-GPU ctx_128k
+#   run above despite double the tokens.
+# CONFIRMED 2026-08-15 (true 2-GPU, tensor_split=1|1 — the config below): node_paratrooper FAILS
+#   (see WARNING above). context_256k PASS at 17.4 tok/s (292.4s).
+# CONFIRMED 2026-08-15 (true 2-GPU, tensor_split=1|1 — full coding+web+L6-stepped run, 27 tasks):
+#   **27/27 PASS at 29.9 tok/s avg, 758.8s total.** All 19 coding + 4 web + 4 L6-stepped (core/
+#   turret/entities/combat) tasks pass cleanly at this tier — confirms the assumption that these
+#   groups transfer unchanged from single-GPU was correct. Only node_paratrooper (the from-scratch
+#   task) is config-sensitive; the shorter 4-task stepped chain is not. GPU temps healthy (GPU1
+#   max 66°C).
+# Spot-check (2026-08-15): tested whether other L6 completers' node_paratrooper FAIL is similarly
+#   config-sensitive. qwen3.6:27b (documented FAIL on 3-GPU auto) also FAILS on single GPU (44.0
+#   tok/s, 101s). noctrex-qwen3.6:35b (documented FAIL on 2×24 GB tensor_split=1|1) also FAILS on
+#   single GPU (122.3 tok/s, 37.5s). Both confirm their FAILs are genuine, large capability gaps
+#   (constructor correct, game loop wrong) — NOT close-call config sensitivity like qwen3.8:27b's.
+#   No further completer spot-checks needed.
+# Skill: L6-full on single GPU (paratrooper PASS, reproducible) and CONFIRMED on this 2×24 GB
+#   config for coding/web/L6-stepped (27/27 PASS). node_paratrooper specifically FAILS on this
+#   config (tensor_split=1|1) — see WARNING above for the confirmed root cause.
+qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=262144  hf:unsloth/Qwen3.8-27B-GGUF
 
 # noctrex-qwen3.6:35b: MXFP4+MTP; Skill L6; CONFIRMED 2026-08-13 ls 10094 (2×24 GB):
 # L6 STEPPED: 4/4 PASS at 90.8 tok/s — core *91.5, turret *91.6, entities *89.8, combat *90.2.

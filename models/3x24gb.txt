@@ -172,7 +172,7 @@ laguna-s-2.1:118b-iq4  laguna-s-2.1-IQ4_XS.gguf  ngl=999,no_mmap,tensor_split=1|
 # java_word_freq (L3) PASS — gemma4:26b-qat (18/19) fails this; A10B handles it cleanly.
 # csv_nordic_property PASS at 16.1 tok/s (196s — thinking tokens + large CSV prefill).
 # python_expr_eval PASS at 25.2 tok/s (no spiral — clean output unlike deepseek-r1:32b).
-# node_paratrooper FAIL TESTS_STILL_FAIL (universal L6 from-scratch wall).
+# node_paratrooper FAIL TESTS_STILL_FAIL (universal L6-full wall).
 # Web: 4/4 PASS at 38.4 tok/s (2026-08-13) — python_fastapi_endpoint PASS.
 # L6 stepped: 4/4 PASS at 17.4 tok/s (2026-08-13) — full chain core/turret/entities/combat.
 # Context (2026-08-13): ctx_8k *51.2, ctx_16k *46.9, ctx_32k *44.2, ctx_64k *39.7, ctx_128k *33.9 tok/s.
