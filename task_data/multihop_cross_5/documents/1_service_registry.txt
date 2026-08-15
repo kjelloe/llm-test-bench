@@ -1,0 +1,12 @@
+SERVICE REGISTRY — Q3 2026
+(canonical list of all platform services and their owning team)
+
+service_id   service_name            owner_team_id
+-----------  ----------------------  -------------
+SVC-1042     payment-gateway         TEAM-7
+SVC-1043     inventory-sync          TEAM-12
+SVC-1044     fraud-detection-rt      TEAM-7
+SVC-1045     reporting-batch         TEAM-3
+SVC-1046     inventory-export        TEAM-12
+SVC-1047     auth-proxy              TEAM-14
+SVC-1048     billing-reconcile       TEAM-3

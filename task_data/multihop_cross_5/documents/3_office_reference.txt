@@ -1,0 +1,11 @@
+OFFICE REFERENCE
+(physical office locations and their regional zone assignments)
+
+office_code   city           region_code
+-----------   -----------    -----------
+BER-4         Berlin         EMEA-CENTRAL
+LON-2         London         EMEA-CENTRAL
+AMS-1         Amsterdam      EMEA-WEST
+STO-2         Stockholm      EMEA-NORTH
+NYC-1         New York       AMER-EAST
+SFO-3         San Francisco  AMER-WEST

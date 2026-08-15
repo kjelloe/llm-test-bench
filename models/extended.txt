@@ -37,4 +37,5 @@ codestral:22b  Codestral-22B-v0.1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,
 #   never emits BEGIN_FILE regardless of num_predict (confirmed at 4800 and 12000); format compliance issue
 phi4-reasoning-plus:14b  Phi-4-reasoning-plus-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:lmstudio-community/Phi-4-reasoning-plus-GGUF
 # llama4-scout:17b: ~3.3 tok/s (CPU-bound, 60 GB hybrid), 19/24; csv_nordic_property times out at 600s; context_128k SLOW (1216s)
-llama4-scout:17b  Q4_K_M/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF  # 2-part model
+# REJECTED 2026-08-11 (3×24 GB): 7/10, structural gaps (csv_nordic_property, python_hashmap), same VRAM as gpt-oss:120b, far lower quality. GGUF deleted.
+# llama4-scout:17b  Q4_K_M/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF  # 2-part model

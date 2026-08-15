@@ -833,6 +833,53 @@ PYTHON_FASTAPI_ENDPOINT = Task(
     min_predict=8000,
 )
 
+MULTIHOP_CHAIN_5 = Task(
+    id="multihop_chain_5",
+    difficulty=4,
+    description=(
+        "A configuration reference document is provided as context. "
+        "It defines a hierarchy of named profiles; each profile may declare a 'parent' profile "
+        "and can override any key from its ancestors. "
+        "The effective value of a key for a profile is the first definition found "
+        "walking from that profile up through its parent chain to the root. "
+        "Find the effective value of 'retention_days' for the profile 'rtfd-prod-instance-07' "
+        "and write that numeric value — and nothing else — to answer.txt."
+    ),
+    subdir="multihop_chain_5",
+    editable_files=["answer.txt"],
+    context_files=["documents/config_reference.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=8192,
+    min_predict=8192,
+)
+
+MULTIHOP_CROSS_5 = Task(
+    id="multihop_cross_5",
+    difficulty=4,
+    description=(
+        "Five reference documents are provided as context: a Service Registry, "
+        "a Team Directory, an Office Reference, a Criticality Classification, "
+        "and an Escalation Policy. "
+        "Use all five documents to determine the primary oncall contact for P1 incidents "
+        "affecting the 'inventory-sync' service. "
+        "Write that contact address — and nothing else — to answer.txt."
+    ),
+    subdir="multihop_cross_5",
+    editable_files=["answer.txt"],
+    context_files=[
+        "documents/1_service_registry.txt",
+        "documents/2_team_directory.txt",
+        "documents/3_office_reference.txt",
+        "documents/4_criticality.txt",
+        "documents/5_escalation_policy.txt",
+    ],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=8192,
+    min_predict=8192,
+)
+
 BUILTIN_TASKS: list[Task] = [
     CSV_NORDIC_PROPERTY,
     NODE_SLUGIFY,
@@ -869,6 +916,8 @@ BUILTIN_TASKS: list[Task] = [
     MULTIHOP_FORWARD,
     MULTIHOP_REVERSE,
     DISTRACTOR_NOTES,
+    MULTIHOP_CHAIN_5,
+    MULTIHOP_CROSS_5,
     CONTEXT_128K,
     CONTEXT_256K,
 ]
@@ -906,6 +955,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "multihop": [
         "multihop_forward", "multihop_reverse", "distractor_notes",
+        "multihop_chain_5", "multihop_cross_5",
     ],
     "web": [
         "python_config_loader",

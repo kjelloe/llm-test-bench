@@ -17,7 +17,7 @@
 # gemma4:26b           # ~114 tok/s  GPU only (MoE, fits in 24 GB)
 # glm4.7-flash         # ~111 tok/s  GPU only (MoE+MXFP4, ~16 GB); 29/33 full; passes L4+L6 stepped
 # qwen2.5-coder:14b    #  ~68 tok/s  GPU only
-# devstral-small-2     #  ~42 tok/s  GPU only (dense 24B); ~17 tok/s with ollama backend
+# devstral-small-2     #  ~54 tok/s llama-server (dense 24B); ~17 tok/s ollama; coding 17/19 (Skill L1); web 4/4 PASS incl. fastapi (dense arch)
 # qwen2.5-coder:32b-q4 # ~40 tok/s  GPU only (dense 32B Q4_K_M); coding only (context tasks need 2×24 GB)
 # gpt-oss:120b         #  ~17 tok/s  RAM + partial GPU, thinking
 # speeds measured on RTX 3090 24 GB (2026-05-22, llama-server backend, 33-task run)
@@ -34,6 +34,8 @@
 # CODING FAIL (1): python_hashmap (L5, base Qwen3-Coder capability gap shared by all qwen3-coder variants).
 # WEB: 2/4 — python_config_loader FAIL (partial-method-completion, same as qwen3-coder:30b-1m),
 #   python_fastapi_endpoint FAIL (A3B coder fine-tune pattern). bash_preflight + node_express_validation PASS.
+# MULTIHOP: chain_5 FAIL → "45" (sibling confusion, 87 tok/s); cross_5 FAIL → "oncall-emea-w-crit" (wrong criticality, 96 tok/s).
+#   All qwen3-coder variants share this 0/2 pattern — coder post-training degrades retrieval direction reasoning.
 # Speed: 211.4 tok/s coding avg, 31% faster than qwopus3.6:35b (161.8 tok/s, 19/19). Token efficiency 2.308 p/k.
 # No Ampere+ required (Q4_K_M, not MXFP4). f16 KV (A3B MoE). max_ctx=32768.
 qwen3-coder-rtpurbo:30b  Qwen3-Coder-30B-A3B-Instruct-RTPurbo.i1-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mradermacher/Qwen3-Coder-30B-A3B-Instruct-RTPurbo-i1-GGUF
@@ -46,17 +48,21 @@ qwen3-coder-rtpurbo:30b  Qwen3-Coder-30B-A3B-Instruct-RTPurbo.i1-Q4_K_M.gguf  ng
 # Para stepped: core PASS (L3), turret PASS (L4). node_para_entities GPU-freezes on single GPU (VRAM headroom ~0.7 GB).
 #   2×24 GB: 4/4 PASS CONFIRMED 2026-07-26 (tensor_split resolves; see 2x24gb.txt).
 # Context_8k PASS (134 tok/s), context_16k PASS (130 tok/s), context_32k PASS (106 tok/s) confirmed 2026-07-22.
-# Multihop+distractor PASS (~101-103 tok/s) at ctx=32768 with both GPUs visible — no VRAM hang for short-prompt tasks.
+# Multihop+distractor PASS (~101-103 tok/s) at ctx=32768. MULTIHOP chain_5 FAIL → "30" (top-down scan); cross_5 PASS (84 tok/s). 4/5 multihop.
+#   Surprising: same Qwen3.6-A3B base as noctrex (which PASSES chain_5) — coder fine-tune introduces top-down retrieval error.
 # VRAM hang is specific to long-prompt prefill (node_para_entities step 3 ~7k tokens); does NOT affect context tasks at ctx=32768.
 # f16 KV (A3B MoE architecture). Power spikes to 350W TDP. max_ctx=32768: context_64k/128k/256k → SKIPPED_CTX. Skill L4 (confirmed 2026-07-22).
 # NOTE: jashepp HF repo deleted 2026-07-26 — hf: line is dead; local GGUF in allmodels/ still usable.
 qwopus3.6:35b  Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Qwopus3.6-35B-A3B-Coder-MXFP4_MOE_Hybrid-Imatrix-GGUF
 # REGRESSION (llama-server 10094): csv_nordic_property FAIL — CONFIRMED 2026-07-23. Was PASS on prior binary.
+# MULTIHOP: chain_5 PASS (77 tok/s); cross_5 PASS (81 tok/s). 5/5 multihop. Standard-instruction base passes both.
 noctrex-qwen3.6:35b  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
 # quest:35b: RL-trained MXFP4 MOE (~19.3 GB); 16/19 coding at 160 tok/s on RTX 4090 (2026-06-24).
 # Skill L6 — passes both L5 tasks (python_hashmap + python_dijkstra) and L6 node_para_combat.
 # Faster than qwen3.6:35b (~160 vs ~128 tok/s). 3 failures: node_csv_parser (quoted-comma),
 # python_multifile_rename (L2, unexpected gap), node_paratrooper (L6). 4090 power spikes to TDP on long tasks.
+# MULTIHOP: chain_5 FAIL → "45" (sibling confusion); cross_5 FAIL → "oncall-emea-w-crit" (wrong criticality). 3/5 multihop.
+#   RL fine-tune introduces same retrieval errors as coder fine-tunes despite Qwen3.6 base (which passes both via noctrex).
 quest:35b  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/QUEST-35B-RL-MXFP4_MOE-GGUF
 gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/gpt-oss-20b-GGUF
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
@@ -64,6 +70,7 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # July 2026 re-instruction fine-tune of Qwen3-30B-A3B-Instruct. Skill L4.
 # Passes: all L1–L4 coding, python_dijkstra (L5), all web (except fastapi_endpoint), node_para_core/turret/combat, context_8k–64k, multihop 3/3.
 # Fails: python_hashmap (L5 cap gap), python_fastapi_endpoint (web L3), node_para_entities (L5 step 3), node_paratrooper, context_128k/256k.
+# MULTIHOP: chain_5 FAIL → "45" (sibling confusion, 172 tok/s); cross_5 PASS (172 tok/s). 4/5 multihop.
 # Context ceiling: 64k (9.2 tok/s KV spill); 128k TOOL_ERROR timeout at 3600s (0 tok/s — prompt eval fills VRAM).
 # max_ctx=65536: caps context tasks at 64k; context_128k/256k become SKIPPED_CTX.
 qwen3-30b:2507  Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
@@ -71,14 +78,25 @@ qwen3-30b:2507  Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf  ngl=999,no_mmap,cache_t
 # Same Qwen3-Coder-30B-A3B architecture as qwen3-coder:30b, MXFP4 quantization. Skill L4 (coding).
 # node_paratrooper TESTS_STILL_FAIL (universal L6 wall, confirmed 2026-06-27).
 # ~7% slower than qwen3-30b:2507 Q4_K_M. Advantage: 1 GB smaller footprint. Fails python_hashmap (L5, capability gap).
+# MULTIHOP: chain_5 FAIL → "45" (sibling confusion, 44 tok/s); cross_5 FAIL → "oncall-emea-w-crit" (81 tok/s). 0/2 new tasks.
 qwen3-coder:30b-mxfp4  Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:Face314/Qwen3-Coder-30B-A3B-Instruct-MXFP4_MOE
 qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+# MULTIHOP: chain_5 FAIL → "45" (sibling confusion, 87 tok/s); cross_5 FAIL → "oncall-emea-w-crit" (96 tok/s). 0/2 new tasks. Identical to rtpurbo failure pattern.
 # gemma4:26b: unsloth Q4_K_M UD variant (~18 GB). Architecture-level failures regardless of GGUF format:
 #   csv_nordic_property (L3, TESTS_STILL_FAIL — wrong output quickly, ~22s), node_csv_parser (L3,
 #   TESTS_STILL_FAIL TRUNCATED — verbose preamble exhausts 16k token budget at 135s; structural).
 #   python_hashmap (L5) PASSES and node_para_core (L3) PASSES with f16 KV. Confirmed on noctrex
 #   MXFP4_MOE variant (candidate run 2026-07-22, 7/10, 124.4 tok/s); same architecture failures apply here.
-gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
+# SUPERSEDED by gemma4:26b-qat (18/19 vs 7/10; GGUF deleted 2026-08-12). Use gemma4:26b-qat below.
+# gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
+# gemma4:26b-qat: lmstudio-community QAT Q4_0 (~13.4 GB, no Ampere+ required, single RTX 4090).
+# CONFIRMED 2026-08-11 full 19-task coding: 18/19 at 129.3 tok/s avg. Skill L3.
+# QAT eliminates verbose-preamble behavior that caused MXFP4 variant to TRUNCATE on csv/parser tasks.
+# PASS: all L1–L2, all L3 except java_word_freq, python_expr_eval/tokenizer/merge_intervals (L4), python_dijkstra + python_hashmap (both L5).
+# FAIL: java_word_freq (L3, quick 4.38s fail — Java gap), node_paratrooper (L6 universal wall).
+# node_para_core PASS (L3 spot). f16 KV. max_ctx=32768. No Ampere+ required.
+# MULTIHOP: chain_5 PASS (91 tok/s); cross_5 PASS (98 tok/s). 5/5 multihop (confirmed 2026-08-15).
+gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
 # glm4.7-flash: MXFP4 MOE (~16 GB); CONFIRMED 2026-06-26 full 33-task run: 29/33, 110.9 tok/s avg.
 # Passes ALL L1–L4 tasks (on prior binary). Fails python_dijkstra (L5), python_hashmap (L5), node_paratrooper (L6 from-scratch), context_256k (capability gap — wrong answer after 476s, not OOM).
 # REGRESSION (llama-server 10094): python_config_loader FAIL — CONFIRMED 2026-07-23. Was PASS on prior binary.
@@ -87,8 +105,11 @@ gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,
 # Effective Skill L4 (context_256k failure is a capability gap, not a hardware limit — on real 16 GB card it would be CTX_TRUNCATED instead).
 # NOTE: ~16 GB model needs 24 GB to run usefully — minimal KV headroom on 16 GB GPU.
 # NOTE: Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without tensor_split — use gpu-mode.sh single for clean single-GPU benchmarks.
+# MULTIHOP: chain_5 PASS (60 tok/s); cross_5 FAIL → "oncall-emea-c-crit" (wrong REGION, not just criticality). 4/5 multihop.
+#   glm4.7-flash uniquely fails cross_5 with wrong region (EMEA-CENTRAL) rather than wrong criticality — different attribute confusion than other models.
 glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
+# MULTIHOP: chain_5 FAIL → "30" (top-down scan); cross_5 PASS (93 tok/s). 4/5 multihop (confirms retrieval error is NOT thinking-model specific).
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,n_cpu_moe=35,no_mmap,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model
 devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256   hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
 # qwen2.5-coder:32b-q4: Q4_K_M (~18.5 GB); 19/19 coding at 40 tok/s on RTX 4090 single-GPU (2026-06-21).
@@ -104,6 +125,7 @@ qwen2.5-coder:32b-q4  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,ca
 # Context ceiling: 32k. f16 KV on dense 31B: ~5.5 GB at 32k (fits), ~11 GB at 64k + 16.4 GB weights ≈ 27.4 GB > 24 GB.
 # max_ctx=32768: context_64k/128k/256k and multihop/distractor → SKIPPED_CTX. For 64k+ use 2×24 GB.
 # f16 KV (unknown architecture — safe default). 4090 power spikes to 350W TDP (normal for dense 31B fully GPU-resident).
+# MULTIHOP: chain_5 PASS (28 tok/s); cross_5 PASS (27 tok/s). 5/5 multihop (confirmed 2026-08-15). Dense architecture universally handles both tasks.
 equinox:31b  Equinox-31B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Equinox-31B-i1-MXFP4-GGUF
 # gemma4:31b-qat: Dense 31B QAT (lmstudio-community, Q4_0, 16.4 GB, single RTX 4090). No Ampere+ requirement.
 # CONFIRMED 2026-07-24: 18/19 coding + 4/4 web PERFECT + 3/4 l6 stepped at ~40-42 tok/s.
@@ -120,4 +142,5 @@ equinox:31b  Equinox-31B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f
 # 2×24 GB context (CONFIRMED 2026-07-25): ctx_64k *30.9 tok/s, ctx_128k *27.9 tok/s SLOW (492s).
 # CONFIRMED FULL RUN: 31/37, Skill L4. Same tier as equinox:31b (32/37); only diff: node_csv_parser.
 # f16 KV (unknown architecture — safe default). max_ctx=32768 (16.4 GB + ~5.5 GB f16 KV = ~22 GB at 32k).
+# MULTIHOP: chain_5 PASS (28 tok/s); cross_5 PASS (28 tok/s). 5/5 multihop (confirmed 2026-08-15). Dense QAT passes both.
 gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:lmstudio-community/gemma-4-31B-it-QAT-GGUF

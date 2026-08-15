@@ -1,6 +1,6 @@
 ### Overview
 
-This repo contains a local, reproducible benchmark harness for evaluating LLMs served by **Ollama** (running locally, typically in WSL) across three capability dimensions:
+This repo contains a local, reproducible benchmark harness for evaluating LLMs served by **llama-server** (primary, spawned per-model via `LlamaServerManager`) or **Ollama** (secondary) across three capability dimensions:
 
 - **Coding (v1 — implemented):** fix broken code so deterministic tests pass.
 - **Context & retrieval (v1 — implemented):** find information in long documents; profile tok/s collapse at different context sizes; multi-hop cross-reference retrieval across document positions.

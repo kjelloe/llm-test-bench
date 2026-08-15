@@ -28,7 +28,8 @@
 # qwen3-coder:30b-1m   # ~160 tok/s  tensor_split, MoE ~15 GB; 19/19 coding PERFECT
 # qwen3.5:35b          # ~147 tok/s  tensor_split, MoE thinking
 # qwen3.6:35b-A3B      # ~134 tok/s  tensor_split, MoE thinking
-# gpt-oss:120b         #  *55 tok/s  tensor_split, MXFP4 MoE 120B ~60 GB GPU-resident; 32/34 eligible, Skill L6 (2026-08-11)
+# gpt-oss:120b         #  *56.1 tok/s  tensor_split, MXFP4 MoE 120B ~60 GB GPU-resident; 32/34 eligible, Skill L6 (CONFIRMED 2026-08-14 coding 19/19)
+# qwen3.5-122b:a10b    #  *37 tok/s  tensor_split, MXFP4 MoE 122B A10B MTP-merged ~65.1 GB; **19/19 coding PERFECT** (2026-08-13)
 # qwen3-next:80b       # *109 tok/s  tensor_split, MoE MXFP4 80B; 29/32 Skill L2; no improvement from 3rd GPU
 # llama4-scout:17b     # 10-29 tok/s  tensor_split, MoE 109B GPU-resident (was 3.3 RAM-bound); REJECTED 2026-08-11 7/10
 # qwen2.5-coder:14b    #  ~72 tok/s  single GPU
@@ -87,10 +88,10 @@ qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|
 # qwen3.6:35b-A3B: MoE ~9 GB active; 29/33 on RTX 4090+5060Ti (2026-06-14); thinking.
 qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/Qwen3.6-35B-A3B-GGUF
 
-# gemma4:26b: MoE ~18 GB; context_128k at 84.5 tok/s on single 24 GB.
-# Architecture-level coding failures (confirmed 2026-07-22): csv_nordic_property (L3, TESTS_STILL_FAIL),
-# node_csv_parser (L3, TRUNCATED — verbose preamble exhausts 16k budget). python_hashmap (L5) PASSES.
-gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
+# gemma4:26b (unsloth UD-Q4_K_M): NOT DOWNLOADED — GGUF missing from allmodels/ (2026-08-13).
+# Base model (noctrex MXFP4) scored 7/10 (SKIP). Use gemma4:26b-qat (18/19+4/4 web) in 2x24gb.txt instead.
+# Context ref (single GPU): 98.8/82.0/86.6/68.9 tok/s at 32k/64k/128k/256k. python_hashmap PASSES.
+# gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
 
 # ── Dense 32B — ctx cap lifted; 72 GB gives ~18 GB/GPU free for KV ───────────
 # qwen3.6:27b at 32B size: see below. For qwen2.5-coder:32b-q4:
@@ -115,10 +116,11 @@ qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8
 # ── 80B MXFP4 MoE — tensor_split=1|1|1 on 72 GB ────────────────────────────
 # qwen3-next:80b: CONFIRMED 2026-06-24 full 33-task (2×24 GB): 29/32 at 109.3 tok/s, Skill L2.
 # Speed: ~115 tok/s coding/16k, ~88 tok/s at 32k, ~26 tok/s at 128k.
-# context_256k: still OOM on 72 GB. Math: 41 GB weights / 3 = 13.7 GB/GPU; 256k KV at A3B
-# needs ~20+ GB/GPU total — still exceeds 10.3 GB free per card. max_ctx=131072 prevents crash.
+# context_256k: CONFIRMED PASS 2026-08-12 at 37.7 tok/s, 247s, ctx=262144 on 72 GB.
+# Architecture supports 262144 tokens; KV footprint smaller than prior OOM estimate on 48 GB.
 # Abliterated = uncensored. Requires --model-timeout 1200.
-qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-GGUF  # 3-part model
+# MULTIHOP chain_5 PASS (75 tok/s). cross_5 PASS (63 tok/s). Full 5/5 multihop (2×24 GB — runs same GGUF).
+qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=262144  hf:noctrex/Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-GGUF  # 3-part model
 
 # ── Dense 70B — SKIPPED; not worth downloading ───────────────────────────────
 # llama3.3:70b Q4_K_M (~40 GB): confirmed 6/10 at 17.4 tok/s on 2×24 GB (2026-06-23).
@@ -139,16 +141,46 @@ qwen3-next:80b  Huihui-Qwen3-Next-80B-A3B-Instruct-abliterated-MXFP4_MOE-00001-o
 # PERFECT: 19/19 coding + 4/4 web. PASSES full L6 stepped chain (core/turret/entities/combat).
 # FAILS: node_paratrooper (from-scratch L6, universal wall). context_16k TOOL_ERROR (transient restart).
 # Speed: ~55 tok/s coding avg, 8-26 tok/s para (long generation), ~60 tok/s context.
-# SKIPPED context_64k/128k/256k at max_ctx=32768 — increased to 65536 to enable context_64k.
-# On 72 GB: 60 GB weights / 3 = 20 GB/GPU, ~4 GB/GPU available for KV at q8_0.
-# KV at ctx=65536: ~8 GB total / 3 = ~2.7 GB/GPU — should fit; revert if OOM.
-# Temps: GPU0 42°C avg, GPU1 49°C avg, GPU2 56°C avg (all healthy).
-gpt-oss:120b  gpt-oss-120b-MXFP4.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536,thinking  hf:ggml-org/gpt-oss-120b-GGUF
+# context_64k PASS (53.4 tok/s, 2026-08-11) at max_ctx=65536.
+# context_128k PASS (39.6 tok/s, 166s, 2026-08-12) at max_ctx=131072 — loads without OOM; KV smaller than estimated.
+# context_256k SKIPPED_CTX (arch limit n_ctx_train=131072). max_ctx raised 65536→131072.
+# Temps: GPU0 42°C avg (full run), GPU2 peak 64°C (context 128k run).
+# MULTIHOP chain_5 PASS (75 tok/s). cross_5 PASS (67 tok/s). Full 5/5 multihop (confirmed 2026-08-15).
+gpt-oss:120b  gpt-oss-120b-MXFP4.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:ggml-org/gpt-oss-120b-GGUF
 
 # llama4-scout:17b (Meta Llama 4 Scout, MoE 17B active / 109B total, Q4_K_M ~60 GB); 3-GPU only.
-# On single 24 GB: RAM-bound at 3.3 tok/s (weights in system RAM); context_128k took 1216s.
-# On 72 GB: fully GPU-resident for the first time → expect 50-80 tok/s (est.; untested at this VRAM).
-# Quality at 3.3 tok/s on 24 GB: 19/24 eligible (csv_nordic_property TOOL_ERROR timeout; ctx≥64k SKIPPED).
-# Similar per-GPU KV to gpt-oss:120b: ~4 GB/GPU → max_ctx=32768 conservative.
-# Requires --model-timeout 1200 (csv_nordic_property may still time out even at faster speed).
-llama4-scout:17b  Q4_K_M/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF  # 2-part model
+# CONFIRMED 2026-08-11 (3×24 GB spot): 7/10, 10-29 tok/s — REJECTED.
+# csv_nordic_property TESTS_STILL_FAIL (structural capability gap, not timeout); python_hashmap FAIL (L5).
+# Same VRAM as gpt-oss:120b; far lower quality. Prior "19/24" inflated by SKIPs. Do not benchmark further.
+# REJECTED 2026-08-11: llama4-scout:17b  Q4_K_M/Llama-4-Scout-17B-16E-Instruct-Q4_K_M-00001-of-00002.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF  # 2-part model; 7/10, csv_nordic_property structural gap, same VRAM as gpt-oss:120b, far lower quality
+
+# laguna-s-2.1:118b-iq4 (Poolside, 118B MoE A8B, wimmmm IQ4_XS, ~58.4 GB); 3-GPU only.
+# CONFIRMED 2026-08-11 full 19-task coding (3×24 GB): 18/19 at 54.3 tok/s avg.
+# csv_nordic_property PASS (was FAIL at IQ3_XXS — precision gap, flipped by IQ4_XS).
+# node_csv_parser FAIL (quoted-comma, structural capability gap — unchanged at higher quant).
+# Speed: 54.3 tok/s avg (vs 96.1 tok/s IQ3_XXS on 2×24 GB — larger model, same 3-GPU budget).
+# CONFIRMED 2026-08-13 web 4/4 + L6 stepped 4/4 + context 8k/16k/32k PASS (max_ctx=32768).
+# CONFIRMED 2026-08-14 context_64k *46.9 tok/s (114.5s) + context_128k *44.4 tok/s (219.4s) PASS.
+# context_256k: SKIPPED_CTX — f16 KV at 262144 ctx needs ~21 GB, exceeds 13.6 GB VRAM headroom.
+# max_ctx=131072 confirmed working; Requires --model-timeout 1200.
+# MULTIHOP chain_5 FAIL → "45" (sibling confusion, 55 tok/s). cross_5 PASS (66 tok/s). 4/5 multihop (confirmed 2026-08-15).
+laguna-s-2.1:118b-iq4  laguna-s-2.1-IQ4_XS.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:wimmmm/poolside-Laguna-S-2.1-GGUF
+
+# qwen3.5-122b:a10b: MXFP4 MoE 122B total / A10B active, MTP head merged into single GGUF, ~65.1 GB; Ampere+.
+# CONFIRMED 2026-08-13 full 19-task coding: **PERFECT 19/19 at 37.4 tok/s avg**, 438.7s total.
+# Breaks both A3B capability ceilings: python_hashmap (L5) PASS + node_para_core (L3) PASS.
+# java_word_freq (L3) PASS — gemma4:26b-qat (18/19) fails this; A10B handles it cleanly.
+# csv_nordic_property PASS at 16.1 tok/s (196s — thinking tokens + large CSV prefill).
+# python_expr_eval PASS at 25.2 tok/s (no spiral — clean output unlike deepseek-r1:32b).
+# node_paratrooper FAIL TESTS_STILL_FAIL (universal L6 from-scratch wall).
+# Web: 4/4 PASS at 38.4 tok/s (2026-08-13) — python_fastapi_endpoint PASS.
+# L6 stepped: 4/4 PASS at 17.4 tok/s (2026-08-13) — full chain core/turret/entities/combat.
+# Context (2026-08-13): ctx_8k *51.2, ctx_16k *46.9, ctx_32k *44.2, ctx_64k *39.7, ctx_128k *33.9 tok/s.
+#   ctx_256k OOM (262144 ctx fills remaining ~6.9 GB VRAM). Ceiling: max_ctx=131072.
+# thinking=true working — no planning loops. MTP merged into GGUF — no --spec-type needed.
+# q8_0 KV (A10B MoE, not 27B dense — no precision concern; hashmap passes cleanly).
+# Speed: 37.4 tok/s avg coding. Slower than gpt-oss:120b (~55 tok/s) — A10B active is more compute-heavy.
+# Requires ./gpu-mode.sh multi and --model-timeout 1200.
+# MULTIHOP chain_5 FAIL → "30" (top-down scan at 34 tok/s). cross_5 PASS (42 tok/s). 4/5 multihop (confirmed 2026-08-15).
+# chain_5 failure notable: 122B A10B model reads top-down and stops at base profile; same error as smaller A3B MoE models.
+qwen3.5-122b:a10b  Qwen3.5-122B-A10B-MXFP4_MOE-MTP-merged.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:jamiefutch/Qwen3.5-122B-A10B-MXFP4_MOE-MTP-GGUF
