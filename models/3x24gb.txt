@@ -184,3 +184,22 @@ laguna-s-2.1:118b-iq4  laguna-s-2.1-IQ4_XS.gguf  ngl=999,no_mmap,tensor_split=1|
 # MULTIHOP chain_5 FAIL → "30" (top-down scan at 34 tok/s). cross_5 PASS (42 tok/s). 4/5 multihop (confirmed 2026-08-15).
 # chain_5 failure notable: 122B A10B model reads top-down and stops at base profile; same error as smaller A3B MoE models.
 qwen3.5-122b:a10b  Qwen3.5-122B-A10B-MXFP4_MOE-MTP-merged.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072,thinking  hf:jamiefutch/Qwen3.5-122B-A10B-MXFP4_MOE-MTP-GGUF
+
+# qwen3.8:27b: Alibaba Qwen3.8-27B Q4_K_M (~18.4 GB, Gated DeltaNet hybrid). Only needs ~20 GB —
+#   does not benefit from the 3rd GPU on speed or capability, but the L6-full task (node_paratrooper)
+#   is GPU-config-sensitive, and explicit 3-way tensor_split is the one config confirmed to PASS it
+#   alongside single-GPU (see CLAUDE.md for the full root-cause diagnosis).
+# REQUIRES llama-server build ≥ 2026-08-13 (qwen35.cpp merged commit 0d0bfcd4f, binary 27df9199d).
+# f16 KV required for python_hashmap (same precision rule as qwen3.6:27b).
+# CONFIRMED 2026-08-16 (3×24 GB, explicit tensor_split=1|1|1): node_paratrooper PASS — 9.6 tok/s,
+#   473.9s. Diffed against the single-GPU output: NOT byte-identical (genuinely different generation
+#   — e.g. `continue` vs nested `if` for the bomb-vs-turret check, different filter ordering) but
+#   still fully correct, 40/40 tests pass. Confirms cross-GPU divergence happens at any split
+#   (2-way or 3-way); whether it lands on broken logic (2-way explicit `1|1`, reproduced 3x FAIL) or
+#   equally-valid alternate logic (3-way, this run) is probabilistic per-instance, not a property of
+#   split arity. Single confirmed run — not proof 3-way is categorically safe the way the 2-way FAIL
+#   is proven unsafe (3 reproductions). Matches the earlier 3-GPU auto-dist result (10.1 tok/s, 453s).
+# For coding/web/context/L6-stepped groups on 3×24 GB, see 24gb.txt (single-GPU) — those groups are
+#   NOT config-sensitive; 27/27 confirmed PASS on 2×24 GB tensor_split=1|1, expected to hold at 3-way too.
+# GPU temps healthy across this run (max 63°C).
+qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF

@@ -69,6 +69,58 @@ def prepare_workdir(task: Task) -> Path:
     return tmp
 
 
+# Files present in task_data/ that must never reach an export — human-only reference
+# solutions or generated cache junk from a prior local test run.
+_EXPORT_EXCLUDE_GLOBS = ("*.reference.*", ".pytest_cache", "__pycache__", ".git", "node_modules")
+
+
+def export_task(task: Task, dest_dir: Path) -> None:
+    """Write a self-contained, shareable copy of `task` to `dest_dir`.
+
+    Includes every file needed to run task.setup_cmd / task.test_cmd (matching what
+    prepare_workdir gives the harness itself), minus human-only reference solutions.
+    Also writes TASK.md (goal + editable/context files + how to check your work) and
+    PROMPT.txt (the exact prompt text the harness sends to a model, for chat-only allies).
+    """
+    if dest_dir.exists() and any(dest_dir.iterdir()):
+        raise FileExistsError(f"{dest_dir} already exists and is not empty")
+
+    src = TASK_DATA_DIR / task.subdir
+    shutil.copytree(src, dest_dir, dirs_exist_ok=True, ignore=shutil.ignore_patterns(*_EXPORT_EXCLUDE_GLOBS))
+
+    editable_list = "\n".join(f"- `{f}`" for f in task.editable_files)
+    context_list = "\n".join(f"- `{f}`" for f in task.context_files) or "(none)"
+    setup_line = f"\n**Setup:** `{' '.join(task.setup_cmd)}`\n" if task.setup_cmd else ""
+    task_md = f"""# {task.id}
+
+**Difficulty:** L{task.difficulty}
+
+## Goal
+
+{task.description}
+
+## Files you may edit
+
+{editable_list}
+
+## Context files (read-only — do not edit)
+
+{context_list}
+{setup_line}
+## Check your work
+
+```
+{" ".join(task.test_cmd)}
+```
+
+All tests must pass. `PROMPT.txt` in this directory is the exact prompt the benchmark harness
+sends to a model for this task — useful if your coding assistant works by chat/paste rather
+than by reading files directly from this directory.
+"""
+    (dest_dir / "TASK.md").write_text(task_md, encoding="utf-8")
+    (dest_dir / "PROMPT.txt").write_text(build_prompt(task, dest_dir), encoding="utf-8")
+
+
 def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
     try:
         r = subprocess.run(

@@ -14,7 +14,7 @@ from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
-from lib.tasks import BUILTIN_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, prepare_workdir, run_setup, run_tests
+from lib.tasks import BUILTIN_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests
 
 
 def _safe_model_name(model: str) -> str:
@@ -251,7 +251,16 @@ def run_one(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark local LLMs on coding tasks (Ollama or llama-server)")
-    parser.add_argument("--models", nargs="+", required=True, metavar="MODEL")
+    parser.add_argument("--models", nargs="+", default=None, metavar="MODEL",
+                        help="Required unless --export-task is given")
+    parser.add_argument("--export-task", default=None, metavar="TASK_ID",
+                        help=f"Write a shareable copy of one task (TASK.md + PROMPT.txt + starting "
+                             f"files) to --export-dir and exit, without running any model. "
+                             f"Choices: {', '.join(TASK_MAP)}")
+    parser.add_argument("--export-dir", default=None, metavar="PATH",
+                        help="Destination for --export-task (default: ./exports/<task_id>/)")
+    parser.add_argument("--list-tasks", action="store_true",
+                        help="Print all task IDs (id, difficulty, group, description) and exit")
     _task_sel = parser.add_mutually_exclusive_group()
     _task_sel.add_argument(
         "--tasks", nargs="+", default=None, metavar="TASK_ID",
@@ -306,6 +315,33 @@ def main() -> None:
     parser.add_argument("--checkpoint-dir", default=None, metavar="PATH",
                         help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
+
+    if args.list_tasks:
+        primary_group = {}
+        for group, ids in TASK_GROUPS.items():
+            if group in ("para", "spot"):  # 'para' duplicates 'l6'; 'spot' is a cross-cutting subset
+                continue
+            for task_id in ids:
+                primary_group.setdefault(task_id, group)
+        width = max(len(t.id) for t in BUILTIN_TASKS)
+        for t in sorted(BUILTIN_TASKS, key=lambda t: (t.difficulty, t.id)):
+            desc = t.description if len(t.description) <= 70 else t.description[:67] + "..."
+            print(f"L{t.difficulty}  {t.id:<{width}}  [{primary_group.get(t.id, '?'):<9}]  {desc}")
+        return
+
+    if args.export_task:
+        if args.export_task not in TASK_MAP:
+            parser.error(f"Unknown task ID: {args.export_task!r}. Available: {sorted(TASK_MAP)}")
+        dest = Path(args.export_dir) if args.export_dir else Path("exports") / args.export_task
+        try:
+            export_task(TASK_MAP[args.export_task], dest)
+        except FileExistsError as e:
+            parser.error(str(e))
+        print(f"Exported {args.export_task!r} to {dest}/  (see TASK.md and PROMPT.txt)")
+        return
+
+    if args.models is None:
+        parser.error("--models is required unless --export-task is given")
 
     if args.out is None:
         from datetime import datetime

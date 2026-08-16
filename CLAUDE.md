@@ -603,6 +603,18 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     context_256k is NOT similarly config-sensitive: PASS on both 3-GPU auto-dist (19.0 tok/s, 358.4s) and true
     2-GPU tensor_split=1|1 (17.4 tok/s, 292.4s) — retrieval tasks with a single correct answer appear robust to
     this effect where complex multi-token game-logic generation is not.
+  **EXPLICIT 3-GPU TENSOR_SPLIT=1|1|1 CONFIRMED 2026-08-16 (3×24 GB rig)**: PASS — 9.6 tok/s, 473.9s. Closely
+    matches the earlier 3-GPU auto-dist result (10.1 tok/s, 453.3s) — consistent behavior. **Diffed against the
+    known-good single-GPU output**: NOT byte-identical (different MD5) — genuinely different generation, e.g.
+    `continue` vs nested `if` in the bomb-vs-turret check, different filter ordering, magic-number `10` vs
+    `cfg.bombRadius` for off-screen culling — but still fully correct, all 40 tests pass. This is important
+    nuance for the root-cause story: cross-GPU computation causes token-level divergence at ANY split (2-way
+    or 3-way alike — confirmed here, the 3-way output is NOT the same as single-GPU), but whether that
+    divergence lands on broken logic (2-way explicit `1|1`, confirmed FAIL) or equally-valid alternate logic
+    (3-way explicit `1|1|1`, this run) is apparently probabilistic per-instance, not a property of "N-way
+    splits are safe/unsafe." Treat this 3-way PASS as one confirmed data point, not a guarantee that every
+    3-way run will pass — it has not been re-run for reproducibility the way the 2-way FAIL was (3 runs).
+    GPU temps healthy (max 63°C). Resolves the "3-way untested" open question from 2026-08-15.
   **ROOT CAUSE CONFIRMED (CONFIRMED 2026-08-15) — diagnostic diff of the actual generated `game.js`**: re-ran
     both single-GPU (PASS, 45.5 tok/s, 103.8s — 3rd confirmation) and tensor_split=1|1 (FAIL, 28.2 tok/s, 159.2s
     — 3rd confirmation) with `--keep-workdirs` and diffed the two generated files.
@@ -668,10 +680,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     at the same context depth on the same single-GPU setup (see DENSE-27B COMPARISON above). Both models handle the
     same context comfortably faster on 2×24 GB — the bottleneck is single-GPU VRAM-saturation-general, not
     architecture-specific.
-  Skill: L6-full — first paratrooper pass on single GPU (45.5 tok/s, 103s, determinism confirmed) and on 2×24 GB
-    3-GPU auto-dist (10.1 tok/s, 453s). **CONFIG-SENSITIVE, ROOT CAUSE CONFIRMED**: reproducibly FAILS with
-    explicit `tensor_split=1|1` on 2×24 GB (3 runs, 28.2-28.3 tok/s, TESTS_STILL_FAIL) due to cross-GPU
-    floating-point reduction non-determinism (confirmed via output diff) — see node_paratrooper section above.
+  Skill: L6-full — first paratrooper pass on single GPU (45.5 tok/s, 103s, determinism confirmed), on 2×24 GB
+    3-GPU auto-dist (10.1 tok/s, 453s), and on explicit 3×24 GB `tensor_split=1|1|1` (9.6 tok/s, 474s, CONFIRMED
+    2026-08-16). **CONFIG-SENSITIVE, ROOT CAUSE CONFIRMED**: reproducibly FAILS with explicit `tensor_split=1|1`
+    on 2×24 GB (3 runs, 28.2-28.3 tok/s, TESTS_STILL_FAIL) due to cross-GPU floating-point reduction
+    non-determinism (confirmed via output diff) — see node_paratrooper section above. The 3-way split passing
+    is a single confirmed run, not proof 3-way splits are categorically safe.
     **All other groups CONFIRMED unaffected**: 27/27 PASS (19 coding + 4 web + 4 L6-stepped) on the exact
     2×24 GB tensor_split=1|1 config. Treat the node_paratrooper pass as confirmed capability, not a
     config-independent guarantee; use single-GPU for reproduction. Added to models/24gb.txt and
@@ -1076,6 +1090,19 @@ Task groups (--task-group):
 
 # Single model / subset of tasks
 ./run.sh --models qwen2.5-coder:7b --tasks python_safe_div
+
+# See what tasks exist — id, difficulty, group, description — before picking one to export
+python3 bench.py --list-tasks
+
+# Export a task as a shareable, self-contained package (TASK.md + PROMPT.txt + starting files)
+# for another coding agent to attempt directly — no model/backend needed for this mode.
+python3 bench.py --export-task node_paratrooper --export-dir ~/share/l6-full-challenge
+
+# Same, to a scratch dir — the L6-full task, the hardest in the benchmark (see CLAUDE.md above)
+python3 bench.py --export-task node_paratrooper --export-dir /tmp/mytestdir
+
+# Any other task works the same way — e.g. the L5 precision-canary task
+python3 bench.py --export-task python_hashmap --export-dir /tmp/mytestdir-hashmap
 
 # Run the harness's own unit tests
 python3 -m pytest tests/ -v
