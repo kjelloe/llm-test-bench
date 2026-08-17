@@ -14,3 +14,4 @@ output/
 *.log
 llama_models
 .gpu-mode
+/backup-to-NAS.sh
