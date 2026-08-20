@@ -681,3 +681,67 @@
 #   config-sensitive (FAILS) with explicit tensor_split=1|1 on 2×24 GB — see WARNING above;
 #   19/19 coding + 4/4 web + 4/4 L6 + ctx 6/6 (all confirmed) + multihop 5/5.
 qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+
+# ── Unsloth Dynamic V3 requant of qwen3.8:27b (added 2026-08-20) ───────────────
+# unsloth re-uploaded unsloth/Qwen3.8-27B-GGUF on 2026-08-19 using their new "Dynamic V3"
+# quant method (claimed >10% higher accuracy on Div-300/KLD vs standard llama.cpp quants).
+# Same repo, same base model as the confirmed qwen3.8:27b above (first node_paratrooper PASS,
+# 19/19 coding) — only the quantization recipe differs. Files renamed with a UD- prefix; the old
+# plain Q4_K_M.gguf we already benchmarked no longer exists in the repo (see WARNING in
+# 24gb.txt/2x24gb.txt).
+# Worth spot-checking because qwen3.8:27b sits at two precision boundaries: python_hashmap needs
+# f16 KV to pass on the old quant, and node_paratrooper fails on 2×24 GB tensor_split=1|1 from a
+# confirmed close-call floating-point reduction-order flip — a more accurate quant could plausibly
+# shift either result. Same runtime params as the confirmed single-GPU qwen3.8:27b config; only
+# the gguf-file differs.
+#
+# RESULT — CONFIRMED 2026-08-20, single RTX 4090, --num-predict 16000: 9/10 spot.
+#   PASS (9): python_safe_div, node_slugify, python_lru_cache, csv_nordic_property (71.1s),
+#     node_csv_parser, python_tokenizer, python_expr_eval, python_hashmap (15.4s, f16 KV —
+#     precision rule unchanged from the old quant), node_para_core. ~41-42 tok/s throughout —
+#     consistently ~9% SLOWER than the old Q4_K_M's ~45-46 tok/s on identical hardware/config.
+#   FAIL: node_paratrooper — REPRODUCIBLE 2/2 (111.5s/40.9 tok/s, 112.4s/40.7 tok/s,
+#     TESTS_STILL_FAIL both times), on the exact single-GPU config that gives the OLD plain
+#     Q4_K_M quant a determinism-confirmed 2/2 PASS (identical MD5, 45.5 tok/s/103s). The
+#     "Dynamic V3" requant — despite the vendor's claimed >10% accuracy improvement on
+#     Div-300/KLD — loses the one result that made qwen3.8:27b notable (first model of any size
+#     to pass this task). Consistent with this task's known razor's-edge greedy-decoding
+#     sensitivity (see the tensor_split root-cause diagnosis on qwen3.8:27b above) — this time
+#     the quant recipe flips it instead of the GPU split.
+# VERDICT: DO NOT PROMOTE. Keep the plain qwen3.8:27b (Q4_K_M) as the primary 24gb.txt/2x24gb.txt
+#   entry. Left here as a documented, tested-and-rejected data point — don't swap the primary
+#   entry to this file without re-confirming node_paratrooper first.
+qwen3.8:27b-ud  Qwen3.8-27B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+
+# ── bartowski requant of qwen3.8:27b (added 2026-08-20) ────────────────────────
+# Third independent Q4_K_M source for the same Qwen3.8-27B DeltaNet-hybrid base model, found via
+# the new "qwen3.8 gguf" scout query. bartowski is a well-regarded imatrix quant house — a useful
+# tiebreaker now that unsloth's plain Q4_K_M (PASS node_paratrooper, 2/2, identical MD5) and
+# unsloth's newer Dynamic V3 UD-Q4_K_M (FAIL node_paratrooper, 2/2, see qwen3.8:27b-ud above)
+# disagree on this task despite being nominally the "same" bit-width. Does bartowski's independent
+# Q4_K_M recipe agree with unsloth's old plain quant (PASS) or the new one (FAIL)? Filename/repo
+# predates the unsloth rename churn (lastModified 2026-08-14), so this one should stay stable.
+# Same runtime params as the confirmed single-GPU qwen3.8:27b config; only the gguf-file/repo differ.
+# WARNING: local filename is deliberately RENAMED to Qwen3.8-27B-bartowski-Q4_K_M.gguf, NOT the
+# upstream Qwen3.8-27B-Q4_K_M.gguf — that exact name already exists locally (it's the recovered
+# original qwen3.8:27b file, see WARNING in 24gb.txt/2x24gb.txt) and fetch-hf.sh has no rename
+# support, so downloading bartowski's file under the same name would silently overwrite/collide
+# with the unsloth one (this happened once already 2026-08-20 — recovered via a pinned HF
+# revision, see next-runs.md). fetch-hf.sh CANNOT auto-fetch this renamed file; it was placed
+# manually via hf_hub_download to a scratch dir then moved into allmodels/ under the new name.
+#
+# RESULT — CONFIRMED 2026-08-20, single RTX 4090, --num-predict 16000: 9/10 spot, same pattern
+#   as qwen3.8:27b-ud. PASS (9): python_safe_div, node_slugify, python_lru_cache,
+#   csv_nordic_property (71.9s), node_csv_parser, python_tokenizer, python_expr_eval,
+#   python_hashmap (13.8s, f16 KV — still holds), node_para_core. ~44-45 tok/s throughout (closer
+#   to the original quant's ~45-46 tok/s than the UD quant's ~41-42 tok/s).
+#   FAIL: node_paratrooper — TESTS_STILL_FAIL, 105.2s/43.8 tok/s.
+# TIEBREAKER RESULT: bartowski's independent Q4_K_M sides with unsloth's NEW Dynamic V3 quant
+#   (both FAIL), not with the original plain Q4_K_M (PASS). 2 of 3 independently-quantized
+#   Q4_K_M-class builds of this model now fail node_paratrooper; only the one specific original
+#   file (which we happen to still have, recovered from an HF revision after an accidental
+#   deletion — see next-runs.md) passes. This reframes the "first model to pass node_paratrooper"
+#   finding: it looks less like a general property of the Qwen3.8-27B architecture and more like
+#   this task sitting at a razor's-edge decision that most quantizations of this model land on the
+#   FAIL side of — the original file may be the lucky outlier, not the representative case.
+qwen3.8:27b-bartowski  Qwen3.8-27B-bartowski-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF

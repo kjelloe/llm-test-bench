@@ -191,4 +191,18 @@ gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # Skill: L6-full — first paratrooper pass, reliably reproducible on THIS single-GPU config
 #   (2 runs, identical MD5) and on 2×24 GB 3-GPU auto-dist. CONFIG-SENSITIVE on 2×24 GB with
 #   explicit tensor_split=1|1 (reproducibly FAILS there — see 2x24gb.txt). Added 2026-08-15.
+# WARNING (2026-08-20): unsloth re-uploaded unsloth/Qwen3.8-27B-GGUF on 2026-08-19 with their
+#   new "Dynamic V3" quant method — files renamed with a UD- prefix. The exact filename below
+#   (Qwen3.8-27B-Q4_K_M.gguf) NO LONGER EXISTS in the repo; fetch-hf.sh will fail to re-download
+#   it from scratch (it only skips re-fetching because our local allmodels/ copy already exists —
+#   do not delete it — this file was briefly, accidentally deleted 2026-08-20 by an unrelated
+#   hf_hub_download call and recovered via a pinned HF revision + SHA256 verification; see
+#   next-runs.md INCIDENT section). All findings above are tied to this specific file.
+# TIEBREAKER (2026-08-20): tested 2 more independent Q4_K_M-class builds of this model on
+#   node_paratrooper — unsloth's new UD-Q4_K_M (qwen3.8:27b-ud, candidates.txt) and bartowski's
+#   Q4_K_M (qwen3.8:27b-bartowski, candidates.txt). BOTH FAIL. Only THIS specific file passes
+#   (2/2, identical MD5). The node_paratrooper PASS looks like a property of this one GGUF file
+#   sitting on the right side of a razor's-edge decoding decision, not a general Qwen3.8-27B
+#   architecture capability — treat "first model to pass node_paratrooper" as file-specific, not
+#   architecture-general. See next-runs.md for the full 3-way comparison table.
 qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF

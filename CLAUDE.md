@@ -690,6 +690,27 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     2×24 GB tensor_split=1|1 config. Treat the node_paratrooper pass as confirmed capability, not a
     config-independent guarantee; use single-GPU for reproduction. Added to models/24gb.txt and
     models/2x24gb.txt 2026-08-15.
+  **⚠ TIEBREAKER — node_paratrooper PASS IS FILE-SPECIFIC, NOT ARCHITECTURE-GENERAL (CONFIRMED
+    2026-08-20).** Tested 2 more independent Q4_K_M-class GGUF builds of this same base model on
+    node_paratrooper: unsloth's own newer "Dynamic V3" requant (`Qwen3.8-27B-UD-Q4_K_M.gguf`,
+    uploaded 2026-08-19, claimed >10% higher accuracy on Div-300/KLD) and bartowski's independent
+    `Qwen3.8-27B-Q4_K_M.gguf`. **Both FAIL** (TESTS_STILL_FAIL, 111-112 tok/s→40.7-40.9 tok/s and
+    105.2s/43.8 tok/s respectively; `python_hashmap` still PASSES on both with f16 KV — that
+    precision rule is unaffected). Of 3 independently-quantized Q4_K_M-tier builds tested, **2/3
+    fail** — only the original file (used for every result documented above, and which we happen
+    to still have) passes, 2/2, identical MD5. **Read "first model of any size to pass
+    node_paratrooper" as a property of that one specific GGUF file, not a general Qwen3.8-27B /
+    Gated-DeltaNet-hybrid architecture capability** — the task appears to sit at a razor's-edge
+    greedy-decoding decision that most quantizations of this model land on the FAIL side of.
+    Related: the original `unsloth/Qwen3.8-27B-GGUF` repo deleted this exact file upstream on
+    2026-08-19 as part of the Dynamic V3 rename (see WARNING in `models/24gb.txt`/`2x24gb.txt`);
+    our local copy was briefly, accidentally deleted during this testing (an unrelated
+    `hf_hub_download(local_dir=...)` call with no collision protection) and recovered via a
+    pinned HF revision + SHA256 verification against the original download's `.metadata` sidecar
+    — exact byte match confirmed, no data lost, but this file is now effectively irreplaceable
+    (do not delete it) and the sole evidence for the PASS side of this finding. Full 3-way
+    comparison table in `next-runs.md`; `qwen3.8:27b-ud` and `qwen3.8:27b-bartowski` in
+    `models/candidates.txt` document both FAIL results in detail.
   **qwen3.5:27b** (bartowski, Qwen3.5-27B dense Q4_K_M, ~16 GB, 2×24 GB recommended, thinking=true, q8_0 KV):
   CONFIRMED 2026-08-13 complete profile — **Skill L6** (all task groups perfect):
   Coding: **PERFECT 19/19 at 28.4 tok/s avg** (373.6s total). python_hashmap PASS with q8_0 KV —

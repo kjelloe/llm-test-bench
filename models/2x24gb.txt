@@ -227,6 +227,17 @@ qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cach
 # Skill: L6-full on single GPU (paratrooper PASS, reproducible) and CONFIRMED on this 2×24 GB
 #   config for coding/web/L6-stepped (27/27 PASS). node_paratrooper specifically FAILS on this
 #   config (tensor_split=1|1) — see WARNING above for the confirmed root cause.
+# WARNING (2026-08-20): unsloth re-uploaded unsloth/Qwen3.8-27B-GGUF on 2026-08-19 with their new
+#   "Dynamic V3" quant method — files renamed with a UD- prefix. The exact filename below
+#   (Qwen3.8-27B-Q4_K_M.gguf) NO LONGER EXISTS in the repo; fetch-hf.sh cannot re-download it from
+#   scratch (it only skips re-fetching because our local allmodels/ copy already exists — do not
+#   delete it — this file was briefly, accidentally deleted 2026-08-20 by an unrelated
+#   hf_hub_download call and recovered via a pinned HF revision + SHA256 verification; see
+#   next-runs.md INCIDENT section).
+# TIEBREAKER (2026-08-20): 2 more independent Q4_K_M-class builds tested on node_paratrooper
+#   (unsloth's new UD-Q4_K_M, bartowski's Q4_K_M — both in candidates.txt) — BOTH FAIL. Only THIS
+#   specific file passes. Treat "first model to pass node_paratrooper" as file-specific, not a
+#   general Qwen3.8-27B architecture capability. See next-runs.md for the full comparison table.
 qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=262144  hf:unsloth/Qwen3.8-27B-GGUF
 
 # noctrex-qwen3.6:35b: MXFP4+MTP; Skill L6; CONFIRMED 2026-08-13 ls 10094 (2×24 GB):

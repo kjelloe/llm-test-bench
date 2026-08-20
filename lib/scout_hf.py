@@ -32,6 +32,7 @@ SCOUT_QUERIES: list[str] = [
     "deepseek coder instruct",
     "gemma4 instruct",
     "gemma4 qat",                        # QAT int4 Gemma 4 (dense 27B primarily — better quality than PTQ)
+    "qwen3.8 gguf",                      # Qwen3.8-27B DeltaNet hybrid dense — our best single-24GB model (L6-full)
     "gpt-oss",
     "codestral",
     "phi4 coding instruct",
@@ -55,6 +56,22 @@ SCOUT_QUERIES: list[str] = [
     "qwq 72b gguf",                      # QwQ-72B dense thinking; Q4 ~41 GB fits 48 GB; new reasoning tier
     "qwen3 235b instruct",               # Qwen3-235B-A22B non-VL; Q2 ~75 GB (72 GB tier), Q3 ~112 GB (192 GB DDR5)
     "deepseek v3 gguf",                  # DeepSeek-V3 671B; IQ1/IQ2 ~100-170 GB for 192 GB DDR5 hybrid
+    # ── Dense models sized for 3×24 GB (72 GB) — Q4-Q6 on a 70-123B dense model ──
+    # gpt-oss:120b/qwen3.5-122b:a10b (both MoE) already own this tier's top slot; these queries
+    # look for DENSE alternatives — no sparse activation, so quality-per-parameter tends to be
+    # higher, at the cost of speed (every weight touched every token; expect ~5-15 tok/s vs
+    # ~40-55 tok/s for the MoE incumbents). qwen2.5:72b-q4 (dense, non-coder) was already tested
+    # and REJECTED (6/10, inferior to qwen2.5-coder:32b) — these queries are for newer/different
+    # dense families that might do better, especially ones with coding-specific fine-tunes.
+    "llama 3.3 70b instruct",            # Meta Llama 3.3 70B dense; Q4_K_M ~40 GB, Q6_K ~54 GB, Q8_0 ~70 GB — all fit 72 GB
+    "qwen2.5 72b coder",                 # coder-specific fine-tune; qwen2.5:72b-q4 (instruct, non-coder) was REJECTED 6/10
+    "command-r-plus gguf",               # Cohere Command R+ 104B dense; Q3-Q4 fits 72 GB
+    "nemotron 70b instruct",             # NVIDIA Llama-3.1-Nemotron-70B; RLHF'd for instruction following
+    "hermes 70b instruct",               # Nous Hermes 70B fine-tunes
+    "athene 72b instruct",               # Athene-V2-Chat / Athene-V2-Agent 72B dense
+    "tulu 3 70b instruct",               # AI2 Tulu 3 70B dense instruct
+    "deepseek coder 33b instruct",       # older dense coder tier, cheap to re-check for regressions/updates
+    "yi 1.5 34b instruct",               # Yi-1.5-34B dense — fits comfortably even at Q6-Q8 on 72 GB
 ]
 
 _REPOS_PER_QUERY = 10
