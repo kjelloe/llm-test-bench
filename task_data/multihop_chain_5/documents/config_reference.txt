@@ -1,0 +1,70 @@
+OBSERVABILITY PLATFORM — Configuration Reference v4.7
+
+Inheritance rule: a profile's effective value for any key is the first definition
+of that key found by walking from the profile to its parent, then the parent's
+parent, and so on, stopping at the first ancestor that defines the key.
+A profile with no parent field is the root.
+
+════════════════════════════════════════════════════════
+PROFILE: base
+════════════════════════════════════════════════════════
+parent          : (none)
+sample_rate_pct : 5
+retention_days  : 30
+alert_threshold : 2000
+batch_size      : 500
+compression     : gzip
+sink_url        : https://ingest.obs.internal
+
+════════════════════════════════════════════════════════
+PROFILE: eu-regulated
+════════════════════════════════════════════════════════
+parent          : base
+retention_days  : 90
+pii_filter      : strict
+alert_threshold : 1500
+
+════════════════════════════════════════════════════════
+PROFILE: financial-services
+════════════════════════════════════════════════════════
+parent          : eu-regulated
+sample_rate_pct : 100
+audit_log       : enabled
+compression     : none
+batch_size      : 250
+
+════════════════════════════════════════════════════════
+PROFILE: payments-pipeline
+════════════════════════════════════════════════════════
+parent          : financial-services
+sink_url        : https://payments.obs.internal
+alert_threshold : 800
+max_lag_ms      : 90
+
+════════════════════════════════════════════════════════
+PROFILE: rtfd-service
+════════════════════════════════════════════════════════
+parent          : payments-pipeline
+batch_size      : 1
+sample_rate_pct : 100
+
+════════════════════════════════════════════════════════
+PROFILE: rtfd-prod
+════════════════════════════════════════════════════════
+parent          : rtfd-service
+sink_url        : https://rtfd-prod.payments.obs.internal
+
+════════════════════════════════════════════════════════
+PROFILE: rtfd-prod-instance-01
+════════════════════════════════════════════════════════
+parent          : rtfd-prod
+retention_days  : 45
+metric_prefix   : rtfd01
+replica_id      : 1
+
+════════════════════════════════════════════════════════
+PROFILE: rtfd-prod-instance-07
+════════════════════════════════════════════════════════
+parent          : rtfd-prod
+metric_prefix   : rtfd07
+replica_id      : 7

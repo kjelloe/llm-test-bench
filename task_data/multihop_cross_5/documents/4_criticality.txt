@@ -1,0 +1,10 @@
+CRITICALITY CLASSIFICATION — effective 2026-07-01
+(P1 incident response tier assigned to each team's services)
+
+team_id   classification
+-------   --------------
+TEAM-3    Standard
+TEAM-7    Critical
+TEAM-12   High
+TEAM-14   Critical
+TEAM-19   High

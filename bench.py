@@ -14,7 +14,7 @@ from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
-from lib.tasks import BUILTIN_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, prepare_workdir, run_setup, run_tests
+from lib.tasks import BUILTIN_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests
 
 
 def _safe_model_name(model: str) -> str:
@@ -251,7 +251,16 @@ def run_one(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark local LLMs on coding tasks (Ollama or llama-server)")
-    parser.add_argument("--models", nargs="+", required=True, metavar="MODEL")
+    parser.add_argument("--models", nargs="+", default=None, metavar="MODEL",
+                        help="Required unless --export-task is given")
+    parser.add_argument("--export-task", default=None, metavar="TASK_ID",
+                        help=f"Write a shareable copy of one task (TASK.md + PROMPT.txt + starting "
+                             f"files) to --export-dir and exit, without running any model. "
+                             f"Choices: {', '.join(TASK_MAP)}")
+    parser.add_argument("--export-dir", default=None, metavar="PATH",
+                        help="Destination for --export-task (default: ./exports/<task_id>/)")
+    parser.add_argument("--list-tasks", action="store_true",
+                        help="Print all task IDs (id, difficulty, group, description) and exit")
     _task_sel = parser.add_mutually_exclusive_group()
     _task_sel.add_argument(
         "--tasks", nargs="+", default=None, metavar="TASK_ID",
@@ -289,6 +298,10 @@ def main() -> None:
                         help="Enable thinking/reasoning mode (ollama only; default: off)")
     parser.add_argument("--warmup", action="store_true", default=False,
                         help="Warm up each model before its first task (ollama only; default: off)")
+    parser.add_argument("--single-gpu", type=int, default=-1, metavar="INDEX",
+                        help="Run on a single GPU (device INDEX). Strips tensor_split from model params "
+                             "and sets CUDA_VISIBLE_DEVICES for the llama-server subprocess. "
+                             "-1 = use all GPUs (default). Usually set via gpu-mode.sh / .gpu-mode.")
     parser.add_argument("--set-power-limit", type=int, default=None, metavar="WATTS",
                         help="Set GPU power limit via 'sudo nvidia-smi -pl WATTS' before benchmarking")
     parser.add_argument("--out", default=None,
@@ -303,12 +316,40 @@ def main() -> None:
                         help="Directory for per-model resume checkpoints; written after each model completes")
     args = parser.parse_args()
 
+    if args.list_tasks:
+        primary_group = {}
+        for group, ids in TASK_GROUPS.items():
+            if group in ("para", "spot"):  # 'para' duplicates 'l6'; 'spot' is a cross-cutting subset
+                continue
+            for task_id in ids:
+                primary_group.setdefault(task_id, group)
+        width = max(len(t.id) for t in BUILTIN_TASKS)
+        for t in sorted(BUILTIN_TASKS, key=lambda t: (t.difficulty, t.id)):
+            desc = t.description if len(t.description) <= 70 else t.description[:67] + "..."
+            print(f"L{t.difficulty}  {t.id:<{width}}  [{primary_group.get(t.id, '?'):<9}]  {desc}")
+        return
+
+    if args.export_task:
+        if args.export_task not in TASK_MAP:
+            parser.error(f"Unknown task ID: {args.export_task!r}. Available: {sorted(TASK_MAP)}")
+        dest = Path(args.export_dir) if args.export_dir else Path("exports") / args.export_task
+        try:
+            export_task(TASK_MAP[args.export_task], dest)
+        except FileExistsError as e:
+            parser.error(str(e))
+        print(f"Exported {args.export_task!r} to {dest}/  (see TASK.md and PROMPT.txt)")
+        return
+
+    if args.models is None:
+        parser.error("--models is required unless --export-task is given")
+
     if args.out is None:
         from datetime import datetime
         args.out = f"output/results-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
 
     # Accept comma-separated values in addition to space-separated, e.g.
     # --tasks "a,b,c" or --tasks a,b c  (any mix)
+    args.models = [m for tok in args.models for m in tok.split(",") if m]
     if args.tasks:
         args.tasks = [t for tok in args.tasks for t in tok.split(",") if t]
     if args.task_group:
@@ -367,7 +408,8 @@ def main() -> None:
 
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
-        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path, debug=args.debug)
+        llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path,
+                                            debug=args.debug, single_gpu_index=args.single_gpu)
 
     elif args.backend == "vllm":
         import shutil
@@ -455,9 +497,11 @@ def main() -> None:
         llama_server_bin=bin_path or None,
         models_dir=models_dir or None,
     )
+    # GPU VRAM is reported in MiB and is never exactly a round number (e.g. RTX 4090 = 24564 MiB,
+    # not 24576). Add 0.1 GB tolerance so 2× "24 GB" cards (49140 MiB = 47.99 GB) pass the 48 GB check.
     total_vram_gb: float = sum(
         g.get("vram_total_mb", 0) for g in (hw.get("gpu") or [])
-    ) / 1024.0
+    ) / 1024.0 + 0.1
 
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     results: list[dict] = []
@@ -669,8 +713,11 @@ def main() -> None:
             # llama-server silently caps ctx when VRAM is insufficient; subsequent
             # requests against the same server process hang or error. Force a clean
             # restart before the next task so needs_restart() picks it up.
-            if record.get("error_kind") == "CTX_TRUNCATED" and llama_manager is not None:
-                print(f"  [{args.backend}] CTX_TRUNCATED — stopping server for fresh restart on next task",
+            # Also restart after TOOL_ERROR: a timeout often means the server GPU
+            # kernel is frozen (process alive but unresponsive). Without a restart
+            # all subsequent tasks send to the hung server and also time out.
+            if record.get("error_kind") in ("CTX_TRUNCATED", "TOOL_ERROR") and llama_manager is not None:
+                print(f"  [{args.backend}] {record['error_kind']} — stopping server for fresh restart on next task",
                       flush=True)
                 llama_manager.stop()
 

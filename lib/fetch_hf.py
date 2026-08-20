@@ -137,7 +137,11 @@ def main() -> None:
 
     print()
     try:
-        from huggingface_hub import hf_hub_download
+        from huggingface_hub import hf_hub_download, repo_info
+        try:
+            from huggingface_hub.errors import RepositoryNotFoundError
+        except ImportError:
+            from huggingface_hub.utils import RepositoryNotFoundError
     except ImportError:
         print(
             "Error: huggingface_hub is not installed.\n"
@@ -147,8 +151,28 @@ def main() -> None:
         )
         sys.exit(1)
 
+    # Pre-check repos for existence before starting any downloads
+    gone: set[str] = set()
+    unique_repos = {cfg.hf_repo for cfg in to_download}
+    if len(unique_repos) > 1 or len(to_download) > 1:
+        print("Checking repos...")
+    for hf_repo in sorted(unique_repos):
+        try:
+            repo_info(hf_repo, repo_type="model")
+        except RepositoryNotFoundError:
+            gone.add(hf_repo)
+            print(f"  WARNING: repo not found (deleted or private): {hf_repo}", file=sys.stderr)
+            print(f"           Update or remove the hf: line in your model file.", file=sys.stderr)
+        except Exception:
+            pass  # network error or auth issue — let the download attempt surface the real error
+    if gone:
+        print()
+
     failed: list[tuple[ModelConfig, str]] = []
     for cfg in to_download:
+        if cfg.hf_repo in gone:
+            failed.append((cfg, f"Repository not found (deleted?): {cfg.hf_repo}"))
+            continue
         shards = _all_shard_names(cfg.gguf_file)
         print(f"[{cfg.ollama_name}]  {cfg.hf_repo} / {cfg.gguf_file}"
               + (f"  (+{len(shards)-1} more parts)" if len(shards) > 1 else ""))

@@ -163,8 +163,8 @@ if command -v dotnet &>/dev/null; then
   DOTNET_VER=$(dotnet --version 2>&1)
   ok "dotnet $DOTNET_VER"
   DOTNET_MAJOR=$(echo "$DOTNET_VER" | cut -d. -f1)
-  if [[ "$DOTNET_MAJOR" -lt 8 ]]; then
-    warn ".NET $DOTNET_VER — .NET 8+ required by the dotnet_sas task"
+  if [[ "$DOTNET_MAJOR" -lt 9 ]]; then
+    warn ".NET $DOTNET_VER — .NET 9+ required by the dotnet_sas task"
   fi
 else
   fail "dotnet not found — https://dotnet.microsoft.com/download"

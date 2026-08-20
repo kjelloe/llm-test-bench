@@ -29,4 +29,5 @@ llama3.3:70b  Llama-3.3-70B-Instruct-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1
 # Fully GPU-resident here — unlike 24 GB (hybrid, n_cpu_moe=35) and 32 GB (hybrid, n_cpu_moe=20).
 # max_ctx=32768: at q8_0 KV this stays within ~4 GB; raise cautiously if no OOM.
 # If OOM, try Q3_K_M GGUF (~50 GB) from ggml-org/gpt-oss-120b-GGUF — frees ~14 GB for KV.
+# MULTIHOP: chain_5 PASS (75 tok/s), cross_5 PASS (67 tok/s). Full 5/5 multihop (confirmed 2026-08-15 on 3×24 GB; same GGUF).
 gpt-oss:120b  gpt-oss-120b-mxfp4-00001-of-00003.gguf  ngl=999,no_mmap,tensor_split=1|1,mlock,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:ggml-org/gpt-oss-120b-GGUF  # 3-part model; fully GPU-resident on 64 GB

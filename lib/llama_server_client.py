@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import os
-import signal
+import socket
 import subprocess
 import time
 import urllib.error
@@ -36,62 +36,28 @@ _BASE_URL = f"http://127.0.0.1:{_PORT}"
 _HEALTH_URL = f"{_BASE_URL}/health"
 
 
-def _kill_port_occupant(port: int, timeout: int = 10) -> None:
-    """Kill any process already listening on *port* so we can bind it cleanly.
-
-    Uses /proc/net/tcp (Linux-only) to find the PID, then sends SIGTERM followed
-    by SIGKILL if the process hasn't exited within *timeout* seconds.
-    """
-    hex_port = f"{port:04X}"
-    try:
-        tcp_data = Path("/proc/net/tcp").read_text()
-    except OSError:
-        return  # not Linux — skip
-    pid: int | None = None
-    for line in tcp_data.splitlines()[1:]:
-        parts = line.split()
-        if len(parts) < 10:
-            continue
-        local_addr = parts[1]
-        inode = parts[9]
-        if local_addr.endswith(f":{hex_port}"):
-            # find the PID that owns this inode via /proc/<pid>/fd symlinks
-            inode_target = f"socket:[{inode}]"
+def _wait_port_free(port: int, timeout: float = 8.0) -> None:
+    """Block until the TCP port is no longer in use (or timeout expires)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.1)
             try:
-                for fd_path in Path("/proc").glob("*/fd/*"):
-                    try:
-                        if os.readlink(str(fd_path)) == inode_target:
-                            pid = int(fd_path.parts[2])
-                            break
-                    except (OSError, ValueError):
-                        continue
-            except Exception:
-                pass
-            break
-    if pid is None:
-        return
-    try:
-        os.kill(pid, signal.SIGTERM)
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            try:
-                os.kill(pid, 0)  # probe: raises if process is gone
-            except ProcessLookupError:
-                return
-            time.sleep(0.5)
-        os.kill(pid, signal.SIGKILL)
-    except (ProcessLookupError, PermissionError):
-        pass
+                s.connect(("127.0.0.1", port))
+            except (ConnectionRefusedError, socket.timeout, OSError):
+                return  # port is free
+        time.sleep(0.3)
 
 
 class LlamaServerManager:
     """Manages a single llama-server subprocess for the duration of a benchmark run."""
 
     def __init__(self, models_dir: str, bin_path: str = "llama-server",
-                 debug: bool = False) -> None:
+                 debug: bool = False, single_gpu_index: int = -1) -> None:
         self.models_dir = Path(models_dir)
         self.bin_path = bin_path
         self.debug = debug
+        self.single_gpu_index = single_gpu_index
         self._proc: subprocess.Popen | None = None
         self._current_model: str | None = None
         self._current_ctx: int = 0
@@ -134,6 +100,7 @@ class LlamaServerManager:
         self._proc = None
         self._current_model = None
         self._current_ctx = 0
+        _wait_port_free(_PORT)
 
     def _start(self, cfg: ModelConfig, ctx_size: int,
                num_threads: int | None = None, startup_timeout: int = 600) -> None:
@@ -156,6 +123,9 @@ class LlamaServerManager:
         if num_threads and num_threads > 0:
             cmd.extend(["--threads", str(num_threads)])
         for key, val in cfg.params.items():
+            if self.single_gpu_index >= 0 and key == "tensor_split":
+                # tensor_split is meaningless (and would error) when only one GPU is visible
+                continue
             cli_key = _PARAM_NAME_MAP.get(key, key.replace("_", "-"))
             flag = "--" + cli_key
             if val is True:
@@ -167,14 +137,19 @@ class LlamaServerManager:
                 # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
                 cmd.extend([flag, str(val).replace("|", ",")])
 
-        # Evict any stale llama-server (or other process) already on our port.
-        # Without this, _wait_ready() may get a health-OK from the wrong server.
-        _kill_port_occupant(_PORT)
+        # single_gpu_index: pin the subprocess to one CUDA device.
+        # CUDA_VISIBLE_DEVICES is already exported by run.sh so this is redundant for the
+        # common path, but setting it explicitly here keeps llama-server correct even when
+        # bench.py is called directly without run.sh.
+        env = None
+        if self.single_gpu_index >= 0:
+            env = dict(os.environ)
+            env["CUDA_VISIBLE_DEVICES"] = str(self.single_gpu_index)
 
         # debug=True: inherit terminal so output streams live; useful for startup diagnosis.
         # debug=False: capture stderr so it can be shown on crash/timeout.
         stderr = None if self.debug else subprocess.PIPE
-        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr)
+        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr, env=env)
         self._current_model = cfg.ollama_name
         self._current_ctx = ctx_size
         try:
@@ -228,10 +203,17 @@ def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
     prompt_tokens      = usage.get("prompt_tokens", 0)
     completion_tokens  = usage.get("completion_tokens", 0)
 
-    timings      = body.get("timings") or {}
-    predicted_ms = timings.get("predicted_ms")
-    prompt_ms    = timings.get("prompt_ms")
-    if predicted_ms is not None and predicted_ms > 0:
+    timings         = body.get("timings") or {}
+    predicted_ms    = timings.get("predicted_ms")
+    predicted_per_s = timings.get("predicted_per_second")
+    prompt_ms       = timings.get("prompt_ms")
+    # Prefer predicted_per_second (server-native tok/s) because predicted_ms can be
+    # 0.0 for very short generations during long prefill, which causes a spurious
+    # fallback to wall-clock time and misleadingly low rates on context tasks.
+    if predicted_per_s and predicted_per_s > 0 and completion_tokens > 0:
+        eval_duration_ns        = int(completion_tokens / predicted_per_s * 1e9)
+        prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
+    elif predicted_ms is not None and predicted_ms > 0:
         eval_duration_ns        = int(predicted_ms * 1e6)
         prompt_eval_duration_ns = int((prompt_ms or 0) * 1e6)
     else:

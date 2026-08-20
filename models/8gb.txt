@@ -1,0 +1,49 @@
+# 8 GB VRAM model set — RTX 4060 Ti 8GB, RTX 3060 12GB (8 GB effective), etc.
+# Target: models whose weights fit in ≤6 GB, leaving ≥2 GB for KV cache.
+#
+# Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
+#   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
+#   params     comma-separated llama-server flags
+#   hf:        HuggingFace repo for fetch-hf.sh download helper
+#
+# Context ceiling: 8 GB cards are very VRAM-constrained.
+# - 6 GB model (e.g. mellum2) leaves ~2 GB for KV → max ~16–32k tokens at q8_0 KV
+# - 4.5 GB model (e.g. 7B Q4) leaves ~3.5 GB for KV → max ~32–48k tokens at q8_0 KV
+# context_64k+ will CTX_TRUNCATED on real 8 GB hardware for all models in this file.
+# The max_ctx values here are set for 8 GB headroom.
+#
+# Speed index (speeds estimated for RTX 4060 Ti 8GB; actual varies by GPU bandwidth):
+# qwen2.5-coder:7b     # ~60-80 tok/s  dense 7B Q4_K_M (~4.5 GB); untested — natural baseline
+# mellum2:12b-thinking # *254 tok/s  MoE A2.5B active (~6.5 GB MXFP4); 20/30 eligible, Skill L1; ctx≤32k
+# Requires Ampere+ (sm_86+) for MXFP4 format — RTX 30/40 series only, not RTX 20 series or older.
+#
+# Confirmed data (all runs on RTX 4090 24GB, single GPU — quality data is portable; speed is not):
+# mellum2:12b-thinking: CONFIRMED 2026-06-26 full 33-task: 20/33 at 254.1 tok/s; Skill L1.
+#   CODING (13/19): PASS: python_safe_div, dotnet_sas, node_csv_parser, python_lru_cache, python_lfu_cache,
+#     python_minheap (TRUNCATED), node_memoize_bug, python_ledger_bug, python_expr_eval,
+#     python_tokenizer, python_merge_intervals, awk_csv_stats, java_word_freq.
+#   CODING FAIL: csv_nordic_property (L3), node_slugify (L2), python_multifile_rename (L2),
+#     node_debounce (L3), python_dijkstra (L5), python_hashmap (L5 — NO_BLOCKS TRUNCATED at 12000 tokens;
+#     thinking budget entirely consumed by reasoning, no BEGIN_FILE emitted).
+#   PARA (2/4 stepped, fail from-scratch): PASS node_para_core (L3), node_para_turret (L4 TRUNCATED).
+#     FAIL node_para_entities (L5), node_para_combat (L6), node_paratrooper (L6 universal wall).
+#     Surprising: node_para_core PASSES where qwen2.5-coder:32b-q4 FAILS.
+#   CONTEXT: PASS 8k/16k/32k; SKIPPED_CTX 64k/128k/256k (max_ctx=32768 hard cap).
+#   MULTIHOP: PASS multihop_forward + distractor_notes; FAIL multihop_reverse.
+#   SKILL L1: node_slugify (L2) TESTS_STILL_FAIL → consecutive chain breaks before L2 completes.
+#   python_hashmap is a permanent ceiling for thinking models — budget exhaustion at any token count.
+# qwen2.5-coder:7b: UNTESTED on this hardware.
+
+# ── 7B dense — lowest weight, best context headroom ──────────────────────────
+# qwen2.5-coder:7b: Q4_K_M (~4.5 GB); leaves ~3.5 GB KV on 8 GB → max_ctx=32768 comfortable.
+# Coding-focused fine-tune of Qwen2.5 7B. Not tested on this benchmark harness.
+qwen2.5-coder:7b  Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-7B-Instruct-GGUF
+
+# ── 12B MoE MXFP4 — fastest 8 GB option ──────────────────────────────────────
+# mellum2:12b-thinking: MXFP4 MoE A2.5B active (~6.5 GB); leaves ~1.5 GB KV on 8 GB.
+# CONFIRMED 2026-06-26: 20/30 eligible at 254.1 tok/s; Skill L1 (node_slugify L2 fails).
+# Context ceiling 32k — SKIPPED_CTX at 64k+ (max=32768). On real 8 GB: ~1.5 GB KV → max_ctx=16384.
+# f16 KV (MoE KV per token is small — only active layers contribute). Requires Ampere+ (MXFP4).
+# python_hashmap is a hard ceiling for thinking models — 12000-token budget entirely consumed
+# by reasoning; never emits BEGIN_FILE. Do not increase num_predict to fix this.
+mellum2:12b-thinking  Mellum2-12B-A2.5B-Thinking-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:JetBrains/Mellum2-12B-A2.5B-Thinking-GGUF-MXFP4_MOE

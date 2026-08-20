@@ -51,7 +51,7 @@ NVCC_BIN=""
 # The Ubuntu 'nvidia-cuda-toolkit' apt package installs an old nvcc at /usr/bin/nvcc
 # (CUDA 12.0) that is incompatible with GCC 13. The proper toolkit lives under
 # /usr/local/cuda-X.Y and is symlinked via /usr/local/cuda.
-for _cuda_dir in $(ls -d /usr/local/cuda-[0-9]* 2>/dev/null | sort -V -r) /usr/local/cuda; do
+for _cuda_dir in $(ls -d /usr/local/cuda-[0-9]* 2>/dev/null | sort -V -r || true) /usr/local/cuda; do
     if [[ -x "$_cuda_dir/bin/nvcc" ]]; then
         CUDA_HOME="$(realpath "$_cuda_dir")"
         NVCC_BIN="$CUDA_HOME/bin/nvcc"
@@ -65,7 +65,7 @@ if [[ -z "$NVCC_BIN" ]] && command -v nvcc &>/dev/null; then
 fi
 
 if [[ -n "$NVCC_BIN" ]]; then
-    CUDA_VER=$("$NVCC_BIN" --version 2>/dev/null | grep -oP 'release \K[0-9]+\.[0-9]+' | head -1)
+    CUDA_VER=$("$NVCC_BIN" --version 2>/dev/null | grep -oP 'release \K[0-9]+\.[0-9]+' | head -1 || true)
 fi
 
 # Fall back to version file
@@ -78,13 +78,54 @@ if [[ -z "$CUDA_VER" && -f /usr/local/cuda/version.txt ]]; then
 fi
 # Fall back to nvidia-smi
 if [[ -z "$CUDA_VER" ]] && command -v nvidia-smi &>/dev/null; then
-    CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+' | head -1)
+    CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+' | head -1 || true)
 fi
 
 if [[ -z "$CUDA_VER" ]]; then
-    fail "Could not detect CUDA version. Is the CUDA toolkit installed?"
-    fail "  Install: https://developer.nvidia.com/cuda-downloads"
-    exit 1
+    warn "CUDA toolkit (nvcc) not found."
+
+    # On WSL2 the GPU driver is provided by Windows; check it is accessible before
+    # offering to install the toolkit, since without it the install would be pointless.
+    if command -v nvidia-smi &>/dev/null; then
+        if nvidia-smi &>/dev/null; then
+            _smi_cuda=$(nvidia-smi 2>/dev/null | grep -oP 'CUDA Version: \K[0-9.]+' || true)
+            info "GPU driver OK (nvidia-smi reports CUDA ${_smi_cuda:-unknown})"
+        else
+            fail "nvidia-smi found but failed — GPU driver may not be set up for WSL2."
+            fail "  See: https://docs.nvidia.com/cuda/wsl-user-guide/"
+            exit 1
+        fi
+    else
+        warn "nvidia-smi not found — continuing anyway (non-WSL2 install may still work)."
+    fi
+
+    echo
+    info "Install nvidia-cuda-toolkit from Ubuntu's repo? (~2 GB download)"
+    read -r -p "  [y/N] " _do_install_cuda
+    if [[ "${_do_install_cuda,,}" != "y" ]]; then
+        fail "Cannot build without CUDA toolkit."
+        fail "  Manual install: https://developer.nvidia.com/cuda-downloads"
+        exit 1
+    fi
+
+    info "Installing nvidia-cuda-toolkit..."
+    if [[ "$EUID" -ne 0 ]]; then
+        sudo apt-get install -y nvidia-cuda-toolkit
+    else
+        apt-get install -y nvidia-cuda-toolkit
+    fi
+
+    # nvidia-cuda-toolkit installs nvcc to /usr/bin/nvcc; re-detect from PATH.
+    NVCC_BIN="$(command -v nvcc 2>/dev/null || true)"
+    if [[ -n "$NVCC_BIN" ]]; then
+        CUDA_VER=$("$NVCC_BIN" --version 2>/dev/null | grep -oP 'release \K[0-9]+\.[0-9]+' | head -1 || true)
+    fi
+    if [[ -z "$CUDA_VER" ]]; then
+        fail "nvidia-cuda-toolkit installed but nvcc still not detected."
+        fail "  Try opening a new terminal and re-running."
+        exit 1
+    fi
+    ok "CUDA toolkit installed: $CUDA_VER"
 fi
 
 CUDA_MAJOR=$(echo "$CUDA_VER" | cut -d. -f1)
@@ -98,38 +139,44 @@ if [[ -n "$CUDA_HOME" ]]; then
     export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
 
-# Detect GPU compute capability to decide how strict the CUDA version check is.
-GPU_SM=""
+# Detect all GPU compute capabilities. On mixed systems (e.g. RTX 4090 + RTX 5060 Ti)
+# cmake would otherwise try to compile for every detected architecture, including
+# Blackwell (sm_120+) which requires CUDA 12.8 and hard-fails with older nvcc.
+GPU_SMS=()
 if command -v nvidia-smi &>/dev/null; then
-    GPU_SM=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '.')
+    while IFS= read -r _cap; do
+        [[ -n "$_cap" ]] && GPU_SMS+=("$(echo "$_cap" | tr -d '.')")
+    done < <(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null || true)
 fi
-GPU_SM_MAJOR=$(echo "${GPU_SM:-0}" | cut -c1)
 
-# sm_120+ is Blackwell (RTX 5000 series) — requires CUDA 12.8, nvcc will hard-fail otherwise.
-# sm_89 and below is supported by CUDA 12.0+.
-MIN_MAJOR=12; MIN_MINOR=8
-CUDA_TOO_OLD=$(( CUDA_MAJOR < MIN_MAJOR || (CUDA_MAJOR == MIN_MAJOR && CUDA_MINOR < MIN_MINOR) ))
-
-if (( CUDA_TOO_OLD )); then
-    if (( GPU_SM_MAJOR >= 12 )); then
-        _reason="Blackwell GPU (sm_${GPU_SM}) requires CUDA 12.8+ — nvcc will fail with 'Unsupported gpu architecture compute_${GPU_SM}'"
+# Split into GPUs the current CUDA can handle vs. Blackwell (sm_120+) that need 12.8.
+SUPPORTED_SMS=()
+BLACKWELL_SMS=()
+CUDA_HAS_BLACKWELL_SUPPORT=$(( CUDA_MAJOR > 12 || (CUDA_MAJOR == 12 && CUDA_MINOR >= 8) ))
+for _sm in "${GPU_SMS[@]}"; do
+    if (( _sm >= 120 )) && (( ! CUDA_HAS_BLACKWELL_SUPPORT )); then
+        BLACKWELL_SMS+=("$_sm")
     else
-        _reason="CUDA ${MIN_MAJOR}.${MIN_MINOR}+ is required to build llama.cpp with CUDA support"
+        SUPPORTED_SMS+=("$_sm")
     fi
-    fail "CUDA $CUDA_VER is too old. $_reason"
-    fail ""
-    fail "  Upgrade CUDA toolkit on Ubuntu 24.04:"
-    fail "    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb"
-    fail "    sudo dpkg -i cuda-keyring_1.1-1_all.deb"
-    fail "    sudo apt-get update && sudo apt-get install cuda-toolkit-12-8"
-    fail "    export PATH=/usr/local/cuda-12.8/bin:\$PATH"
-    fail "    export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:\$LD_LIBRARY_PATH"
-    fail "    nvcc --version   # verify"
-    fail ""
-    fail "  For other Ubuntu versions replace 'ubuntu2404' with e.g. 'ubuntu2204'."
+done
+
+if [[ ${#GPU_SMS[@]} -gt 0 ]]; then
+    ok "GPUs detected: ${GPU_SMS[*]/#/sm_}"
+fi
+
+if [[ ${#BLACKWELL_SMS[@]} -gt 0 ]]; then
+    warn "Blackwell GPU(s) (sm_${BLACKWELL_SMS[*]}) excluded — CUDA $CUDA_VER < 12.8."
+    warn "  To enable RTX 5000-series GPUs, install CUDA 12.8+:"
+    warn "    sudo apt-get install cuda-toolkit-12-8   # if NVIDIA repo is configured"
+    warn "    or: https://developer.nvidia.com/cuda-downloads"
+fi
+
+if [[ ${#SUPPORTED_SMS[@]} -eq 0 ]]; then
+    fail "No GPUs supported by CUDA $CUDA_VER. All detected GPUs require CUDA 12.8+."
+    fail "  Install CUDA 12.8: https://developer.nvidia.com/cuda-downloads"
     exit 1
 fi
-[[ -n "$GPU_SM" ]] && ok "GPU compute capability: sm_${GPU_SM}"
 
 # ── 3. Source repo ────────────────────────────────────────────────────────────
 section "Source"
@@ -200,8 +247,16 @@ fi
 # ── 6. CMake build ────────────────────────────────────────────────────────────
 section "Build"
 JOBS=$(nproc)
+# Build for supported GPUs. Omit the -real suffix so cmake also emits PTX alongside
+# native code; the driver then JIT-compiles it for any newer GPU at runtime (e.g.
+# a Blackwell card alongside the primary sm_89 GPU).
+CUDA_ARCH_FLAG=""
+if [[ ${#SUPPORTED_SMS[@]} -gt 0 ]]; then
+    _arch_list=$(IFS=';'; echo "${SUPPORTED_SMS[*]}")
+    CUDA_ARCH_FLAG="-DCMAKE_CUDA_ARCHITECTURES=${_arch_list}"
+fi
 info "Build dir : $BUILD_DIR"
-info "Flags     : -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release${NVCC_BIN:+ -DCMAKE_CUDA_COMPILER=$NVCC_BIN}"
+info "Flags     : -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release${NVCC_BIN:+ -DCMAKE_CUDA_COMPILER=$NVCC_BIN}${CUDA_ARCH_FLAG:+ $CUDA_ARCH_FLAG}"
 info "Cores     : $JOBS"
 echo
 
@@ -211,7 +266,8 @@ cmake \
     -DGGML_CUDA=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
-    ${NVCC_BIN:+-DCMAKE_CUDA_COMPILER="$NVCC_BIN"}
+    ${NVCC_BIN:+-DCMAKE_CUDA_COMPILER="$NVCC_BIN"} \
+    ${CUDA_ARCH_FLAG:+$CUDA_ARCH_FLAG}
 
 echo
 cmake --build "$BUILD_DIR" --config Release -j"$JOBS"

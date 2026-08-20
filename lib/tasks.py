@@ -69,6 +69,58 @@ def prepare_workdir(task: Task) -> Path:
     return tmp
 
 
+# Files present in task_data/ that must never reach an export — human-only reference
+# solutions or generated cache junk from a prior local test run.
+_EXPORT_EXCLUDE_GLOBS = ("*.reference.*", ".pytest_cache", "__pycache__", ".git", "node_modules")
+
+
+def export_task(task: Task, dest_dir: Path) -> None:
+    """Write a self-contained, shareable copy of `task` to `dest_dir`.
+
+    Includes every file needed to run task.setup_cmd / task.test_cmd (matching what
+    prepare_workdir gives the harness itself), minus human-only reference solutions.
+    Also writes TASK.md (goal + editable/context files + how to check your work) and
+    PROMPT.txt (the exact prompt text the harness sends to a model, for chat-only allies).
+    """
+    if dest_dir.exists() and any(dest_dir.iterdir()):
+        raise FileExistsError(f"{dest_dir} already exists and is not empty")
+
+    src = TASK_DATA_DIR / task.subdir
+    shutil.copytree(src, dest_dir, dirs_exist_ok=True, ignore=shutil.ignore_patterns(*_EXPORT_EXCLUDE_GLOBS))
+
+    editable_list = "\n".join(f"- `{f}`" for f in task.editable_files)
+    context_list = "\n".join(f"- `{f}`" for f in task.context_files) or "(none)"
+    setup_line = f"\n**Setup:** `{' '.join(task.setup_cmd)}`\n" if task.setup_cmd else ""
+    task_md = f"""# {task.id}
+
+**Difficulty:** L{task.difficulty}
+
+## Goal
+
+{task.description}
+
+## Files you may edit
+
+{editable_list}
+
+## Context files (read-only — do not edit)
+
+{context_list}
+{setup_line}
+## Check your work
+
+```
+{" ".join(task.test_cmd)}
+```
+
+All tests must pass. `PROMPT.txt` in this directory is the exact prompt the benchmark harness
+sends to a model for this task — useful if your coding assistant works by chat/paste rather
+than by reading files directly from this directory.
+"""
+    (dest_dir / "TASK.md").write_text(task_md, encoding="utf-8")
+    (dest_dir / "PROMPT.txt").write_text(build_prompt(task, dest_dir), encoding="utf-8")
+
+
 def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
     try:
         r = subprocess.run(
@@ -676,7 +728,7 @@ CSV_NORDIC_PROPERTY = Task(
     context_files=["data_sample.csv", "test_solution.py"],
     test_cmd=["python3", "-m", "pytest", "test_solution.py", "-v", "--tb=short"],
     test_timeout=120,
-    num_ctx=16384,      # prompt alone is ~6400 tokens; 8192 default leaves only ~1700 for generation
+    num_ctx=32768,      # prompt ~6400 tokens; min_predict=20000 needs 26400 total — exceeds old 16384
     min_predict=20000,  # qwen3.5:35b exhausts 12000 reasoning tokens; raised from 12000
     model_timeout=600,  # cold-start + ~12000 token generation exceeds run.sh's 300s default
 )
@@ -749,6 +801,137 @@ JAVA_WORD_FREQ = Task(
     min_predict=8000,   # thinking models exhaust 400-token default in reasoning
 )
 
+PYTHON_CONFIG_LOADER = Task(
+    id="python_config_loader",
+    difficulty=2,
+    description=(
+        "load_config() in config.py reads APP_HOST, APP_PORT, APP_DEBUG, APP_MAX_CONN, and APP_NAME "
+        "from environment variables with typed defaults. It has two bugs: "
+        "(1) string values are not stripped of leading/trailing whitespace before use or conversion, "
+        "so APP_PORT='  9000  ' causes a ValueError in int(); "
+        "(2) an environment variable explicitly set to an empty string is not treated as absent — "
+        "the caller's default is ignored and the empty string is used instead. "
+        "Fix config.py so all tests pass."
+    ),
+    subdir="python_config_loader",
+    editable_files=["config.py"],
+    context_files=["tests/test_config_loader.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=8000,
+)
+
+BASH_PREFLIGHT = Task(
+    id="bash_preflight",
+    difficulty=2,
+    description=(
+        "preflight.sh checks that required commands (git, python3, curl) are on PATH "
+        "and that required environment variables (DATABASE_URL, APP_SECRET) are set and non-empty. "
+        "It has two bugs: "
+        "(1) it always prints 'OK' even when checks fail; "
+        "(2) it always exits 0 regardless of whether any checks failed. "
+        "Fix preflight.sh so it prints 'OK' and exits 0 only when all checks pass, "
+        "and exits 1 with MISSING_VAR / MISSING_CMD messages to stderr when any check fails."
+    ),
+    subdir="bash_preflight",
+    editable_files=["preflight.sh"],
+    context_files=["tests/test_preflight.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=30,
+    min_predict=8000,
+)
+
+NODE_EXPRESS_VALIDATION = Task(
+    id="node_express_validation",
+    difficulty=3,
+    description=(
+        "The POST /items route in src/router.js has four bugs: "
+        "(1) returns HTTP 200 instead of 201 on success; "
+        "(2) does not validate that price is a number (accepts strings like 'free'); "
+        "(3) does not validate that price is positive (accepts zero and negative values); "
+        "(4) does not reject whitespace-only names (accepts '   ' as a valid name). "
+        "The stored item's name should be the trimmed value. "
+        "Fix src/router.js so all tests pass. Do not modify src/app.js, tests/router.test.js, or package.json."
+    ),
+    subdir="node_express_validation",
+    editable_files=["src/router.js"],
+    context_files=["src/app.js", "tests/router.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/router.test.js"],
+    test_timeout=30,
+    setup_cmd=["npm", "install", "--prefer-offline"],
+    setup_timeout=120,
+    min_predict=8000,
+)
+
+PYTHON_FASTAPI_ENDPOINT = Task(
+    id="python_fastapi_endpoint",
+    difficulty=3,
+    description=(
+        "The products API in products.py has three bugs: "
+        "(1) POST /products returns HTTP 200 instead of 201 (missing status_code=201 on the decorator); "
+        "(2) GET /products/{product_id} returns None for missing IDs causing a 500 — it should raise HTTPException(404); "
+        "(3) POST /products accepts zero, negative, and whitespace-only names — "
+        "price must be > 0 and name must be non-blank after stripping whitespace. "
+        "Use Pydantic field constraints / validators for price and name. "
+        "Fix products.py so all tests pass."
+    ),
+    subdir="python_fastapi_endpoint",
+    editable_files=["products.py"],
+    context_files=["tests/test_products.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short", "-W", "ignore::DeprecationWarning"],
+    test_timeout=30,
+    setup_cmd=["python3", "-m", "pip", "install", "-q", "fastapi", "httpx"],
+    setup_timeout=120,
+    min_predict=8000,
+)
+
+MULTIHOP_CHAIN_5 = Task(
+    id="multihop_chain_5",
+    difficulty=4,
+    description=(
+        "A configuration reference document is provided as context. "
+        "It defines a hierarchy of named profiles; each profile may declare a 'parent' profile "
+        "and can override any key from its ancestors. "
+        "The effective value of a key for a profile is the first definition found "
+        "walking from that profile up through its parent chain to the root. "
+        "Find the effective value of 'retention_days' for the profile 'rtfd-prod-instance-07' "
+        "and write that numeric value — and nothing else — to answer.txt."
+    ),
+    subdir="multihop_chain_5",
+    editable_files=["answer.txt"],
+    context_files=["documents/config_reference.txt"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=8192,
+    min_predict=8192,
+)
+
+MULTIHOP_CROSS_5 = Task(
+    id="multihop_cross_5",
+    difficulty=4,
+    description=(
+        "Five reference documents are provided as context: a Service Registry, "
+        "a Team Directory, an Office Reference, a Criticality Classification, "
+        "and an Escalation Policy. "
+        "Use all five documents to determine the primary oncall contact for P1 incidents "
+        "affecting the 'inventory-sync' service. "
+        "Write that contact address — and nothing else — to answer.txt."
+    ),
+    subdir="multihop_cross_5",
+    editable_files=["answer.txt"],
+    context_files=[
+        "documents/1_service_registry.txt",
+        "documents/2_team_directory.txt",
+        "documents/3_office_reference.txt",
+        "documents/4_criticality.txt",
+        "documents/5_escalation_policy.txt",
+    ],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=15,
+    num_ctx=8192,
+    min_predict=8192,
+)
+
 BUILTIN_TASKS: list[Task] = [
     CSV_NORDIC_PROPERTY,
     NODE_SLUGIFY,
@@ -769,6 +952,10 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_MERGE_INTERVALS,
     AWK_CSV_STATS,
     JAVA_WORD_FREQ,
+    PYTHON_CONFIG_LOADER,
+    BASH_PREFLIGHT,
+    NODE_EXPRESS_VALIDATION,
+    PYTHON_FASTAPI_ENDPOINT,
     NODE_PARATROOPER,
     NODE_PARA_CORE,
     NODE_PARA_TURRET,
@@ -781,6 +968,8 @@ BUILTIN_TASKS: list[Task] = [
     MULTIHOP_FORWARD,
     MULTIHOP_REVERSE,
     DISTRACTOR_NOTES,
+    MULTIHOP_CHAIN_5,
+    MULTIHOP_CROSS_5,
     CONTEXT_128K,
     CONTEXT_256K,
 ]
@@ -801,8 +990,16 @@ TASK_GROUPS: dict[str, list[str]] = {
     "l6": [
         "node_para_core", "node_para_turret", "node_para_entities", "node_para_combat",
     ],
+    "para": [
+        "node_para_core", "node_para_turret", "node_para_entities", "node_para_combat",
+    ],
     "l6_full": [
         "node_paratrooper",
+    ],
+    "spot": [
+        "python_safe_div", "node_slugify", "python_lru_cache", "csv_nordic_property",
+        "node_csv_parser", "python_tokenizer", "python_expr_eval", "python_hashmap",
+        "node_para_core", "node_paratrooper",
     ],
     "context": [
         "context_8k", "context_16k", "context_32k",
@@ -810,5 +1007,12 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "multihop": [
         "multihop_forward", "multihop_reverse", "distractor_notes",
+        "multihop_chain_5", "multihop_cross_5",
+    ],
+    "web": [
+        "python_config_loader",
+        "bash_preflight",
+        "node_express_validation",
+        "python_fastapi_endpoint",
     ],
 }

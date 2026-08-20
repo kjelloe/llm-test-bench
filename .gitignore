@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 .pytest_cache/
 output/
+/exports/
 .instance-id
 /task_data/node_slugify/node_modules/
 /task_data/node_slugify/package-lock.json
@@ -12,3 +13,5 @@ output/
 /task_data/dotnet_sas/tests/*/obj/
 *.log
 llama_models
+.gpu-mode
+/backup-to-NAS.sh

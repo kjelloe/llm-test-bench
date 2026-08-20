@@ -19,6 +19,23 @@ set -euo pipefail
 #   Alternatively pass --set-power-limit WATTS on the command line.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Console logging ───────────────────────────────────────────────────────────
+_LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$_LOG_DIR"
+_log_num=0
+for _f in "$_LOG_DIR"/compare-[0-9]*.log; do
+    [[ -f "$_f" ]] || continue
+    _n="${_f##*/compare-}"; _n="${_n%.log}"
+    [[ "$_n" =~ ^[0-9]+$ ]] && [[ "$_n" -gt "$_log_num" ]] && _log_num=$_n || true
+done
+_log_num=$(( _log_num + 1 ))
+_CMP_LOG="$_LOG_DIR/compare-$(printf '%02d' "$_log_num").log"
+exec > >(tee "$_CMP_LOG") 2>&1
+ls -t "$_LOG_DIR"/compare-[0-9]*.log 2>/dev/null | tail -n +11 | xargs -r rm -f
+ln -sf "$(basename "$_CMP_LOG")" "$_LOG_DIR/compare-latest.log"
+export BENCH_NO_LOG=1  # prevent run.sh from creating a redundant run-NN.log
+
 MODELS_DIR="$SCRIPT_DIR/models"
 STATS_FILE="$SCRIPT_DIR/output/compare-history.json"
 MODEL_TIMEOUT=1200
@@ -50,7 +67,7 @@ Extra options are forwarded to bench.py (run.sh --help for the full list).
   -h, --help                    show this help and exit
 
 Forwarded to bench.py (selection):
-  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop
+  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop | web
   --tasks TASK_ID [...]         explicit task subset
   --backend ollama|llama-server|vllm  inference backend (default: ollama)
   --num-predict INT             max output tokens (compare.sh default: 8000)

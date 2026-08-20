@@ -14,9 +14,13 @@ section() { echo; echo -e "${BOLD}── $* ──${NC}"; }
 hr()      { echo -e "${BOLD}════════════════════════════════════════${NC}"; }
 
 # ── Platform detection ────────────────────────────────────────────────────────
+IS_WSL=false
 case "$(uname -s)" in
   Darwin) PLATFORM=macos ;;
-  Linux)  PLATFORM=linux ;;
+  Linux)
+    PLATFORM=linux
+    grep -qi microsoft /proc/version 2>/dev/null && IS_WSL=true
+    ;;
   *)      PLATFORM=unknown ;;
 esac
 
@@ -57,11 +61,13 @@ echo "║  ollama-code-bench  installer        ║"
 echo "╚══════════════════════════════════════╝"
 echo -e "${NC}"
 echo "  Platform: $PLATFORM"
+[[ "$IS_WSL" == "true" ]] && echo "  WSL2 detected"
 [[ -n "$PKG_MGR" ]] && echo "  Package manager: $PKG_MGR"
 echo
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
+VENV="$SCRIPT_DIR/.venv"
 
 # ── 1. Python 3 ───────────────────────────────────────────────────────────────
 section "Python 3"
@@ -71,7 +77,7 @@ else
   fail "python3 not found"
   if ask "Install Python 3?"; then
     case "$PLATFORM-$PKG_MGR" in
-      linux-apt)    run_cmd "python3" sudo apt-get install -y python3 python3-pip ;;
+      linux-apt)    run_cmd "python3" sudo apt-get install -y python3 python3-pip python3-venv ;;
       linux-dnf)    run_cmd "python3" sudo dnf install -y python3 python3-pip ;;
       linux-pacman) run_cmd "python3" sudo pacman -S --noconfirm python python-pip ;;
       macos-*)
@@ -85,48 +91,61 @@ else
   fi
 fi
 
-# ── 2. pip + pytest ───────────────────────────────────────────────────────────
-section "pytest (Python test runner)"
-if python3 -m pytest --version &>/dev/null 2>&1; then
-  ok "pytest $(python3 -m pytest --version 2>&1 | awk '{print $NF}')"
-else
-  fail "pytest not installed"
+# ── 2. Python venv + dependencies ─────────────────────────────────────────────
+section "Python venv + dependencies (.venv)"
 
-  # Ensure pip is available before trying to use it
-  if ! python3 -m pip --version &>/dev/null 2>&1; then
-    warn "pip not found — attempting to install it first"
-    PIP_INSTALLED=false
-    case "$PLATFORM-$PKG_MGR" in
-      linux-apt)    run_cmd "python3-pip" sudo apt-get install -y python3-pip && PIP_INSTALLED=true ;;
-      linux-dnf)    run_cmd "python3-pip" sudo dnf install -y python3-pip && PIP_INSTALLED=true ;;
-      linux-pacman) run_cmd "python-pip"  sudo pacman -S --noconfirm python-pip && PIP_INSTALLED=true ;;
-      *)
-        info "Trying ensurepip as fallback…"
-        if python3 -m ensurepip --upgrade &>/dev/null 2>&1; then
-          ok "pip bootstrapped via ensurepip"
-          PIP_INSTALLED=true
-        else
-          fail "Could not install pip automatically — install it manually and re-run"
-        fi ;;
-    esac
-    # ensurepip fallback for apt/dnf/pacman if the package install failed
-    if [[ "$PIP_INSTALLED" == "false" ]] && python3 -m ensurepip --upgrade &>/dev/null 2>&1; then
-      ok "pip bootstrapped via ensurepip"
-      PIP_INSTALLED=true
-    fi
-  fi
-
-  if python3 -m pip --version &>/dev/null 2>&1; then
-    if ask "Install pytest via pip?"; then
-      run_cmd "pytest" python3 -m pip install --user pytest
-    fi
-  else
-    fail "pip still unavailable — cannot install pytest automatically"
-    info "Install pip manually, then run: python3 -m pip install --user pytest"
+# On Debian/Ubuntu, venv + ensurepip live in a separate package
+if [[ "$PLATFORM-$PKG_MGR" == "linux-apt" ]] && \
+   ! python3 -c "import ensurepip" &>/dev/null 2>&1; then
+  warn "python3-venv / ensurepip not available"
+  if ask "Install python3-venv?"; then
+    run_cmd "python3-venv" sudo apt-get install -y python3-venv
   fi
 fi
 
-# ── 3. Node.js + npm ──────────────────────────────────────────────────────────
+if [[ -d "$VENV" ]]; then
+  ok ".venv exists"
+else
+  fail ".venv not found — required by run.sh and bench.py"
+  if ask "Create Python virtual environment at .venv?"; then
+    run_cmd "python3 -m venv .venv" python3 -m venv "$VENV"
+  fi
+fi
+
+# Ensure pip is present in the venv — may be absent on Debian/Ubuntu without python3-pip
+if [[ -d "$VENV" ]] && [[ ! -x "$VENV/bin/pip" ]]; then
+  info "pip not found in .venv — bootstrapping via ensurepip…"
+  if "$VENV/bin/python" -m ensurepip --upgrade &>/dev/null 2>&1; then
+    ok "pip bootstrapped"
+  else
+    warn "ensurepip failed — install python3-pip and recreate the venv:"
+    info "  sudo apt-get install -y python3-pip && rm -rf .venv && python3 -m venv .venv"
+  fi
+fi
+
+if [[ -d "$VENV" ]]; then
+  if [[ -f "$SCRIPT_DIR/requirements.txt" ]]; then
+    if [[ ! -x "$VENV/bin/pip" ]]; then
+      warn "pip still not available in .venv — skipping requirements install"
+      info "Fix: sudo apt-get install -y python3-pip && rm -rf .venv && python3 -m venv .venv"
+    elif ask "Install/update Python dependencies from requirements.txt into .venv?"; then
+      run_cmd "pip install -r requirements.txt" \
+        "$VENV/bin/pip" install -r "$SCRIPT_DIR/requirements.txt"
+      if "$VENV/bin/python" -m pytest --version &>/dev/null 2>&1; then
+        ok "pytest $("$VENV/bin/python" -m pytest --version 2>&1 | awk '{print $NF}')  (in .venv)"
+      fi
+    fi
+  else
+    warn "requirements.txt not found — skipping pip install"
+  fi
+  info "To run tests: source .venv/bin/activate && python3 -m pytest tests/"
+  info "Or directly:  .venv/bin/python -m pytest tests/"
+else
+  warn "Skipping dependency install — .venv not available"
+  info "Create it manually: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"
+fi
+
+# ── 3. Node.js 20+ and npm ────────────────────────────────────────────────────
 section "Node.js 20+ and npm"
 NODE_OK=false
 if command -v node &>/dev/null; then
@@ -193,11 +212,34 @@ if [[ "$DOTNET_OK" == "false" ]]; then
       linux-apt)
         info "Adding Microsoft package feed…"
         # Works on Ubuntu 20.04+ / Debian 10+
-        if run_cmd "Microsoft feed" sudo bash -c \
-            "wget -qO- https://packages.microsoft.com/config/ubuntu/\$(lsb_release -rs)/packages-microsoft-prod.deb -O /tmp/mspkg.deb && dpkg -i /tmp/mspkg.deb"; then
-          sudo apt-get update -qq
-          run_cmd "dotnet-sdk-8.0" sudo apt-get install -y dotnet-sdk-8.0
-        fi ;;
+        sudo bash -c \
+          "wget -qO- https://packages.microsoft.com/config/ubuntu/\$(lsb_release -rs)/packages-microsoft-prod.deb -O /tmp/mspkg.deb && dpkg -i /tmp/mspkg.deb" \
+          &>/dev/null || true
+        sudo apt-get update -qq 2>/dev/null || true
+        _dotnet_installed=false
+        for _chan in dotnet-sdk-8.0 dotnet-sdk-9.0; do
+          if sudo apt-get install -y "$_chan" &>/dev/null 2>&1; then
+            ok "$_chan"
+            _dotnet_installed=true
+            break
+          fi
+        done
+        if [[ "$_dotnet_installed" == "false" ]]; then
+          warn "dotnet-sdk not available via apt (Ubuntu 26.04+ ships without it)"
+          if ask "Install .NET 9 via the official dotnet-install.sh script?"; then
+            if run_cmd "dotnet-install.sh" bash -c \
+                "curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 9.0 --install-dir \$HOME/.dotnet"; then
+              export PATH="$PATH:$HOME/.dotnet"
+              grep -qxF 'export PATH=$PATH:$HOME/.dotnet' "$HOME/.bashrc" 2>/dev/null || \
+                echo 'export PATH=$PATH:$HOME/.dotnet' >> "$HOME/.bashrc"
+              ok ".NET installed to \$HOME/.dotnet — PATH updated in ~/.bashrc"
+            fi
+          else
+            info "Manual install: curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 9.0"
+            info "Then add to ~/.bashrc: export PATH=\$PATH:\$HOME/.dotnet"
+          fi
+        fi
+        unset _dotnet_installed _chan ;;
       linux-dnf)
         run_cmd "dotnet" sudo dnf install -y dotnet-sdk-8.0 ;;
       macos-*)
@@ -213,8 +255,53 @@ if [[ "$DOTNET_OK" == "false" ]]; then
   fi
 fi
 
-# ── 5. Ollama ─────────────────────────────────────────────────────────────────
+# ── 5. Java 17+ ───────────────────────────────────────────────────────────────
+section "Java 17+ (required for java_* tasks)"
+JAVA_OK=false
+if command -v java &>/dev/null; then
+  JAVA_VER_STR=$(java -version 2>&1 | head -1)
+  JAVA_MAJOR=$(java -version 2>&1 | head -1 | sed 's/.*version "\([0-9]*\).*/\1/')
+  if [[ "$JAVA_MAJOR" -ge 17 ]]; then
+    ok "java  $JAVA_VER_STR"
+    if command -v javac &>/dev/null; then
+      ok "javac  $(javac -version 2>&1)"
+      JAVA_OK=true
+    else
+      warn "javac not found — install the JDK (not just JRE)"
+    fi
+  else
+    warn "java $JAVA_VER_STR — Java 17+ required"
+  fi
+fi
+
+if [[ "$JAVA_OK" == "false" ]]; then
+  if ask "Install Java 17 JDK?"; then
+    case "$PLATFORM-$PKG_MGR" in
+      linux-apt)    run_cmd "openjdk-17-jdk" sudo apt-get install -y openjdk-17-jdk ;;
+      linux-dnf)    run_cmd "java-17-openjdk-devel" sudo dnf install -y java-17-openjdk-devel ;;
+      linux-pacman) run_cmd "jdk-openjdk" sudo pacman -S --noconfirm jdk-openjdk ;;
+      macos-*)
+        if command -v brew &>/dev/null; then
+          run_cmd "openjdk@17" brew install openjdk@17
+          info "After install, link it:"
+          info "  sudo ln -sfn \$(brew --prefix)/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk"
+        else
+          fail "Homebrew not found — install from https://brew.sh then retry"
+        fi ;;
+      *)
+        fail "Cannot auto-install Java on this platform."
+        info "Download from: https://adoptium.net" ;;
+    esac
+  fi
+fi
+
+# ── 6. Ollama ─────────────────────────────────────────────────────────────────
 section "Ollama"
+if [[ "$IS_WSL" == "true" ]]; then
+  info "WSL2 detected — if Ollama is running on the Windows host, set OLLAMA_URL:"
+  info "  export OLLAMA_URL=http://\$(ip route show default | awk '/default/{print \$3}'):11434"
+  info "  (current OLLAMA_URL=$OLLAMA_URL)"
+fi
 OLLAMA_UP=false
 if curl -sf --max-time 3 "$OLLAMA_URL" &>/dev/null; then
   ok "Ollama running at $OLLAMA_URL"
@@ -242,6 +329,10 @@ else
     if ask "Install Ollama?"; then
       case "$PLATFORM" in
         linux)
+          if [[ "$PKG_MGR" == "apt" ]] && ! command -v zstd &>/dev/null; then
+            info "Installing zstd (required by Ollama installer)…"
+            sudo apt-get install -y zstd &>/dev/null || warn "zstd install failed — Ollama installer may fail"
+          fi
           info "Running official Ollama install script…"
           run_cmd "ollama" bash -c "curl -fsSL https://ollama.ai/install.sh | sh" ;;
         macos)
@@ -268,7 +359,7 @@ else
   fi
 fi
 
-# ── 6. Ollama models ──────────────────────────────────────────────────────────
+# ── 7. Ollama models ──────────────────────────────────────────────────────────
 section "Ollama models (for compare.sh)"
 MODELS_FILE="$SCRIPT_DIR/models/default.txt"
 REQUIRED_MODELS=()
@@ -314,9 +405,28 @@ else
   info "Then pull models:  ollama pull <model>"
 fi
 
-# ── 7. vLLM (optional — required only for --backend vllm) ────────────────────
+# ── 8. llama-server (optional — required only for --backend llama-server) ─────
+section "llama-server (optional)"
+_ls_bin="${LLAMA_SERVER_BIN:-$(command -v llama-server 2>/dev/null || true)}"
+if [[ -n "$_ls_bin" ]]; then
+  ok "llama-server found: $_ls_bin"
+  if [[ -n "${LLAMA_MODELS_DIR:-}" ]]; then
+    ok "LLAMA_MODELS_DIR=$LLAMA_MODELS_DIR"
+  else
+    warn "LLAMA_MODELS_DIR not set — add to your ~/.bashrc or ~/.zshrc:"
+    info "  export LLAMA_MODELS_DIR=/path/to/gguf/models"
+  fi
+else
+  warn "llama-server not on PATH — needed only for --backend llama-server"
+  info "Pre-built binaries: https://github.com/ggerganov/llama.cpp/releases"
+  info "After downloading, add to ~/.bashrc or ~/.zshrc:"
+  info "  export LLAMA_SERVER_BIN=/path/to/llama-server"
+  info "  export LLAMA_MODELS_DIR=/path/to/gguf/models"
+fi
+unset _ls_bin
+
+# ── 9. vLLM (optional — required only for --backend vllm) ────────────────────
 section "vLLM backend (optional)"
-VENV="$SCRIPT_DIR/.venv"
 if [[ -d "$VENV" ]] && "$VENV/bin/python" -c "import vllm" &>/dev/null 2>&1; then
     VLLM_VER=$("$VENV/bin/python" -c "import vllm; print(vllm.__version__)" 2>/dev/null || echo "unknown")
     ok "vllm $VLLM_VER  (in .venv)"
@@ -324,14 +434,32 @@ else
     warn "vllm not installed"
     info "Required only for --backend vllm (tensor-parallel inference, dual-GPU 70B models)"
     info "Installation is large: ~4–8 GB including CUDA libraries"
+    _py_minor=$(python3 -c "import sys; print(sys.version_info.minor)" 2>/dev/null || echo "0")
+    if [[ "$_py_minor" -ge 13 ]]; then
+      warn "Python 3.$_py_minor detected — vLLM currently supports Python 3.9–3.12 only"
+      info "vLLM will likely fail to install on Python 3.$_py_minor"
+      info "Install Python 3.12 and create the .venv with it:"
+      info "  python3.12 -m venv .venv && .venv/bin/pip install vllm"
+    fi
+    unset _py_minor
     if ask "Install vllm in .venv now?"; then
         if [[ ! -d "$VENV" ]]; then
-            fail ".venv not found — run ./run.sh once first to create it, then re-run install.sh"
-        else
-            # Install separately: vllm[gguf] extra is not present in all releases
-            if run_cmd "vllm" "$VENV/bin/pip" install vllm; then
-                run_cmd "gguf (for --load-format gguf)" "$VENV/bin/pip" install "gguf>=0.10.0"
+            warn ".venv not found — attempting to create it now"
+            run_cmd "python3 -m venv .venv" python3 -m venv "$VENV"
+        fi
+        if [[ -d "$VENV" ]]; then
+            if [[ ! -x "$VENV/bin/pip" ]]; then
+                fail ".venv/bin/pip not found — pip is missing from the venv"
+                info "Fix: $VENV/bin/python -m ensurepip --upgrade"
+                info "Then re-run install.sh to retry vllm installation"
+            else
+                # Install separately: vllm[gguf] extra is not present in all releases
+                if run_cmd "vllm" "$VENV/bin/pip" install vllm; then
+                    run_cmd "gguf (for --load-format gguf)" "$VENV/bin/pip" install "gguf>=0.10.0"
+                fi
             fi
+        else
+            fail "Cannot create .venv — install Python 3 first (section 1)"
         fi
     else
         info "Skip — to install later:"

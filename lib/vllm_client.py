@@ -34,7 +34,7 @@ _PARAM_NAME_MAP: dict[str, str] = {
 }
 
 # Params consumed by the harness; never forwarded to vllm serve
-_HARNESS_ONLY: set[str] = {"thinking", "max_ctx", "max_model_len"}
+_HARNESS_ONLY: set[str] = {"thinking", "max_ctx", "max_model_len", "gguf_load_format"}
 
 _PORT = 8090
 _BASE_URL = f"http://127.0.0.1:{_PORT}"
@@ -138,7 +138,11 @@ class VLLMManager:
             "--host", "0.0.0.0",
         ]
         if use_gguf:
-            cmd.extend(["--tokenizer", cfg.hf_repo, "--load-format", "gguf"])
+            # --quantization gguf is the patched MoE-GGUF path (replaces --load-format gguf
+            # for the fused-expert kernel fix). Falls back to --load-format gguf if the
+            # model file sets gguf_load_format=legacy in params.
+            load_flag = "--load-format" if cfg.params.get("gguf_load_format") == "legacy" else "--quantization"
+            cmd.extend(["--tokenizer", cfg.hf_repo, load_flag, "gguf"])
         for key, val in cfg.params.items():
             if key in _HARNESS_ONLY:
                 continue
@@ -188,13 +192,18 @@ class VLLMManager:
             self._current_ctx = 0
             raise
 
-    def _read_log(self, tail: int = 8000) -> str:
+    def _read_log(self, tail: int = 30000) -> str:
         if not self._log_path:
             return ""
         try:
             with open(self._log_path, errors="replace") as f:
                 content = f.read()
-            return content[-tail:] if len(content) > tail else content
+            if len(content) <= tail:
+                return content
+            # Show head + tail so the root-cause exception (near top of crash log)
+            # is visible alongside the propagation chain (at the bottom).
+            head = content[:4000]
+            return f"{head}\n...[{len(content) - tail - 4000} chars omitted]...\n{content[-tail:]}"
         except Exception:
             return ""
 

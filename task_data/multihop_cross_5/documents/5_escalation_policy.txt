@@ -1,0 +1,16 @@
+ESCALATION POLICY — P1 ONCALL CONTACTS
+(primary contact address per region and criticality tier)
+
+region_code    classification   primary_contact
+-----------    --------------   -----------------------------------------------
+EMEA-WEST      Standard         oncall-emea-w-std@corp.example
+EMEA-WEST      High             oncall-emea-w-high@corp.example
+EMEA-WEST      Critical         oncall-emea-w-crit@corp.example
+EMEA-NORTH     High             oncall-emea-n-high@corp.example
+EMEA-NORTH     Critical         oncall-emea-n-crit@corp.example
+EMEA-CENTRAL   High             oncall-emea-c-high@corp.example
+EMEA-CENTRAL   Critical         oncall-emea-c-crit@corp.example
+AMER-EAST      Standard         oncall-amer-e-std@corp.example
+AMER-EAST      High             oncall-amer-e-high@corp.example
+AMER-EAST      Critical         oncall-amer-e-crit@corp.example
+AMER-WEST      High             oncall-amer-w-high@corp.example

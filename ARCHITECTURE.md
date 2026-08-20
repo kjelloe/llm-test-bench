@@ -1,6 +1,6 @@
 ### Overview
 
-This repo contains a local, reproducible benchmark harness for evaluating LLMs served by **Ollama** (running locally, typically in WSL) across three capability dimensions:
+This repo contains a local, reproducible benchmark harness for evaluating LLMs served by **llama-server** (primary, spawned per-model via `LlamaServerManager`) or **Ollama** (secondary) across three capability dimensions:
 
 - **Coding (v1 — implemented):** fix broken code so deterministic tests pass.
 - **Context & retrieval (v1 — implemented):** find information in long documents; profile tok/s collapse at different context sizes; multi-hop cross-reference retrieval across document positions.
@@ -25,7 +25,8 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 install.sh                Interactive installer: checks and installs missing dependencies
-run.sh                    Venv setup + bench.py entrypoint
+run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip)
+gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU mode; writes .gpu-mode (gitignored)
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
 compare-results.sh        Merges two result JSONs and prints speed summary + full task table for backend comparison; thin wrapper for lib/compare_results.py
@@ -47,10 +48,13 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
+hwmonitor/
+  hwmonitor.py            Standalone hardware watchdog: polls GPU (nvidia-smi), CPU (/sys/class/thermal), RAM (/proc/meminfo) at configurable interval; WARN/CRIT on threshold breach; on CRIT sends SIGINT → SIGTERM to bench.py; run.sh starts this automatically in --quiet mode (WARN/CRIT to stderr, data to log only)
+  SPEC.md                 hwmonitor specification, threshold reference, CLI flags, integration notes
   history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
   statistics.py           Dataset builder: default mode (one row per model/backend), --summary (context speed profile: pass% + tok/s per context size with TRUNC/SKIP/FAIL codes and auto-dropped ctx_256k column), --detail (one row per task); --sort-by COLUMN [asc|desc] with run_date desc default; HF scout enrichment (hf_downloads, hf_gguf_gb) cross-referenced from hf-scout-state.json; new summary fields: slow, skipped_vram, skipped_ctx
   compare_results.py      Merges two result JSONs and prints speed summary + full task comparison table
-  fetch_hf.py             Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt
+  fetch_hf.py             Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; skips a model if its exact gguf_file already exists in $LLAMA_MODELS_DIR (no rename/collision handling). GOTCHA: any ad hoc `hf_hub_download(local_dir=...)` call outside this script (e.g. one-off manual downloads) has the same no-collision behavior and will silently delete/overwrite a same-named file mid-transfer if one already exists at that path — always download to a scratch dir, verify (size/SHA256), then `mv` into place; never point `local_dir` straight at a directory holding files worth keeping. Confirmed the hard way 2026-08-20 (see CLAUDE.md's qwen3.8:27b section) — recovered via a pinned HF revision + the `.metadata` sidecar's saved SHA256.
   search_hf.py            Searches HuggingFace Hub for GGUF files matching model names; suggests models/*.txt lines
   scout_hf.py             Scans HuggingFace Hub across curated coding/context model queries; saves state snapshot; diffs on re-run to report new, updated, and gone repos; VRAM fit labels (✓/~/✗) for 24 GB cards
   estimate_vram.py        VRAM scalability estimation table: reads anchor measurements from output/*.json, applies bandwidth-ratio heuristics to project tok/s at 16V/24V/2×16V/2×24V/2×32V tiers for both 8k and 128k context
@@ -84,11 +88,15 @@ task_data/
   python_hashmap/         hashmap.py (baseline), tests/test_hashmap.py
   python_tokenizer/       tokenizer.py (baseline), tests/test_tokenizer.py   — min_predict=12000  [state machine: ESCAPE→INIT bug; fix is ESCAPE→STRING]
   csv_nordic_property/    data.csv (5 000 rows × 103 cols, Nordic CSV), data_sample.csv (5-row sample for prompt), solution.py (skeleton), test_solution.py  — min_predict=12000  model_timeout=600  [code-gen from scratch: 10 data questions → answers.txt + quantile transform → output.csv]
+  python_config_loader/   config.py (baseline), tests/test_config_loader.py  — min_predict=8000  [L2 web: env-config loader; bugs: no whitespace-strip, empty-string doesn't fall back to default]
+  bash_preflight/         preflight.sh (baseline), tests/test_preflight.py  — min_predict=8000  [L2 web: bash prereq checker; bugs: always prints OK, always exits 0; tested via pytest subprocess]
+  node_express_validation/ src/app.js (context), src/router.js (baseline), tests/router.test.js, package.json  — setup: npm install  min_predict=8000  [L3 web: Express POST /items; bugs: wrong status 200→201, non-numeric price, negative price, whitespace-only name]
+  python_fastapi_endpoint/ products.py (baseline), tests/test_products.py  — setup: pip install fastapi httpx  min_predict=8000  [L3 web: FastAPI products API; bugs: POST returns 200, GET returns 500 for missing→404, no price/name validation]
   node_para_core/         src/game.js (stub), tests/game.test.js (7 tests), package.json  — min_predict=4000  [L6 step 1: constructor, processInput, tick, isOver, getResult, getState; seeded RNG]
   node_para_turret/       src/game.js (step-1 ref + stubs), tests/game.test.js (17 tests)  — min_predict=6000  [L6 step 2: _processInput turret rotation, _updateProjectiles physics; stub header requires "output complete file including DEFAULTS and mulberry32"]
   node_para_entities/     src/game.js (steps 1-2 ref + stubs), tests/game.test.js (29 tests)  — min_predict=10000  [L6 step 3: helicopters, paratroopers chute/freefall/landed, lose conditions]
   node_para_combat/       src/game.js (steps 1-3 ref + stubs), tests/game.test.js (40 tests)  — num_ctx=16384  min_predict=12000  [L6 step 4: jets, bombs, collision detection; prompt ≈9k tokens]
-  node_paratrooper/       src/game.js (stub with firing formula hint), src/game.reference.js (406-line reference, human-only — not in context_files), tests/game.test.js (40 tests)  — num_ctx=32768  min_predict=24000  [L6 full: implement entire Game class; use --task-group l6_full]
+  node_paratrooper/       src/game.js (stub with firing formula hint), src/game.reference.js (406-line reference, human-only — not in context_files), tests/game.test.js (40 tests)  — num_ctx=32768  min_predict=24000  [L6-full: implement entire Game class; use --task-group l6_full]
   context_8k/             documents/incident_archive.txt (~5.5k tok, 100 records), answer.txt (baseline), tests/test_answer.py  — num_ctx=8192   [tok/s profiler]
   context_16k/            documents/incident_archive.txt (~11k tok, 200 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=16384  [tok/s profiler]
   context_32k/            documents/incident_archive.txt (~22k tok, 400 records), answer.txt (baseline), tests/test_answer.py   — num_ctx=32768  [tok/s profiler]
@@ -158,6 +166,10 @@ For each `(model, task)` pair:
 #### `bench.py` — CLI Runner
 
 - Parses CLI args; builds the `(model, task)` matrix.
+- **`--list-tasks`** and **`--export-task`** are early-exit modes, checked before the `--models` requirement:
+  `--list-tasks` prints every `BUILTIN_TASKS` entry sorted by `(difficulty, id)` with its primary
+  `TASK_GROUPS` membership (`para` and `spot` skipped as duplicates/cross-cutting subsets) and returns;
+  `--export-task` calls `export_task()` (see `tasks.py` below) and returns — neither runs any backend/model.
 - At startup: captures `system_baseline_vram_mb` from `get_gpu_snapshot()` (before any model loads) for use as the VRAM drain reference between models.
 - On model switch: calls `unload_model(previous_model)` to explicitly evict weights from VRAM, then calls `wait_for_gpu_idle(baseline_vram_mb=…)` which polls until `gpu_util < 5%` AND `vram_used_mb < baseline + 200 MB` AND VRAM stable between polls (10s timeout; marks snapshot `dirty: true` on timeout and prints a warning).
 - If `--warmup`: sends a tiny prompt to each model just before its first task (JIT, not bulk upfront) using `keep_alive=-1` to keep it resident through all its tasks. Captures `gpu_after` snapshot post-warmup.
@@ -175,8 +187,9 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 - **`Task` dataclass**: `id`, `description`, `subdir`, `editable_files`, `context_files`, `test_cmd`, `test_timeout`, `setup_cmd`, `setup_timeout`, `difficulty` (1=L1/2=L2/3=L3/4=L4/5=L5, used for the Skill column), `num_ctx` (optional per-task context window override — runner uses `max(global, task.num_ctx)`), `min_predict` (optional per-task floor on `--num-predict`; useful when thinking models need extended token budget for reasoning before output), `model_timeout` (optional per-task override for the Ollama HTTP request timeout; context_128k and context_256k set 3600s/7200s respectively because prompt-eval alone at those sizes can exceed the default 300s), `min_vram_gb` (optional; if `total_vram_gb < min_vram_gb` the task is skipped before the model call with `SKIPPED_VRAM` — avoids multi-hour timeouts for tasks whose KV cache cannot fit on the hardware, e.g. `context_256k` sets `min_vram_gb=48` to effectively disable it until a fully GPU-resident 256k model is available — MoE models with CPU expert offload timed out at >2h prompt eval for 220k tokens), `wall_time_budget_s` (optional; if `tests_pass` and `wall_s > wall_time_budget_s`, the record gets `slow=True` and the cell shows `SLOW` in the comparison table — still counts as a pass for skill/pass rate; `context_128k` sets 300s to flag KV-spill runs where qwen3-coder:30b takes ~1860s).
 - **`build_prompt(task, workdir)`**: reads file contents and assembles the user message with `BEGIN_FILE/END_FILE` blocks for editable files and `--- path ---` fenced sections for context files.
 - **`prepare_workdir`**, **`run_setup`**, **`run_tests`**: thin subprocess wrappers using `subprocess.run(..., timeout=...)`.
-- **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list (33 tasks total) and a lookup dict by task id.
-- **`TASK_GROUPS`**: predefined group shorthands for `--task-group`: `coding` (19 tasks: L1–L5 coding + data), `l6` (4 stepped Paratrooper tasks: node_para_core / turret / entities / combat), `l6_full` (1 task: node_paratrooper, full implementation from scratch), `context` (6 tasks: context_8k … context_256k), `multihop` (3 tasks: multihop_forward, multihop_reverse, distractor_notes). `bench.py` resolves groups by filtering `BUILTIN_TASKS` in order, so combining groups preserves the canonical task sequence.
+- **`export_task(task, dest_dir)`**: writes a shareable, self-contained copy of one task to `dest_dir` for a human or another coding agent to attempt directly (`bench.py --export-task TASK_ID`). Copies the full `task_data/<subdir>` tree — same source `prepare_workdir` uses, so `setup_cmd`/`test_cmd` work unmodified — filtered through `_EXPORT_EXCLUDE_GLOBS` (`*.reference.*`, `.pytest_cache`, `__pycache__`, `.git`, `node_modules`) to strip human-only reference solutions (e.g. `node_paratrooper`'s `src/game.reference.js`, which is deliberately excluded from `context_files` for the same reason). Also writes `TASK.md` (goal, editable/context files, test command) and `PROMPT.txt` (`build_prompt(task, dest_dir)` — byte-identical to what the harness sends a model, for chat-only agents). Raises `FileExistsError` if `dest_dir` exists and is non-empty, rather than silently overwriting.
+- **`BUILTIN_TASKS` / `TASK_MAP`**: the built-in task list (37 tasks total) and a lookup dict by task id.
+- **`TASK_GROUPS`**: predefined group shorthands for `--task-group`: `coding` (19 tasks: L1–L5 coding + data), `l6` (4 stepped Paratrooper tasks: node_para_core / turret / entities / combat), `l6_full` (1 task: node_paratrooper, full implementation from scratch), `context` (6 tasks: context_8k … context_256k), `multihop` (3 tasks: multihop_forward, multihop_reverse, distractor_notes), `web` (4 tasks: python_config_loader, bash_preflight, node_express_validation, python_fastapi_endpoint — slower than coding tasks due to `npm install` / `pip install` setup). `bench.py` resolves groups by filtering `BUILTIN_TASKS` in order, so combining groups preserves the canonical task sequence.
 
 #### `ollama_client.py` — Ollama Model Adapter
 
@@ -188,7 +201,7 @@ Two responsibilities kept in one module to avoid a thin `prompting.py` abstracti
 
 Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` so `bench.py` can select either backend at startup.
 
-- **`LlamaServerManager`** — manages a single `llama-server` subprocess:
+- **`LlamaServerManager`** — manages a single `llama-server` subprocess. Constructor accepts `single_gpu_index: int = -1`; when ≥ 0, strips `tensor_split` from model params and sets `CUDA_VISIBLE_DEVICES=<index>` in the subprocess environment so llama-server sees only that device. Typically set via `bench.py --single-gpu` which is injected by `run.sh` from `.gpu-mode`.
   - `ensure(cfg, ctx_size, num_threads, startup_timeout=600)` — starts or restarts the server if the model changed or `ctx_size` grew beyond the running instance. Blocks until `/health` returns `{"status":"ok"}` (up to `startup_timeout` seconds, default 600; large RAM-bound models with `mlock` may take 300–600s). If the server exits before becoming ready, its full stderr output is captured and included in the raised `RuntimeError` for diagnosis.
   - `stop()` — terminates the process; SIGTERM then SIGKILL on timeout; closes the stderr pipe.
   - Tracks `_current_model` and `_current_ctx` to minimise unnecessary restarts (never downsizes ctx — a server running at 131072 tokens is fine for an 8192-token task).
@@ -250,9 +263,24 @@ Boolean params (e.g. `no_mmap`, `mlock`) become `True` in the dict. Key-value pa
 
 Optional module; requires `nvidia-ml-py` (`pip install nvidia-ml-py`). Fails gracefully with a `RuntimeWarning` if pynvml is unavailable — all functions return `None` and the benchmark continues normally.
 
-- `get_gpu_snapshot() -> dict | None` — single point-in-time sample: `vram_used_mb`, `gpu_util`, `mem_bandwidth_util` for GPU 0.
+- `get_gpu_snapshot() -> dict | None` — single point-in-time sample: `vram_used_mb` (summed across all GPUs), `gpu_util` (max across all GPUs), `mem_bandwidth_util` (max across all GPUs). Multi-GPU aware — initialises handles for all devices returned by `nvmlDeviceGetCount()` at import time.
 - `wait_for_gpu_idle(timeout, baseline_vram_mb, …) -> dict | None` — polls every 500ms until all three conditions hold simultaneously: `gpu_util < 5%`, `vram_used_mb < baseline_vram_mb + 200`, and VRAM delta < 50 MB between consecutive polls. Hard timeout: 10s. On timeout: returns last snapshot with `"dirty": True`; clean exit returns snapshot with `"dirty": False`. Used between model loads to ensure `before_load` captures true idle baseline.
 - `launch_peak_poller(stop_event, poll_interval) -> (Thread, list)` — background thread that polls every 500ms until `stop_event` is set, then does one final poll. Records the sample with the highest `gpu_util` seen across all polls. Captures genuine peak GPU activity regardless of task duration (replaces the old fixed 5-second delayed snapshot which missed short tasks).
+
+#### `hwmonitor/hwmonitor.py` — Hardware Watchdog
+
+Standalone script launched automatically by `run.sh` in `--quiet` mode alongside every benchmark run. Stdlib-only; no additional dependencies beyond `nvidia-smi`.
+
+- `probe_hotspot() -> bool` — probes `nvidia-smi --query-gpu=temperature.gpu.hotspot` at startup; returns `False` if driver too old (falls back to core temp with a startup notice). Called once, result stored as `hotspot: bool` for the lifetime of the process.
+- `collect_gpu(hotspot) -> list[GpuSample]` — single `nvidia-smi` call per interval; queries 8 or 9 fields depending on hotspot support; returns `list[GpuSample]` (one per device). Returns `[]` on any error.
+- `collect_cpu_temp() -> float | None` — reads highest value from `/sys/class/thermal/thermal_zone*/temp`; returns `None` on WSL2 (directory absent) or any error.
+- `collect_ram() -> tuple[float, float]` — reads `MemTotal` / `MemAvailable` from `/proc/meminfo`; returns `(used_gb, total_gb)`.
+- `_eval(key, value, warn, crit, label, prev, out) -> str` — threshold state machine for one metric. Appends `(level, msg)` to `out` only on state transition (OK→WARN, WARN→CRIT, etc.). Returns the new level string. `crit=None` disables CRIT for that metric (power, RAM).
+- `check_thresholds(s, t, prev) -> (alerts, new_state)` — applies `_eval` across all GPU/CPU/RAM metrics in a `Sample`; returns transition alerts and the full updated state dict (including carried-forward unchanged keys).
+- `abort_bench(pid, abort_timeout, emit) -> None` — sends `SIGINT`; waits `abort_timeout` seconds polling `os.kill(pid, 0)`; sends `SIGTERM` if still alive. Handles `ProcessLookupError` and `PermissionError` gracefully.
+- `emit(msg, data=False)` (closure in `main()`) — writes plain text to log; in `--quiet` mode: data lines (`data=True`) go to log only, alert lines go to stderr.
+
+**Integration with `run.sh`:** `run.sh` backgrounds `bench.py`, captures its PID, starts `hwmonitor.py --pid <PID> --quiet --log output/hwmonitor-<ts>.log` in a second background process, waits for bench.py (preserving exit code), then kills/waits hwmonitor. Pass `--no-hwmonitor` to `run.sh` to skip.
 
 #### `parsing.py` — Edit Protocol Parser
 

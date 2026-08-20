@@ -23,7 +23,23 @@ llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_S.gguf  tp=2,dtype=auto,max_model_len=
 # ── 32B models — tp=2 removes the single-GPU KV constraint ───────────────────
 # qwen2.5-coder:32b: 10 GiB/GPU for weights → ~13 GiB KV total → max_model_len=65536
 qwen2.5-coder:32b  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=65536  hf:Qwen/Qwen2.5-Coder-32B-Instruct
-# deepseek-r1:32b: thinking; 10 GiB/GPU → ~13 GiB KV → max_model_len=32768 (conservative)
-deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=32768,thinking  hf:deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+# deepseek-r1:32b: thinking; 10 GiB/GPU → with fp8 KV, ~26 GiB KV budget → try max_model_len=65536
+# fp8 KV halves the KV footprint; verify python_hashmap does not regress before committing
+deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=65536,kv_cache_dtype=fp8,enable_prefix_caching,thinking  hf:deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
 # qwq:32b Q5_K_M: ~11 GiB/GPU for weights → ~13 GiB KV total → max_model_len=32768
 qwq:32b  QwQ-32B-Q5_K_M.gguf  tp=2,dtype=auto,max_model_len=32768,thinking  hf:Qwen/QwQ-32B
+
+# ── Qwen3-Coder-30B-A3B comparison: GGUF Q4_K_M vs AWQ ──────────────────────
+# GGUF mode: requires patched vLLM using --quantization gguf (not --load-format gguf).
+# CONFIRMED 2026-07-06 at tp=1 single 4090: 15/16 eligible tasks PASS, 31.2 tok/s.
+# KV ceiling single 24 GB: max_model_len=8192 (GGUF loader overhead ~5 GB; estimated max ~13760).
+# tp=2 here: expect ~13-17 tok/s from PCIe all-reduce overhead (same as AWQ tp=2 at 16.6 tok/s).
+# dtype=float16 required for MoE GGUF plugin (not auto). enforce_eager avoids CUDA graph overhead.
+# hf: field is the base model tokenizer repo (not the GGUF quant repo).
+qwen3-coder:30b-gguf  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  tp=2,dtype=float16,enforce_eager,gpu_mem_util=0.88,max_model_len=32768  hf:Qwen/Qwen3-Coder-30B-A3B-Instruct
+# AWQ Int4 — Ampere+Ada compatible via awq_marlin. fp8 arm dead on 4090+3090 TP:
+# both W8A8 variants (Qwen official + BCCard FP8-Dynamic) quantize activations to E4M3 (fp8e4nv);
+# RTX 3090 (Ampere) cannot do this and there is no Marlin fallback for block-scaled fp8 in TP.
+# cpatonn variant chosen over QuantTrio — QuantTrio may trigger vLLM Mamba/SSM misdetection.
+# Downloaded automatically to ~/.cache/huggingface/hub/ on first vllm serve call.
+qwen3-coder:30b-awq  -  tp=2,gpu_mem_util=0.88,enforce_eager,enable_prefix_caching,max_model_len=32768  hf:cpatonn/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit

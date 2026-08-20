@@ -51,6 +51,38 @@ qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,ma
 #   max_num_seqs=1 as belt-and-suspenders. Benchmark sends 1 request at a time → no impact.
 qwen3.6:27b-gptq  -  tp=1,dtype=auto,max_model_len=32768,enforce_eager,max_num_seqs=1  hf:AxisQuant/Qwen3.6-27b-gptq-int4
 
+# seed-oss:36b-int4 — ByteDance Seed architecture, GPTQ Int4, ~18 GB, novel family (no GGUF).
+# enforce_eager precaution: novel architecture may trigger Mamba/SSM handler like AxisQuant GPTQ.
+# max_model_len=16384: ~18 GB weights on 24 GB at gpu_mem_util=0.88 → ~3 GB KV headroom;
+# vLLM will report actual max at startup if 16384 is too large; lower to 8192 if it fails.
+seed-oss:36b-int4  -  tp=1,gpu_mem_util=0.88,enforce_eager,max_model_len=16384  hf:ByteDance-Seed/Seed-OSS-36B-PT-GPTQ-Int4
+
+# ── GGUF MoE tp=1 — patched vLLM fused-expert kernel test ────────────────────
+# Uses --quantization gguf (patched flag) instead of --load-format gguf.
+# No dtype/enforce_eager per ally's step-1 correctness test params.
+# If this still throws width error, the down_proj patch was insufficient.
+qwen3-coder:30b-gguf  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  tp=1,gpu_mem_util=0.88,max_model_len=8192  hf:Qwen/Qwen3-Coder-30B-A3B-Instruct
+
+# ── AWQ single-GPU — Qwen3-Coder-30B-A3B tp=1 for throughput comparison ──────
+# Same cpatonn AWQ as 2x24gb.vllm but tp=1; eliminates PCIe all-reduce overhead.
+# Model fits in 24 GB at AWQ Int4 (~15 GB weights). gpu_mem_util=0.88 for display headroom.
+# Baseline comparison: tp=2 got 16.6 tok/s; tp=1 should approach llama-server (~115 tok/s).
+qwen3-coder:30b-awq  -  tp=1,gpu_mem_util=0.88,enforce_eager,enable_prefix_caching,max_model_len=32768  hf:cpatonn/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit
+
+# ── AWQ candidates — HF-format, no GGUF, no Mamba/SSM config.json issue ─────
+# AWQ calibration is more representative than C4-calibrated GPTQ for coding tasks.
+# Verify HF repo IDs before uncommenting — search HuggingFace for community AWQ uploads.
+# Expected: no enforce_eager/max_num_seqs=1 workaround needed (AWQ config.json is clean).
+# Check python_hashmap with fp8 KV — if it regresses, drop kv_cache_dtype=fp8.
+#
+# Qwen3.6-27B AWQ — primary daily-driver candidate; avoids AxisQuant GPTQ Mamba issue
+# Find: search hf for "Qwen3.6-27B-AWQ" or "Qwen/Qwen3.6-27B" AWQ variants
+# qwen3.6:27b-awq  -  tp=1,dtype=auto,max_model_len=65536,kv_cache_dtype=fp8,enable_prefix_caching  hf:TODO/Qwen3.6-27B-AWQ
+#
+# Gemma4-26B AWQ — strong coding alternative; dense architecture suits vLLM scheduling
+# Find: search hf for "Gemma-4-26B-AWQ" or "google/gemma-4-26b-it" AWQ variants
+# gemma4:26b-awq  -  tp=1,dtype=auto,max_model_len=65536,kv_cache_dtype=fp8,enable_prefix_caching  hf:TODO/Gemma-4-26B-AWQ
+
 # ── MoE GGUF models — NOT SUPPORTED by vLLM's GGUF loader ───────────────────
 # vLLM's --load-format gguf cannot map MoE expert weight tensors. All A3B / MoE
 # models fail with "Failed to map GGUF parameters: model.layers.X.mlp.experts.*"

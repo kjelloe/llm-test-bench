@@ -1,0 +1,10 @@
+TEAM DIRECTORY — Q3 2026
+(engineering teams, leads, and assigned office codes)
+
+team_id   team_name           lead_employee_id   office_code
+-------   -----------------   ----------------   -----------
+TEAM-3    Analytics Core      EMP-0221           BER-4
+TEAM-7    Payments Core       EMP-0441           STO-2
+TEAM-12   Supply Chain        EMP-0882           AMS-1
+TEAM-14   Platform Infra      EMP-0193           AMS-1
+TEAM-19   Security Ops        EMP-0317           NYC-1
