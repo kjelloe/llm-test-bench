@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%8A%3C/text%3E%3C/svg%3E" />
+<title>Open Ocean — Three.js</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0a1420; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+  .panel {
+    position: fixed; z-index: 10;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #eaf3fa;
+  }
+  #title { top: 18px; left: 22px; pointer-events: none; }
+  #title h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; text-shadow: 0 1px 10px rgba(0,0,0,.55); }
+  #title p { margin: 5px 0 0; font-size: 12px; opacity: .7; text-shadow: 0 1px 8px rgba(0,0,0,.55); }
+  #controls {
+    bottom: 18px; left: 20px; width: 252px;
+    background: rgba(7, 15, 24, .55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  #controls .row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; margin: 10px 0 5px; opacity: .92; }
+  #controls .row:first-child { margin-top: 0; }
+  #controls .row span { font-variant-numeric: tabular-nums; opacity: .8; }
+  #controls input[type="range"] { width: 100%; accent-color: #57a8ff; margin: 0; }
+  #controls .check { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 12px; opacity: .92; cursor: pointer; user-select: none; }
+  #hint { bottom: 20px; right: 22px; font-size: 12px; opacity: .6; text-shadow: 0 1px 8px rgba(0,0,0,.55); pointer-events: none; }
+  #vignette { position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.32) 100%); }
+  @media (max-width: 640px) { #hint { display: none; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="vignette"></div>
+<div class="panel" id="title">
+  <h1>Open Ocean</h1>
+  <p>Three.js · physical sky, mirror water, dynamic sun</p>
+</div>
+<div class="panel" id="controls">
+  <div class="row">Sun elevation <span id="elevVal">12°</span></div>
+  <input id="elevation" type="range" min="0" max="80" step="1" value="12" />
+  <div class="row">Sun azimuth <span id="azimVal">205°</span></div>
+  <input id="azimuth" type="range" min="0" max="360" step="1" value="205" />
+  <label class="check"><input id="shadows" type="checkbox" checked /> Sun shadows</label>
+</div>
+<div class="panel" id="hint">drag to orbit · scroll to zoom</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import { Water } from 'three/addons/objects/Water.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* ---------------- utilities ---------------- */
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* Tileable procedural water normal map (fallback if the CDN texture is unavailable). */
+function createWaterNormalsTexture(size = 512) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(size, size);
+
+  const rand = mulberry32(0x5EED);
+  const waves = [];
+  for (let i = 0; i < 26; i++) {
+    waves.push({
+      fx: Math.round((rand() - 0.5) * 24),
+      fy: Math.round((rand() - 0.5) * 24),
+      amp: 1 / (1 + i * 0.35),
+      ph: rand() * Math.PI * 2
+    });
+  }
+  const height = (u, v) => {
+    let h = 0;
+    for (const w of waves) h += w.amp * Math.sin(6.28318530718 * (w.fx * u + w.fy * v) + w.ph);
+    return h;
+  };
+
+  const H = new Float32Array(size * size);
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) H[y * size + x] = height(x / size, y / size);
+
+  let maxSlope = 1e-6;
+  const dxs = new Float32Array(size * size), dys = new Float32Array(size * size);
+  for (let y = 0; y < size; y++) {
+    const yu = ((y - 1 + size) % size) * size, yd = ((y + 1) % size) * size;
+    for (let x = 0; x < size; x++) {
+      const xl = y * size + ((x - 1 + size) % size), xr = y * size + ((x + 1) % size);
+      const dx = (H[xr] - H[xl]) * 0.5, dy = (H[yd + x] - H[yu + x]) * 0.5;
+      dxs[y * size + x] = dx; dys[y * size + x] = dy;
+      if (Math.abs(dx) > maxSlope) maxSlope = Math.abs(dx);
+      if (Math.abs(dy) > maxSlope) maxSlope = Math.abs(dy);
+    }
+  }
+  const k = 0.55 / maxSlope;
+
+  for (let i = 0; i < size * size; i++) {
+    const dx = dxs[i] * k, dy = dys[i] * k;
+    const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
+    const j = i * 4;
+    img.data[j]     = (-dx * inv * 0.5 + 0.5) * 255;
+    img.data[j + 1] = (-dy * inv * 0.5 + 0.5) * 255;
+    img.data[j + 2] = ( inv * 0.5 + 0.5) * 255;
+    img.data[j + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+/* ---------------- renderer / scene / camera ---------------- */
+
+const container = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.55;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xbcd6e4, 150, 2000);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 20000);
+camera.position.set(0, 12, 60);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 8, -120);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 5;
+controls.maxDistance = 600;
+controls.maxPolarAngle = Math.PI / 2 - 0.04;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.35;
+renderer.domElement.addEventListener('pointerdown', () => { controls.autoRotate = false; }, { once: true });
+
+/* ---------------- sky ---------------- */
+
+const sky = new Sky();
+sky.scale.setScalar(10000);
+scene.add(sky);
+const skyU = sky.material.uniforms;
+skyU['turbidity'].value = 10;
+skyU['rayleigh'].value = 2;
+skyU['mieCoefficient'].value = 0.005;
+skyU['mieDirectionalG'].value = 0.8;
+
+// Image-based lighting for the PBR materials, derived from the sky itself.
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+let envRT = null;
+let envDirty = true;
+function updateEnvironment() {
+  if (envRT) envRT.dispose();
+  const envScene = new THREE.Scene();
+  envScene.add(sky);
+  envRT = pmremGenerator.fromScene(envScene);
+  scene.add(sky);
+  scene.environment = envRT.texture;
+}
+
+/* ---------------- lights ---------------- */
+
+const sun = new THREE.Vector3();
+const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 50;
+dirLight.shadow.camera.far = 1200;
+dirLight.shadow.camera.left = -280;
+dirLight.shadow.camera.right = 280;
+dirLight.shadow.camera.top = 280;
+dirLight.shadow.camera.bottom = -280;
+dirLight.shadow.bias = -0.0002;
+dirLight.shadow.normalBias = 3;
+scene.add(dirLight);
+scene.add(dirLight.target);
+
+const hemi = new THREE.HemisphereLight(0xbfd9e6, 0x0a1a24, 0.5);
+scene.add(hemi);
+
+/* ---------------- water ---------------- */
+
+const waterGeometry = new THREE.PlaneGeometry(10000, 10000);
+const water = new Water(waterGeometry, {
+  textureWidth: 512,
+  textureHeight: 512,
+  waterNormals: createWaterNormalsTexture(),
+  sunDirection: sun.clone(),
+  sunColor: 0xffffff,
+  waterColor: 0x001e0f,
+  distortionScale: 3.7,
+  fog: true
+});
+water.rotation.x = -Math.PI / 2;
+scene.add(water);
+water.material.uniforms['size'].value = 6;
+
+// Upgrade to the official normal map if the CDN is reachable (procedural one is the fallback).
+new THREE.TextureLoader().load(
+  'https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/textures/waternormals.jpg',
+  (tex) => {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    water.material.uniforms['normalSampler'].value = tex;
+  }
+);
+
+/* ---------------- island & rocks ---------------- */
+
+const rockMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
+
+function createRock(seed, scale, position, grassAmount = 1) {
+  const rand = mulberry32(seed);
+  const ph = Array.from({ length: 12 }, () => rand() * Math.PI * 2);
+  let geo = new THREE.IcosahedronGeometry(1, 5);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const v = new THREE.Vector3(), n = new THREE.Vector3(), c = new THREE.Color();
+  const sand = new THREE.Color(0xd8c493);
+  const rock = new THREE.Color(0x5c6470);
+  const grass = new THREE.Color(0x4f6b3a);
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    n.copy(v).normalize();
+    let h = 0;
+    h += 0.55 * Math.sin(n.x * 2.7 + ph[0]) * Math.sin(n.y * 3.1 + ph[1]) * Math.sin(n.z * 2.3 + ph[2]);
+    h += 0.30 * Math.sin(n.x * 6.1 + ph[3]) * Math.sin(n.y * 5.3 + ph[4]) * Math.sin(n.z * 6.7 + ph[5]);
+    h += 0.15 * Math.sin(n.x * 11.3 + ph[6]) * Math.sin(n.y * 12.7 + ph[7]) * Math.sin(n.z * 10.9 + ph[8]);
+    h += 0.07 * Math.sin(n.x * 23.1 + ph[9]) * Math.sin(n.y * 21.7 + ph[10]) * Math.sin(n.z * 25.3 + ph[11]);
+    const r = Math.max(1 + h * 0.5, 0.25);
+    v.copy(n).multiplyScalar(r);
+    v.y *= 0.72;
+    pos.setXYZ(i, v.x, v.y, v.z);
+    const y = v.y;
+    if (y < 0.12) c.copy(sand);
+    else if (y < 0.5) c.copy(sand).lerp(rock, (y - 0.12) / 0.38);
+    else c.copy(rock).lerp(grass, Math.min((y - 0.5) / 0.55, 1) * grassAmount);
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo = mergeVertices(geo, 1e-4);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, rockMaterial);
+  mesh.scale.setScalar(scale);
+  mesh.position.copy(position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
+
+createRock(1, 35, new THREE.Vector3(0, -4, -170), 1);
+createRock(2, 16, new THREE.Vector3(-260, -6, -420), 0.4);
+createRock(3, 22, new THREE.Vector3(300, -7, -380), 0.25);
+
+/* ---------------- boat ---------------- */
+
+function createBoat() {
+  const boat = new THREE.Group();
+  const wood = new THREE.MeshStandardMaterial({ color: 0x7a4a2b, roughness: 0.85 });
+  const woodDark = new THREE.MeshStandardMaterial({ color: 0x54331d, roughness: 0.9 });
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.8, 1.3), wood);
+  hull.position.y = 0.4;
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.8, 4), wood);
+  bow.rotation.z = -Math.PI / 2;
+  bow.rotation.y = Math.PI / 4;
+  bow.scale.set(1, 1, 0.55);
+  bow.position.set(2.4, 0.4, 0);
+  const stern = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 1.3), woodDark);
+  stern.position.set(-1.9, 0.5, 0);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 1.0),
+    new THREE.MeshStandardMaterial({ color: 0xf2ead8, roughness: 0.7 }));
+  cabin.position.set(-0.7, 1.15, 0);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 2.8, 8), woodDark);
+  mast.position.set(0.5, 2.3, 0);
+  const sailGeo = new THREE.BufferGeometry();
+  sailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+    0.5, 3.6, 0,
+    0.5, 1.3, 0,
+    0.5, 1.3, 1.5
+  ]), 3));
+  sailGeo.computeVertexNormals();
+  const sail = new THREE.Mesh(sailGeo,
+    new THREE.MeshStandardMaterial({ color: 0xfaf6ec, roughness: 0.95, side: THREE.DoubleSide }));
+  boat.add(hull, bow, stern, cabin, mast, sail);
+  boat.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  boat.position.set(30, 0, -75);
+  boat.rotation.y = -0.65;
+  scene.add(boat);
+  return boat;
+}
+const boat = createBoat();
+
+/* ---------------- sun control ---------------- */
+
+const WARM = new THREE.Color(0xff8f3d);
+const COOL = new THREE.Color(0xfff2df);
+const FOG_WARM = new THREE.Color(0xe8a87c);
+const FOG_COOL = new THREE.Color(0xbcd6e4);
+
+function updateSun(elevationDeg, azimuthDeg) {
+  const phi = THREE.MathUtils.degToRad(90 - elevationDeg);
+  const theta = THREE.MathUtils.degToRad(azimuthDeg);
+  sun.setFromSphericalCoords(1, phi, theta);
+
+  skyU['sunPosition'].value.copy(sun);
+  water.material.uniforms['sunDirection'].value.copy(sun).normalize();
+  dirLight.position.copy(sun).multiplyScalar(500);
+
+  const t = THREE.MathUtils.smoothstep(elevationDeg, 0, 30);
+  dirLight.color.copy(WARM).lerp(COOL, t);
+  dirLight.intensity = 1.5 + t * 2.0;
+  hemi.intensity = 0.3 + t * 0.45;
+  scene.fog.color.copy(FOG_WARM).lerp(FOG_COOL, t);
+  skyU['turbidity'].value = 10 - t * 4;
+  skyU['rayleigh'].value = 2.0;
+  // Lower exposure as the sun rises so the bright sky keeps its blue instead of clipping to white.
+  renderer.toneMappingExposure = 0.5 - t * 0.2;
+
+  envDirty = true;
+}
+
+const elevSlider = document.getElementById('elevation');
+const azimSlider = document.getElementById('azimuth');
+function onSunChange() {
+  const e = parseFloat(elevSlider.value);
+  const a = parseFloat(azimSlider.value);
+  document.getElementById('elevVal').textContent = e + '°';
+  document.getElementById('azimVal').textContent = a + '°';
+  updateSun(e, a);
+}
+elevSlider.addEventListener('input', onSunChange);
+azimSlider.addEventListener('input', onSunChange);
+
+document.getElementById('shadows').addEventListener('change', (ev) => {
+  renderer.shadowMap.enabled = ev.target.checked;
+  dirLight.castShadow = ev.target.checked;
+  scene.traverse((o) => { if (o.isMesh) o.material.needsUpdate = true; });
+});
+
+onSunChange();
+
+/* ---------------- animation ---------------- */
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  if (envDirty) { updateEnvironment(); envDirty = false; }
+
+  water.material.uniforms['time'].value = t;
+
+  // Boat bobbing
+  boat.position.y = Math.sin(t * 0.8) * 0.3 + Math.sin(t * 0.47 + 1.3) * 0.18;
+  boat.rotation.z = Math.sin(t * 0.6 + 0.8) * 0.05;
+  boat.rotation.x = Math.sin(t * 0.5 + 2.0) * 0.035;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
