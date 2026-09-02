@@ -13,6 +13,8 @@
 #
 # Speed index (confirmed on RTX 4090 24GB single GPU — speed portable to RTX 4070 class):
 # qwen2.5-coder:14b   # *72 tok/s  dense 14B Q4_K_M (~9 GB); Skill L2; Passes both L5 coding tasks
+# ornith:1.5-9b       # *79 tok/s  jashepp Ornith-1.5-9B MXFP4 MoE hybrid (~8.9 GB); Skill L2 (Peak L5);
+#                                  17/19 coding — fastest confirmed model in this tier. Requires Ampere+ (MXFP4).
 # Confirmed 2026-06-26 full 33-task run: 23/33 at 71.8 tok/s; max ctx 32k (hardware cap on 12 GB).
 
 # ── 14B dense — best confirmed 12 GB model ─────────────────────────────────────
@@ -26,3 +28,16 @@
 # 14B passes cleanly with q8_0 KV.
 # MULTIHOP chain_5 PASS (54 tok/s). cross_5 FAIL → "oncall-emea-w-crit" (wrong criticality, 61 tok/s). 4/5 multihop.
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
+
+# ── jashepp Ornith-1.5-9B — fastest confirmed 12 GB pick ───────────────────────
+# CONFIRMED 2026-08-28, single RTX 4090 (24 GB, quality data portable — speed is not):
+# 10-task spot 8/10, full 19-task coding 17/19 at 79.3 tok/s avg (129.4s total) — same jashepp
+# family as qwopus3.6:35b/equinox:31b/ornith:1.5-35b (all strong on this benchmark).
+# FAILS: csv_nordic_property (L3), python_lfu_cache (L3). PASSES: node_csv_parser (L3 — many
+# larger models fail this), python_hashmap (L5) — strong result for a 9B-class model.
+# Skill L2 (csv_nordic_property L3 fail caps it), Peak L5 (python_hashmap passes despite the cap).
+# Requires Ampere+ (sm_86+) — MXFP4 format, RTX 30/40 series only.
+# Tested with f16 KV, no explicit max_ctx (server default). At real 12 GB VRAM (8.9 GB weights,
+# ~3.1 GB headroom), context beyond ~16k is UNTESTED — reduce max_ctx further if you see OOM.
+# Web/context/multihop/L6-stepped groups not yet run — coding-only profile so far.
+ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF

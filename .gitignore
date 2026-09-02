@@ -13,5 +13,11 @@ output/
 /task_data/dotnet_sas/tests/*/obj/
 *.log
 llama_models
+/allmodels/
+*.gguf
+/kv-stream-experiment/
 .gpu-mode
 /backup-to-NAS.sh
+/HF_TOKEN.txt
+*_TOKEN.txt
+.env

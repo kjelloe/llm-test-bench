@@ -33,6 +33,16 @@ SCOUT_QUERIES: list[str] = [
     "gemma4 instruct",
     "gemma4 qat",                        # QAT int4 Gemma 4 (dense 27B primarily — better quality than PTQ)
     "qwen3.8 gguf",                      # Qwen3.8-27B DeltaNet hybrid dense — our best single-24GB model (L6-full)
+    # NOTE: "Qwen3.8" also names an UNRELATED second model — Qwen's new Qwen4-preview
+    # architecture (internal codename "qwen4exp"), released as "Qwen3.8-Flash-Next"
+    # (125B main + 51B n-gram embedding + 4B MTP, 6B active/token). This one was found via an
+    # external field report, NOT this scout — added 2026-08-29 to close that gap and catch any
+    # other quant house's re-release of it (bartowski/mradermacher/etc, not just unsloth's own).
+    "qwen3.8 flash next gguf",           # exact model name, spaced
+    "qwen3.8-flash-next gguf",           # exact model name, hyphenated (HF search may tokenize differently)
+    "flash-next gguf",                   # short distinctive fragment, in case the above miss a re-upload's naming
+    "qwen4exp gguf",                     # internal architecture codename — may appear in repo descriptions/READMEs
+    "qwen4 preview gguf",                # public architecture description used in our own docs
     "gpt-oss",
     "codestral",
     "phi4 coding instruct",

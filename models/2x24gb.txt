@@ -238,7 +238,21 @@ qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cach
 #   (unsloth's new UD-Q4_K_M, bartowski's Q4_K_M — both in candidates.txt) — BOTH FAIL. Only THIS
 #   specific file passes. Treat "first model to pass node_paratrooper" as file-specific, not a
 #   general Qwen3.8-27B architecture capability. See next-runs.md for the full comparison table.
+# UPDATE (2026-08-23, investigation CLOSED): extended tiebreaker to 6 independent builds × 3 GPU
+#   configs. THIS file remains the only one that passes on both single-GPU and 3-GPU — bartowski's
+#   Q5_K_M (qwen3.8:27b-q5km, candidates.txt) is the only other clean PASS anywhere but is
+#   single-GPU-only (fails 3-GPU, confirmed). No precision/house/config rule generalizes; treat
+#   this file as genuinely irreplaceable with no substitute. Full detail in candidates.txt and
+#   memory/project_benchmark_findings.md.
 qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=262144  hf:unsloth/Qwen3.8-27B-GGUF
+
+# jashepp Ornith-1.5-35B-A3B, MXFP4 MoE Q8_0-Imatrix, ~19.8 GB — CONFIRMED 2026-08-24 on single
+#   24 GB (fits comfortably at 2×24 GB too, untested at that tier specifically): 19/19 coding,
+#   3/4 web (fastapi FAIL, same A3B pattern as qwopus3.6:35b), 6/6 context incl. 256k PASS at
+#   49.9 tok/s on ONE GPU, 3/5 multihop (5-hop chain_5/cross_5 FAIL), 4/4 L6-stepped (14th
+#   completer). node_paratrooper (L6-full): NOT reproducible (1 PASS / 6 attempts — fluke, not a
+#   capability). See models/24gb.txt and candidates.txt for full detail.
+ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
 
 # noctrex-qwen3.6:35b: MXFP4+MTP; Skill L6; CONFIRMED 2026-08-13 ls 10094 (2×24 GB):
 # L6 STEPPED: 4/4 PASS at 90.8 tok/s — core *91.5, turret *91.6, entities *89.8, combat *90.2.
@@ -309,7 +323,11 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,tenso
 # never emits BEGIN_FILE. Confirmed at both 8000 and 16000 num_predict (same wall time, 211s).
 # Structural capability gap on these tasks, not a budget issue.
 # MULTIHOP chain_5 PASS (30 tok/s). cross_5 PASS (31 tok/s). Full 5/5 multihop.
-qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
+# Commented out 2026-08-22: GGUF deleted from allmodels/ to free disk space. Coding rejection
+# (11/24, KV thrashing ~6 tok/s) was from single-24 GB testing; multihop later passed 5/5 at
+# multi-GPU tiers, but a full coding re-evaluation with real multi-GPU headroom was never done
+# before this cleanup. Re-download via ./fetch-hf.sh if this tier is revisited.
+# qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
 
 # ── 80B MXFP4 MoE — requires 2×24 GB ────────────────────────────────────────────
 # qwen3-next:80b: noctrex, 3-part ~41 GB; CONFIRMED 2026-06-24 full 33-task compare:

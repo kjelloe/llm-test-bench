@@ -9,7 +9,7 @@ set -euo pipefail
 #   ./powerlimit.sh              use $POWER_LIMIT env var, or 350 W default (all GPUs)
 #   ./powerlimit.sh 300          explicit uniform wattage (all GPUs)
 #   ./powerlimit.sh --query      show current limits without changing anything
-#   ./powerlimit.sh --per-gpu    per-model limits: RTX 4090→300W, RTX 3090→280W
+#   ./powerlimit.sh --per-gpu    per-model limits: RTX 4090→260W, RTX 3090→240W
 #   ./powerlimit.sh --per-gpu --reset  restore each GPU to its hardware maximum
 #
 # Config default:
@@ -17,11 +17,18 @@ set -euo pipefail
 #   default used by this script and by compare.sh.
 #
 # Per-GPU budget (--per-gpu):
-#   2 GPUs: 4090@300W + 3090@280W = 580W GPU + ~175W system ≈ 755W (37% headroom vs 1200W PSU)
-#   3 GPUs: 4090@300W + 3090@280W + 3090@280W = 860W GPU + ~175W system ≈ 1035W (14% headroom)
+#   2 GPUs: 4090@260W + 3090@240W = 500W GPU + ~175W system ≈ 675W (44% headroom vs 1200W PSU)
+#   3 GPUs: 4090@260W + 3090@240W + 3090@240W = 740W GPU + ~175W system ≈ 915W (24% headroom)
+#
+# TIGHTENED 2026-08-29 (from 300/280/280, 14% headroom) after an unexplained hard crash
+# (Kernel-Power ID 41, zero preceding log entries) during sustained 3-GPU compute-bound testing
+# of qwen3.8-flash-next (93% GPU util — much higher sustained utilization than the
+# memory-bandwidth-bound models this rig normally runs). Root cause not confirmed — power limits
+# reset on every reboot and there was no way to verify they were actually applied during the
+# session that crashed. Precautionary tightening while gathering more data with hwmonitor enabled.
 
-LIMIT_4090=300   # W; hardware max is 450W
-LIMIT_3090=280   # W; hardware max is 350W
+LIMIT_4090=260   # W; hardware max is 450W
+LIMIT_3090=240   # W; hardware max is 350W
 
 # ── Parse args ────────────────────────────────────────────────────────────────
 QUERY_ONLY=false

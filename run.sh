@@ -63,6 +63,18 @@ if [[ -f "$_SCRIPT_DIR/.gpu-mode" ]]; then
     fi
 fi
 
+# ── Power-limit safety check (multi-GPU, 3+ cards) ───────────────────────────
+# nvidia-smi power limits reset to hardware default on every reboot and are NOT
+# applied automatically by this repo — see ./powerlimit.sh and hw-upgrade-july-2026.md
+# (2026-08-29 incident: unexplained hard crash during sustained 3-GPU compute-bound
+# testing; power limits could not be confirmed in effect at the time). Abort rather
+# than risk uncapped GPUs pulling combined power the PSU wasn't sized for.
+# Override MAX_PSU_WATT if your PSU differs from the 1200W this repo was built around;
+# SKIP_POWER_CHECK=1 bypasses the check entirely for advanced/known-safe setups.
+if [[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${SKIP_POWER_CHECK:-0}" -ne 1 ]]; then
+    python3 "$_SCRIPT_DIR/lib/power_check.py" "${MAX_PSU_WATT:-1200}" "${SYSTEM_OVERHEAD_WATT:-175}" || exit 1
+fi
+
 # ── Launch bench.py in background ────────────────────────────────────────────
 python3 bench.py "${_GPU_ARGS[@]+"${_GPU_ARGS[@]}"}" "$@" &
 _BENCH_PID=$!

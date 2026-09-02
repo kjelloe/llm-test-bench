@@ -206,3 +206,23 @@ gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 #   architecture capability — treat "first model to pass node_paratrooper" as file-specific, not
 #   architecture-general. See next-runs.md for the full 3-way comparison table.
 qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# UPDATE (2026-08-23, investigation CLOSED): extended tiebreaker to 6 independent builds × 3 GPU
+#   configs. THIS file remains the only one that passes on both single-GPU and 3-GPU — bartowski's
+#   Q5_K_M (qwen3.8:27b-q5km, candidates.txt) is the only other clean PASS anywhere but is
+#   single-GPU-only (fails 3-GPU). No precision/house/config rule generalizes; treat this file as
+#   genuinely irreplaceable with no substitute. Full detail in candidates.txt and
+#   memory/project_benchmark_findings.md.
+
+# jashepp Ornith-1.5-35B-A3B, MXFP4 MoE Q8_0-Imatrix, ~19.8 GB, no Ampere+ required.
+# CONFIRMED 2026-08-24: PERFECT 19/19 coding (45.2 tok/s), 3/4 web (fastapi FAIL — same A3B
+#   coder/RL pattern as qwopus3.6:35b), 6/6 context including context_256k PASS at 49.9 tok/s on
+#   a SINGLE 24 GB card (unusual — most models need 2×24 GB+ for that), 3/5 multihop (2-hop
+#   forward/reverse/distractor PASS; 5-hop chain_5/cross_5 FAIL), 4/4 L6-stepped at --num-ctx 32768
+#   (including node_para_entities — the Qwen3.6-A3B-lineage discriminator; strongly suggests same
+#   base as qwopus3.6:35b). 14th L6-stepped-chain completer. node_paratrooper (L6-full): FIRST-TRY
+#   PASS in spot check but FAILED verification (5/5 FAIL on independent repeats, single-GPU,
+#   identical config) — NOT an L6-full completer, treat as unreliable/fluke.
+# 35/38 eligible tasks pass overall. Best-in-class jashepp-35B coding speed; close sibling to
+#   qwopus3.6:35b (same publisher, both 19/19 coding, both fail fastapi) but adds L6-stepped
+#   completion and clean single-GPU 256k context that qwopus3.6 needed 2×24 GB to reach.
+ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF

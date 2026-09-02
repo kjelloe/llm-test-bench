@@ -1,6 +1,6 @@
 # Default / canonical model set
 # Order: fastest → slowest by observed avg tok/s
-# Last updated: 2026-07-22
+# Last updated: 2026-08-25 (added qwen3.8:27b)
 #
 # Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
 #   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
@@ -14,9 +14,15 @@
 # glm4.7-flash           # *132 tok/s  GPU only (MoE MXFP4 ~16 GB); 31/37 (32/37 prior binary); Ampere+ required
 # qwen2.5-coder:14b      #  *83 tok/s  GPU only (dense 14B); 27/37, Skill L2
 # qwen3.6:27b            #  *44 tok/s  GPU only (dense 27B); 35/37, Skill L5; f16 KV required; no Ampere+ requirement
+# qwen3.8:27b            #  ~45 tok/s  GPU only (DeltaNet hybrid 27B); 19/19 coding + 4/4 web + 4/4 L6-stepped +
+#                                       node_paratrooper (L6-full, single-GPU only); f16 KV required; no Ampere+;
+#                                       REQUIRES llama-server ≥ 2026-08-13 (qwen35.cpp commit 0d0bfcd4f) — NOT the
+#                                       binary the 2026-07-23 compare run below used; verify `llama-server --version`
+#                                       before running compare.sh or this entry will fail to load / behave oddly
 # equinox:31b            #  *41 tok/s  GPU only (dense 31B MXFP4 ~16.4 GB); 32/37, Skill L4; Ampere+ required
 # gpt-oss:120b           #  ~17 tok/s  RAM + partial GPU, thinking
 # * = confirmed on RTX 4090 single GPU, llama-server 10094, 37-task compare run 2026-07-23
+#     (qwen3.8:27b was NOT part of that run — added 2026-08-25, confirmed separately on a newer binary)
 # Removed 2026-07-22: gemma4:26b (architecture-level L3 CSV failures every run),
 #   devstral-small-2 (node_slugify L2 fail, superseded by equinox:31b),
 #   qwen3-coder:30b-1m (python_config_loader L2 fail, superseded by qwen3-30b:2507)
@@ -50,6 +56,13 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # *44 tok/s — 35/37, Skill L5; best single-GPU quality on 10094 binary; no Ampere+ requirement
 # f16 KV REQUIRED — q8_0 KV causes python_hashmap FAIL (_EMPTY omission at precision boundary)
 qwen3.6:27b  Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
+
+# ~45 tok/s — Gated DeltaNet hybrid 27B; PERFECT 19/19 coding + 4/4 web + 4/4 L6-stepped +
+# node_paratrooper (L6-full, the only model confirmed to pass it — see CLAUDE.md for the full
+# file-specificity caveat: this exact GGUF is irreplaceable, no substitute build reproduces the
+# L6-full pass). f16 KV REQUIRED (same precision rule as qwen3.6:27b above). No Ampere+ required.
+# REQUIRES llama-server ≥ 2026-08-13 (qwen35.cpp commit 0d0bfcd4f) — confirm before running compare.sh.
+qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
 
 # ~36 tok/s — dense 31B MXFP4 Q8_0-Imatrix ~16.4 GB; 19/19 coding PERFECT + 4/4 web PERFECT
 # Only single-24GB model passing python_fastapi_endpoint (field_validator + .strip()). Skill L4.

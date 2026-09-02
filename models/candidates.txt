@@ -220,6 +220,9 @@
 # CONFIRMED 2026-07-22: 8/10 at 160.4 tok/s — SKIP. Not Qwen3.6-35B-A3B base (python_hashmap fails).
 # Identical 10-task profile to qwen3-30b:2507. Full run est. ~18/19 at 160 tok/s.
 # Dominated by qwopus3.6:35b (19/19, 162 tok/s). Not worth adding to 24gb.txt.
+# NOT THE SAME MODEL as ornith:1.5-35b below (2026-08-24) — this is jashepp's earlier 1.0 release
+# on an unknown, weaker base; 1.5 is a materially different/improved release (passes
+# python_hashmap and node_para_entities, both of which this 1.0 build fails) and IS in 24gb.txt.
 # ornith:35b  Ornith-1.0-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.0-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
 
 # jashepp QUEST-35B-RL-A3B MXFP4 MOE Hybrid (~18.4 GB, single RTX 4090, Ampere+ required).
@@ -711,7 +714,10 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_typ
 # VERDICT: DO NOT PROMOTE. Keep the plain qwen3.8:27b (Q4_K_M) as the primary 24gb.txt/2x24gb.txt
 #   entry. Left here as a documented, tested-and-rejected data point — don't swap the primary
 #   entry to this file without re-confirming node_paratrooper first.
-qwen3.8:27b-ud  Qwen3.8-27B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# Commented out 2026-08-23: GGUF deleted to free disk space. Conclusion fully captured above
+# (FAIL 2/2) and superseded by the more complete qwen3.8:27b-ud-q5km result (FAIL 11/11 across
+# single/2-GPU/3-GPU, config-independent). Re-download via ./fetch-hf.sh if ever needed again.
+# qwen3.8:27b-ud  Qwen3.8-27B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
 
 # ── bartowski requant of qwen3.8:27b (added 2026-08-20) ────────────────────────
 # Third independent Q4_K_M source for the same Qwen3.8-27B DeltaNet-hybrid base model, found via
@@ -744,4 +750,467 @@ qwen3.8:27b-ud  Qwen3.8-27B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cac
 #   finding: it looks less like a general property of the Qwen3.8-27B architecture and more like
 #   this task sitting at a razor's-edge decision that most quantizations of this model land on the
 #   FAIL side of — the original file may be the lucky outlier, not the representative case.
-qwen3.8:27b-bartowski  Qwen3.8-27B-bartowski-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+# Commented out 2026-08-23: GGUF already deleted (was already gone before this pass — flagged
+# here so a broad ./fetch-hf.sh models/candidates.txt never silently re-downloads it). Conclusion
+# fully captured above (FAIL, tiebreaker). Re-download via ./fetch-hf.sh if ever needed again.
+# qwen3.8:27b-bartowski  Qwen3.8-27B-bartowski-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+
+# ── bartowski Q5_K_M of qwen3.8:27b — precision hypothesis test (added 2026-08-22) ─────
+# Open question from the Q4_K_M tiebreaker above: 2 of 3 independently-quantized Q4_K_M-class
+# builds FAIL node_paratrooper; only one specific original file passes. Hypothesis: this is
+# quantization noise at the Q4 boundary flipping a close greedy-decoding token choice (test 33,
+# the freefall-crush rule — see the tensor_split root-cause diff for the same class of effect),
+# not a stable property of any one build. Q5_K_M (20.8 GB) is the practical next precision step —
+# fits a single 24 GB GPU with ~3.2 GB headroom at default ctx=8192 (Q6_K at 23.5 GB does not:
+# ~0.5 GB headroom, real OOM risk, and would force 2×24 GB which confounds the test with the
+# already-confirmed cross-GPU floating-point non-determinism finding — not a clean precision read).
+# Filename does not collide with any local file (unsloth's Q5 variants are named
+# Qwen3.8-27B-UD-Q5_K_M.gguf) — fetch-hf.sh can pull this directly, no rename needed.
+# Same runtime params as the confirmed single-GPU qwen3.8:27b config; only gguf-file/repo differ.
+# TEST PLAN: node_paratrooper + python_hashmap, single RTX 4090, default ctx=8192, f16 KV,
+# --num-predict 24000 (paratrooper) — same as the confirmed PASS run. If this passes cleanly,
+# it supports "FAIL results are Q4-tier quantization noise, not architecture-general." If it also
+# fails, that weakens the precision hypothesis and points back toward "the original file was a
+# lucky outlier" as the more likely explanation.
+#
+# RESULT — CONFIRMED 2026-08-22, single RTX 4090, default ctx=8192, f16 KV: **node_paratrooper
+#   PASS 5/5** (deterministic — identical PASS outcome every run, 38.4 tok/s / 125.9s each,
+#   early-stopped at 5 consistent per the test's own stopping rule rather than grinding to 100).
+#   **python_hashmap PASS** (39.2 tok/s, 15.7s, f16 KV — precision canary still holds at Q5).
+# VERDICT: supports the precision hypothesis. Q5_K_M (20.8 GB, ~1.6 bits/weight more than
+#   Q4_K_M's ~17.8 GB) passes cleanly and repeatably where 2 of 3 Q4_K_M-tier builds failed.
+#   Consistent with "the FAIL results are quantization noise at the Q4 boundary flipping a close
+#   greedy-decoding token choice on test 33," not "the original Q4_K_M PASS file was a lucky
+#   outlier with no relation to precision." Does not fully prove it (only one Q5 build tested;
+#   a second independent Q5_K_M source, e.g. unsloth's Qwen3.8-27B-UD-Q5_K_M.gguf, would be the
+#   next tiebreaker if this needs to be nailed down further) — but it's the strongest evidence
+#   yet that going up one quant tier reliably clears this task. Worth considering as the
+#   recommended qwen3.8:27b build for anyone who wants node_paratrooper reliability without
+#   depending on one irreplaceable, hard-to-recover Q4_K_M file.
+qwen3.8:27b-q5km  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+
+# 2-GPU control variant — added 2026-08-23. NEEDED to resolve the confound found on
+# qwen3.8:27b-ud-plain-q8/-ud-q8kxl (both FAIL 5/5 at tensor_split=1|1, but that split is already
+# known to flip the original PASS file to FAIL by itself, independent of file/precision). This
+# is the missing control: does THIS known-good (single-GPU PASS 5/5) file also flip under the
+# same split? If yes, the split explains everything and node_paratrooper testing above single-GPU
+# capacity should move to 3-GPU instead. If no, that's a real, still-unexplained difference.
+# No download needed — same file as qwen3.8:27b-q5km, already on disk.
+qwen3.8:27b-q5km-2gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+
+# 3-GPU variant — added 2026-08-23. Final open question from the confound-resolution follow-up:
+# does bartowski's Q5_K_M share the original file's split-independence (PASS on both single-GPU
+# AND 3-GPU), or is that trait unique to the one irreplaceable file? No download needed — same
+# file as qwen3.8:27b-q5km, already on disk.
+qwen3.8:27b-q5km-3gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+
+# ── unsloth Dynamic V3 UD-Q5_K_M — second Q5 tiebreaker (added 2026-08-22) ─────────────
+# bartowski's Q5_K_M passed node_paratrooper 5/5 (see above) — but that's one build from one
+# quant house. This is the more targeted next test: unsloth's own Dynamic V3 pipeline (the same
+# pipeline whose Q4_K_M requant, qwen3.8:27b-ud, FAILED node_paratrooper 2/2) at Q5 precision.
+# Two possible outcomes disentangle two different explanations:
+#   - PASSES → supports "it's precision-tier, not method" (Dynamic V3 is fine once precision is
+#     high enough — consistent with bartowski's Q5 result).
+#   - FAILS → supports "it's something about unsloth's Dynamic V3 quantization method specifically,
+#     not precision tier" (would mean bartowski's Q5 pass and the original plain Q4_K_M pass share
+#     something Dynamic V3 doesn't, independent of bit-width).
+# 19.8 GB — fits single 24 GB same as the other Q5 builds. Filename does not collide with any
+# local file. Explicitly NOT using the abliterated/uncensored Q5 variants floating around from
+# other publishers (JonathanColetti, 0bserverx, huihui-ai, Blackfrost-AI, AtomicChat, HauhauCS) —
+# those are different fine-tunes, not just different quantizations, so they'd confound the
+# precision-vs-method question rather than answer it. STATUS: not yet downloaded/tested.
+# Commented out 2026-08-23: GGUF deleted to free disk space. Conclusion fully captured below
+# (FAIL 11/11, ALL 3 GPU configs, config-independent — the cleanest result in this whole series).
+# Re-download via ./fetch-hf.sh if ever needed again.
+# qwen3.8:27b-ud-q5km  Qwen3.8-27B-UD-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+
+# Multi-GPU variants of the same file — added 2026-08-22 to test whether the cross-GPU
+# floating-point non-determinism found on the original Q4_K_M PASS file (reproducibly FAILS
+# node_paratrooper under explicit tensor_split=1|1, PASSES under 3-GPU auto-dist or degenerate
+# tensor_split=1|0) is a precision-independent effect or something Q5 also stabilizes.
+# Requires ./gpu-mode.sh multi first.
+# qwen3.8:27b-ud-q5km-2gpu  Qwen3.8-27B-UD-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# qwen3.8:27b-ud-q5km-3gpu  Qwen3.8-27B-UD-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+#
+# RESULT — CONFIRMED 2026-08-22: node_paratrooper FAILS on ALL 11 runs across ALL 3 GPU configs.
+#   Single-GPU: 0/5 (early-stopped at 5 consistent FAIL, 39.8 tok/s, 115.2s each).
+#   2-GPU tensor_split=1|1: 0/3 FAIL. 3-GPU tensor_split=1|1|1: 0/3 FAIL.
+#   python_hashmap: PASS (f16 KV precision canary unaffected, as expected).
+# VERDICT: unlike the original Q4_K_M PASS file — which flips between PASS/FAIL depending on
+#   GPU split (cross-GPU floating-point non-determinism) — this build fails UNIFORMLY regardless
+#   of GPU config. That rules out "GPU-split sensitivity" as the explanation for this build's
+#   failure; it's a stable, config-independent FAIL. Combined with UD-Q4_K_M also failing 2/2,
+#   this means unsloth's Dynamic V3 pipeline fails node_paratrooper at BOTH Q4 and Q5 precision —
+#   contradicting the pure "Q4-tier quantization noise" hypothesis. Precision tier alone does not
+#   explain the split results: bartowski's Q5_K_M PASSES 5/5, unsloth's own Q5_K_M FAILS 11/11.
+#   REVISED PICTURE: the differentiator looks like it's the quantization HOUSE/METHOD, not the
+#   bit-width. bartowski's imatrix recipe tends to land on the PASS side of this razor's-edge
+#   decision at Q5; unsloth's Dynamic V3 recipe lands on FAIL regardless of precision. The
+#   original irreplaceable PASS file was unsloth's OLDER, pre-Dynamic-V3 quant — a different
+#   recipe again, and itself unstable under cross-GPU splits. Three separate axes now in play
+#   (quant house, quant method/generation, GPU split) — not reducible to "precision" alone.
+
+# ── unsloth higher-precision multi-GPU tiebreakers (added 2026-08-23) ──────────────────
+# unsloth's repo has TWO separate lineages at high precision, not just "more bits of the same
+# thing": a plain Q8_0 (no "UD-" prefix — likely their OLDER pipeline, same lineage as the one
+# irreplaceable original PASS file) and Dynamic V3 UD-Q6_K/UD-Q8_K_XL tiers (same pipeline that
+# already failed at Q4 and Q5, 11/11 config-independent). Neither fits single 24 GB alongside KV
+# — both require multi-GPU. Two different questions:
+#   qwen3.8:27b-ud-plain-q8: is it "unsloth as a house" or specifically "Dynamic V3 as a method"?
+#     If this (older-pipeline, non-UD) file PASSES, that isolates the failure to Dynamic V3
+#     specifically — not unsloth generally, since this shares lineage with the one known PASS file.
+#   qwen3.8:27b-ud-q8kxl: does Dynamic V3 fail even at near-lossless 8-bit (top tier they offer)?
+#     If it STILL fails after Q4/Q5 both failed, that rules out "just needs more bits" entirely
+#     and points to something structural in the Dynamic V3 conversion itself.
+# Configured for 2×24 GB (tensor_split=1|1, fits comfortably in 48 GB with KV headroom).
+# Commented out 2026-08-25: GGUFs deleted from allmodels/ to free disk space (58 GB combined with
+# the 3-GPU variants below). Investigation CLOSED 2026-08-23 — both confirmed FAIL at every tested
+# config (2-GPU AND 3-GPU, see below), no further tiebreakers planned. Redownloadable via
+# ./fetch-hf.sh if ever needed again.
+# qwen3.8:27b-ud-plain-q8  Qwen3.8-27B-Q8_0.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# qwen3.8:27b-ud-q8kxl  Qwen3.8-27B-UD-Q8_K_XL.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+#
+# RESULT — CONFIRMED 2026-08-23, both at 2×24 GB tensor_split=1|1 (the only config that fits):
+#   qwen3.8:27b-ud-plain-q8 (older non-UD pipeline, 29.0 GB): node_paratrooper FAIL 5/5.
+#   qwen3.8:27b-ud-q8kxl (Dynamic V3, top tier, 31.5 GB): node_paratrooper FAIL 5/5.
+#   python_hashmap PASS on both (f16 KV canary unaffected, as always).
+# ⚠ CONFOUNDED RESULT — DO NOT read this as "higher precision doesn't help" or "unsloth's older
+#   pipeline also fails." Neither file fits single 24 GB, so BOTH could only be tested at
+#   tensor_split=1|1 — and we already know from the original irreplaceable PASS file that this
+#   EXACT GPU split reproducibly flips it from PASS to FAIL (3/3 runs, confirmed 2026-08-15) due
+#   to genuine cross-GPU floating-point non-determinism, independent of quant house or precision.
+#   These 10 FAILs are fully consistent with "tensor_split=1|1 alone explains it" — we have no
+#   way to tell from this data whether plain-q8/q8kxl would ALSO fail on single-GPU, because that
+#   config physically doesn't exist for these file sizes on this hardware.
+# TO ACTUALLY ANSWER THE QUESTION: need a same-GPU-split CONTROL — test a build already known to
+#   PASS on single-GPU (bartowski's Q5_K_M, qwen3.8:27b-q5km) at this same tensor_split=1|1 split.
+#   If bartowski's Q5 ALSO flips to FAIL under tensor_split=1|1 (likely, given the original file's
+#   precedent), that would show the 2-way split kills this task universally regardless of file —
+#   meaning higher-precision multi-GPU testing of node_paratrooper is not meaningful at 2×24 GB at
+#   all, and any future precision/house comparison must either stay single-GPU (capacity-limited
+#   to ≤~Q5 for this model) or use the 3-GPU config, which the original file's diagnostics showed
+#   does NOT reproduce the same flip (3-GPU auto-dist and explicit 1|1|1 both PASSED for that file).
+#   NEXT STEP if this is worth resolving further: re-run qwen3.8:27b-ud-plain-q8/-q8kxl at 3-GPU
+#   tensor_split=1|1|1 instead of 2-GPU — that config didn't show the flip for the original file,
+#   so it's the cleaner test of the house/precision question this batch was meant to answer.
+#
+# ═══ FOLLOW-UP CONFIRMED 2026-08-23 — confound RESOLVED, and the conclusion is bigger than expected ═══
+# Ran both the missing control and the 3-GPU retest.
+#   CONTROL (qwen3.8:27b-q5km-2gpu): bartowski's Q5_K_M — known PASS 5/5 on single-GPU — FAILS
+#     5/5 at tensor_split=1|1 (2-GPU). Confirms the 2-way split alone explains ANY node_paratrooper
+#     FAIL at that config, regardless of file. The earlier 2-GPU Q8-tier FAILs told us nothing new.
+#   RETEST at 3-GPU tensor_split=1|1|1 (the config that does NOT flip the original PASS file):
+#     qwen3.8:27b-ud-plain-q8-3gpu (older non-Dynamic-V3 pipeline, Q8_0): FAIL 5/5.
+#     qwen3.8:27b-ud-q8kxl-3gpu (Dynamic V3, top tier): FAIL 5/5.
+#   These 3-GPU results ARE clean (3-GPU is verified not to flip known-good files) — this is real
+#   signal, not a split artifact.
+# REVISED CONCLUSION: the "unsloth older pipeline is safe" theory does NOT hold beyond the one
+#   original file. plain-Q8_0 shares that older, non-Dynamic-V3 lineage and is much HIGHER
+#   precision than the original Q4_K_M — yet it fails at 3-GPU where the original file passes.
+#   Across this entire investigation, only ONE file — the original, irreplaceable, since-deleted-
+#   upstream Q4_K_M — has ever passed node_paratrooper on a GPU config that isn't independently
+#   known to be flip-prone (single-GPU and 3-GPU). Every other build tested (2 unsloth Dynamic V3
+#   tiers, unsloth's own higher-precision older-pipeline Q8_0, bartowski Q4_K_M) fails on every
+#   config that isn't itself a coin-flip. bartowski's Q5_K_M is the only OTHER build with a clean
+#   PASS anywhere (single-GPU, 5/5) — but it has not been tested at 3-GPU, so it's not yet known
+#   whether it shares the original file's split-independence or is single-GPU-only.
+# PRACTICAL TAKEAWAY: stop looking for "the right precision" or "the right house" as a general
+#   rule — the evidence now points to the original file being a genuine outlier, not a
+#   representative of any reproducible category. For real use: bartowski's Q5_K_M single-GPU
+#   remains the best-evidenced NON-irreplaceable option. If 3-GPU capacity is available, the
+#   original Q4_K_M file remains the strongest overall (passes single-GPU AND 3-GPU).
+#
+# ═══ FINAL DATA POINT CONFIRMED 2026-08-23 (qwen3.8:27b-q5km-3gpu) — investigation CLOSED ═══
+# bartowski's Q5_K_M at 3-GPU tensor_split=1|1|1: node_paratrooper FAILS 5/5 (python_hashmap PASS).
+# Since 3-GPU is a config independently verified NOT to flip known-good files, this is a clean,
+# real result: bartowski's Q5_K_M does NOT share the original file's split-independence — it is
+# single-GPU-only. FINAL TALLY across 6 independent builds × 3 GPU configs: the ORIGINAL FILE IS
+# THE ONLY BUILD, EVER, THAT PASSES ON BOTH SINGLE-GPU AND 3-GPU. Every other build tested —
+# 3 unsloth Dynamic V3 tiers, unsloth's own higher-precision older-pipeline Q8_0, bartowski's
+# Q4_K_M, and now bartowski's Q5_K_M at 3-GPU — fails everywhere except the one config
+# (bartowski Q5_K_M single-GPU) that gave a second, narrower PASS. This is as close to conclusive
+# as this line of investigation gets: the original file's node_paratrooper PASS is not explained
+# by precision, quant house, or GPU config in any generalizable way — it is specific to that one
+# GGUF file. No further precision/house tiebreakers planned; recommend closing this investigation.
+# FINAL RECOMMENDATION: bartowski's Q5_K_M (qwen3.8:27b-q5km) single-GPU for anyone without the
+# irreplaceable original file. The original Q4_K_M file (single-GPU or 3-GPU) remains the single
+# strongest choice if available — treat it as genuinely irreplaceable, it has no known substitute.
+# Commented out 2026-08-25: GGUFs deleted from allmodels/ to free disk space (58 GB combined with
+# the 2-GPU variants above). Investigation CLOSED — no further tiebreakers planned. Redownloadable
+# via ./fetch-hf.sh if ever needed again.
+# qwen3.8:27b-ud-plain-q8-3gpu  Qwen3.8-27B-Q8_0.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# qwen3.8:27b-ud-q8kxl-3gpu  Qwen3.8-27B-UD-Q8_K_XL.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+
+# ── jashepp Ornith-1.5-35B-A3B — new candidate spot check (added 2026-08-24) ────────────
+# jashepp's track record: qwopus3.6:35b (PERFECT 19/19 coding, current fastest fallback pick) and
+# equinox:31b (PERFECT 19/19 + 4/4 web) are both strong; agents-a1:35b (unknown base) was the one
+# reject (FAIL csv_nordic_property, 7/10). 2/3 hits from the same lab justifies a spot check where
+# most other small-lab MoE releases don't. Q8_0-Imatrix variant (19.8 GB) matches the precision
+# tier jashepp used for the qwopus3.6 release. Fits single 24 GB comfortably.
+# STATUS: not yet downloaded/tested.
+ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
+#
+# RESULT — CONFIRMED 2026-08-23/24, single RTX 4090: **10/10 spot check PASS, Skill L6, 45.3 tok/s
+#   avg.** All L1-L5 tasks (csv_nordic_property, node_slugify, python_safe_div, node_csv_parser,
+#   python_lru_cache, python_expr_eval, python_hashmap, python_tokenizer, node_para_core) PASS
+#   cleanly and repeat-independent — no caveats there. python_hashmap PASS with f16 KV (precision
+#   canary holds, unremarkable at this size/architecture). csv_nordic_property PASS is notable —
+#   the exact task that rejected jashepp's other 35B (agents-a1:35b, unknown base).
+# node_paratrooper (L6-full) FIRST-TRY PASS in the spot check (103.7s, 45.3 tok/s) — but this is
+#   the exact task the entire qwen3.8:27b investigation just showed is prone to razor's-edge
+#   coin-flip results. Ran the same 100-run/early-stop-5 verification protocol used throughout
+#   that investigation: **5/5 FAIL on independent repeat runs** (single-GPU, same config as the
+#   spot check, genuine full completions ~45 tok/s / ~90-100s each, not truncation artifacts).
+#   Tally: 1 PASS / 6 total attempts. VERDICT: node_paratrooper PASS was a fluke, not a
+#   reproducible capability — same class of result as qwen3.8:27b's non-original builds, just
+#   caught by the repeat protocol before being trusted. NOT an L6-full completer.
+# NOTE: unlike qwen3.8:27b (which showed bit-identical determinism per fixed build/GPU-config —
+#   repeats either all pass or all fail), ornith:1.5-35b shows genuine run-to-run variation on
+#   IDENTICAL single-GPU config with no GPU-split change involved. Root cause not investigated
+#   (not worth the effort given the practical verdict is unchanged either way) — flagging as a
+#   data point that this model's determinism behavior on this task differs from qwen3.8:27b's.
+# OVERALL: excellent model for coding/web-adjacent work (10/10 through L5, best-in-class csv
+#   handling for a jashepp 35B), Skill rating should be read as L5 in practice, not L6 — the L6
+#   spot-check PASS does not hold up. Worth considering for 24gb.txt at the L5 tier if a faster
+#   alternative to qwen2.5-coder:32b-q4/equinox:31b is wanted, but NOT as an L6-full pick.
+#
+# FULL 19-TASK CODING — CONFIRMED 2026-08-24, single RTX 4090: **PERFECT 19/19 at 45.2 tok/s avg,
+#   232.7s total.** Clean sweep, no failures — every task from the 10-task spot check plus the
+#   remaining 9 (dotnet_sas, python_lfu_cache, python_minheap, python_multifile_rename,
+#   node_memoize_bug, python_ledger_bug, python_dijkstra, node_debounce, python_merge_intervals,
+#   awk_csv_stats, java_word_freq) all PASS. Ties qwopus3.6:35b and equinox:31b (both also 19/19)
+#   as a third jashepp-lineage model with a perfect coding score — strengthens the "2/3 jashepp
+#   hits" read from before this run to effectively 3/3 on raw coding capability (agents-a1:35b's
+#   csv_nordic_property FAIL remains the one exception in the family). Token efficiency 2.289 p/k.
+#   Skill L5 (coding-only context; node_paratrooper/L6-full confirmed NOT reproducible, see above).
+# RECOMMENDATION: strong candidate for 24gb.txt as a fast, perfect-coding L5 pick — same tier as
+#   equinox:31b (19/19 coding, ~40 tok/s) but ~13% faster here (45.2 vs ~40 tok/s), though web/L6
+#   groups untested so far (only coding confirmed). Would need web (4 tasks) + context/multihop to
+#   round out a full profile before considering it for default.txt or a role-pick swap.
+#
+# FULL PROFILE — CONFIRMED 2026-08-24, single RTX 4090 (web+context+multihop default ctx;
+#   L6-stepped at --num-ctx 32768): **35/38 eligible tasks PASS** (excluding node_paratrooper,
+#   separately confirmed unreliable above).
+#   WEB 3/4: python_config_loader/bash_preflight/node_express_validation PASS (~135-156 tok/s);
+#     python_fastapi_endpoint FAIL — expected pattern, matches every A3B MoE coder/RL fine-tune
+#     tested (Field(min_length=1) instead of field_validator+.strip(); same fail as qwopus3.6:35b).
+#   CONTEXT 6/6 PASS — including context_256k PASS at 49.9 tok/s (362.6s) on a SINGLE 24 GB card,
+#     unusually good; most models need 2×24 GB+ for 256k. ctx_8k-64k all clean (0.5-142.6 tok/s,
+#     several entries prefill-dominated wall-time on short outputs, not real throughput drops).
+#   MULTIHOP 3/5: forward/reverse/distractor_notes PASS (~100-104 tok/s); multihop_chain_5 AND
+#     multihop_cross_5 (L4, 5-hop) both FAIL — 2-hop retrieval is solid, 5-hop is not. New data
+#     point not seen on other jashepp models (multihop_chain_5/cross_5 are newer task additions).
+#   L6 STEPPED 4/4 PASS at --num-ctx 32768 (148-157 tok/s) — INCLUDING node_para_entities, the
+#     step that discriminates Qwen3.6-A3B-lineage models from Qwen3.5-A3B ones (Qwen3.5 A3B
+#     universally fails it). Strongly suggests Ornith-1.5 is Qwen3.6-A3B-based, same as qwopus3.6.
+#     **Joins the L6-stepped-chain-completer list** (14th model, alongside qwopus3.6:35b,
+#     noctrex-qwen3.6:35b, qwen3.6:35b-A3B, gpt-oss:120b, qwen3.5-122b:a10b, gemma4:26b/31b-qat,
+#     qwen3.6:27b, qwen3.5:27b, quest:35b, qwen3.8:27b, laguna-s-2.1:118b).
+# FULL TALLY: 19/19 coding + 3/4 web + 6/6 context (incl. 256k single-GPU) + 3/5 multihop +
+#   4/4 L6-stepped = 35/38, PLUS confirmed-unreliable node_paratrooper (1/6 attempts, not counted
+#   as a pass). Effective Skill: L5 by the harness's strict rating (multihop_chain_5/cross_5 are
+#   L4, but web fastapi is L3 and fails) — but this undersells it; the model completes the full
+#   L6-stepped chain, has perfect coding, and passes 256k context on one GPU, none of which the
+#   raw Skill number captures well.
+# FINAL RECOMMENDATION: excellent 24gb.txt candidate — best-in-class jashepp-35B coding speed
+#   (45 tok/s), full L6-stepped chain, 256k context on a single card. Not an L6-full completer
+#   (node_paratrooper unreliable) and not a web-perfect pick (fastapi fails, same as qwopus3.6).
+#   Consider alongside qwopus3.6:35b as a fast general-purpose 24 GB pick; the two are close in
+#   profile (both jashepp, both 19/19 coding, both fail fastapi) — qwopus3.6 is faster on raw
+#   coding tok/s historically, Ornith adds the L6-stepped completion and clean 256k context that
+#   qwopus3.6 needed 2×24 GB to achieve. Worth a place in models/24gb.txt.
+
+# ── jashepp Ornith-1.5-9B — smaller sibling spot check (added 2026-08-27) ──────────────
+# Same jashepp family as ornith:1.5-35b (which just tested excellently: 35/38 tasks, 14th
+# L6-stepped completer). jashepp is 3/3 on recent releases (qwopus3.6:35b, equinox:31b,
+# ornith:1.5-35b all strong) — worth checking whether the smaller 9B sibling holds up, since it
+# would fill a gap in the smaller-VRAM tier files (8gb/12gb/16gb.txt) that don't have many
+# jashepp-caliber options yet. MXFP4_Q8_0-Imatrix hybrid variant (9.5 GB) — same precision tier
+# choice as ornith:1.5-35b (matches qwopus3.6's own release format). Fits any tier trivially.
+# STATUS: not yet downloaded/tested.
+ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
+
+# ── Qwen3.8-Flash-Next — new Qwen4-preview architecture (added 2026-08-28) ─────────────
+# Official Qwen release (2026-08-26), NOT a community fine-tune. New architecture: Gated DeltaNet
+# + Qwen Sparse Attention (QSA) hybrid, Gated Residual, N-gram Embedding (51B params, designed to
+# be offloaded to host RAM with async prefetch — explicitly built for memory-constrained setups
+# like this one). 125B main model + 51B n-gram embedding + 4B MTP ≈ 180B total params, 6B
+# activated/token. Real MoE component (512 experts, 10 routed + 1 shared).
+# llama.cpp OFFICIALLY SUPPORTS this architecture (text & vision) per the model's own README —
+# this is not a "wait for community support" situation like GroveMoE was.
+# Benchmarks vs qwen3.8:27b (dense, no MoE): DeepSWE 58.7 vs 42.2, SWE-bench Pro 62.5 vs 61.7,
+# SWE-bench Multilingual 81.0 vs 73.8 — meaningful gains, not just a size/speed tradeoff.
+# REVISED 2026-08-28: switched from DevQuasar Q2_K to unsloth's own UD-Q4_K_XL (111.3 GB,
+# 4-part) after finding a third-party field report (DataCamp tutorial). Two reasons:
+#   1. llama.cpp's qwen4_exp architecture support is NOT yet in mainline — the report's author
+#      had to build from unsloth's own fork branch (qwen4exp/qwen3.8-flash-next), not stock
+#      llama.cpp. Our existing llama-server binary (commit 27df9199d, 2026-08-15) predates this
+#      model's 2026-08-26 release entirely and will NOT recognize the architecture. Built a
+#      separate binary from that branch (see below) rather than touching the working install —
+#      the existing binary stays untouched for qwen3.8:27b and everything else that depends on it.
+#   2. unsloth is the house that co-develops the architecture support itself — their own quants
+#      are the trustworthy choice for a model with a genuinely novel component (n-gram embedding
+#      table) that a generic third-party requant tool may not handle correctly. Per the same field
+#      report's own sizing table: UD-Q4_K_XL retains ~93% top-token agreement with full precision;
+#      lower unsloth tiers exist (UD-IQ4_XS 93.7 GB, UD-Q3_K_XL 90 GB, UD-IQ1_S 72.5 GB, all >80%
+#      agreement) if 111.3 GB proves too tight, but Q4_K_XL is the recommended "sweet spot" and
+#      fits comfortably in this rig's 72 GB VRAM + 86 GB RAM = 158 GB budget with real headroom.
+# Build: git clone --branch qwen4exp/qwen3.8-flash-next https://github.com/unslothai/llama.cpp.git
+#   to a SEPARATE directory from ~/GIT/llama.cpp (the working mainline checkout), built with
+#   my-build.sh, and run via `LLAMA_SERVER_BIN=<new binary path>` (bench.py honors this env var —
+#   confirmed in bench.py, does not require installing over the existing ~/.local/bin/llama-server).
+# Launch flags: the field report used `--fit on --fit-target 4096` (llama.cpp's automatic
+#   VRAM/RAM split, leaving 4 GB VRAM headroom) instead of manual n_cpu_moe tuning — likely more
+#   robust for this architecture's mixed dense/MoE/n-gram-embedding structure than guessing an
+#   n_cpu_moe layer count. Passed through as fit=on,fit_target=4096 (generic underscore→hyphen
+#   param conversion in llama_server_client.py). Reported real-world speed: ~80 tok/s at short
+#   context, ~64 tok/s as context grows, on a single RTX PRO 6000 96GB — encouraging given only
+#   6B of the ~180B total params are active per token.
+# ⚠ SAMPLING MISMATCH: Qwen recommends temp=1.0/top_p=0.95/top_k=20/min_p=0.0 for thinking mode
+#   (non-deterministic) — this harness forces temp=0/seed=1 for reproducibility. Results here may
+#   not reflect the model's "intended" quality; treat as a capability spot-check, not a faithful
+#   recreation of the vendor's recommended config. Default reasoning_effort is xhigh (heavy token
+#   use) — chat_template_kwargs reasoning_effort=medium is available to cut token use if the
+#   default budget gets exhausted before an answer, matching the thinking-model budget issues
+#   documented elsewhere in this file.
+# mmproj file available in the same repo if vision testing is ever wanted — not wired up here,
+# this harness doesn't exercise vision tasks.
+# STATUS: not yet downloaded/tested (this revision). Q2_K/Q3_K_M DevQuasar builds abandoned before
+# download — see rationale above.
+# TWO LOAD ATTEMPTS FAILED 2026-08-28 (both OOM): --fit is exclusive of BOTH --n-gpu-layers
+# ("n_gpu_layers already set by user, abort") AND --tensor-split ("tensor_split already set by
+# user, abort") — it wants to compute device placement entirely itself, across however many
+# GPUs are visible. Removed both. The DataCamp field report's own command (single GPU) only used
+# --fit/--fit-target alongside ctx-size/batch/flash-attn/sampling flags — nothing else
+# layer/device-related. Presumed --fit auto-distributes across all visible CUDA devices when
+# multiple are present — CONFIRMED 2026-08-28: this assumption held. Third attempt (fit=on,
+# fit_target=4096 only, no ngl/tensor_split) loaded successfully across all 3 GPUs (205.4s
+# startup) and ran python_safe_div: PASS, 71.1s wall, 7.2 tok/s apparent (thinking=true +
+# default reasoning_effort=xhigh likely dominates this single tiny-task measurement — not
+# representative of steady-state speed; field report saw 64-80 tok/s on a single 96 GB GPU with
+# larger generations). Binary: LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server
+# (built from unslothai/llama.cpp @ qwen4exp/qwen3.8-flash-next, commit eaf9376, 0.3.0-dev).
+# WORKING CONFIG CONFIRMED — this is the line to use for further testing (10-task spot check
+# next, to get a real capability + steady-state-speed read rather than judging off one L1 task).
+# PRIMARY CONFIG — fit_target=512, batch=1024/512 (promoted 2026-08-29 after the optimization
+# sweep below; strictly faster than the original fit_target=4096/batch=512/128 config on every
+# task tested, same 9/10 capability, no regressions).
+#
+# BINARY UPDATE 2026-08-29: mainline ggml-org/llama.cpp merged NATIVE qwen4exp support
+# (PR #27742, 2026-08-27) plus follow-on optimization work including the exact graph-split
+# reduction we would have wanted (PR #27880, 2026-08-28), doubled Q-split granularity for
+# tensor parallelism, dedicated indexer-cache tensor handling, and mmap tuning for the
+# host-resident gather tables. The separate unsloth fork (~/GIT/llama.cpp-qwen4exp) is no
+# longer strictly required — mainline built at commit c841aeeb8 (2026-08-29) loads and runs
+# this config correctly with LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server (the
+# repo's normal binary location, no special path needed).
+# PERFORMANCE COMPARISON CONFIRMED 2026-08-29 (fork v2 vs mainline c841aeeb8, same config,
+# same tasks): NOT a clear speedup — mixed result. python_safe_div comparable (30.6 vs
+# 27-32 tok/s), python_hashmap essentially identical (6.1 vs 6.4 tok/s), python_expr_eval
+# notably SLOWER on mainline (4.1 vs 6.2 tok/s), node_slugify slower on first-request cold
+# start (15.6 vs 29 tok/s — likely JIT/kernel-cache warmup noise on a fresh binary, not
+# re-verified). Read: the graph-split fix likely targets the same class of fixed
+# per-request overhead our fit_target/batch tuning already captured, so there wasn't much
+# headroom left for it to unlock on this specific 3-GPU --fit topology; the remaining
+# decode-speed ceiling still looks like genuine unoptimized compute kernels for this
+# brand-new architecture, independent of graph scheduling.
+# RECOMMENDATION: switch to mainline (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server)
+# going forward — not for speed, but because it's now the actively-maintained path (will keep
+# receiving fixes via git pull) versus a frozen fork commit, and it's the repo's normal binary
+# location (no special env var override needed for anything else). The fork remains a documented
+# fallback if a future mainline regression appears.
+qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp at commit c841aeeb8+ (PR #27742/#27880 merged); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
+
+# UD-IQ1_S variant (67.6 GB actual, 3 parts) — stretch-goal test from the optimization sweep.
+# Nearly fits entirely in 72 GB VRAM (vs Q4_K_XL's ~106 GB needing ~34 GB RAM offload), so this
+# tests whether RAM-offload volume itself is a real speed factor, or whether the compute-bound
+# ceiling we found (93% GPU util, unoptimized kernels) dominates regardless of offload volume.
+# unsloth's own quality table: ~80% top-token agreement at this tier (vs ~93% at Q4_K_XL) — a
+# real capability risk, not just a speed experiment. Testing added 2026-08-30.
+qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 3-part model — use mainline llama.cpp (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server)
+#
+# RESULT — CONFIRMED 2026-08-30: real speed gain, real capability cost. Not a free lunch.
+#   SPEED (vs Q4_K_XL fork-v2 numbers, same tasks): node_slugify 51.1 vs 29.0-29.3 tok/s (~1.75x),
+#   python_safe_div 59.1 vs 27.2-31.7 tok/s (~2x), python_hashmap 19.7 vs 6.1-6.4 tok/s (~3x!),
+#   node_para_core 7.2 vs 4.6-4.9 tok/s (~1.4x). Startup also much faster (7-27s vs 20-55s+) since
+#   almost nothing needs placing in RAM. CONFIRMS RAM-offload volume IS a genuine speed factor —
+#   this refines the earlier fit_target-sweep conclusion ("purely compute-bound, config-
+#   independent"): both a compute-kernel ceiling AND a RAM-offload-volume cost are real, and
+#   IQ1_S mostly eliminates the second one by fitting almost entirely in VRAM.
+#   CAPABILITY: python_hashmap (L5 precision canary) PASSES cleanly — quantization did not break
+#   the precision-sensitive tombstone logic. BUT python_expr_eval (L4, passes cleanly on
+#   Q4_K_XL) FAILS(TESTS_STILL_FAIL) **6/6 consistently** (verified with 5 repeat runs after the
+#   first failure, stopped there — pattern was unambiguous well before a 20-run ceiling). Failed
+#   attempts varied significantly in length/wall-time (29-170s) — genuinely different wrong
+#   solutions each time, not a stuck/deterministic bug. This is a real, reproducible capability
+#   regression, matching unsloth's own stated ~80% top-token agreement at this tier (vs ~93% at
+#   Q4_K_XL) — not just a theoretical quality risk, a concrete broken task.
+# VERDICT: do not recommend IQ1_S as a general replacement for Q4_K_XL — the 1.4-3x speed gain
+#   does not justify losing a previously-reliable capability. Useful data point for understanding
+#   the speed/RAM-offload relationship; not a practical everyday config. Full 10-task spot check
+#   not run (node_csv_parser, node_paratrooper, csv_nordic_property, python_tokenizer untested at
+#   this quant) — the capability question was already answered by the one regression found.
+#
+# 10-TASK SPOT CHECK — CONFIRMED 2026-08-29 on the ORIGINAL config (fit_target=4096,
+#   batch=512/128), 3×24 GB via --fit: first pass 4/10 at default model-timeout (300s/600s) —
+#   node_slugify, python_safe_div, python_lru_cache PASS quickly; node_paratrooper (L6-full!)
+#   PASS at 1272s (has its own ~1800s task timeout); node_csv_parser FAIL(NO_BLOCKS) — genuine
+#   format-compliance issue, not a timeout; the other 5 (csv_nordic_property, python_expr_eval,
+#   python_hashmap, python_tokenizer, node_para_core) all FAIL(TOOL_ERROR) at exactly 0.0 tok/s,
+#   wall time landing almost precisely on the timeout boundary (300.19–300.87s, 600.76s) — zero
+#   tokens ever received by the client.
+# ROOT CAUSE CONFIRMED (checked llama_server_client.py directly): the harness sends
+#   "stream": false — a non-streaming request. Any response that takes longer than the timeout to
+#   complete looks IDENTICAL to a hang: 0.0 tok/s, TOOL_ERROR.
+# RETEST CONFIRMED 2026-08-29 with model_timeout=2400: **ALL 5 PASS** (csv_nordic_property needed
+#   its own hardcoded 600s task override temporarily bumped too, then reverted — see
+#   lib/tasks.py). **COMBINED: 9/10** — only node_csv_parser genuinely fails (format compliance).
+#   Includes python_hashmap (L5 precision canary) and a node_paratrooper (L6-full) PASS — the
+#   latter NOT independently re-verified given how unreliable single passes on that exact task
+#   have proven throughout this investigation (qwen3.8:27b/ornith:1.5-35b); treat as promising,
+#   not confirmed.
+#
+# OPTIMIZATION SWEEP — CONFIRMED 2026-08-29. Checked gpu_snapshots on the original config: only
+#   ~60/72 GB VRAM used after load (13.7 GB idle) despite fit_target=4096, and gpu_util 93% /
+#   mem_bandwidth_util 12% during generation — a compute-bound signature, not memory-bandwidth-
+#   bound, consistent with unoptimized/early CUDA kernels for the new architecture components
+#   (QSA indexer, N-gram embedding gather, Gated Residual) rather than a placement/config issue.
+#   Tested fit_target=512 (much smaller VRAM margin, let --fit pack more onto GPU) + batch=1024/
+#   ubatch=512 (the field report's own values, vs our default 512/128) together as one variant.
+#   IMPORTANT CAVEAT: this session's 82.5-minute gap between launching this variant and its first
+#   result coincided with an unexplained hard PC crash (Kernel-Power Event ID 41, zero preceding
+#   log entries) — see hw-upgrade-july-2026.md. Root cause NOT confirmed as this config's fault
+#   (GPU power limits could not be verified as applied at the time), but re-tested this variant
+#   twice more afterward under tightened power limits (260/240/240 W, was 300/280/280) with
+#   hwmonitor active throughout — both re-tests completed cleanly, temps maxed at 66°C, zero
+#   WARN/CRIT. Treat as safe under the new power limits; the crash's exact cause remains unproven.
+#   RESULT — full 10-task spot check re-run on the new config, matched 1:1 against the original's
+#   per-task numbers above (original → new, decode tok/s and wall time):
+#     node_slugify          3.2 tok/s 112s → 29.3 tok/s   8s  (~14x — short output, <100 tok)
+#     python_safe_div       4.7 tok/s  30s → 27.2 tok/s   5s  (~6x  — short output, <100 tok)
+#     python_lru_cache      6.5 tok/s  84s →  5.6 tok/s  74s  (~1.1x — noisy, output-length dependent)
+#     node_csv_parser      FAIL(NO_BLOCKS) 126s → FAIL(NO_BLOCKS) 69s  (same genuine failure, faster)
+#     python_expr_eval      4.4 tok/s 214s →  6.2 tok/s 121s  (~1.75x)
+#     python_hashmap        4.1 tok/s 164s →  6.4 tok/s  93s  (~1.75x)
+#     python_tokenizer      4.4 tok/s 186s →  6.2 tok/s 120s  (~1.55x)
+#     node_paratrooper      4.1 tok/s 1272s → 4.1 tok/s 1060s  (~1.2x, within noise — decode speed
+#                                                                 UNCHANGED on the longest generation)
+#     node_para_core        4.6 tok/s 313s →  4.9 tok/s 268s  (~1.17x)
+#     csv_nordic_property   4.1 tok/s 887s →  4.5 tok/s 715s  (~1.24x)
+#   PATTERN: the speedup is dramatic (6-14x) only for very short generations (<100 tokens) and
+#   shrinks to a modest but real ~1.2-1.8x for medium/long generations (300-4400+ tokens),
+#   collapsing to noise-level (~1.2x) on the single longest task. This strongly confirms the
+#   compute-bound-on-unoptimized-kernels read: fit_target/batch tuning mainly cuts FIXED
+#   per-request overhead (connection/graph setup), which dominates short requests and is
+#   amortized away on long ones — it does not raise the actual sustained per-token decode
+#   throughput ceiling (~4-6 tok/s), which is most likely a kernel-level limit in this 2-day-old
+#   experimental branch, not something reachable by config tuning alone.
+#   Capability unchanged: same 9/10 (node_csv_parser genuinely fails either way).
+# PRACTICAL TAKEAWAY: promoted this variant to primary — it is strictly faster with zero
+#   downside on every task tested. Further speed gains beyond this point most likely require
+#   upstream kernel optimization work on the unslothai/llama.cpp qwen4exp branch itself, not more
+#   llama-server flag tuning. reasoning_effort tuning was deprioritized after data showed this
+#   model does essentially no visible reasoning at default settings (gen_tok counts match direct
+#   task output sizes, not inflated by thinking) — it would not address a compute-bound ceiling
+#   anyway. Not yet tried: smaller quants (UD-IQ4_XS/UD-Q3_K_XL/UD-IQ1_S) that fit more/fully in
+#   VRAM — see next-runs.md's stretch-goal plan.

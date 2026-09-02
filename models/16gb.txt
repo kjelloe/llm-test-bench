@@ -24,12 +24,22 @@
 # qwen2.5-coder:14b    #  ~68 tok/s   ~10 GB   confirmed 24 GB; 23/33 — misses csv_nordic_property; chain_5 PASS, cross_5 FAIL→emea-w-crit (4/5)
 # qwen2.5-coder:7b     # speed TBD     ~7 GB   not yet benchmarked
 # qwen3.5:27b Q3_K_M  #  ~35 tok/s   ~12 GB   sizing estimate — see note below; 27/29 at Q4_K_M on 24 GB; Q4_K_M: chain_5 PASS, cross_5 PASS (5/5)
+# ornith:1.5-9b        #  ~79 tok/s  ~8.9 GB  confirmed 24 GB (quality portable, speed not); 17/19 coding, Skill L2 (Peak L5); requires Ampere+ (MXFP4)
 
 # ── Confirmed 24 GB — fit fully on 16 GB at same quant ───────────────────────
 # MULTIHOP: chain_5 PASS (109 tok/s), cross_5 PASS (84 tok/s). Full 5/5 multihop.
 gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:unsloth/gpt-oss-20b-GGUF
 # MULTIHOP: chain_5 PASS (54 tok/s), cross_5 FAIL → "oncall-emea-w-crit" (wrong criticality). 4/5 multihop.
 qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-14B-Instruct-GGUF
+
+# jashepp Ornith-1.5-9B — CONFIRMED 2026-08-28, single RTX 4090 (24 GB, quality data portable —
+# speed is not): 17/19 coding at 79.3 tok/s avg — fastest confirmed model in this tier by a wide
+# margin. FAILS csv_nordic_property + python_lfu_cache (both L3); PASSES node_csv_parser (L3) and
+# python_hashmap (L5) — strong for a 9B-class model. Skill L2 (Peak L5). Requires Ampere+ (MXFP4).
+# 8.9 GB weights leaves ~4.6 GB KV headroom on a real 16 GB card — more comfortable than the 12 GB
+# tier entry. Tested with f16 KV, no explicit max_ctx; context beyond ~32k UNTESTED on this model.
+# Web/context/multihop/L6-stepped groups not yet run — coding-only profile so far.
+ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
 
 # ── Sizing estimate — not benchmarked; verify GGUF filename with ./search-hf.sh ─
 qwen2.5-coder:7b  Qwen2.5-Coder-7B-Instruct-Q6_K.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-7B-Instruct-GGUF

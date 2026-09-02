@@ -25,7 +25,7 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 install.sh                Interactive installer: checks and installs missing dependencies
-run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip)
+run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; in multi-GPU mode (3+ GPUs) runs a pre-flight power-limit check (lib/power_check.py) and aborts if unsafe (MAX_PSU_WATT/SKIP_POWER_CHECK env vars; added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md); auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip — but keep it enabled for sustained/heavy/multi-GPU/new-architecture testing)
 gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU mode; writes .gpu-mode (gitignored)
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
@@ -35,6 +35,7 @@ fetch-hf.sh               Downloads GGUF files from HuggingFace Hub based on hf:
 search-hf.sh              Searches HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste; thin wrapper for lib/search_hf.py
 scout-hf.sh               Periodically scans HuggingFace for new GGUFs relevant to coding + context benchmarks; diffs against saved state to show new/updated/gone repos; thin wrapper for lib/scout_hf.py
 show-all-models.sh        Runs ollama show on every locally installed model
+test-adaptive-kv-streaming-blackwell.sh  Standalone, self-contained repro/test script for the RaymondHuang210129/llama.cpp-adaptive-kv-streaming fork on a Blackwell-generation GPU (RTX 50-series) — investigated 2026-09-01/02, crashes on this rig's Ada/Ampere GPUs; not part of the benchmark harness, does not depend on this repo being present on the target machine; run manually when Blackwell hardware is available (see CLAUDE.md and next-runs.md for the investigation)
 lib/optimize_models.py    Hardware-aware llama-server param optimizer: detects GPU/VRAM/compute, suggests ngl, split_mode, tensor_split, flash_attn, n_cpu_moe, KV cache type, batch sizes; writes back to models/*.txt; --suggest-ctx prints DEFAULT_CTX for configure.sh
 preflight.sh              Dependency checker (GPU, Ollama, models, Python, Node, .NET)
 fetch.sh                  Pulls models by set name, set file path, or bare model name
@@ -48,13 +49,14 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
+  power_check.py          Pre-flight GPU power-limit safety check for multi-GPU runs; evaluate() is the pure decision function (unit-tested in tests/test_power_check.py), main() wraps it with an nvidia-smi query for run.sh to call; added 2026-08-29
 hwmonitor/
   hwmonitor.py            Standalone hardware watchdog: polls GPU (nvidia-smi), CPU (/sys/class/thermal), RAM (/proc/meminfo) at configurable interval; WARN/CRIT on threshold breach; on CRIT sends SIGINT → SIGTERM to bench.py; run.sh starts this automatically in --quiet mode (WARN/CRIT to stderr, data to log only)
   SPEC.md                 hwmonitor specification, threshold reference, CLI flags, integration notes
   history.py              compare-history.json writer (cmd_save) and header printer (cmd_show)
   statistics.py           Dataset builder: default mode (one row per model/backend), --summary (context speed profile: pass% + tok/s per context size with TRUNC/SKIP/FAIL codes and auto-dropped ctx_256k column), --detail (one row per task); --sort-by COLUMN [asc|desc] with run_date desc default; HF scout enrichment (hf_downloads, hf_gguf_gb) cross-referenced from hf-scout-state.json; new summary fields: slow, skipped_vram, skipped_ctx
   compare_results.py      Merges two result JSONs and prints speed summary + full task comparison table
-  fetch_hf.py             Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; skips a model if its exact gguf_file already exists in $LLAMA_MODELS_DIR (no rename/collision handling). GOTCHA: any ad hoc `hf_hub_download(local_dir=...)` call outside this script (e.g. one-off manual downloads) has the same no-collision behavior and will silently delete/overwrite a same-named file mid-transfer if one already exists at that path — always download to a scratch dir, verify (size/SHA256), then `mv` into place; never point `local_dir` straight at a directory holding files worth keeping. Confirmed the hard way 2026-08-20 (see CLAUDE.md's qwen3.8:27b section) — recovered via a pinned HF revision + the `.metadata` sidecar's saved SHA256.
+  fetch_hf.py             Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; skips a model if its exact gguf_file already exists in $LLAMA_MODELS_DIR (no rename/collision handling); sets HF_HUB_DISABLE_XET=1 by default (setdefault — an explicit override wins) after HF's Xet backend repeatedly stalled on large multi-part GGUF downloads (confirmed 2026-08-28/30 on 100+ GB files) with no error, just silently stopping progress. GOTCHA: any ad hoc `hf_hub_download(local_dir=...)` call outside this script (e.g. one-off manual downloads) has the same no-collision behavior and will silently delete/overwrite a same-named file mid-transfer if one already exists at that path — always download to a scratch dir, verify (size/SHA256), then `mv` into place; never point `local_dir` straight at a directory holding files worth keeping. Confirmed the hard way 2026-08-20 (see CLAUDE.md's qwen3.8:27b section) — recovered via a pinned HF revision + the `.metadata` sidecar's saved SHA256.
   search_hf.py            Searches HuggingFace Hub for GGUF files matching model names; suggests models/*.txt lines
   scout_hf.py             Scans HuggingFace Hub across curated coding/context model queries; saves state snapshot; diffs on re-run to report new, updated, and gone repos; VRAM fit labels (✓/~/✗) for 24 GB cards
   estimate_vram.py        VRAM scalability estimation table: reads anchor measurements from output/*.json, applies bandwidth-ratio heuristics to project tok/s at 16V/24V/2×16V/2×24V/2×32V tiers for both 8k and 128k context
@@ -72,6 +74,7 @@ tests/
   test_model_config.py        Unit tests for the models/*.txt parser (ModelConfig, max_ctx, hf: field)
   test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split)
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
+  test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
   python_safe_div/        calc.py (baseline), conftest.py, tests/test_calc.py

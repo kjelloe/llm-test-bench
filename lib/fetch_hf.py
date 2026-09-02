@@ -66,6 +66,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # HF's Xet backend has stalled repeatedly on large multi-part GGUF downloads in this
+    # project (confirmed 2026-08-28/30 on 100+ GB files) — the transfer silently stops
+    # progressing with no error. Disabling it falls back to plain HTTP, which has been
+    # reliable. setdefault() so an explicit user override (e.g. HF_HUB_DISABLE_XET=0) wins.
+    os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+
     models_dir = os.environ.get("LLAMA_MODELS_DIR", "")
     if not models_dir:
         print("Error: LLAMA_MODELS_DIR environment variable is not set.", file=sys.stderr)

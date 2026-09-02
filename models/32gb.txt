@@ -73,7 +73,11 @@ deepseek-r1:32b  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # qwq:32b: Q5_K_M (~22 GB); KV thrashing at ~6 tok/s on 24 GB; on 32 GB ~10 GB KV headroom.
 #   ctx=65536 should be feasible with q8_0 KV. Not yet confirmed on 32 GB.
 # MULTIHOP: chain_5 PASS (30 tok/s), cross_5 PASS (31 tok/s). Full 5/5 multihop.
-qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
+# Commented out 2026-08-22: GGUF deleted from allmodels/ to free disk space. Coding rejection
+# (11/24, KV thrashing ~6 tok/s) was from single-24 GB testing; multihop later passed 5/5 at
+# multi-GPU tiers, but a full coding re-evaluation with real multi-GPU headroom was never done
+# before this cleanup. Re-download via ./fetch-hf.sh if this tier is revisited.
+# qwq:32b  QwQ-32B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:unsloth/QwQ-32B-GGUF
 
 # ── Best overall result — MXFP4 + MTP (requires Ampere+ GPU, llama.cpp MXFP4 support) ──
 # 31/33 at 118 tok/s on 24 GB; 19/19 coding PERFECT; ~12 GB → ample KV headroom on 32 GB.

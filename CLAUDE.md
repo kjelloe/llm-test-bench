@@ -711,6 +711,27 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     (do not delete it) and the sole evidence for the PASS side of this finding. Full 3-way
     comparison table in `next-runs.md`; `qwen3.8:27b-ud` and `qwen3.8:27b-bartowski` in
     `models/candidates.txt` document both FAIL results in detail.
+  **⚠ SUPERSEDES THE ABOVE — node_paratrooper PASS is a genuine OUTLIER, not a category
+    (CONFIRMED 2026-08-23).** Extended the tiebreaker with 3 more builds and cross-GPU testing:
+    unsloth Dynamic V3 at Q5_K_M (FAIL 11/11 across single/2-GPU/3-GPU — config-independent),
+    unsloth's own higher-precision *older* pipeline at Q8_0 (FAIL, tested at 2-GPU AND 3-GPU —
+    3-GPU is a verified-clean config, so this is real signal, not split noise), and unsloth
+    Dynamic V3 at near-lossless UD-Q8_K_XL (FAIL at 2-GPU AND 3-GPU, same). Also ran the missing
+    control: bartowski's Q5_K_M — known PASS 5/5 single-GPU — FAILS 5/5 at 2-GPU tensor_split=1|1,
+    confirming that split alone (not file quality) explains any FAIL seen there. **Tally across
+    the entire investigation: the ONLY file that has ever passed node_paratrooper on a GPU config
+    not independently known to be flip-prone (single-GPU or 3-GPU) is the one original,
+    irreplaceable, since-deleted-upstream Q4_K_M file.** Every other build — 3 unsloth Dynamic V3
+    tiers, unsloth's own older-pipeline Q8_0, bartowski's Q4_K_M — fails on every clean config.
+    bartowski's Q5_K_M is the only other build with a clean PASS anywhere (single-GPU 5/5) — but
+    CONFIRMED 2026-08-23 it FAILS 5/5 at 3-GPU, so it does NOT share the original file's
+    split-independence; it is single-GPU-only. **Final tally, investigation CLOSED 2026-08-23:
+    across 6 independent builds × 3 GPU configs, the original file is the ONLY one that ever
+    passes on both single-GPU and 3-GPU.** **Stop looking for "the right precision" or "the right
+    quant house" as a general fix — there isn't one; the original file is a lucky outlier.** Practical
+    recommendation: use bartowski's Q5_K_M (`qwen3.8:27b-q5km`) single-GPU for anyone without the
+    irreplaceable original file; use the original file if 3-GPU capacity is available. Full detail
+    in `models/candidates.txt` and `memory/project_benchmark_findings.md`.
   **qwen3.5:27b** (bartowski, Qwen3.5-27B dense Q4_K_M, ~16 GB, 2×24 GB recommended, thinking=true, q8_0 KV):
   CONFIRMED 2026-08-13 complete profile — **Skill L6** (all task groups perfect):
   Coding: **PERFECT 19/19 at 28.4 tok/s avg** (373.6s total). python_hashmap PASS with q8_0 KV —
@@ -933,6 +954,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
       quest:35b (~97 tok/s CONFIRMED with tensor_split=1|1; model-timeout 600 for combat at ctx=32768)
   - 1×24 GB (default ctx): glm4.7-flash (~111 tok/s)
   - 1×24 GB (default ctx, **L6-full — paratrooper PASS**): qwen3.8:27b (~45 tok/s, f16 KV, new binary ≥ 2026-08-13)
+  - 1×24 GB (--num-ctx 32768): **ornith:1.5-35b** (~155 tok/s, jashepp Ornith-1.5-35B-A3B MXFP4
+    MoE Q8_0-Imatrix; 14th completer, CONFIRMED 2026-08-24; entities PASS suggests Qwen3.6-A3B
+    base, same lineage as qwopus3.6:35b; node_paratrooper/L6-full separately confirmed NOT
+    reproducible for this model — 1 PASS / 6 attempts, see full entry in candidates.txt)
   Note: qwen3.6:27b's ~12 tok/s for L6 tasks makes it practical only as a capability test.
   Note: qwen3.5:27b at ~27 tok/s is faster for L6 despite older Qwen generation — q8_0 KV vs f16.
   Entities gap is A3B MoE specific: Qwen3.5 A3B MoE (qwen3.5:35b, qwen3-30b:2507,
@@ -1050,7 +1075,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 ```
 bench.py            CLI runner
 install.sh          Interactive dependency installer
-run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh
+run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
 compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
@@ -1072,6 +1097,7 @@ lib/
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
   gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
+  power_check.py          Pre-flight GPU power-limit safety check for 3+ GPU runs; evaluate() unit-tested in tests/test_power_check.py; called by run.sh (added 2026-08-29)
   history.py              Run history writer and header printer
 logs/
   run-NN.log          Per-run output (tee from run.sh); keeps last 10; run-latest.log symlink
@@ -1284,6 +1310,78 @@ When asked to implement features:
   - ⚠ Additional GONE repos per 2026-06-07 scout: noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
     (default.txt entry) and unsloth/Qwen3-Coder-30B-A3B-Instruct-1M-GGUF (default.txt entry).
     Both files must be on disk. All four default.txt GONE entries flagged with ⚠ comments.
+  - **qwen3.8-flash-next** (Qwen's Qwen4-preview architecture, official release 2026-08-26,
+    ~106 GB unsloth UD-Q4_K_XL, 4-part): new architecture entirely — Gated DeltaNet + Qwen Sparse
+    Attention (QSA) hybrid, Gated Residual, N-gram Embedding (125B main + 51B n-gram embedding +
+    4B MTP, 6B activated/token). **Requires a separate llama-server build** — mainline llama.cpp
+    (the binary this repo normally uses) does NOT support this architecture; built from
+    `unslothai/llama.cpp` @ branch `qwen4exp/qwen3.8-flash-next` (commit `eaf9376`, `0.3.0-dev`)
+    at `~/GIT/llama.cpp-qwen4exp`, invoked via `LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server`
+    (bench.py already honors this env var — no code change needed for that part).
+    **Launch config gotcha**: use `--fit on --fit-target 4096` ONLY — both `--n-gpu-layers` and
+    `--tensor-split` conflict with `--fit`'s own auto-placement and cause it to abort fitting,
+    falling back to a naive single-GPU placement that OOMs. `--fit` correctly auto-distributes
+    across all 3 GPUs on its own once those two flags are removed (confirmed 2026-08-28).
+    **10-task spot check CONFIRMED 2026-08-29: 9/10 PASS**, but only once given adequate time —
+    default per-task timeouts (300-600s) are far too short for this model's default
+    `reasoning_effort=xhigh` at its steady-state ~4-7 tok/s on this hardware. First pass at
+    default timeouts showed 5 tasks FAIL(TOOL_ERROR) at exactly 0.0 tok/s landing right on the
+    timeout boundary — root cause confirmed by reading `llama_server_client.py`: the harness
+    sends non-streaming requests (`"stream": false`), so a slow-but-working response is
+    indistinguishable from a hang. Retested all 5 at `model_timeout=2400` — all passed, several
+    within even the old default, confirming genuine speed/timeout issue, not capability. Only
+    real failure: `node_csv_parser` (NO_BLOCKS, format compliance). Includes a `python_hashmap`
+    (L5 precision canary) PASS and a `node_paratrooper` (L6-full) PASS — the latter NOT
+    independently re-verified given how often single passes on that exact task have failed
+    repeat verification this cycle (see qwen3.8:27b/ornith:1.5-35b entries) — treat as promising,
+    not confirmed.
+    **OPTIMIZATION CONFIRMED 2026-08-29**: `reasoning_effort` wiring was skipped — response
+    metrics showed gen_tok counts matching direct task output sizes exactly, i.e. no visible
+    reasoning overhead at default settings, so effort-level tuning wasn't expected to help. The
+    real finding: `gpu_snapshots` showed only ~60/72 GB VRAM used after load (13.7 GB idle
+    despite `fit_target=4096`) and 93% GPU util / 12% mem-bandwidth util during generation — a
+    compute-bound signature pointing at unoptimized/early CUDA kernels for the new architecture's
+    novel components (QSA indexer, N-gram embedding gather, Gated Residual) in this 2-day-old
+    branch, not a placement issue. Tested `fit_target=512` + `batch_size=1024`/`ubatch_size=512`
+    (the field report's own values) together: 6-14x speedup on short generations (<100 tokens,
+    dominated by fixed per-request overhead) shrinking to a modest 1.2-1.8x on medium/long
+    generations, collapsing to noise-level (~1.2x, decode speed literally unchanged at 4.1 tok/s)
+    on the single longest task (`node_paratrooper`). Confirms the config change cuts fixed
+    overhead, not the actual sustained decode ceiling — a likely kernel-level limit not reachable
+    by further flag tuning. Capability held at 9/10 either way. **Promoted this config to primary**
+    — strictly faster, zero downside. Further gains likely need upstream kernel work, not more
+    config sweeping. Full per-task before/after numbers in `models/candidates.txt`.
+    **Unplanned incident**: an unexplained hard PC crash occurred during this sweep (see
+    `hw-upgrade-july-2026.md`) — not confirmed caused by this testing, but prompted tightening
+    GPU power limits (300/280/280W → 260/240/240W) and adding an automatic pre-flight power-limit
+    check to `run.sh` for any 3+ GPU run (see Repository Layout below). All testing after that
+    point re-enabled `hwmonitor` and completed cleanly (max 66°C, zero WARN/CRIT).
+    **MAINLINE BINARY UPDATE 2026-08-29**: mainline `ggml-org/llama.cpp` merged native qwen4exp
+    support (PR #27742) plus the exact graph-split optimization this model needed (PR #27880) and
+    several other qwen4exp-specific fixes — the separate unsloth fork is no longer strictly
+    required. CONFIRMED performance comparison (fork v2 vs mainline commit c841aeeb8, same
+    config, same tasks): NOT a clear speedup, mixed result (one task comparable, one identical,
+    one notably slower on mainline) — the graph-split fix likely targets the same fixed-overhead
+    class our `fit_target`/batch tuning already captured. **Recommend switching to mainline
+    anyway** (`LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server`, the repo's normal binary
+    location) — not for speed, but because it's actively maintained going forward versus a frozen
+    fork commit. Fork remains a documented fallback. Full comparison in `models/candidates.txt`.
+    **Upstream commit tracking (checked through 2026-09-01)** found several qwen4exp-relevant
+    fixes merged since — a QSA correctness fix, an indexer-efficiency change, and a CUDA abort
+    fix — not yet incorporated into a fresh benchmark run. Full list in `next-runs.md`.
+  - **llama.cpp-adaptive-kv-streaming fork** (`RaymondHuang210129/llama.cpp-adaptive-kv-streaming`,
+    investigated 2026-09-01/02): adds `--kv-stream-stage-mib` to `llama-server`, streaming the KV
+    cache between pinned host memory and a bounded CUDA pool for long contexts on GPUs too small
+    to hold the full KV cache — targets `qwen3.8:27b` specifically (not `qwen3.8-flash-next`; the
+    fork predates the qwen4exp merge entirely). Author validated on an RTX 5070 Ti (Blackwell,
+    compute capability 12.0). **Crashes reliably on this rig's Ada/Ampere GPUs** the moment
+    streaming is engaged — cleanly isolated across 3 controlled runs (2 different KV cache types
+    both crashed in 2 different CUDA kernels only when streaming was active; the identical
+    non-streaming config worked cleanly). Not pursued further on this hardware; revisit only if a
+    Blackwell-generation GPU is added to the rig. A self-contained repro/test script for that
+    scenario is saved at `test-adaptive-kv-streaming-blackwell.sh` (repo root) for whenever that
+    hardware is available. Full isolation detail in `next-runs.md`;
+    memory: `project_adaptive_kv_streaming_fork`.
 
 #### What NOT to do
 
