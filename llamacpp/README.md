@@ -57,7 +57,11 @@ nvcc --version   # should print: release 12.8, ...
 The script will:
 1. Detect Ubuntu and CUDA versions — block if CUDA < 12.8 on a Blackwell GPU
 2. Check and install missing packages (`cmake`, `build-essential`, `libcurl4-openssl-dev`)
-3. Build with `-DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release -j$(nproc)`
+3. Build with `-DGGML_CUDA=ON -DGGML_CUDA_GRAPHS=ON -DCMAKE_BUILD_TYPE=Release -j$(nproc)`
+   (`GGML_CUDA_GRAPHS` added 2026-09-04 — required for the `GGML_CUDA_GRAPH_OPT=1` runtime env
+   var to do anything at all; it's OFF by default upstream and the env var is a silent no-op
+   without it. See the qwen4exp row below before relying on this for multi-GPU speed, though —
+   it measured *worse*, not better, on this rig's 3-GPU `--fit` setup.)
 4. Verify `llama-server` binary and print its version
 5. Prompt to install `llama-server` to `/usr/local/bin`
 6. Prompt to install an optional systemd service with MoE-optimised flags
@@ -100,14 +104,27 @@ Some model architectures require a specific minimum llama.cpp commit. Building f
 | Architecture | Model | Min commit | PR |
 |---|---|---|---|
 | `mellum` | JetBrains Mellum2-12B-A2.5B | `4fb16eccc` | #23966 |
+| Gated DeltaNet hybrid | qwen3.8:27b | `0d0bfcd4f` (qwen35.cpp merge, ≥ 2026-08-13) | — |
+| `qwen4exp` (Gated DeltaNet+QSA hybrid) | qwen3.8-flash-next | `6c84c7d5d` (PR #27742, native support) minimum; **pin to `67a17c17c` for correct speed** | #27742, #27880 |
 
-If you see `error loading model: unknown model architecture: 'mellum'`, update and rebuild:
+If you see `error loading model: unknown model architecture: 'mellum'` (or `qwen4exp`, or the
+DeltaNet arch name), update and rebuild:
 
 ```bash
 cd ~/GIT/llama.cpp
 git pull
 cmake --build build --config Release -j$(nproc)
 ```
+
+**⚠ For `qwen4exp` (qwen3.8-flash-next) specifically, do NOT just build latest `master`.**
+Confirmed 2026-09-04: mainline commit `49c0dc82b` (82 commits past `67a17c17c`) is a real
+regression — 27–55% slower on longer-generation tasks than `67a17c17c`, and a newer multi-GPU
+CUDA-graph optimization (`GGML_CUDA_GRAPH_OPT=1`) measured *worse* on this rig's topology, not
+better. This architecture is under fast-moving, non-monotonic upstream development — **checkout
+`67a17c17c` explicitly** (`git checkout 67a17c17c` before building) rather than `master`, and
+re-verify speed on a 3-task comparison (`python_hashmap`, `python_expr_eval`,
+`python_safe_div`) before trusting any newer commit for this model. Full history in this repo's
+`CLAUDE.md` and `next-runs.md`.
 
 ---
 
@@ -172,6 +189,10 @@ Models pre-configured for dual 24 GB GPUs (48 GB total): `llama3.3:70b`, `qwq:32
    | `gemma4:26b` | `gemma-4-26B-A4B-it-UD-Q4_K_M.gguf` | `default.txt` |
    | `qwen3-coder-next` | `Qwen3-Coder-Next-Q4_K_M-0000{1-4}-of-00004.gguf` | `experimental.txt` |
    | `gemma4:31b` | `gemma-4-31B-it-Q4_K_M.gguf` | `experimental.txt` |
+   | `qwen3.8:27b` (original) | `Qwen3.8-27B-Q4_K_M.gguf` | `24gb.txt`, `2x24gb.txt` — **⚠ genuinely irreplaceable**: this exact file is the *only* build (of 6 independently tested, across every GPU config) confirmed to pass `node_paratrooper` on both single-GPU and 3-GPU. Deleted upstream 2026-08-19; do not delete the local copy. If you don't have it, use `bartowski`'s `Qwen3.8-27B-Q5_K_M.gguf` instead (single-GPU only, see `CLAUDE.md`) |
+   | `ornith:1.5-9b` | `Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf` | `12gb.txt`, `16gb.txt` — deleted upstream as of the 2026-08-30 scout |
+   | Qwen3.8-Flash-Next MTP companion | `Qwen3.8-Flash-Next-MTP-Q4_K_M.gguf` (store at `allmodels/MTP/`) | `qwen3.8-flash-next-ikllama` in `candidates.txt` (ik_llama.cpp `-md` flag) — source repo `dzannotti/Qwen3.8-Flash-Next-MTP-GGUF` went GONE per scout |
+   | `qwen2.5-coder:32b-q4` / `qwen2.5-coder:32b` | `Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf` (Q5_K_M also referenced, less critical) | `24gb.txt`, `2x24gb.txt`, `3x24gb.txt` — the strongest coder in this whole benchmark (PERFECT 19/19). Source repo `bartowski/Qwen2.5-Coder-32B-Instruct-GGUF` went GONE per the 2026-09-06 scout; only the Q4_K_M file is confirmed safe on the original machine — the Q5_K_M variant was never downloaded there and can no longer be fetched fresh from this repo |
 
    Transfer command (from old machine):
    ```bash

@@ -256,14 +256,19 @@ if [[ ${#SUPPORTED_SMS[@]} -gt 0 ]]; then
     CUDA_ARCH_FLAG="-DCMAKE_CUDA_ARCHITECTURES=${_arch_list}"
 fi
 info "Build dir : $BUILD_DIR"
-info "Flags     : -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release${NVCC_BIN:+ -DCMAKE_CUDA_COMPILER=$NVCC_BIN}${CUDA_ARCH_FLAG:+ $CUDA_ARCH_FLAG}"
+info "Flags     : -DGGML_CUDA=ON -DGGML_CUDA_GRAPHS=ON -DCMAKE_BUILD_TYPE=Release${NVCC_BIN:+ -DCMAKE_CUDA_COMPILER=$NVCC_BIN}${CUDA_ARCH_FLAG:+ $CUDA_ARCH_FLAG}"
 info "Cores     : $JOBS"
 echo
 
+# GGML_CUDA_GRAPHS=ON compiles in CUDA-graph support (USE_CUDA_GRAPH), OFF by default
+# upstream. Required at build time for the multi-GPU concurrent-streams-per-split
+# optimization (ggml-cuda.cu, GGML_CUDA_GRAPH_OPT runtime env var, mainline commit
+# 0ba6499c3, 2026-09-04) — that env var is a silent no-op without this flag.
 cmake \
     -S "$LLAMA_SRC_DIR" \
     -B "$BUILD_DIR" \
     -DGGML_CUDA=ON \
+    -DGGML_CUDA_GRAPHS=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
     ${NVCC_BIN:+-DCMAKE_CUDA_COMPILER="$NVCC_BIN"} \
@@ -395,4 +400,7 @@ echo -e "  Version: $VER_OUT"
 echo -e "  To benchmark: export LLAMA_SERVER_BIN=$SERVER_BIN"
 echo -e "                export LLAMA_MODELS_DIR=/path/to/models"
 echo -e "                ./compare.sh --backend llama-server"
+echo
+echo -e "  Multi-GPU CUDA graph opt (built in, off by default at runtime):"
+echo -e "                export GGML_CUDA_GRAPH_OPT=1"
 echo

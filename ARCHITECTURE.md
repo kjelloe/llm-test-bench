@@ -75,6 +75,9 @@ tests/
   test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split)
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
+  test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP)
+  test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)
+  test_reporting.py           Unit tests for lib/reporting._skill_level / _peak_skill_level (consecutive-tier vs peak-tier scoring logic)
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
   python_safe_div/        calc.py (baseline), conftest.py, tests/test_calc.py

@@ -41,6 +41,22 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # Web/context/multihop/L6-stepped groups not yet run — coding-only profile so far.
 ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
 
+# ISTA-DASLab GSQ-RCO non-uniform quantization of qwen3.8:27b — CONFIRMED 2026-09-03, single
+# RTX 4090, f16 KV: 9/10 on the 10-task spot check at a remarkably consistent ~54-55 tok/s. Only
+# node_paratrooper (L6-full) FAILS — expected/consistent with this base model's established
+# file-specific node_paratrooper finding, not a quality regression. PASSES python_hashmap (L5
+# precision canary), csv_nordic_property + node_csv_parser (both commonly-failed L3 CSV tasks),
+# and node_para_core (L6 stepped step 1). Per-tensor gradient-optimal allocation (GSQ+RCO,
+# arXiv:2604.18556 / arXiv:2605.00649) rather than one uniform quant type for the whole model —
+# author's own published benchmarks claim this exact tier is "task-lossless" vs BF16. At 11.8 GB
+# this is dramatically smaller than the usual 17-21 GB range for this base model, and noticeably
+# faster (54-55 vs the ~27-45 tok/s range seen for standard Q4_K_M/Q5_K_M builds elsewhere in
+# this repo) — leaves ~4.2 GB headroom for KV on a real 16 GB card. Does NOT fit the 12 GB tier at
+# this quant size (11.8 GB leaves only ~0.2 GB for KV); the smaller GSQ-RCO tiers (IQ2_S 9.3 GB,
+# IQ3_XXS 10.1 GB) are untested but would be the ones to try there. Full detail in
+# models/candidates.txt.
+qwen3.8-27b-gsqrco  Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768,thinking  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+
 # ── Sizing estimate — not benchmarked; verify GGUF filename with ./search-hf.sh ─
 qwen2.5-coder:7b  Qwen2.5-Coder-7B-Instruct-Q6_K.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:bartowski/Qwen2.5-Coder-7B-Instruct-GGUF
 

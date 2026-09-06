@@ -226,3 +226,15 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_typ
 #   qwopus3.6:35b (same publisher, both 19/19 coding, both fail fastapi) but adds L6-stepped
 #   completion and clean single-GPU 256k context that qwopus3.6 needed 2×24 GB to reach.
 ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
+
+# Tiel-Coder-35B-A3B (peculiar-ragdoll) — coding-focused Ornith derivative, found via scout
+# 2026-09-05 (flagged by an external community thread as "Ornith on steroids for coding").
+# CONFIRMED 2026-09-05, single RTX 4090: 18/19 coding at 163.9 tok/s avg, 81.2s total — fastest
+# in this VRAM tier. Only node_slugify (L2) FAILS. Passes both L5 tasks (python_hashmap,
+# python_dijkstra) and every L3 CSV task. node_paratrooper (L6-full) FAILS (universal wall).
+# CONFIRMED 2026-09-05 web: 4/4 PASS at ~161 tok/s (incl. python_fastapi_endpoint — a genuine
+# exception to the "coder fine-tunes fail fastapi" rule). L6-stepped: 3/4 (core/turret/combat
+# PASS, entities FAILS cleanly at ctx=32768 — not a stepped-chain completer). CONFIRMED context:
+# 6/6 PASS 8k-256k, including 256k on a single GPU (86-104 tok/s). Multihop: 3/5 (forward/
+# reverse/distractor PASS; chain_5 and cross_5 FAIL — same profile as ornith:1.5-35b).
+tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF

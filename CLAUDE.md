@@ -139,6 +139,9 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Key finding: Qwen2.5-72B-Instruct is inferior to qwen2.5-coder:32b-q4 (PERFECT 19/19) on coding tasks
   despite being 2.2× larger — coding fine-tune dominates over scale for the Qwen2.5 family.
   GPU temps (591 samples): GPU0 41-52°C, GPU1 40-62°C, GPU2 43-66°C. GGUF kept on disk; not added to any model set.
+  ⚠ Source repo `bartowski/Qwen2.5-Coder-32B-Instruct-GGUF` went GONE per the 2026-09-06 scout —
+  the Q4_K_M file (below) is already downloaded and safe on this machine; the Q5_K_M variant
+  referenced in `models/4x24gb.txt` was never downloaded and can no longer be fetched fresh.
   qwen2.5-coder:32b Q4_K_M (~18.5 GB weights): CONFIRMED 2026-06-26 full 33-task on 2×24 GB:
   28/33 at 36.5 tok/s, Skill L2. CODING PERFECT (19/19) — the strongest coder tested; passes
   csv_nordic_property, node_csv_parser, and python_expr_eval (deepseek-r1:32b loops on expr_eval
@@ -946,6 +949,17 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     cascades autoregressively, lands on wrong logic for the hardest game rule (test 33) by the end. This is
     floating-point reduction-order non-determinism in cross-GPU aggregation, not a capability regression.
     Use single-GPU to reproduce reliably. See qwen3.8:27b's full entry above for complete diagnostic detail.)
+  - **🏆 node_paratrooper (L6-full) SECOND CONFIRMED PASS: qwen3.8-flash-next, 2026-09-03,
+    ~183-244s at ~22-24 tok/s, 3×24 GB via --fit, mainline llama.cpp commit 67a17c17c+.**
+    Verified with 6 total runs (1 initial + 5 repeats), **6/6 PASS** — unlike qwen3.8:27b's
+    original file this is NOT tied to one irreplaceable GGUF; it's unsloth's standard
+    UD-Q4_K_XL quant on a standard, rebuildable mainline binary. **IMPORTANT: this model does
+    NOT complete the full L6 stepped chain** — `node_para_core` (step 1) FAILS reliably (6/6
+    FAIL(NO_BLOCKS)) on this same build, a real regression confirmed by repeat testing, not a
+    fluke. So this is a from-scratch node_paratrooper pass in isolation, not a full-chain
+    completion — a genuinely different (and, on the hardest single task, arguably more
+    impressive) achievement than the stepped-chain completers listed below. See
+    `models/candidates.txt` and `next-runs.md` for full diagnostic detail.
   - 3×24 GB: gpt-oss:120b (~55 tok/s), qwen3.5-122b:a10b (~17 tok/s), laguna-s-2.1:118b-iq4 (~21 tok/s)
   - 2×24 GB (--num-ctx 32768): noctrex-qwen3.6:35b (~91 tok/s), qwen3.6:35b-A3B unsloth (~97 tok/s),
       qwopus3.6:35b (~123 tok/s), gemma4:26b-qat (~82 tok/s), gemma4:31b-qat (~32 tok/s),
@@ -1102,9 +1116,21 @@ lib/
 logs/
   run-NN.log          Per-run output (tee from run.sh); keeps last 10; run-latest.log symlink
   compare-NN.log      Per-compare output (tee from compare.sh); compare-latest.log symlink
+llamacpp/
+  build-llama.sh      Build helper (symlinked as ~/GIT/llama.cpp/my-build.sh) — detects CUDA/GPU
+                      archs, builds with -DGGML_CUDA=ON -DGGML_CUDA_GRAPHS=ON (added 2026-09-04,
+                      required for GGML_CUDA_GRAPH_OPT=1 to do anything — see qwen3.8-flash-next
+                      notes below), optional install + systemd service prompts
+  README.md           Setup checklist, architecture minimum-commit table, troubleshooting
 tests/
-  test_parsing.py         Parser unit tests  →  python3 -m pytest tests/
-  test_model_config.py    Model config parser unit tests
+  test_parsing.py             Parser unit tests  →  python3 -m pytest tests/
+  test_model_config.py        Model config parser unit tests
+  test_llama_server_client.py llama_server_client._parse_body unit tests (reasoning_content, timings, content/thinking split)
+  test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
+  test_power_check.py         lib/power_check.evaluate() unit tests
+  test_export_task.py         --export-task bundling unit tests
+  test_hwmonitor.py           hwmonitor threshold state-machine unit tests
+  test_reporting.py           lib/reporting skill-level scoring unit tests
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=8000 model_timeout=600
@@ -1164,7 +1190,50 @@ When asked to implement features:
 
 #### vLLM backend constraints (updated 2026-07-06)
 
-- **MoE GGUF — patched vLLM** (2026-07-06): `--quantization gguf` (ally's patched flag, not
+- **⚠ SUPERSEDED 2026-09-06 — GGUF support moved out-of-tree, no patch needed anymore.**
+  Checked a fresh `~/GIT/vllm` checkout (merged from upstream `main` 2026-09-06): the in-tree
+  GGUF kernels this "ally's patched flag" note describes were deleted upstream back in June
+  2026 (`6635279d8a`, "Migrate GGUF quantization support to plugin") and replaced with an
+  official, separately-maintained `vllm-project/vllm-gguf-plugin` package. Plain
+  `vllm serve <repo>:<quant_type>` now works — no `--quantization gguf` patch flag needed at
+  all. The plugin **natively supports MoE for Qwen3-MoE and Qwen3.5-MoE** (our own model
+  lineage) plus DeepSeek-V2/V3 and MiniMax-M2. Two things to know: (1) use K-quants (Q4_K_M,
+  Q6_K) for MoE models, not I-Matrix quants (IQ1_M/IQ2_M/IQ3_S/IQ4_XS) — I-Matrix expert layers
+  fall back to a slow per-token loop instead of the fast fused MoE kernel, and every model this
+  repo has actually promoted is already a K-quant; (2) Qwen3.5-MoE GGUF specifically needs
+  `--hf-config-path` pointing at the equivalent HF model, since its `qwen35moe` architecture
+  string isn't recognized by HF's own config parser. Neither the plugin nor core vLLM require
+  Blackwell/RTX 5000-series hardware for this — `CMakeLists.txt` lists this rig's actual
+  compute capabilities (8.6/8.9) as fully supported, and a recent plugin fix ("remove Blackwell
+  bf16 restriction") turned out to be unlocking Blackwell to match a path Ampere/Hopper already
+  had, not gating anything to Blackwell. **Separately**, this same vLLM checkout now ships a
+  native Anthropic Messages API (`vllm/entrypoints/anthropic/`, routes `/v1/messages` and
+  `/v1/messages/count_tokens`, matching mainline llama.cpp's own native support) — relevant if
+  this harness or any sibling tooling ever needs to speak Anthropic format directly to a
+  vLLM-served model instead of going through `vllm_client.py`'s existing OpenAI-compatible
+  path. Re-benchmarking the old 15/16-at-31.2-tok/s result below against the new plugin has not
+  been done — treat the numbers below as historical (they may well be faster now) until
+  someone re-runs it.
+- **Plugin update reviewed 2026-09-06** (21 new commits since the above check). Most relevant:
+  a **real OOM fix directly hitting our 27B tier** — commit `51b8d7a` ("Release GGUF shard
+  tensors when materializing fused weights") fixed fused-layer shard tensors (QKV, merged-
+  column) being kept resident twice during loading. Its own commit message gives exact numbers
+  for a **27B Q4_K_M GGUF** (our `qwen3.6:27b`/`qwen3.8:27b` weight class): 17.83 GiB of weights
+  was ballooning to 22.87 GiB peak and OOM-ing on a 24 GB card; fixed, peak now 19.24 GiB, loads
+  with real headroom. A 27B-class GGUF that likely could not load on this plugin a few weeks ago
+  should now fit on a single RTX 4090 — worth an actual test before assuming the old 4×
+  llama-server-vs-vLLM speed gap still holds at this weight class. Also landed: **Qwen3.5/3.6
+  MTP + Gated DeltaNet support** (`4ec8d61`) — dedicated adapters auto-detect an embedded
+  `nextn` MTP block in the GGUF (`--speculative-config '{"method":"mtp",...}'`, no separate
+  file, same clean pattern already confirmed at zero speed penalty on `qwen3.5-122b:a10b` via
+  llama.cpp) plus explicit Gated DeltaNet weight-layout reordering — directly the architecture
+  family behind our best single-GPU models, though the adapter's `model_type` map only lists
+  `qwen3_5*` strings explicitly and the plugin's own "tested coverage" docs only exercise Qwen
+  3.6 in its vision-language form, not this plain-text/MTP path — present in code, not yet in
+  their own regression-tested list. Also: Gemma4 GGUF support (`d4c1f0d`, relevant to
+  `gemma4:26b-qat`/`31b-qat`), Mellum2 support (`fb973ad`), and CVE-2026-53923 already patched
+  in this checkout. Full detail in `next-runs.md`.
+- **MoE GGUF — patched vLLM** (2026-07-06, historical): `--quantization gguf` (ally's patched flag, not
   stock `--load-format gguf`) successfully loads Qwen3-Coder-30B-A3B MoE GGUF. Results:
   15/16 eligible tasks PASS at 31.2 tok/s (tp=1, single RTX 4090). python_hashmap TESTS_STILL_FAIL
   (base model gap — same as AWQ; see below). KV headroom caps at ~13760 tokens on single 24 GB
@@ -1366,9 +1435,33 @@ When asked to implement features:
     anyway** (`LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server`, the repo's normal binary
     location) — not for speed, but because it's actively maintained going forward versus a frozen
     fork commit. Fork remains a documented fallback. Full comparison in `models/candidates.txt`.
-    **Upstream commit tracking (checked through 2026-09-01)** found several qwen4exp-relevant
-    fixes merged since — a QSA correctness fix, an indexer-efficiency change, and a CUDA abort
-    fix — not yet incorporated into a fresh benchmark run. Full list in `next-runs.md`.
+    **REBUILD CONFIRMED 2026-09-03** at commit `67a17c17c` (~1 month of accumulated qwen4exp
+    fixes since `c841aeeb8`, including `b356fa262` — a kv-cells lookup optimization whose own
+    commit message reports +4.9% tg measured directly on Qwen3.8-Flash-Next UD-Q4_K_XL — and a
+    model-agnostic CUDA MoE fusion). Re-ran the same 3-task comparison: **real, large speedup** —
+    `python_hashmap` 6.1→23.0 tok/s (~3.7x), `python_expr_eval` 4.1-6.2→23.2 tok/s (~4-5.7x).
+    `python_safe_div` went ~27-32→~19-24 tok/s (~25-30% slower, verified across 6 repeat runs —
+    real, not noise). Pattern: all three tasks now converge to roughly the same ~19-23 tok/s
+    sustained rate, where before they were wildly split — consistent with the accumulated fixes
+    genuinely repairing the per-token decode degradation the earlier optimization sweep diagnosed.
+    Net effect for real coding work (hundreds-to-thousands of tokens, not tens): strongly
+    positive. **Current recommendation (SUPERSEDED BELOW): rebuild mainline periodically** — this
+    architecture is under active upstream development and these gains came from ~1 month of
+    accumulated commits. Full detail in `next-runs.md` and `models/candidates.txt`.
+    **⚠ REGRESSION CONFIRMED 2026-09-04** at commit `49c0dc82b` (82 commits past `67a17c17c`) —
+    rebuilt specifically to test a new multi-GPU CUDA-graph lever (`0ba6499c3`, gated behind
+    build flag `-DGGML_CUDA_GRAPHS=ON`, added to `llamacpp/build-llama.sh`, plus runtime env var
+    `GGML_CUDA_GRAPH_OPT=1`). Result: **not a win, a clear regression on both counts**.
+    `node_paratrooper`: ~22-24 tok/s (67a17c17c) → 13.8 tok/s (49c0dc82b, no graphopt) → 11.3
+    tok/s (WITH `GGML_CUDA_GRAPH_OPT=1` — the new lever makes it worse, not better, for this
+    3-GPU `--fit` topology). Capability held: PASS both runs (8/8 total confirmed passes for
+    this model). `python_hashmap` 23.0→10.3 tok/s (-55%), `python_expr_eval` 23.2→16.9 tok/s
+    (-27%), `python_safe_div` ~19-24→31.4 tok/s (the one task that got faster) — same
+    short-task-up/long-task-down split as the 67a17c17c improvement, but inverted. Not bisected.
+    **"Rebuild periodically" is NOT a one-way ratchet — verify the 3-task speed comparison after
+    every rebuild before switching. Current recommendation: pin to commit `67a17c17c` for
+    production use of this model; do not enable `GGML_CUDA_GRAPH_OPT=1` for it.** Full detail in
+    `next-runs.md` and `models/candidates.txt`.
   - **llama.cpp-adaptive-kv-streaming fork** (`RaymondHuang210129/llama.cpp-adaptive-kv-streaming`,
     investigated 2026-09-01/02): adds `--kv-stream-stage-mib` to `llama-server`, streaming the KV
     cache between pinned host memory and a bounded CUDA pool for long contexts on GPUs too small
@@ -1382,6 +1475,64 @@ When asked to implement features:
     scenario is saved at `test-adaptive-kv-streaming-blackwell.sh` (repo root) for whenever that
     hardware is available. Full isolation detail in `next-runs.md`;
     memory: `project_adaptive_kv_streaming_fork`.
+  - **ik_llama.cpp fork with MTP speculative decoding** (RESULTS 2026-09-04): dedicated qwen4exp
+    support plus MTP (NextN) self-speculative decoding for `qwen3.8-flash-next`
+    (`qwen3.8-flash-next-ikllama` in `candidates.txt` — note this fork's `--fit` is a bare boolean,
+    `fit=on` errors). Needed a separate small "predictor-only" MTP companion GGUF via `-md`
+    (unsloth's standard file has no embedded MTP tail); getting that to fit alongside `--fit`'s
+    main-model placement on this 3-GPU topology was fragile — `--fit-margin` and `-ngld 0` had no
+    effect, only reducing `--ctx-size` to 2048 actually freed enough VRAM. **MTP spec-decoding
+    genuinely works** (92.6% draft acceptance rate) but effective throughput was only ~17.1 tok/s
+    — slower than mainline's current tuned baseline (~19-24 tok/s, no speculation needed). This
+    fork also doesn't honor `enable_thinking:false` for this model (genuine `<think>` reasoning by
+    default), making its baseline handicapped versus mainline's zero-reasoning behavior. **Not
+    currently a win on this hardware** — the reported ~90 tok/s on a single RTX 5090 elsewhere
+    likely reflects Blackwell's bandwidth + no cross-GPU overhead, not reproduced on this 3-way
+    Ada/Ampere split.
+    **Follow-up (2026-09-04), qwen3.8:27b-GSQ-RCO with an embedded MTP head** (official repo
+    ships `-mtp` variants — one file, no separate `-md`/VRAM-fitting fragility): loaded cleanly,
+    single GPU. 90.8% draft acceptance rate again, but effective speed (55.52 tok/s) was
+    statistically identical to this quant's already-confirmed non-speculative baseline
+    (54.9-56.9 tok/s) — zero net gain. **Two data points now show MTP's payoff depends on
+    whether the baseline has spare decode headroom to exploit, not on acceptance rate alone** —
+    qwen3.8-flash-next's slow/compute-bound baseline saw a real 2.2x gain (still not enough to
+    beat mainline); this already-fast, likely bandwidth-saturated baseline saw none. Check
+    baseline headroom before expecting a win from MTP on any future test. Full diagnostic detail
+    in `next-runs.md`; memory: `feedback_mtp_spec_decoding_lessons`.
+  - **tiel-coder:35b** (peculiar-ragdoll, Tiel-Coder-35B-A3B, UD-IQ4_XS, ~16.5 GB, single RTX
+    4090, no Ampere+ required, f16 KV): coding-focused Ornith derivative, found via scout
+    2026-09-05 — flagged by an external community thread as "Ornith on steroids for coding"
+    (9+ independent re-uploads appeared across one scout cycle, a strong trending signal).
+    CONFIRMED 2026-09-05 **10-task spot check: 8/10 at ~165 tok/s** — fastest model in this
+    VRAM tier (faster than qwopus3.6:35b's 161 and ornith:1.5-35b's 155 tok/s). PASSES
+    `python_hashmap` (L5 precision canary) and `csv_nordic_property` — two of the harder
+    discriminators in the whole benchmark. FAILS `node_slugify` (L2, TESTS_STILL_FAIL — a
+    genuine wrong-output bug, not a format/parsing issue) and `node_paratrooper` (L6-full,
+    expected universal wall). **PROMOTED to full 19-task coding run: 18/19 at 163.9 tok/s avg,
+    81.2s total** — only `node_slugify` fails; also passes `python_dijkstra` (L5) and every
+    other L3 CSV task (`node_csv_parser`, `awk_csv_stats`, `java_word_freq`). Stronger L5
+    coverage than `qwen3-coder-rtpurbo:30b` (which fails hashmap) at a comparable coding score
+    and speed tier. GPU temps healthy (max 60°C). Added to `models/24gb.txt`.
+    **CONFIRMED 2026-09-05 web + L6-stepped (single RTX 4090, --num-ctx 32768)**: **WEB: 4/4
+    PASS at ~161 tok/s** — python_config_loader, bash_preflight, node_express_validation,
+    python_fastapi_endpoint. Notable: this is a coder fine-tune, and the established rule is
+    that post-trained coder fine-tunes FAIL fastapi (qwen3-coder:30b-1m, rtpurbo, qwopus3.6:35b
+    all fail it) — tiel-coder:35b is a genuine exception. **L6 STEPPED: 3/4** — node_para_core
+    PASS (167.0 tok/s), node_para_turret PASS (164.7 tok/s), node_para_entities **FAIL**
+    (TESTS_STILL_FAIL, 161.4 tok/s, 19.4s — clean capability failure at ctx=32768, not a
+    context/budget issue), node_para_combat PASS (158.9 tok/s — passes because the step-4
+    scaffold provides a reference entities implementation, same pattern as equinox:31b). Does
+    NOT complete the full L6 stepped chain — not a 15th completer. GPU temps healthy (max 62°C).
+    **CONFIRMED 2026-09-05 context + multihop (single RTX 4090)**: **CONTEXT: 6/6 PASS 8k-256k,
+    including 256k on a single GPU** — ctx_8k *100.4 (4.4s), ctx_16k *102.0 (7.4s), ctx_32k *103.8
+    (14.6s), ctx_64k *88.9 (29.7s), ctx_128k *111.6 (51.6s), ctx_256k *86.3 (122.0s). Matches
+    `ornith:1.5-35b`'s own single-GPU 256k ceiling. **MULTIHOP: 3/5** — forward/reverse/distractor
+    PASS (104-140 tok/s), `multihop_chain_5` and `multihop_cross_5` both FAIL(TESTS_STILL_FAIL) —
+    the same aggregate 3/5 score as `ornith:1.5-35b` (whose own per-task breakdown was never
+    captured, so this is a count match, not confirmed to be the identical two failing tasks) —
+    consistent with sharing its lineage either way. GPU temps
+    healthy (max 65°C). Full profile: 18/19 coding + 4/4 web + 3/4 L6-stepped (entities FAILS) +
+    6/6 context (8k-256k) + 3/5 multihop.
 
 #### What NOT to do
 

@@ -43,6 +43,16 @@ SCOUT_QUERIES: list[str] = [
     "flash-next gguf",                   # short distinctive fragment, in case the above miss a re-upload's naming
     "qwen4exp gguf",                     # internal architecture codename — may appear in repo descriptions/READMEs
     "qwen4 preview gguf",                # public architecture description used in our own docs
+    "gsq-rco gguf",                      # ISTA-DASLab GSQ+RCO non-uniform quantization (found via
+                                          # external link 2026-09-03, not caught by any prior query)
+    "ista-daslab gguf",                  # same lab, broader catch for future releases
+    # jashepp Ornith-1.5-35B-A3B: 14th confirmed L6-stepped completer (CONFIRMED 2026-08-24,
+    # found via external field report, NOT this scout — added 2026-09-04 to close that same
+    # gap, mirroring the qwen3.8-flash-next precedent above). "tiel-coder" is a coding-focused
+    # derivative flagged in the same field report as worth checking; unverified, not yet tested.
+    "ornith gguf",
+    "ornith 1.5 gguf",
+    "tiel-coder gguf",
     "gpt-oss",
     "codestral",
     "phi4 coding instruct",

@@ -947,7 +947,8 @@ qwen3.8:27b-q5km-3gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1
 # reject (FAIL csv_nordic_property, 7/10). 2/3 hits from the same lab justifies a spot check where
 # most other small-lab MoE releases don't. Q8_0-Imatrix variant (19.8 GB) matches the precision
 # tier jashepp used for the qwopus3.6 release. Fits single 24 GB comfortably.
-# STATUS: not yet downloaded/tested.
+# STATUS: TESTED AND PROMOTED — see the CONFIRMED 2026-08-24 result blocks below this entry;
+# added to models/24gb.txt as the 14th L6-stepped-chain completer.
 ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
 #
 # RESULT — CONFIRMED 2026-08-23/24, single RTX 4090: **10/10 spot check PASS, Skill L6, 45.3 tok/s
@@ -1027,8 +1028,55 @@ ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,
 # would fill a gap in the smaller-VRAM tier files (8gb/12gb/16gb.txt) that don't have many
 # jashepp-caliber options yet. MXFP4_Q8_0-Imatrix hybrid variant (9.5 GB) — same precision tier
 # choice as ornith:1.5-35b (matches qwopus3.6's own release format). Fits any tier trivially.
-# STATUS: not yet downloaded/tested.
+# STATUS: TESTED AND PROMOTED — CONFIRMED 2026-08-28, single RTX 4090: 17/19 coding at 79.3
+# tok/s, fastest confirmed model in the 12/16 GB tiers. Full detail in models/12gb.txt and
+# models/16gb.txt (where it's promoted). Already deleted upstream as of the 2026-08-30 scout —
+# local copy is now irreplaceable.
 ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
+
+# Tiel-Coder-35B-A3B (peculiar-ragdoll) — found via scout 2026-09-05, flagged via an external
+# Reddit thread (same thread that surfaced Ornith/Ninfer) as "literally Ornith on steroids for
+# coding". Trending hard: 9+ independent re-uploads appeared in a single scout cycle (npario,
+# dotnfc, jan1k NVFP4, 3x kingjones777 ROCm-specific builds, jlindeberg P100-specific,
+# LuffyTheFox Genesis-Hermes fine-tune, plus an MTP companion variant) — strong community signal.
+# Worth testing given Ornith's own documented weakness is specifically from-scratch code/game
+# generation (both our own node_paratrooper verification failure and an independent Reddit
+# report on Three.js game generation). UD-IQ4_XS, ~16.5 GB, fits single 24 GB. Testing the plain
+# variant first, not the MTP one (see feedback_mtp_spec_decoding_lessons — MTP only pays off when
+# the baseline has spare decode headroom; establish plain baseline first).
+# CONFIRMED 2026-09-05, single RTX 4090: 8/10 spot check at ~165 tok/s (fastest in this VRAM
+# tier — faster than qwopus3.6:35b's 161 and ornith:1.5-35b's 155). PASSES python_hashmap (L5
+# precision canary) and csv_nordic_property (both common failure points). FAILS node_slugify
+# (L2, TESTS_STILL_FAIL — genuine wrong-output bug, not format) and node_paratrooper (L6-full,
+# expected universal wall). PROMOTED to full 19-task coding run: **18/19 at 163.9 tok/s avg,
+# 81.2s total** — only node_slugify fails; also passes python_dijkstra (L5) and every other L3
+# CSV task (node_csv_parser, awk_csv_stats, java_word_freq). Stronger L5 coverage than
+# qwen3-coder-rtpurbo:30b (which fails hashmap) at comparable coding score and speed tier.
+# GPU temps healthy (max 60°C). PROMOTED to models/24gb.txt.
+# CONFIRMED 2026-09-05 web + L6-stepped (single RTX 4090, --num-ctx 32768):
+#   **WEB: 4/4 PASS at ~161 tok/s avg** — python_config_loader, bash_preflight,
+#   node_express_validation, python_fastapi_endpoint. NOTABLE: this is a coder fine-tune, and
+#   our established rule says post-trained coder fine-tunes FAIL fastapi (qwen3-coder:30b-1m,
+#   rtpurbo, qwopus3.6:35b all fail it) — tiel-coder:35b is a genuine exception to that pattern.
+#   **L6 STEPPED: 3/4** — node_para_core PASS (167.0 tok/s), node_para_turret PASS (164.7 tok/s),
+#   node_para_entities **FAIL** (TESTS_STILL_FAIL, 161.4 tok/s, 19.4s — clean capability failure,
+#   not a context/budget issue at ctx=32768), node_para_combat PASS (158.9 tok/s — passes because
+#   the step-4 scaffold provides a reference entities implementation, same pattern as equinox:31b).
+#   Does NOT complete the full L6 stepped chain (entities is the required discriminator) — NOT a
+#   15th L6-stepped completer. GPU temps healthy (max 62°C).
+# CONFIRMED 2026-09-05 context + multihop (single RTX 4090, no explicit max_ctx — server's own
+# ceiling tested directly): **CONTEXT: 6/6 PASS 8k-256k, including 256k on a single GPU** —
+# ctx_8k *100.4 (4.4s), ctx_16k *102.0 (7.4s), ctx_32k *103.8 (14.6s), ctx_64k *88.9 (29.7s),
+# ctx_128k *111.6 (51.6s), ctx_256k *86.3 (122.0s). Matches ornith:1.5-35b's own single-GPU 256k
+# ceiling — same base architecture handling f16 KV at this VRAM tier well. **MULTIHOP: 3/5** —
+# multihop_forward PASS (134.7 tok/s), multihop_reverse PASS (104.4 tok/s), distractor_notes
+# PASS (140.5 tok/s); multihop_chain_5 FAIL(TESTS_STILL_FAIL) and multihop_cross_5
+# FAIL(TESTS_STILL_FAIL) — the same aggregate 3/5 score as ornith:1.5-35b (that model's own
+# per-task multihop breakdown was never captured, so this is a count match, not confirmed to be
+# the identical two failing tasks). Consistent with sharing Ornith's lineage either way. GPU
+# temps healthy (max 65°C). Full profile now: 18/19 coding + 4/4 web + 3/4 L6-stepped (entities
+# FAILS) + 6/6 context (8k-256k) + 3/5 multihop.
+tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF
 
 # ── Qwen3.8-Flash-Next — new Qwen4-preview architecture (added 2026-08-28) ─────────────
 # Official Qwen release (2026-08-26), NOT a community fine-tune. New architecture: Gated DeltaNet
@@ -1114,12 +1162,103 @@ ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type
 # headroom left for it to unlock on this specific 3-GPU --fit topology; the remaining
 # decode-speed ceiling still looks like genuine unoptimized compute kernels for this
 # brand-new architecture, independent of graph scheduling.
-# RECOMMENDATION: switch to mainline (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server)
-# going forward — not for speed, but because it's now the actively-maintained path (will keep
-# receiving fixes via git pull) versus a frozen fork commit, and it's the repo's normal binary
-# location (no special env var override needed for anything else). The fork remains a documented
-# fallback if a future mainline regression appears.
-qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp at commit c841aeeb8+ (PR #27742/#27880 merged); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
+# RECOMMENDATION (superseded below): switch to mainline
+# (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server) — not for speed, but because it's now
+# the actively-maintained path (will keep receiving fixes via git pull) versus a frozen fork
+# commit, and it's the repo's normal binary location (no special env var override needed for
+# anything else). The fork remains a documented fallback if a future mainline regression appears.
+#
+# ⚠ SUPERSEDED — REBUILD CONFIRMED 2026-09-03: rebuilt mainline at commit `67a17c17c` (24
+#   commits ahead of the `c841aeeb8` comparison above, ~1 month of accumulated upstream fixes)
+#   and re-ran the same 3-task comparison. This time it's a REAL, LARGE speedup — not the "no
+#   clear win" result from the first comparison:
+#     python_hashmap:    6.1-6.4 tok/s → 23.0 tok/s   (~3.7x faster)
+#     python_expr_eval:  4.1-6.2 tok/s → 23.2 tok/s   (~4-5.7x faster)
+#     python_safe_div:   27-32 tok/s   → 19-24 tok/s  (~25-30% SLOWER — verified consistent
+#       across 6 repeat runs, not noise; a fresh server start AND a warm one both land in this
+#       range, ruling out cold-start as the explanation)
+#   PATTERN: all three tasks now converge to roughly the same ~19-23 tok/s sustained rate, where
+#   before they were wildly split (fast bursts on short tasks, severe compute-bound collapse on
+#   longer ones — see the fit_target sweep above). Read: the accumulated upstream fixes (most
+#   concretely `b356fa262` "kv-cells: look up the n-gram history in the sequence position index"
+#   — whose own commit message reports +4.9% tg measured directly on **Qwen3.8-Flash-Next
+#   UD-Q4_K_XL** at 71k context — plus a model-agnostic CUDA MoE weighted-expert-reduction fusion
+#   `3466812d1`, plus further qwen4exp-specific indexer/CUDA-abort fixes) appear to have fixed
+#   whatever was causing per-token decode speed to degrade with generation length. Short tasks
+#   lose their old "burst before the collapse" advantage; medium/long tasks — the ones real coding
+#   work actually looks like — gain enormously. NET EFFECT FOR REAL WORK: strongly positive.
+#   LONGEST-TASK CONFIRMATION 2026-09-03 (same commit 67a17c17c): csv_nordic_property PASS at
+#   208s (~3.4x faster, convergence pattern holds). node_para_core: 6/6 FAIL(NO_BLOCKS) — a REAL,
+#   REPRODUCIBLE REGRESSION on this build, verified with 5 repeats after the first failure.
+#   Format-compliance failure, not a timeout (decode speed 22-24 tok/s throughout). Root cause not
+#   diagnosed. **node_paratrooper: 6/6 PASS at ~183-244s (~4-5.7x faster than fork v2's 1060s) —
+#   verified with 5 repeats after the first pass. This CONFIRMS reliable L6-full capability** —
+#   qwen3.8-flash-next is now the SECOND model in this entire investigation (after qwen3.8:27b's
+#   file-specific pass) to reliably clear node_paratrooper, and unlike that one this is NOT tied
+#   to an irreplaceable file — standard unsloth Q4_K_XL on a standard rebuildable mainline binary.
+#   See CLAUDE.md's L6 completer list (now includes this model). GPU temps excellent throughout
+#   (max 43°C). Net verdict: one real regression, one major capability confirmation on the
+#   hardest task in the whole benchmark.
+#   CURRENT RECOMMENDATION (SUPERSEDED BELOW): use mainline at this commit or later. Rebuild
+#   periodically — qwen4exp is under active upstream development and these gains came from ~1
+#   month of accumulated fixes.
+#
+# ⚠ REGRESSION CONFIRMED 2026-09-04 — "rebuild periodically" is NOT a one-way ratchet. Rebuilt
+#   mainline again at commit `49c0dc82b` (82 commits past `67a17c17c`), specifically to test the
+#   new multi-GPU CUDA-graph optimization `0ba6499c3` ("CUDA: Allow concurrent streams per split
+#   for multi-GPU", found via routine upstream-commit-tracking). That optimization requires a
+#   build-time flag (`-DGGML_CUDA_GRAPHS=ON`, OFF by default upstream — added to
+#   `llamacpp/build-llama.sh`/`my-build.sh`) plus a runtime env var (`GGML_CUDA_GRAPH_OPT=1`);
+#   without the build flag the env var is a silent no-op.
+#   Result: NOT a win — a clear regression, on both counts:
+#     node_paratrooper: 67a17c17c ~22-24 tok/s → 49c0dc82b no-graphopt 13.8 tok/s → WITH
+#       GGML_CUDA_GRAPH_OPT=1 11.3 tok/s (env var makes it WORSE, not better, for this
+#       3-GPU --fit topology). Capability held: PASS both times (8/8 total passes now).
+#     python_hashmap:   23.0 tok/s → 10.3 tok/s  (-55%)
+#     python_expr_eval: 23.2 tok/s → 16.9 tok/s  (-27%)
+#     python_safe_div:  ~19-24 tok/s → 31.4 tok/s (+ faster — the ONE task that improved)
+#   Pattern: short/fixed-overhead-dominated tasks got faster, sustained-generation tasks got
+#   substantially slower — the mirror image of the 67a17c17c improvement, suggesting something
+#   in these 82 commits reintroduced a per-token decode-speed regression for this architecture.
+#   NOT bisected — out of scope for a routine check; flagging for whoever investigates next.
+#   CURRENT RECOMMENDATION: roll back to commit `67a17c17c` for production use of this model
+#   until the regression is understood. Do not assume "mainline is newer" == "mainline is
+#   faster" for qwen4exp going forward — verify the 3-task speed comparison after every rebuild
+#   before switching. GGML_CUDA_GRAPH_OPT=1 specifically: do not enable for this model/topology.
+qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b, 2026-09-04, is a CONFIRMED REGRESSION for this model — see comment block above; verify speed after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
+
+# ik_llama.cpp (ikawrakow fork) variant — CLI conventions differ from mainline: `--fit` is a bare
+# boolean here (mainline takes `--fit on`), so `fit=on` errors with "unknown argument: on" — use
+# bare `fit` instead. No `fit_target` equivalent tested yet (this fork uses `--fit-margin`/
+# `--gpu-fit-margin`, different naming — omitted here, defaults used for the first test).
+# The interesting feature — `--spec-type mtp:n_max=1,p_min=0.0` (MTP self-speculative decoding
+# using the model's own embedded MTP head, no separate draft file) — is NOT representable in this
+# comma-delimited params field (model_config.py splits on every comma, no quote-awareness, and
+# the spec-type value itself contains a comma) — test that via a direct manual server launch
+# instead of through this model-file entry. Investigation in progress 2026-09-03, see
+# next-runs.md.
+qwen3.8-flash-next-ikllama  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — requires LLAMA_SERVER_BIN=~/GIT/ik_llama.cpp/build/bin/llama-server
+#
+# RESULT — CONFIRMED 2026-09-04: baseline (this line, no spec-decoding) is 7.8 tok/s INCLUDING a
+#   full <think> block — this fork does not honor enable_thinking:false for this model (528/546
+#   tokens were reasoning on a trivial node_slugify prompt), unlike mainline which shows no
+#   visible reasoning overhead at all. Much slower than mainline's tuned ~19-24 tok/s baseline.
+#
+# MTP SELF-SPECULATIVE DECODING (direct manual server launch — NOT representable in this
+#   comma-delimited params field, the --spec-type value itself contains a comma): tested with
+#   `--spec-type mtp:n_max=1,p_min=0.0` plus a separate MTP "predictor-only" companion GGUF via
+#   `-md` (unsloth's standard file has no embedded MTP tail; used
+#   dzannotti/Qwen3.8-Flash-Next-MTP-GGUF, 2.6 GB, allmodels/MTP/). Fitting the draft model
+#   alongside --fit's main-model placement on this 3-GPU topology was fragile: --fit-margin 1024
+#   had zero effect (byte-identical failure), -ngld 0 (draft fully CPU-resident) also had zero
+#   effect — only reducing --ctx-size to 2048 (down from 8192) actually freed enough real VRAM to
+#   load successfully. RESULT: MTP spec-decoding genuinely works — 92.6% draft acceptance rate
+#   (288/311 accepted), a real ~2.2x speedup over this fork's own baseline (7.8→17.1 tok/s) — but
+#   effective throughput (600 completion tokens / 35.1s = 17.1 tok/s) is still SLOWER than
+#   mainline's tuned baseline with no speculation at all. NOT currently a win on this hardware.
+#   User-reported ~90 tok/s on a single RTX 5090 elsewhere not reproduced here — plausibly
+#   Blackwell bandwidth + no cross-GPU PCIe overhead (one GPU vs this rig's 3-way split) + a
+#   config that didn't need ctx=2048 to fit. Full diagnostic detail in next-runs.md.
 
 # UD-IQ1_S variant (67.6 GB actual, 3 parts) — stretch-goal test from the optimization sweep.
 # Nearly fits entirely in 72 GB VRAM (vs Q4_K_XL's ~106 GB needing ~34 GB RAM offload), so this
@@ -1214,3 +1353,56 @@ qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.ggu
 #   task output sizes, not inflated by thinking) — it would not address a compute-bound ceiling
 #   anyway. Not yet tried: smaller quants (UD-IQ4_XS/UD-Q3_K_XL/UD-IQ1_S) that fit more/fully in
 #   VRAM — see next-runs.md's stretch-goal plan.
+
+# ── ISTA-DASLab GSQ-RCO non-uniform quantization of qwen3.8:27b — candidate for 12/16 GB tier ──
+# Found via a user-supplied link (2026-09-03), not routine scout — see scout query note below.
+# GSQ (Gumbel-Softmax Quantization) + RCO (Riemannian Constrained Optimization): per-tensor
+# gradient-based precision allocation under a total size budget, rather than one uniform quant
+# type for all tensors. Author's own published benchmarks (arXiv:2604.18556, arXiv:2605.00649)
+# claim IQ3_S (11.8 GB, 3.50 bpw) is "task-lossless" vs the BF16 base — exact match on AIME25
+# (100.00) and LiveCodeBench v6 (85.71), -0.51 on GPQA-Diamond — a 4.6x size reduction from the
+# 53.8 GB BF16 baseline. Also beats Unsloth's own UD-IQ3_S at matched size on 2 of 3 benchmarks.
+# Four sizes available: IQ2_XS (8.4 GB), IQ2_S (9.3 GB), IQ3_XXS (10.1 GB), IQ3_S (11.8 GB,
+# recommended/task-lossless per the author) — all fit comfortably in BOTH the 12 GB and 16 GB
+# tiers; downloaded IQ3_S first as the strongest claimed operating point.
+# OPEN QUESTION: does GSQ-RCO's per-tensor gradient-optimal allocation relax our established f16
+# KV requirement for this model lineage (q8_0 KV causes qwen3.6:27b/qwen3.8:27b to omit `_EMPTY`
+# from python_hashmap — see the python_hashmap precision-canary note in CLAUDE.md)? Testing with
+# f16 KV first (our safe baseline) to isolate whether GSQ-RCO itself retains capability; q8_0 KV
+# comparison is a natural follow-up if there's interest.
+# Academic benchmarks (AIME25/GPQA/LiveCodeBench) are a different evaluation than our own
+# task suite — "task-lossless" per their own numbers does not guarantee a clean result on our
+# specific precision-sensitive canaries; testing against our suite before trusting the claim.
+#
+# RESULT — CONFIRMED 2026-09-03, single RTX 4090, f16 KV, mainline llama.cpp:
+# **9/10 on the 10-task spot check**, only `node_paratrooper` (L6-full from-scratch) FAILS
+# (TESTS_STILL_FAIL) — expected/consistent with this base model's well-established finding that a
+# node_paratrooper PASS is file-specific, not a general architecture capability (see qwen3.8:27b's
+# extensive investigation elsewhere in this file). Everything else PASSES cleanly, including
+# `python_hashmap` (L5 precision canary — GSQ-RCO's per-tensor allocation retains full precision
+# at f16 KV, same as our standard uniform-quant builds of this model), `csv_nordic_property` and
+# `node_csv_parser` (both commonly-failed L3 CSV tasks), and `node_para_core` (L6 stepped step 1).
+# Speed: remarkably consistent ~54-55 tok/s across every task (single RTX 4090, no RAM offload
+# needed at just 11.8 GB) — notably faster than our standard Q4_K_M/Q5_K_M builds of the same
+# base model (17-21 GB), likely simply because there's much less to move per token. Temps
+# excellent throughout (max 64°C), only brief harmless power WARNs (98-101% of the 260W cap,
+# always recovered within seconds, no CRIT).
+# VERDICT: genuinely excellent — matches/exceeds standard uniform-quant capability at nearly half
+# the size (11.8 GB vs the base model's usual 17-21 GB range) and noticeably faster. Promoted to
+# `models/16gb.txt`. Does NOT fit the 12 GB tier at this specific quant size (11.8 GB leaves only
+# ~0.2 GB for KV) — the smaller GSQ-RCO tiers (IQ2_S 9.3 GB, IQ3_XXS 10.1 GB) are untested but
+# would be the ones to try for a genuine 12 GB fit, and per the author's own published numbers
+# both still score close to the BF16 baseline.
+qwen3.8-27b-gsqrco  Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+#
+# MTP FOLLOW-UP — CONFIRMED 2026-09-04: the official repo ships an MTP-embedded variant of this
+#   exact quant (Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf, 11.29 GB, downloaded to allmodels/). Tested
+#   MTP self-speculative decoding on ik_llama.cpp, single GPU (embedded head — no separate -md
+#   file, avoids the VRAM-fitting fragility hit on qwen3.8-flash-next). Loaded cleanly and fast.
+#   90.8% draft acceptance rate — but effective speed (55.52 tok/s) was statistically IDENTICAL to
+#   this quant's already-confirmed non-speculative baseline (54.9-56.9 tok/s). Zero net gain.
+#   Read: this baseline is already fast/likely memory-bandwidth-saturated at batch=1, leaving no
+#   slack for speculative batching to exploit — contrast with qwen3.8-flash-next's slow baseline,
+#   which DID see a real (if insufficient) 2.2x gain from the same technique. High acceptance
+#   rate alone does not predict a real speedup; check baseline headroom first. Not pursued
+#   further. Full detail in next-runs.md.
