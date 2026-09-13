@@ -159,6 +159,7 @@ gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,tensor_split=1
 # Passes node_para_entities (L5) + node_para_combat (L6) — only 16 GB model in set to achieve L6 stepped.
 # GLM architecture fails python_hashmap + python_dijkstra (both L5) regardless of precision.
 # tensor_split: optional (fits single GPU); included for KV headroom symmetry in multi-model runs.
+# ⚠ hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF went GONE per the 2026-09-07 scout — file already downloaded and safe locally (allmodels/GLM-4.7-Flash-MXFP4_MOE.gguf), no longer fetchable fresh if ever lost.
 glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 
 # qwen3.5:27b: dense 27B Q4_K_M (~16 GB); Skill L6 full profile CONFIRMED 2026-08-13.

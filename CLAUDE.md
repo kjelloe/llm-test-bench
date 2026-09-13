@@ -139,9 +139,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   Key finding: Qwen2.5-72B-Instruct is inferior to qwen2.5-coder:32b-q4 (PERFECT 19/19) on coding tasks
   despite being 2.2× larger — coding fine-tune dominates over scale for the Qwen2.5 family.
   GPU temps (591 samples): GPU0 41-52°C, GPU1 40-62°C, GPU2 43-66°C. GGUF kept on disk; not added to any model set.
-  ⚠ Source repo `bartowski/Qwen2.5-Coder-32B-Instruct-GGUF` went GONE per the 2026-09-06 scout —
-  the Q4_K_M file (below) is already downloaded and safe on this machine; the Q5_K_M variant
-  referenced in `models/4x24gb.txt` was never downloaded and can no longer be fetched fresh.
+  Source repo `bartowski/Qwen2.5-Coder-32B-Instruct-GGUF` briefly went GONE per the 2026-09-06
+  scout and is BACK per the 2026-09-07 scout (reappeared in that day's NEW list) — the Q4_K_M
+  file (below) was already downloaded and safe regardless; the Q5_K_M variant referenced in
+  `models/4x24gb.txt` is fetchable again if ever needed. No lasting impact.
   qwen2.5-coder:32b Q4_K_M (~18.5 GB weights): CONFIRMED 2026-06-26 full 33-task on 2×24 GB:
   28/33 at 36.5 tok/s, Skill L2. CODING PERFECT (19/19) — the strongest coder tested; passes
   csv_nordic_property, node_csv_parser, and python_expr_eval (deepseek-r1:32b loops on expr_eval
@@ -1149,6 +1150,38 @@ Task groups (--task-group):
   spot      10-task candidate spot check (standard evaluation subset)
 ```
 
+#### Pre-flight: check for an active external-facing serving instance
+
+The sibling repo `~/GIT/llm-service-provider` (separate git repo) may be actively serving
+llama.cpp or vLLM to a remote agent pipeline through an SSH tunnel on this same rig's GPUs —
+that is its entire purpose, not benchmarking. **Before starting any GPU-consuming run in this
+repo** (`run.sh`, `compare.sh`, or any `--task-group` run that spawns llama-server/vllm),
+check whether it is active:
+
+```bash
+~/GIT/llm-service-provider/status.sh
+# equivalent: ~/GIT/llm-service-provider/bin/llmctl status
+```
+
+Look at the `backend:` line and the `llm-backend` / `vllm-local-*` unit states — if active, a
+benchmark run here will compete for the same GPU VRAM/compute and can disrupt real external
+traffic being served through the tunnel. Coordinate before launching a benchmark (stopping it
+via `llmctl stop backend` there would interrupt a live remote pipeline, so don't do that
+unilaterally — check with whoever/whatever depends on it first).
+
+#### Known Issues
+
+- **⚠ Blocker for any future mainline llama.cpp rebuild past commit `14a9d09f7`** (2026-09-09):
+  upstream removed `--mmap`/`--no-mmap`/`--mlock`/`--direct-io` entirely, replaced by
+  `--load-mode {auto,none,mmap,mlock,mmap+mlock,dio}`. Every model line in every `models/*.txt`
+  file uses `no_mmap`, which `lib/llama_server_client.py` currently converts to a bare
+  `--no-mmap` — that flag no longer exists past this commit, so llama-server will refuse to
+  start for every model until the harness is updated (translate `no_mmap` → `--load-mode none`,
+  following the same pattern already used for `_BOOL_EMIT_VALUE`/`--flash-attn`). Not urgent —
+  every currently-pinned binary predates this — but fix it before rebuilding mainline for any
+  other reason (e.g. to pick up the GDN/CUDA-race/checkpoint fixes noted below). See
+  `next-runs.md` for the full diagnosis and fix sketch; not yet applied.
+
 #### How to Run
 
 ```bash
@@ -1177,9 +1210,21 @@ python3 bench.py --export-task node_paratrooper --export-dir /tmp/mytestdir
 # Any other task works the same way — e.g. the L5 precision-canary task
 python3 bench.py --export-task python_hashmap --export-dir /tmp/mytestdir-hashmap
 
-# Run the harness's own unit tests
-python3 -m pytest tests/ -v
+# Run the harness's own unit tests — MUST activate the venv first (see note below)
+source .venv/bin/activate && python -m pytest tests/ -v
 ```
+
+**Always activate `.venv` before running pytest directly** (`source .venv/bin/activate && python
+-m pytest tests/`), don't invoke `.venv/bin/python3 -m pytest` or a system `python3 -m pytest`
+by path. Two failure modes if you skip this, both confirmed 2026-09-06: (1) system `python3` has
+no `pytest` installed at all → immediate `No module named pytest`; (2) invoking pytest via
+`.venv/bin/python3` directly (without activating) passes 93/94 but spuriously fails
+`test_harness_e2e.py::test_run_one_pass` — that test's mock coding task shells out to run
+`python -m pytest` inside a scratch workdir, and its `shutil.which("python")` PATH-detection
+fallback reflects the *invoking shell's* PATH, not the interpreter you launched pytest with;
+without `.venv/bin` on PATH it falls back to bare `python3`, which is the same pytest-less system
+interpreter from failure mode (1). `run.sh` always sources the venv first, so this never affects
+real benchmark runs — it only bites ad hoc `pytest` invocations that skip activation.
 
 #### Deliverables Expectations
 
@@ -1233,6 +1278,32 @@ When asked to implement features:
   their own regression-tested list. Also: Gemma4 GGUF support (`d4c1f0d`, relevant to
   `gemma4:26b-qat`/`31b-qat`), Mellum2 support (`fb973ad`), and CVE-2026-53923 already patched
   in this checkout. Full detail in `next-runs.md`.
+- **Recommended first models to try on the vLLM GGUF plugin, by VRAM tier (2026-09-11, not yet
+  vLLM-tested — recommendation, not a result)**: the plugin's own README "Tested model coverage"
+  table (`~/GIT/vllm-gguf-plugin/README.md`) lists confirmed-working text architectures as Qwen
+  2.5 (Q6_K), Qwen 3 dense (Q8_0), Phi 3.5 (IQ4_XS), GPT-2/StableLM (Q4_K_M), Gemma 3/OLMoE
+  (Q4_0) — **notably, MXFP4 does not appear anywhere in that table**, and the Qwen3.5/3.6 GDN
+  hybrid family and Gemma4 are only confirmed in vision-language form, not plain text/MTP. That
+  means most of this repo's best-scoring small/mid models (`glm4.7-flash`, `ornith:*`,
+  `quest:35b`, `qwopus3.6:35b`, `noctrex-qwen3.6:35b` — all MXFP4) carry real, untested
+  architecture/quant-compatibility risk on this specific plugin, separate from whether they'd
+  perform well once loaded.
+  - **16 GB single GPU: `qwen2.5-coder:14b`** (Qwen2.5 architecture, Q4_K_M, ~9 GB weights —
+    hf:`bartowski/Qwen2.5-Coder-14B-Instruct-GGUF`). Same architecture family the plugin
+    explicitly lists as tested (Qwen 2.5), leaving comfortable VRAM headroom for vLLM's own
+    loader overhead + KV cache at 16 GB. Not this repo's highest-scoring 16 GB-class model on
+    llama-server, but the safest bet for an actual load-and-run success on a first vLLM-GGUF
+    attempt — a model that won't load is worth nothing regardless of benchmark score.
+  - **2× 16 GB (32 GB, tp=2): `qwen2.5-coder:32b-q4`** (Qwen2.5 architecture, Q4_K_M, ~18.5 GB
+    weights — hf:`bartowski/Qwen2.5-Coder-32B-Instruct-GGUF`, PERFECT 19/19 coding on
+    llama-server, this repo's strongest coder overall). Same architecture-confidence rationale as
+    above, now with real headroom to spare at 32 GB for KV cache and vLLM's loader overhead, and
+    the best documented capability of any model that fits this VRAM budget with a confidently
+    supported architecture.
+  - Both picks trade "best documented capability at this VRAM size" for "most likely to actually
+    load cleanly on the first try" — deliberately, since this plugin has never been exercised on
+    this rig. Once either loads successfully, that's the point to branch out to a GDN-hybrid or
+    MXFP4 model and see what actually happens.
 - **MoE GGUF — patched vLLM** (2026-07-06, historical): `--quantization gguf` (ally's patched flag, not
   stock `--load-format gguf`) successfully loads Qwen3-Coder-30B-A3B MoE GGUF. Results:
   15/16 eligible tasks PASS at 31.2 tok/s (tp=1, single RTX 4090). python_hashmap TESTS_STILL_FAIL
@@ -1499,6 +1570,18 @@ When asked to implement features:
     beat mainline); this already-fast, likely bandwidth-saturated baseline saw none. Check
     baseline headroom before expecting a win from MTP on any future test. Full diagnostic detail
     in `next-runs.md`; memory: `feedback_mtp_spec_decoding_lessons`.
+    **New untested lead (2026-09-14)**: a Reddit tip — "stream ngrams off ssd and offload experts
+    to cpu" on ≥16 GB VRAM + 64-96 GB RAM — checked against `~/GIT/llama.cpp/src/models/
+    qwen4exp.cpp` and confirmed to map to two real mechanisms, not folk wisdom: the huge N-gram
+    Embedding table (`per_layer_token_embd` tensor) is created with `TENSOR_READ_LAZY` (rows
+    paged from the mmap'd GGUF on demand, requires mmap enabled — already true for this repo's
+    config), and "offload experts" is the existing `-ngl 999 --n-cpu-moe N --no-repack` CPU-MoE
+    paging technique documented below. Recipe: skip `--fit`, restrict via `CUDA_VISIBLE_DEVICES`
+    to match a ≤32 GB VRAM budget, use `-ngl 999 --n-cpu-moe N` explicitly. `N` and resulting
+    speed are both genuinely unknown — this ~106 GB model vs. a 16-32 GB VRAM target is a much
+    bigger gap than the "~30% of MoE layers per 3 GB overage" rule learned from `gpt-oss-120b`.
+    Both this rig (96 GB RAM) and a separate RTX 5060 Ti ×2 box (96 GB DRAM) qualify to try this.
+    Full detail in `next-runs.md`; playbook in `how-to-vllm.md` §6.
   - **tiel-coder:35b** (peculiar-ragdoll, Tiel-Coder-35B-A3B, UD-IQ4_XS, ~16.5 GB, single RTX
     4090, no Ampere+ required, f16 KV): coding-focused Ornith derivative, found via scout
     2026-09-05 — flagged by an external community thread as "Ornith on steroids for coding"

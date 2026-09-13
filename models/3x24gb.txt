@@ -51,6 +51,7 @@ gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_ty
 # glm4.7-flash: MXFP4 MoE ~16 GB; CONFIRMED 2026-06-26 full 33-task: 29/33, 110.9 tok/s, Skill L4.
 # Single GPU only — tensor_split degrades speed for small MoE (PCIe overhead > gain).
 # context_256k TESTS_STILL_FAIL (capability gap, not OOM — wrong answer after full generation).
+# ⚠ hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF went GONE per the 2026-09-07 scout — file already downloaded and safe locally (allmodels/GLM-4.7-Flash-MXFP4_MOE.gguf), no longer fetchable fresh if ever lost.
 glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 
 # qwen2.5-coder:14b (~9 GB): on 48 GB was capped at max_ctx=32768; on 72 GB context_256k trivial.

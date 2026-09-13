@@ -107,6 +107,7 @@ gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f
 # NOTE: Without CUDA_VISIBLE_DEVICES restriction, llama-server distributes layers to both GPUs even without tensor_split — use gpu-mode.sh single for clean single-GPU benchmarks.
 # MULTIHOP: chain_5 PASS (60 tok/s); cross_5 FAIL → "oncall-emea-c-crit" (wrong REGION, not just criticality). 4/5 multihop.
 #   glm4.7-flash uniquely fails cross_5 with wrong region (EMEA-CENTRAL) rather than wrong criticality — different attribute confusion than other models.
+# ⚠ hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF went GONE per the 2026-09-07 scout — file already downloaded and safe locally (allmodels/GLM-4.7-Flash-MXFP4_MOE.gguf), no longer fetchable fresh if ever lost.
 glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 qwen3.5:35b  Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:bartowski/Qwen_Qwen3.5-35B-A3B-GGUF
 # MULTIHOP: chain_5 FAIL → "30" (top-down scan); cross_5 PASS (93 tok/s). 4/5 multihop (confirms retrieval error is NOT thinking-model specific).

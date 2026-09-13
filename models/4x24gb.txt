@@ -53,6 +53,7 @@ gpt-oss:20b  gpt-oss-20b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=q8_0,cache_ty
 # glm4.7-flash: MXFP4 MoE ~16 GB; CONFIRMED 2026-06-26 full 33-task: 29/33, 110.9 tok/s, Skill L4.
 # Single GPU only — tensor_split degrades speed for small MoE (PCIe overhead > gain).
 # context_256k TESTS_STILL_FAIL (capability gap, not OOM — wrong answer after full generation).
+# ⚠ hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF went GONE per the 2026-09-07 scout — file already downloaded and safe locally (allmodels/GLM-4.7-Flash-MXFP4_MOE.gguf), no longer fetchable fresh if ever lost.
 glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
 
 # qwen2.5-coder:14b (~9 GB): context_256k trivial at 96 GB.
@@ -92,12 +93,10 @@ qwen3.6:35b-A3B  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|
 gemma4:26b  gemma-4-26B-A4B-it-UD-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:unsloth/gemma-4-26B-A4B-it-GGUF
 
 # ── Dense 32B — max_ctx=262144 trivial at 96 GB (19.4 GB/GPU free) ───────────
-# ⚠ hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF went GONE per the 2026-09-06 scout — the Q4_K_M
-# file below is already on disk (allmodels/Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf, ~18.5 GB,
-# also used by qwen2.5-coder:32b-q4 in the actively-used 2x24gb.txt/24gb.txt/default.txt), so
-# this machine is unaffected. The Q5_K_M line below was never downloaded and can no longer be
-# fetched fresh from this repo — a new-machine setup following llamacpp/README.md's replication
-# checklist would need another quant house's Q5_K_M or to rsync the file if it's ever needed.
+# hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF briefly went GONE per the 2026-09-06 scout and is
+# BACK per 2026-09-07 — both quants below are fetchable again. The Q4_K_M file is already on disk
+# regardless (allmodels/Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf, ~18.5 GB, also used by
+# qwen2.5-coder:32b-q4 in the actively-used 2x24gb.txt/24gb.txt/default.txt).
 # qwen2.5-coder:32b-q4: CONFIRMED 2026-06-26 full 33-task (2×24 GB): 28/33, Skill L2, 36.5 tok/s.
 # 19/19 coding PERFECT (strongest coder tested). Fails node_para_core (L3 logic gap), node_paratrooper.
 # On 96 GB: 18.5/4 = 4.6 GB/GPU → 19.4 GB/GPU for KV → max_ctx=262144 has ample headroom.
