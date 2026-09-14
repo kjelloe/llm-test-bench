@@ -11,7 +11,9 @@
 #                                       use for debugging; ~20% slower)
 #                   gpu_mem_util=0.9  → --gpu-memory-utilization 0.9
 #   hf:           HuggingFace repo ID — used as vLLM --tokenizer source when
-#                 loading GGUFs; also used for fetch-hf.sh
+#                 loading GGUFs, so it names the ORIGINAL model repo. The GGUF itself
+#                 isn't in that repo: download it through a models/*.txt entry
+#                 (fetch-hf.sh on this file can't find the GGUFs).
 
 # Run with:
 #   ./compare.sh --backend vllm             (reads this file automatically)

@@ -18,8 +18,11 @@ it's just where the vLLM experiment is now actually running. Full background: `C
   cd vllm-gguf-plugin
   uv pip install -e . --no-build-isolation
   ```
-  Use a reasonably fresh checkout (post-2026-09-06) so the Blackwell-unlock fix is included —
-  an older pinned release may still carry the old restriction.
+  The current checkout (`d4c1f0d`, 2026-08-31, still the latest upstream on 2026-09-15) already
+  includes the Blackwell bf16 fix (`bb5d952`) and the 27B load-OOM fix (`51b8d7a`). It needs a
+  vLLM from after the June 2026 GGUF move: the repo's `.venv` has vLLM 0.21.0 (May 2026), which
+  is too old. Use a fresh venv on WSL ext4 with a current vLLM (0.29.0 as of 2026-09-15); see
+  `test-plan-5060ti.md`.
 - Verify the GPU is actually recognized before doing anything else:
   ```bash
   nvidia-smi --query-gpu=index,name,compute_cap,memory.total --format=csv
@@ -49,14 +52,16 @@ whatever download flow the box already uses.
 
 ```bash
 # 16 GB single GPU
-vllm serve bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:Q4_K_M
+vllm serve bartowski/Qwen2.5-Coder-14B-Instruct-GGUF:Q4_K_M --tokenizer Qwen/Qwen2.5-Coder-14B-Instruct
 
 # 2×16 GB, tensor parallel
-vllm serve bartowski/Qwen2.5-Coder-32B-Instruct-GGUF:Q4_K_M --tensor-parallel-size 2
+vllm serve bartowski/Qwen2.5-Coder-32B-Instruct-GGUF:Q4_K_M --tokenizer Qwen/Qwen2.5-Coder-32B-Instruct \
+  --tensor-parallel-size 2
 ```
 
-No `--quantization gguf` patch flag needed — that requirement is obsolete now that GGUF support
-lives in the plugin, not in-tree. Both of these are plain dense Qwen2.5 checkpoints, so none of
+No `--quantization gguf` patch flag needed for this `repo:quant` form: GGUF support now lives in
+the plugin, not in-tree. (The harness serves a local file instead and still passes
+`--quantization gguf`; with the plugin installed, that name maps to the plugin's GGUF method.) Both of these are plain dense Qwen2.5 checkpoints, so none of
 the MoE-specific plugin quirks apply (K-quant-vs-I-Matrix kernel selection, `--hf-config-path`
 for Qwen3.5-MoE) — those only matter once you branch out past this pair.
 
@@ -68,19 +73,17 @@ curl -s http://127.0.0.1:8000/v1/completions \
   -d '{"model":"bartowski/Qwen2.5-Coder-14B-Instruct-GGUF","prompt":"def fib(n):","max_tokens":32}'
 ```
 
-Expect a real completion, not an error. If this repo (`llm-test-bench`) is cloned onto the same
-box, its own harness can drive the full task suite instead of a manual curl — but note two
-things first: `lib/vllm_client.py` always **spawns and manages its own `vllm serve` subprocess
-locally**, with no remote-host mode, so this only works run directly on the RTX 50xx machine, not
-pointed at it from elsewhere; and the existing `models/*.vllm` entries for these two models
-(`32gb.vllm`, `2x24gb.vllm`, `default.vllm`) **predate the GGUF-plugin migration** — they use the
-old `--load-format gguf` convention where `hf:` names a *tokenizer* repo (`Qwen/Qwen2.5-Coder-*-
-Instruct`, the official safetensors repo) and expect the GGUF file to already exist locally under
-whatever name is listed, fetched some other way. That's a different setup than the plugin's own
-`vllm serve <gguf-repo>:<quant>` convention this doc uses above. Don't assume those file entries
-work unmodified against the plugin — either add fresh entries pointing `hf:` at bartowski's GGUF
-repos (matching §2/§3 above) and verify the params still make sense for the plugin's loader, or
-skip the harness for this first pass and just use the plain `vllm serve` commands in §3.
+Expect a real completion, not an error. (If it says the model isn't found, check the served name
+with `curl -s http://127.0.0.1:8000/v1/models`.) If this repo (`llm-test-bench`) is cloned onto
+the same box, its own harness can drive the full task suite instead of a manual curl. Two things
+to know first: `lib/vllm_client.py` always **spawns and manages its own `vllm serve` subprocess
+locally**, with no remote-host mode, so this only works run directly on the RTX 50xx machine; and
+in GGUF mode it serves a **local file** with `--tokenizer <hf:> --quantization gguf`. So a `.vllm`
+GGUF entry's `hf:` must be the original model repo that holds the tokenizer (e.g.
+`Qwen/Qwen2.5-Coder-14B-Instruct`, as in `32gb.vllm`, `2x24gb.vllm`, `default.vllm`,
+`16gb.vllm` and `2x16gb.vllm`), not bartowski's GGUF-only repo, and the GGUF itself is downloaded
+separately through a `models/*.txt` entry. Point `VLLM_BIN` at the new vLLM's binary, or `run.sh`
+uses the old vLLM in the repo's `.venv`. Step-by-step: `test-plan-5060ti.md`.
 
 ## 5. What to record
 
@@ -136,6 +139,12 @@ this model's much larger total footprint pulling from RAM every token could beha
 Don't assume a win or a loss — this is a real test, not a foregone conclusion. Full detail in
 `next-runs.md`'s "qwen3.8-flash-next stream ngrams" section.
 
+**Result (2026-09-14/15): it works.** On one RTX 5060 Ti with 88 GB of WSL RAM, the full run
+scored 37/38 eligible tasks at 18.1 tok/s. The working config is not the recipe above: keep
+`--fit on --fit-target 512` (it moves the experts to the CPU by itself) and add `--no-repack`. No
+`CUDA_VISIBLE_DEVICES` or `--n-cpu-moe N` needed. Steps: [`how-to-test-flash-next.md`](how-to-test-flash-next.md).
+Results: the `qwen3.8-flash-next-16gb` entry in `models/candidates.txt`.
+
 ## 6b. Second experiment on this box: Qwen3.8-27B via vLLM-native quants
 
 Once §1-5 confirm the box works at all (the Qwen2.5-coder pair above), the more interesting test
@@ -159,6 +168,36 @@ leads" section.
 doesn't support GGUF and to not bother — contradicts this repo's own source-verified
 `vllm-gguf-plugin` finding from §1-5's setup. This box is the first opportunity to actually
 resolve that disagreement instead of trusting either side.
+
+## 6c. Model files for this box (added 2026-09-14)
+
+Runnable entries for §4/§6b are now in `models/16gb.vllm` (single-card smoke test, usable with
+just RTX 5060 Ti #1) and `models/2x16gb.vllm` (the QUASAR-QAT NVFP4 tp=2 config from §6b, plus a
+dense-Qwen2.5 fallback — not runnable until the second 5060 Ti is installed). Don't run
+`fetch-hf.sh` on the `.vllm` files: their `hf:` fields name the original model repos, which the
+harness passes as `--tokenizer` (the plugin's own README does the same), and those repos contain
+no GGUF. Download each GGUF through its `models/*.txt` entry instead (noted in each file). The
+NVFP4 entry downloads itself from the Hub on the first `vllm serve`. Step-by-step:
+`test-plan-5060ti.md`.
+
+A fresh 2026-09-14 web check for this addition turned up **inconsistent, partly unreliable**
+results for "the" Qwen3.8-27B NVFP4 repo (sizes claimed anywhere from 14-23 GB for what should be
+the same 4-bit weights, plus repeated mentions of a "NInfer" proprietary runtime that reads as
+low-quality SEO content, not verified fact). Stuck with the QUASAR-QAT pick this section already
+named before that search, since it's independently corroborated at ~19.7-20.6 GB and was chosen
+for a documented reason (best VRAM headroom, `vllm`-tagged) rather than search-result noise.
+**Verify the repo/file actually exists and re-check its real size on huggingface.co before
+downloading** — don't treat the comment block in `2x16gb.vllm` as CONFIRMED the way the rest of
+this project's dated findings are.
+
+Also resolved in that same check: **`qwen3.8-flash-next` (already in `models/candidates.txt` for
+llama-server) is NOT a realistic vLLM target on this box at all**, regardless of how many 5060
+Tis get added. vLLM's own official recipe for that architecture (qwen4exp, landed in vLLM main
+2026-09) budgets ~250 GB aggregate VRAM (validated minimum 2× GB300, 4× recommended) — orders of
+magnitude past what a 5060 Ti box can reach. If Flash-Next itself (not just the 27B dense model)
+is ever wanted on this hardware, the realistic path is llama.cpp's CPU-MoE-offload technique
+(§6's "stream ngrams off ssd and offload experts to cpu" recipe), not vLLM. That path has since
+been confirmed on one RTX 5060 Ti: 37/38 eligible tasks at 18.1 tok/s (see §6).
 
 ## 7. Once there are results
 

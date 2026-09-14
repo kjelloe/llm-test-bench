@@ -1268,6 +1268,83 @@ qwen3.8-flash-next-ikllama  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00
 # real capability risk, not just a speed experiment. Testing added 2026-08-30.
 qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 3-part model — use mainline llama.cpp (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server)
 #
+# ── 16 GB VRAM + 96 GB RAM + NVMe variant (RTX 5060 Ti box, added 2026-09-14) — CONFIRMED 9/10 ──
+# Spot-check results are below the model line.
+# Same UD-Q4_K_XL file as qwen3.8-flash-next above (111.3 GB) — no extra download. Does NOT fit in
+# 16+96 GB outright; relies on mmap paging so weights can stream from NVMe instead of all being
+# resident. Mechanisms verified in source at the pinned commit 67a17c17c:
+#   - N-gram embedding table (~51B params) is created with TENSOR_READ_LAZY (qwen4exp.cpp:188).
+#   - --fit overflows MoE expert tensors (ffn_*_exps) to CPU layer-by-layer when VRAM runs out
+#     (common/fit.cpp:522), so no hand-tuned n_cpu_moe count needed on a single small GPU.
+#   - no_repack (--no-repack) keeps CPU-side experts as mmap'd file pages; without it they are
+#     repacked into anonymous RAM and can no longer be evicted/re-read from NVMe.
+# Keep mmap ON: never add no_mmap here. Speed is unknown — expect well below the 3×24 GB rig's
+# ~19-24 tok/s, and much worse if the hot expert set doesn't stay in page cache (NVMe thrash).
+# Build llama.cpp pinned to 67a17c17c: same commit validated for this model, and it predates
+# 14a9d09f7 (the --no-mmap removal that breaks every other models/*.txt entry). Blackwell needs
+# CUDA 12.8+ (llamacpp/README.md).
+qwen3.8-flash-next-16gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — same file as qwen3.8-flash-next
+#
+# RESULT — CONFIRMED 2026-09-14, 10-task spot check: **9/10 at 18.4 tok/s avg** (17.4-19.7 range),
+#   893.5s of task time, 16:05 total runtime.
+#   Box: RTX 5060 Ti 16 GB (180 W cap) + Ryzen 7 9800X3D, WSL2 with memory=88GB (86.4 GB visible,
+#   not the full 96 GB). llama.cpp 67a17c17c (build 10775).
+#   PASS: python_safe_div 19.7 tok/s 19s, node_slugify 18.2 12s, python_lru_cache 19.4 41s,
+#     csv_nordic_property 18.2 225s (6429 prompt / 2968 gen tokens; fits inside its own 600s task
+#     timeout), python_tokenizer 18.8 60s, python_expr_eval 17.4 67s, python_hashmap 18.1 55s
+#     (L5 precision canary), node_para_core 17.5 93s, node_paratrooper 17.7 288s (L6-full;
+#     5464 prompt / 4302 gen tokens).
+#   FAIL: node_csv_parser, NO_BLOCKS in 33s. finish=stop, not truncated: it emitted BEGIN_FILE and a
+#     complete function, then stopped without END_FILE. Format compliance, same failure as the
+#     3×24 GB rig.
+#   vs 3×24 GB rig on the same commit: same 9/10 count at ~75-85% of the rig's speed (rig: 19-24
+#     tok/s; node_paratrooper 183-244s there vs 288s here). node_para_core PASSED here but FAILED
+#     6/6 on the rig at this commit. Only ONE run here, not re-verified; could be the different
+#     numerics of a 1-GPU + CPU-experts split vs a 3-GPU split (see qwen3.8:27b's tensor_split
+#     finding). Repeat it before calling this a real difference.
+#   WHERE THE TIME GOES: GPU averaged 43 W of 180 W at 34% util (max 69%), VRAM 14.0/15.9 GB, max
+#     53°C, zero hwmonitor WARN/CRIT. The GPU mostly waits on CPU-side experts, so decode speed is
+#     bound by CPU/RAM, not the GPU. NVMe reads (manual curl test): 240-900 MB/s on the first
+#     request, dropping to ~30 MB/s average once the hot experts were in page cache (~75 GB cached,
+#     ~8 GB free). hwmonitor measures RAM via MemAvailable, so the page cache does not trigger its
+#     RAM warning.
+#   LOAD: 1m24s cold from WSL ext4; 6-15s restarts with a warm page cache. The first attempt had the
+#     files on /mnt/c (9p) and loaded at only ~190 MB/s. Keep the model on WSL's own filesystem.
+#   Manual curl showed reasoning_content on this build (the model thinks before answering), though
+#   harness gen-token counts stayed small (71-4302).
+#
+# FULL RUN — CONFIRMED 2026-09-14/15 (all 39 tasks, max_ctx=131072): **36/39 at 18.1 tok/s avg**,
+#   4442.5s of task time, 1:21:43 total. Harness Skill L2 / Peak L6. Zero hwmonitor WARN/CRIT,
+#   GPU max 58°C, max VRAM 14.3 GB. results: output/results-20260914-230037.json
+#   Coding 18/19 (after the dotnet_sas re-run below). FAIL node_csv_parser (NO_BLOCKS again:
+#     complete function, no END_FILE), which caps Skill at L2 — the only real failure.
+#     dotnet_sas was TOOL_ERROR in 0.9s during the full run, a FALSE NEGATIVE: the task targets
+#     net9.0 and the box had only .NET SDK 8.0.128, so setup failed before the model was called.
+#     RE-RUN 2026-09-15 after installing dotnet-sdk-9.0 (9.0.121, ppa:dotnet/backports):
+#     **PASS 28.0s at 17.7 tok/s** (output/results-20260915-002924.json).
+#   CORRECTED TOTAL: 37/39, i.e. 37/38 eligible (context_256k skipped by its VRAM guard).
+#   Web 4/4, including python_fastapi_endpoint.
+#   L6 stepped 4/4 (the full stepped chain on a 16 GB card): core 85.6s, turret 120.6s, entities
+#     180.0s, combat 269.0s. node_paratrooper PASS 282.3s. node_para_core has now passed 2/2 on this
+#     box (it failed 6/6 on the 3×24 GB rig at the same commit).
+#   Context 5/5 run: 8k 17.1 tok/s 66s, 16k 17.6 112s, 32k 16.2 218s, 64k 14.5 444s, 128k 11.8 tok/s
+#     966s (100,534 prompt tokens, inside its 3600s task timeout). context_256k SKIPPED_VRAM, see
+#     the max_ctx note below.
+#   Multihop 5/5: forward 222s, reverse 227s, distractor 227s (~28.9k-token prompts each), chain_5
+#     22s, cross_5 22s.
+#   Speed falls as prompts grow: ~19 tok/s at coding sizes, 11.8 tok/s at 128k.
+#   max_ctx=131072, set 2026-09-14 before the first full run. The model's trained context is
+#   262144 (GGUF qwen4exp.context_length). Its KV cache is small: 12 of 48 layers are full
+#   attention (full_attention_interval=4), 2 KV heads x 256 dim, so ~24 KB/token at f16 worst case
+#   plus the indexer cache. Measured VRAM rose only ~312 MB going from ctx 8192 to 32768. --fit
+#   keeps VRAM at its target by moving more experts to CPU as context grows, so long context costs
+#   page-cache pressure and prefill time rather than an OOM.
+#   CORRECTION after the full run: context_256k shows SKIPPED_VRAM, not SKIPPED_CTX. The task has
+#   its own guard, min_vram_gb=48 (lib/tasks.py:707, enforced in bench.py:588, no CLI override),
+#   added because MoE models with CPU expert offload took >2h of prompt processing at ~220k tokens.
+#   Raising max_ctx alone would not run it; the guard would have to be lifted. Untested: 128k took
+#   966s here, so ~220k tokens might fit the task's 7200s timeout, but prefill slows as context grows.
+#
 # RESULT — CONFIRMED 2026-08-30: real speed gain, real capability cost. Not a free lunch.
 #   SPEED (vs Q4_K_XL fork-v2 numbers, same tasks): node_slugify 51.1 vs 29.0-29.3 tok/s (~1.75x),
 #   python_safe_div 59.1 vs 27.2-31.7 tok/s (~2x), python_hashmap 19.7 vs 6.1-6.4 tok/s (~3x!),

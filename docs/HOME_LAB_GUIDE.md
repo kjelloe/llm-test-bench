@@ -16,7 +16,7 @@ These are not competitors. They optimize for different workloads.
 |---|---|---|
 | **Primary strength** | Single-user, interactive, frequent model swaps | Concurrent requests, always-on serving |
 | **Model format** | GGUF (broad ecosystem, aggressive low-bit quants) | HF safetensors or GGUF (dense models only) |
-| **MoE support** | Excellent — all A3B/A22B MoE GGUFs work | GGUF MoE works with patched `--quantization gguf` flag (confirmed 31.2 tok/s tp=1); stock vLLM still fails with `mlp.experts.*` error; use AWQ/FP8 HF format with stock vLLM |
+| **MoE support** | Excellent — all A3B/A22B MoE GGUFs work | Since June 2026, GGUF (including Qwen3-MoE/Qwen3.5-MoE) lives in the separate `vllm-gguf-plugin`; not yet re-tested here. Historical (pre-plugin): a patched in-tree `--quantization gguf` gave 31.2 tok/s tp=1, and stock vLLM failed on `mlp.experts.*`. AWQ/FP8 HF format also works |
 | **Startup time** | Fast — model swaps in seconds | Slow — CUDA graph capture ~400s for 32B; `enforce_eager` saves ~1 GB VRAM at ~20% speed cost |
 | **KV cache** | `q8_0` or `f16` per model flag | FP8 (`kv_cache_dtype=fp8`) halves memory; FP16 default |
 | **Prefix caching** | Not available | Built-in; significant TTFT wins on repeated system prompts |
@@ -32,6 +32,18 @@ These are not competitors. They optimize for different workloads.
 ---
 
 ### 2. VRAM Tier Recommendations
+
+#### 2.0 Single 16 GB GPU + large system RAM (RTX 5060 Ti 16 GB)
+
+Measured on an RTX 5060 Ti box (WSL2, ~86 GB RAM visible) unless noted.
+
+| Role | Model | Size | tok/s\* | Score | Notes |
+|---|---|---|---|---|---|
+| Big-model quality | `qwen3.8-flash-next-16gb` | 111 GB file, ~14 GB in VRAM | \*18.1 | 37/38 eligible | 180B-param MoE paged off NVMe via `--fit` + `--no-repack`; keep the model on a fast local filesystem (not `/mnt/c` under WSL2). See [`how-to-test-flash-next.md`](../how-to-test-flash-next.md) |
+| Fits fully in VRAM | `qwen3.8-27b-gsqrco` | 11.8 GB | \*~55 on RTX 4090 | 9/10 spot | Not yet measured on a 5060 Ti; expect roughly 24 tok/s there (estimate from its lower memory bandwidth). In `models/16gb.txt` |
+
+vLLM on this tier is not yet tested; see `models/16gb.vllm`, [`how-to-vllm.md`](../how-to-vllm.md)
+and the test plan in [`test-plan-5060ti.md`](../test-plan-5060ti.md).
 
 #### 2.1 Single 24 GB GPU (RTX 4090 or RTX 3090)
 
@@ -333,7 +345,7 @@ Confirmed scores from `models/24gb.txt` (single RTX 4090) and `models/2x24gb.txt
 | Speed + quality, 48 GB | `noctrex-qwen3.6:35b` | llama-server | \*121 | 32/33; 256k at 75 tok/s |
 | Large review (3×24 GB) | `gpt-oss:120b` | llama-server | ~90 est. | GPU-resident at 72 GB; was 17 tok/s RAM-bound |
 | vLLM AWQ, single GPU | `cpatonn/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit` | vLLM tp=1 | \*28.5 | 18/19; python_hashmap FAIL (base gap); 4× slower than llama-server |
-| vLLM GGUF (patched), single GPU | Q4_K_M via `--quantization gguf` (patched vLLM) | vLLM tp=1 | \*31.2 | 15/16 eligible; ctx≤8192 on single 24 GB; ~10% faster than AWQ |
+| vLLM GGUF (patched, pre-plugin, 2026-07), single GPU | Q4_K_M via `--quantization gguf` (patched vLLM) | vLLM tp=1 | \*31.2 | 15/16 eligible; ctx≤8192 on single 24 GB; ~10% faster than AWQ |
 
 **Rejected models (do not add to regular sets):**
 

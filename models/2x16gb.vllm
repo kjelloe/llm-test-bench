@@ -1,0 +1,43 @@
+# Dual 16 GB VRAM GPU — vLLM (2× RTX 5060 Ti 16GB = 32 GB total, tp=2, Blackwell)
+#
+# NOT YET RUNNABLE as of 2026-09-15 — the second RTX 5060 Ti has not arrived yet.
+# This file preps the ground so the config is ready the moment it's installed.
+# Companion to models/16gb.vllm (single-card smoke test). Steps: test-plan-5060ti.md, Part B.
+#
+# Don't run fetch-hf.sh on this file (see the format note in models/16gb.vllm):
+#   - qwen3.8-27b:nvfp4 downloads itself from the Hub on the first `vllm serve`.
+#   - The 32B GGUF comes via: ./fetch-hf.sh models/candidates.txt --models qwen2.5-coder:32b-q4
+#
+# Run once the second card is in (./gpu-mode.sh multi first):
+#   VLLM_BIN=~/vllm-env/bin/vllm ./run.sh --backend vllm --model-file models/2x16gb.vllm \
+#     --models qwen3.8-27b:nvfp4
+
+# ── Primary target: Qwen3.8-27B, NVFP4, native Blackwell tensor-core path ────
+# Same dense Gated-DeltaNet-hybrid architecture as this repo's own extensively
+# tested qwen3.8:27b (llama-server Q4_K_M, f16 KV — see 24gb.txt/2x24gb.txt/
+# 3x24gb.txt and the python_hashmap precision-canary notes in CLAUDE.md).
+# RTX 5060 Ti is Blackwell (sm_120) with native NVFP4 tensor cores, so this is not an
+# emulated/fallback quant path.
+#
+# VERIFIED 2026-09-15 on the HF Hub: repo exists, 19 files, 20.6 GB, includes
+# tokenizer.json. config.json: Qwen3_5ForConditionalGeneration (model_type qwen3_5),
+# compressed-tensors "nvfp4-pack-quantized", 4-bit weights AND 4-bit activations
+# (group size 16, fp8 scales), bf16 base, max_position_embeddings 262144. It ships
+# preprocessor/video configs, so the vision tower is in there too (unused for text).
+# Still unverified: output quality. Web research for this pick was noisy (several
+# differently-named "Qwen3.8-27B NVFP4" repos claiming 14-23 GB), and 4-bit
+# activations are a real precision risk for python_hashmap — watch that task.
+#
+# ~20 GB of weights across 2× 16 GB leaves room for KV at tp=2. enforce_eager kept as a
+# precaution for the first run (vLLM's own recipe needs it on a single RTX 5090).
+# kv_cache_dtype intentionally NOT set to fp8: qwen3.6:27b/qwen3.8:27b need
+# f16-equivalent KV precision or python_hashmap silently drops the `_EMPTY` sentinel
+# (see CLAUDE.md's python_hashmap precision-canary section).
+qwen3.8-27b:nvfp4  -  tp=2,dtype=auto,max_model_len=32768,enforce_eager,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
+
+# ── Fallback if the NVFP4 repo/quant doesn't load cleanly ───────────────────
+# Same architecture-confidence reasoning as models/16gb.vllm's smoke test, scaled to
+# 32 GB: dense Qwen2.5, in the plugin's tested-coverage table, PERFECT 19/19 coding on
+# this repo's llama-server benchmark (its strongest coder overall).
+# GGUF from bartowski via models/candidates.txt; hf: below is the tokenizer repo.
+qwen2.5-coder:32b-5060ti  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=65536,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct

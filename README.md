@@ -199,6 +199,10 @@ suggests a `models/*.txt` line; `./fetch-hf.sh` downloads every configured `hf:`
 GGUFs are detected and assembled automatically). `./scout-hf.sh` periodically scans for new releases
 and diffs against a saved state so re-runs only show what changed.
 
+**WSL2:** keep `LLAMA_MODELS_DIR` on WSL's own filesystem (e.g. `~/models`), not under `/mnt/c`.
+Windows drives are reached over 9p and are far slower, which matters most for large models that
+page weights from disk (see [`how-to-test-flash-next.md`](how-to-test-flash-next.md)).
+
 ---
 
 ## Multi-GPU
@@ -224,6 +228,8 @@ and diffs against a saved state so re-runs only show what changed.
 | `candidates.txt` | Models under active evaluation — pairs with `--task-group spot` |
 
 `.vllm` files mirror the same tiers with vLLM-specific params (`tp`, `enforce_eager`, `gpu_mem_util`).
+`16gb.vllm` / `2x16gb.vllm` target an RTX 5060 Ti box; see [`how-to-vllm.md`](how-to-vllm.md) and
+[`test-plan-5060ti.md`](test-plan-5060ti.md).
 
 ---
 

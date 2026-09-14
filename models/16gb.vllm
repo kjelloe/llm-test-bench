@@ -1,0 +1,47 @@
+# Single 16 GB VRAM GPU — vLLM (RTX 5060 Ti 16GB / RTX 4080 / similar, Ampere+/Blackwell)
+#
+# Prepping the ground for a new box: RTX 5060 Ti #1 now, RTX 5060 Ti #2 arriving later
+# (see models/2x16gb.vllm for the tp=2 config once that card is installed).
+# NOT YET RUN. Step-by-step: test-plan-5060ti.md, Part B.
+#
+# Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<repo>]
+#   GGUF mode (gguf-file set, not "-"): the harness serves the local file with
+#     --tokenizer <hf_repo> --quantization gguf (see lib/vllm_client.py). hf: must be
+#     the ORIGINAL model repo, which holds the tokenizer; GGUF-only repos such as
+#     bartowski's have no tokenizer files. So don't run fetch-hf.sh on this file:
+#     download each GGUF through its models/*.txt entry (noted per entry below).
+#   HF-format mode (gguf-file omitted or "-"): vLLM downloads straight from the
+#     HF Hub on the first `vllm serve` call (GPTQ/AWQ/NVFP4/safetensors).
+#
+# Setup (details in test-plan-5060ti.md):
+#   1. Confirm the GPU: nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
+#      (RTX 5060 Ti reports compute_cap 12.0.)
+#   2. Install a CURRENT vLLM (0.29.0 as of 2026-09-15) into a fresh venv on WSL ext4.
+#      The repo's .venv has vLLM 0.21.0 (May 2026), which predates the June 2026 move of
+#      GGUF support into vllm-gguf-plugin.
+#   3. Install vllm-gguf-plugin into that same venv (uv pip install -e . --no-build-isolation).
+#      Checkout d4c1f0d already has the Blackwell bf16 fix and the 27B load-OOM fix.
+#   4. Download the GGUF: ./fetch-hf.sh models/16gb.txt --models qwen2.5-coder:14b
+#   5. Run: VLLM_BIN=~/vllm-env/bin/vllm ./run.sh --backend vllm --model-file models/16gb.vllm \
+#             --models qwen2.5-coder:14b-5060ti
+#      Without VLLM_BIN, run.sh picks up the old vLLM in the repo's .venv.
+
+# ── Smoke test: confirm the vLLM + GGUF plugin stack actually works on this box ──
+# Dense Qwen2.5 architecture — listed in the plugin's own "tested model coverage" table
+# (at Q6_K; this is Q4_K_M), so this is the safest first thing to try before anything
+# exotic: a model that won't load is worth nothing, regardless of benchmark score.
+# ~9 GB Q4_K_M weights leave generous headroom on 16 GB for KV cache and vLLM's own
+# overhead. GGUF comes from bartowski via models/16gb.txt; hf: below is the tokenizer repo.
+qwen2.5-coder:14b-5060ti  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=32768,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-14B-Instruct
+
+# ── Qwen3.8-27B does NOT fit a single 16 GB card ─────────────────────────────
+# Same dense Gated-DeltaNet-hybrid base as this repo's extensively-tested
+# qwen3.8:27b (llama-server, 24gb.txt/2x24gb.txt/3x24gb.txt). Every NVFP4/quantized
+# build found (2026-09-14 web check) has weights alone in the ~17-23 GB range —
+# already bigger than this card's 16 GB before any KV cache or vLLM overhead.
+# vLLM's own recipe page (recipes.vllm.ai/Qwen/Qwen3.8-27B) only documents a
+# single-GPU config on an RTX 5090 (31.4 GB usable), and even that needs
+# --enforce-eager to avoid OOM during CUDA graph capture.
+# → See models/2x16gb.vllm for the tp=2 (32 GB) config once the second RTX 5060 Ti
+#   is installed. On one 16 GB card, qwen3.8-27b-gsqrco (llama-server, models/16gb.txt)
+#   is the way to run this model family.

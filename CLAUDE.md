@@ -957,7 +957,8 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     UD-Q4_K_XL quant on a standard, rebuildable mainline binary. **IMPORTANT: this model does
     NOT complete the full L6 stepped chain** — `node_para_core` (step 1) FAILS reliably (6/6
     FAIL(NO_BLOCKS)) on this same build, a real regression confirmed by repeat testing, not a
-    fluke. So this is a from-scratch node_paratrooper pass in isolation, not a full-chain
+    fluke on the 3×24 GB rig. (The same file and commit DID pass the full chain on a single 16 GB
+    card; see the qwen3.8-flash-next-16gb bullet below.) So this is a from-scratch node_paratrooper pass in isolation, not a full-chain
     completion — a genuinely different (and, on the hardest single task, arguably more
     impressive) achievement than the stepped-chain completers listed below. See
     `models/candidates.txt` and `next-runs.md` for full diagnostic detail.
@@ -973,6 +974,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     MoE Q8_0-Imatrix; 14th completer, CONFIRMED 2026-08-24; entities PASS suggests Qwen3.6-A3B
     base, same lineage as qwopus3.6:35b; node_paratrooper/L6-full separately confirmed NOT
     reproducible for this model — 1 PASS / 6 attempts, see full entry in candidates.txt)
+  - 1×16 GB + CPU/NVMe expert paging (default per-task ctx): **qwen3.8-flash-next-16gb** (~18 tok/s,
+    RTX 5060 Ti 16 GB + 88 GB WSL RAM; 15th completer, CONFIRMED 2026-09-14/15). Same UD-Q4_K_XL
+    file and llama.cpp commit 67a17c17c as the 3×24 GB qwen3.8-flash-next entry, whose
+    node_para_core fails 6/6. Here node_para_core passed 2/2, the full stepped chain 4/4, and
+    node_paratrooper (L6-full) 2/2. Probably the different numerics of a 1-GPU + CPU-experts split
+    (compare qwen3.8:27b's tensor_split finding) rather than a capability difference. Full entry
+    in candidates.txt.
   Note: qwen3.6:27b's ~12 tok/s for L6 tasks makes it practical only as a capability test.
   Note: qwen3.5:27b at ~27 tok/s is faster for L6 despite older Qwen generation — q8_0 KV vs f16.
   Entities gap is A3B MoE specific: Qwen3.5 A3B MoE (qwen3.5:35b, qwen3-30b:2507,
@@ -1093,12 +1101,18 @@ install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
-compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
+compare.sh          Runs the canonical models/default.txt set (10 models as of 2026-09-15) (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; pre-checks repos for 404/deleted before downloading
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
 scout-hf.sh         Periodic HF Hub scanner; diffs against saved state (output/hf-scout-state.json); use --vllm for AWQ/GPTQ/FP8 transformers repos (state: output/hf-scout-vllm-state.json); --no-save for dry-run; --show-all to include unchanged repos
-preflight.sh        Dependency checker
+preflight.sh        Dependency checker. Run it first on a new box: dotnet_sas needs .NET 9+
+how-to-vllm.md      vLLM on an RTX 50xx (Blackwell) box: setup, GGUF plugin, model picks (models/16gb.vllm, models/2x16gb.vllm)
+how-to-test-flash-next.md  Step-by-step: qwen3.8-flash-next on 16 GB VRAM + RAM + NVMe expert paging
+test-plan-5060ti.md Plan for the RTX 5060 Ti box: qwen3.8-27b-gsqrco (llama-server) and first vLLM tests
+docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier
+next-runs.md        Referenced throughout this file and models/*.txt, but NOT tracked in git
+                    (absent on the RTX 5060 Ti box as of 2026-09-15). See Known Issues.
 hwmonitor/
   hwmonitor.py      Live hardware watchdog: GPU temp/power/VRAM, CPU temp, RAM; WARN/CRIT on threshold breach; aborts bench.py on CRIT (SIGINT → SIGTERM)
   SPEC.md           hwmonitor specification and threshold reference
@@ -1134,9 +1148,9 @@ tests/
   test_reporting.py           lib/reporting skill-level scoring unit tests
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
-  csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=8000 model_timeout=600
+  csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=20000 num_ctx=32768 model_timeout=600
   context_8k/             L1 context retrieval at ~5.5k tokens (6 context tasks total)
-  multihop_forward/       L3 two-hop retrieval (2 multihop tasks)
+  multihop_forward/       L3 two-hop retrieval (multihop_reverse is its mirror task)
   distractor_notes/       L2 decoy-resistant retrieval
   multihop_chain_5/       L4 5-hop config inheritance (correct answer: 90; sibling distractor: 45; top-level distractor: 30)
   multihop_cross_5/       L4 5-doc cross-reference (correct: oncall-emea-w-high; criticality distractor: oncall-emea-w-crit)
@@ -1181,6 +1195,16 @@ unilaterally — check with whoever/whatever depends on it first).
   every currently-pinned binary predates this — but fix it before rebuilding mainline for any
   other reason (e.g. to pick up the GDN/CUDA-race/checkpoint fixes noted below). See
   `next-runs.md` for the full diagnosis and fix sketch; not yet applied.
+  Verified 2026-09-14: the pinned `67a17c17c` already defines `--load-mode` (common/arg.cpp:2718)
+  and only marks `--no-mmap` as deprecated, so emitting `--load-mode none` for `no_mmap` works on
+  both the pinned binary and newer builds.
+- **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
+  ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
+  was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
+  the machine that has it, or treat those references as dangling.
+- **New box: run `./preflight.sh` before the first benchmark.** The RTX 5060 Ti box had only .NET
+  SDK 8, so `dotnet_sas` failed as TOOL_ERROR in 0.9s: a false negative that looks like a model
+  failure in the results table. Fixed by installing `dotnet-sdk-9.0`.
 
 #### How to Run
 
@@ -1191,7 +1215,7 @@ unilaterally — check with whoever/whatever depends on it first).
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (9 models × 33 tasks)
+# Full benchmark (models/default.txt set × 39 tasks)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1300,6 +1324,16 @@ When asked to implement features:
     above, now with real headroom to spare at 32 GB for KV cache and vLLM's loader overhead, and
     the best documented capability of any model that fits this VRAM budget with a confidently
     supported architecture.
+  - **Runnable entries exist since 2026-09-14, not yet run**: `models/16gb.vllm` (the 14B smoke
+    test) and `models/2x16gb.vllm` (`qwen3.8-27b:nvfp4` via `QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4`,
+    plus the 32B fallback), for an RTX 5060 Ti box. Qwen3.8-27B does not fit a single 16 GB card:
+    every NVFP4 build found is ~17-23 GB of weights. **qwen3.8-flash-next is not a vLLM target on
+    consumer hardware**: vLLM main added its architecture in 2026-09, but the official recipe
+    budgets ~250 GB aggregate VRAM. On 16 GB it runs via llama-server instead (see the
+    qwen3.8-flash-next entry below). Details: `how-to-vllm.md` §6c; test plan: `test-plan-5060ti.md`.
+    In GGUF mode the harness passes `hf:` as `--tokenizer`, so a `.vllm` GGUF entry must name the
+    ORIGINAL model repo (e.g. `Qwen/Qwen2.5-Coder-14B-Instruct`), not a GGUF-only repo such as
+    bartowski's, which has no tokenizer files. Download the GGUF through a `models/*.txt` entry.
   - Both picks trade "best documented capability at this VRAM size" for "most likely to actually
     load cleanly on the first try" — deliberately, since this plugin has never been exercised on
     this rig. Once either loads successfully, that's the point to branch out to a GDN-hybrid or
@@ -1570,7 +1604,7 @@ When asked to implement features:
     beat mainline); this already-fast, likely bandwidth-saturated baseline saw none. Check
     baseline headroom before expecting a win from MTP on any future test. Full diagnostic detail
     in `next-runs.md`; memory: `feedback_mtp_spec_decoding_lessons`.
-    **New untested lead (2026-09-14)**: a Reddit tip — "stream ngrams off ssd and offload experts
+    **Reddit tip (2026-09-14), now CONFIRMED (result below)**: a Reddit tip — "stream ngrams off ssd and offload experts
     to cpu" on ≥16 GB VRAM + 64-96 GB RAM — checked against `~/GIT/llama.cpp/src/models/
     qwen4exp.cpp` and confirmed to map to two real mechanisms, not folk wisdom: the huge N-gram
     Embedding table (`per_layer_token_embd` tensor) is created with `TENSOR_READ_LAZY` (rows
@@ -1582,6 +1616,19 @@ When asked to implement features:
     bigger gap than the "~30% of MoE layers per 3 GB overage" rule learned from `gpt-oss-120b`.
     Both this rig (96 GB RAM) and a separate RTX 5060 Ti ×2 box (96 GB DRAM) qualify to try this.
     Full detail in `next-runs.md`; playbook in `how-to-vllm.md` §6.
+    **RESULT, CONFIRMED 2026-09-14/15** on 1× RTX 5060 Ti 16 GB (Blackwell) + Ryzen 7 9800X3D, WSL2
+    memory=88GB, model on WSL ext4 (`qwen3.8-flash-next-16gb` in candidates.txt): full run
+    **37/38 eligible at 18.1 tok/s avg** (1:21:43). Coding 18/19 (only node_csv_parser, the same
+    missing-END_FILE format failure as the 3×24 GB rig), web 4/4, L6 stepped 4/4 plus
+    node_paratrooper, context 8k-128k 5/5 (128k: 966s at 11.8 tok/s), multihop 5/5.
+    context_256k is SKIPPED_VRAM by its own min_vram_gb=48 guard (lib/tasks.py:707).
+    **The working recipe differs from the one above**: KEEP `--fit on --fit-target 512` (at
+    67a17c17c `--fit` moves MoE experts to CPU by itself, common/fit.cpp:522, so no hand-tuned N)
+    and ADD `--no-repack` (without it, CPU-side experts are copied into anonymous RAM and can't be
+    re-read from NVMe). Never `--no-mmap`/`--mlock`. The GPU averaged 43 W at 34% util, so decode
+    is CPU/RAM-bound. NVMe reads fell from 240-900 MB/s cold to ~30 MB/s once the hot experts sat
+    in page cache (~75 GB). **Pitfall: model files on `/mnt/c` (WSL 9p) loaded at ~190 MB/s. Move
+    them onto WSL's ext4 first** (the load then took 1m24s). Steps: `how-to-test-flash-next.md`.
   - **tiel-coder:35b** (peculiar-ragdoll, Tiel-Coder-35B-A3B, UD-IQ4_XS, ~16.5 GB, single RTX
     4090, no Ampere+ required, f16 KV): coding-focused Ornith derivative, found via scout
     2026-09-05 — flagged by an external community thread as "Ornith on steroids for coding"

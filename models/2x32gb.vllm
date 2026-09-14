@@ -7,9 +7,10 @@
 #   72B/70B models can now run at higher quant (Q5_K_M) or higher context
 #   gpt-oss:120b (MXFP4 ~60 GiB): first config where 120B is fully GPU-resident
 #
-# GGUFs not in default.vllm — download before first use:
-#   ./fetch-hf.sh models/2x32gb.vllm
-#   (fetch-hf.sh uses hf: fields to locate GGUF files on HuggingFace Hub)
+# GGUFs not in default.vllm — download before first use. The hf: fields here are the
+# ORIGINAL model repos (the harness passes them as --tokenizer), and those repos don't
+# contain the GGUFs, so ./fetch-hf.sh on this file can't download them. Get each GGUF from
+# a GGUF repo (e.g. bartowski's) through a models/*.txt entry or `huggingface-cli download`.
 #
 # Run with:
 #   ./run.sh --backend vllm --model-file models/2x32gb.vllm --models llama3.3:70b-q5km
@@ -21,7 +22,7 @@
 llama3.3:70b-q4ks  Llama-3.3-70B-Instruct-Q4_K_S.gguf  tp=2,dtype=auto,max_model_len=65536  hf:meta-llama/Llama-3.3-70B-Instruct
 
 # Q5_K_M (~48 GiB): higher quality; leaves ~8 GiB KV total → max_model_len=32768.
-# New GGUF — not in default.vllm; run ./fetch-hf.sh models/2x32gb.vllm first.
+# New GGUF — not in default.vllm; download it first (see the header note).
 # Tokenizer same gated repo as Q4_K_S above.
 llama3.3:70b-q5km  Llama-3.3-70B-Instruct-Q5_K_M.gguf  tp=2,dtype=auto,max_model_len=32768  hf:meta-llama/Llama-3.3-70B-Instruct
 
@@ -29,10 +30,10 @@ llama3.3:70b-q5km  Llama-3.3-70B-Instruct-Q5_K_M.gguf  tp=2,dtype=auto,max_model
 # Q4_K_M (~40 GiB): ~12 GiB/GPU for weights → ~16 GiB KV total → max_model_len=32768.
 # (64 GB × 0.9 − 40 GiB = 17.6 GiB KV; 65536 × 320 KB/token = 21 GiB → exceeds budget;
 #  use max_model_len=32768 which needs only ~10.5 GiB KV.)
-# New GGUF — run ./fetch-hf.sh models/2x32gb.vllm to download.
+# New GGUF — download it first (see the header note).
 qwen2.5-coder:72b  Qwen2.5-Coder-72B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=32768  hf:Qwen/Qwen2.5-Coder-72B-Instruct
 
 # ── deepseek-r1:70b — thinking; Llama-70B distill ────────────────────────────
 # Q4_K_M (~37 GiB): same weight footprint as llama3.3:70b Q4_K_S → ~16 GiB KV.
-# New GGUF — run ./fetch-hf.sh models/2x32gb.vllm to download.
+# New GGUF — download it first (see the header note).
 deepseek-r1:70b  DeepSeek-R1-Distill-Llama-70B-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=32768,thinking  hf:deepseek-ai/DeepSeek-R1-Distill-Llama-70B
