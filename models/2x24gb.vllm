@@ -17,7 +17,7 @@
 
 # ── 70B — primary tp=2 target; minimum 2× 24 GB ──────────────────────────────
 # Q4_K_S (~37 GiB across 2 GPUs); proven at max_model_len=32768 on 2× RTX 3090.
-# Tokenizer is gated (meta-llama) — set HF_TOKEN env var or populate hf-token.txt.
+# Tokenizer is gated (meta-llama) — set HF_TOKEN env var or populate HF_TOKEN.txt.
 llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_S.gguf  tp=2,dtype=auto,max_model_len=32768  hf:meta-llama/Llama-3.3-70B-Instruct
 
 # ── 32B models — tp=2 removes the single-GPU KV constraint ───────────────────

@@ -31,6 +31,35 @@ _BOOL_EMIT_VALUE: dict[str, str] = {
     "flash-attn": "on",
 }
 
+# llama.cpp 14a9d09f7 (2026-09-09) removed --no-mmap in favour of --load-mode. Builds from before
+# --load-mode existed (release 10094, the unsloth qwen4exp fork) only know the legacy flag, and the
+# pinned 67a17c17c knows both, so the binary's own --help decides which one to emit.
+_LOAD_MODE_EQUIV: dict[str, str] = {
+    "no-mmap": "none",
+}
+_load_mode_support: dict[str, bool] = {}
+
+
+def _supports_load_mode(bin_path: str) -> bool:
+    """True if this llama-server build has --load-mode (checked once per binary)."""
+    if bin_path not in _load_mode_support:
+        try:
+            out = subprocess.run([bin_path, "--help"], capture_output=True, text=True, timeout=60)
+            _load_mode_support[bin_path] = "--load-mode" in out.stdout + out.stderr
+        except (OSError, subprocess.TimeoutExpired):
+            # Keep the legacy flag; a missing binary then fails loudly when the server starts.
+            _load_mode_support[bin_path] = False
+    return _load_mode_support[bin_path]
+
+
+def _bool_flag(cli_key: str, bin_path: str) -> list[str]:
+    """CLI arguments for a parameter set to True (bare key) in a model file."""
+    if cli_key in _LOAD_MODE_EQUIV and _supports_load_mode(bin_path):
+        return ["--load-mode", _LOAD_MODE_EQUIV[cli_key]]
+    if cli_key in _BOOL_EMIT_VALUE:
+        return ["--" + cli_key, _BOOL_EMIT_VALUE[cli_key]]
+    return ["--" + cli_key]
+
 _PORT = 8080
 _BASE_URL = f"http://127.0.0.1:{_PORT}"
 _HEALTH_URL = f"{_BASE_URL}/health"
@@ -127,15 +156,11 @@ class LlamaServerManager:
                 # tensor_split is meaningless (and would error) when only one GPU is visible
                 continue
             cli_key = _PARAM_NAME_MAP.get(key, key.replace("_", "-"))
-            flag = "--" + cli_key
             if val is True:
-                if cli_key in _BOOL_EMIT_VALUE:
-                    cmd.extend([flag, _BOOL_EMIT_VALUE[cli_key]])
-                else:
-                    cmd.append(flag)
+                cmd.extend(_bool_flag(cli_key, self.bin_path))
             else:
                 # | is used as sub-separator for comma-containing values (e.g. tensor_split=1|1)
-                cmd.extend([flag, str(val).replace("|", ",")])
+                cmd.extend(["--" + cli_key, str(val).replace("|", ",")])
 
         # single_gpu_index: pin the subprocess to one CUDA device.
         # CUDA_VISIBLE_DEVICES is already exported by run.sh so this is redundant for the

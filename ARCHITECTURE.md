@@ -245,7 +245,8 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` a
       [other params from model file]
     ```
   `max_model_len`, `max_ctx`, `thinking` are consumed by the harness and never forwarded. Inference calls use `_detect_connect_url()` which tries 127.0.0.1 first, then falls back to the machine's LAN IP (WSL2 mirrored-mode workaround — loopback may be firewalled).
-- **HF token:** reads `hf-token.txt` from the repo root and sets `HF_TOKEN` in the subprocess environment if not already set — required for gated models (Llama 3.3).
+- **HF token:** if `HF_TOKEN` (or `HUGGING_FACE_HUB_TOKEN`) isn't already set, reads `HF_TOKEN.txt` from the repo root, falling back to the legacy `hf-token.txt`, and sets `HF_TOKEN` in the subprocess environment — required for gated models (Llama 3.3). Both file names are gitignored.
+- **Xet disabled by default:** sets `HF_HUB_DISABLE_XET=1` in the subprocess environment (`setdefault`, so an explicit value wins), same as `fetch_hf.py`. vLLM downloads HF-format weights on the first `vllm serve`, and the Xet backend silently stalled such a download on 2026-09-15 (weights frozen at 1.0 GB, no error).
 - `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions`. `model` is the short `ollama_name` (matches `--served-model-name`). Reads `reasoning_content` for thinking models; promotes it to `content` when `content` is empty (same fallback as llama-server).
 - **`_parse_body(body, elapsed_ns)`** — vLLM does not expose llama.cpp `timings` fields, so `eval_duration` is set to wall time and `prompt_eval_duration` to 0. `tok_per_s` in results is therefore `completion_tokens / wall_time`.
 - `unload_model(...)` — no-op; lifecycle managed by `VLLMManager.stop()`.
@@ -311,7 +312,10 @@ Captures a point-in-time hardware description at benchmark start:
   - `platform` — `"Linux 6.6.87…"` etc.
   - `cuda_toolkit` — CUDA toolkit version from `nvcc --version` or version files; `""` if not found
   - `ollama_version` — from `ollama --version`; `""` if Ollama not installed
-  - `llama_server_version` — from `llama-server --version`; only present when `llama_server_bin` is passed
+  - `llama_server_version` — from `<bin> --version`; only present when `llama_server_bin` is passed
+    (bench.py passes the vllm binary on vllm runs, so this can hold a vLLM version)
+  - `server_name` — `llama-server` or `vllm`: which engine `llama_server_version` belongs to (since
+    2026-09-16; `lib/statistics.py` infers it from the backend for older files and exports it as `server_name`)
   - `models_storage` — `{"device": str, "transport": str}` for the GGUF/Ollama model directory; transport is one of `nvme`, `ssd`, `hdd`, `windows-drive`, `network-or-virtual`, or a raw fs type
 - `hw_summary(hw) -> str` — one-line string suitable for display, e.g. `RTX 5060 Ti 16GB  |  AMD Ryzen 7 5800X3D (16 logical cores)  |  64.0 GB RAM`.
 

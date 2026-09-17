@@ -39,11 +39,43 @@ Measured on an RTX 5060 Ti box (WSL2, ~86 GB RAM visible) unless noted.
 
 | Role | Model | Size | tok/s\* | Score | Notes |
 |---|---|---|---|---|---|
-| Big-model quality | `qwen3.8-flash-next-16gb` | 111 GB file, ~14 GB in VRAM | \*18.1 | 37/38 eligible | 180B-param MoE paged off NVMe via `--fit` + `--no-repack`; keep the model on a fast local filesystem (not `/mnt/c` under WSL2). See [`how-to-test-flash-next.md`](../how-to-test-flash-next.md) |
+| Big-model quality | `qwen3.8-flash-next-16gb` | 111 GB file, ~14 GB in VRAM | \*18.1 | 37/38 eligible | 180B-param MoE paged off NVMe via `--fit` + `--no-repack`; keep the model on a fast local filesystem (not `/mnt/c` under WSL2). Also runs as a **served lane** (llm-service-provider, 2026-09-16): loads in ~70 s, smoke 9/9 with tool calls. See [`how-to-test-flash-next.md`](../how-to-test-flash-next.md) |
 | Fits fully in VRAM | `qwen3.8-27b-gsqrco` | 11.8 GB | \*~55 on RTX 4090 | 9/10 spot | Not yet measured on a 5060 Ti; expect roughly 24 tok/s there (estimate from its lower memory bandwidth). In `models/16gb.txt` |
 
-vLLM on this tier is not yet tested; see `models/16gb.vllm`, [`how-to-vllm.md`](../how-to-vllm.md)
-and the test plan in [`test-plan-5060ti.md`](../test-plan-5060ti.md).
+vLLM on this tier (by hand, 2026-09-15/16): Qwen2.5-Coder-14B AWQ runs at 43-44 tok/s, but its
+tool calls fail with `tool_choice: "auto"` (so does the 7B). `cyankiwi/Qwen3.5-9B-AWQ-4bit` runs at
+~54-60 tok/s with a **209,615-token KV cache** (6.75 GiB at 0.92, measured 2026-09-17), which is
+independent of `--max-num-seqs` — 8 slots costs 0.5% of the pool. Read vLLM's `GPU KV cache size`
+line rather than reusing a number, and compare configurations only from an idle GPU. Its tool calls work,
+including real Claude Code and Pi sessions through `llm-service-provider`. Both need `--gpu-memory-utilization 0.92` (Windows holds ~1.1 GiB of
+the card under WSL) and `CUDA_HOME=/usr/local/cuda-13.0`. Steps: [`vllm-plan.md`](../vllm-plan.md);
+setup: [`how-to-vllm.md`](../how-to-vllm.md) and [`test-plan-5060ti.md`](../test-plan-5060ti.md).
+None of these vLLM models has a benchmark score yet. Serving behaviour is measured, though
+(2026-09-17, 12k-token prompts, cold prefix cache): per-stream decode ~56 tok/s, 12k prefill
+~2,700 tok/s, and concurrency is gated by `--max-num-seqs`, not KV — at 2 slots throughput doubles
+from one client to two (28.5 -> 53.2 tok/s) then queues hard (8 clients wait a 46 s median for a
+first token), while 8 slots remove the queue (7.5 s) at the cost of per-stream decode falling to
+~8 tok/s. Pick the slot count from how many clients you have, not from VRAM.
+
+#### 2.0b Dual 16 GB (2× RTX 5060 Ti — 32 GB total)
+
+**Planned, not yet measured** — the second card is not installed as of 2026-09-16. 32 GB puts the
+27B class in reach, which is the whole point: no 27B build fits one 16 GB card (every NVFP4 variant
+found is 17-23 GB of weights). Entries are written and annotated in `models/2x16gb.vllm`:
+`qwen3.8-27b:nvfp4` (`QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4`, 20.6 GB) as the primary, with
+`qwen2.5-coder:32b-awq` as the fallback.
+
+Two caveats before planning around it. `tp=2` all-reduces over PCIe on every layer of every token —
+on the 4090+3090 rig that cost 16.6 versus 28.5 tok/s for a comparable model, and these cards are at
+x8 each. And NVFP4 is 4-bit *activations* as well as weights, which is exactly what `python_hashmap`
+(the L5 precision canary, §5) is sensitive to on the 27B family: run that task before trusting the
+build. Alternative topology: one 16 GB model per card, two genuinely different lanes, no cross-card
+traffic. Operational steps, capacity/concurrency estimates and DDR5 sizing:
+[`upgrade-dual-5060.md`](../../llm-service-provider/upgrade-dual-5060.md) in `llm-service-provider`.
+
+llama.cpp on this tier: `models/2x16gb.txt` (written 2026-09-16, unmeasured on this pair) — dense
+27-32B at `tensor_split=1|1`, the MoE fast lane, and `qwen3.8-flash-next-32gb`, the 180B MoE that
+already scores 37/38 on a *single* 5060 Ti via NVMe expert paging.
 
 #### 2.1 Single 24 GB GPU (RTX 4090 or RTX 3090)
 

@@ -173,6 +173,7 @@ def _hw_summary(hw: dict | None) -> dict:
         "platform":     hw.get("platform", ""),
         "cuda_toolkit": hw.get("cuda_toolkit", ""),
         "llama_server_version": hw.get("llama_server_version", ""),
+        "server_name":  hw.get("server_name", ""),
     }
 
 

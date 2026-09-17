@@ -141,7 +141,7 @@ export LLAMA_MODELS_DIR=/path/to/gguf/models
 
 Models pre-configured for dual 24 GB GPUs (48 GB total): `llama3.3:70b`, `qwq:32b`, `qwen2.5-coder:32b`, `qwen3-coder-next` (commented until GONE repo resolved), `qwen3-coder-480b` (commented until vLLM MoE GGUF fix lands).
 
-**HF_TOKEN required** for `llama3.3:70b` (gated meta-llama repo). Populate `hf-token.txt` in the repo root or set `HF_TOKEN` in your environment.
+**HF_TOKEN required** for `llama3.3:70b` (gated meta-llama repo). Populate `HF_TOKEN.txt` in the repo root or set `HF_TOKEN` in your environment.
 
 ---
 
@@ -165,7 +165,7 @@ Models pre-configured for dual 24 GB GPUs (48 GB total): `llama3.3:70b`, `qwq:32
    export LLAMA_MODELS_DIR=/path/to/gguf/models
    export HF_TOKEN=hf_...          # needed for llama3.3:70b and other gated models
    ```
-   Or populate `hf-token.txt` in the repo root instead of `HF_TOKEN`.
+   Or populate `HF_TOKEN.txt` in the repo root instead of `HF_TOKEN`.
 
 4. **Install Python/Node/dotnet dependencies:**
    ```bash

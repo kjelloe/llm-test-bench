@@ -21,8 +21,18 @@ it's just where the vLLM experiment is now actually running. Full background: `C
   The current checkout (`d4c1f0d`, 2026-08-31, still the latest upstream on 2026-09-15) already
   includes the Blackwell bf16 fix (`bb5d952`) and the 27B load-OOM fix (`51b8d7a`). It needs a
   vLLM from after the June 2026 GGUF move: the repo's `.venv` has vLLM 0.21.0 (May 2026), which
-  is too old. Use a fresh venv on WSL ext4 with a current vLLM (0.29.0 as of 2026-09-15); see
+  is too old. Use a fresh venv on WSL ext4 with vLLM from upstream `main` installed with `VLLM_USE_PRECOMPILED=1` (two SM120 speedups
+  landed after the 0.29.0 release: `13cf9e05c1` and `f6326f53bd`). `/mnt/c/GIT/vllm/my-build.sh`
+  automates the install and verifies it; see
   `test-plan-5060ti.md`.
+- Install the CUDA 13.0 toolkit (`cuda-toolkit-13-0`) and set `CUDA_HOME=/usr/local/cuda-13.0` in
+  every shell that runs `vllm serve` (and before `./run.sh --backend vllm`). FlashInfer JIT-compiles
+  kernels at startup and needs nvcc >= 12.9 for SM120, matching PyTorch's CUDA 13.0. The pip
+  `nvidia/cu13` nvcc does not work (13.4 compiler, 13.0 headers). Without it vLLM logs `SM 12.x
+  requires CUDA >= 12.9` and then dies with the misleading `FlashInfer requires GPUs with sm75 or
+  higher`. Check `echo $CUDA_HOME`: a `~/.bashrc` that puts an older CUDA on PATH is not enough.
+- Under WSL keep `--gpu-memory-utilization` at 0.92 or lower: Windows holds ~1.1 GiB of the card,
+  which `nvidia-smi` inside WSL doesn't show. The real free memory: `torch.cuda.mem_get_info()`.
 - Verify the GPU is actually recognized before doing anything else:
   ```bash
   nvidia-smi --query-gpu=index,name,compute_cap,memory.total --format=csv
@@ -84,6 +94,11 @@ GGUF entry's `hf:` must be the original model repo that holds the tokenizer (e.g
 `16gb.vllm` and `2x16gb.vllm`), not bartowski's GGUF-only repo, and the GGUF itself is downloaded
 separately through a `models/*.txt` entry. Point `VLLM_BIN` at the new vLLM's binary, or `run.sh`
 uses the old vLLM in the repo's `.venv`. Step-by-step: `test-plan-5060ti.md`.
+
+Under WSL mirrored networking, `curl` to `127.0.0.1` hangs for a `vllm serve` bound to `0.0.0.0`
+(its default); use the machine's address, or start vLLM with `--host 127.0.0.1`. For agentic use
+(tool calls, Claude Code), the tested 16 GB pick is `cyankiwi/Qwen3.5-9B-AWQ-4bit`, not the
+Qwen2.5-Coder models, whose tool calls fail with `tool_choice: "auto"`: see `vllm-plan.md`.
 
 ## 5. What to record
 
@@ -178,7 +193,9 @@ dense-Qwen2.5 fallback — not runnable until the second 5060 Ti is installed). 
 harness passes as `--tokenizer` (the plugin's own README does the same), and those repos contain
 no GGUF. Download each GGUF through its `models/*.txt` entry instead (noted in each file). The
 NVFP4 entry downloads itself from the Hub on the first `vllm serve`. Step-by-step:
-`test-plan-5060ti.md`.
+`test-plan-5060ti.md` for the benchmark half, and
+`~/GIT/llm-service-provider/upgrade-dual-5060.md` for the whole second-card upgrade (hardware
+checks, switching the serving lane to tp=2, how many users 32 GB serves, DDR5 sizing, rollback).
 
 A fresh 2026-09-14 web check for this addition turned up **inconsistent, partly unreliable**
 results for "the" Qwen3.8-27B NVFP4 repo (sizes claimed anywhere from 14-23 GB for what should be
@@ -194,7 +211,10 @@ Also resolved in that same check: **`qwen3.8-flash-next` (already in `models/can
 llama-server) is NOT a realistic vLLM target on this box at all**, regardless of how many 5060
 Tis get added. vLLM's own official recipe for that architecture (qwen4exp, landed in vLLM main
 2026-09) budgets ~250 GB aggregate VRAM (validated minimum 2× GB300, 4× recommended) — orders of
-magnitude past what a 5060 Ti box can reach. If Flash-Next itself (not just the 27B dense model)
+magnitude past what a 5060 Ti box can reach. (Since `3116c5d06b`, 2026-09-09, vLLM can keep the
+n-gram table in pinned host RAM with `--engram-config '{"cpu_offload": true}'`, but the 125B main
+model still needs far more than 32 GB of VRAM. On a WSL2 box it can't work at all: vLLM turns pinned
+memory off under WSL.) If Flash-Next itself (not just the 27B dense model)
 is ever wanted on this hardware, the realistic path is llama.cpp's CPU-MoE-offload technique
 (§6's "stream ngrams off ssd and offload experts to cpu" recipe), not vLLM. That path has since
 been confirmed on one RTX 5060 Ti: 37/38 eligible tasks at 18.1 tok/s (see §6).

@@ -1110,6 +1110,10 @@ preflight.sh        Dependency checker. Run it first on a new box: dotnet_sas ne
 how-to-vllm.md      vLLM on an RTX 50xx (Blackwell) box: setup, GGUF plugin, model picks (models/16gb.vllm, models/2x16gb.vllm)
 how-to-test-flash-next.md  Step-by-step: qwen3.8-flash-next on 16 GB VRAM + RAM + NVMe expert paging
 test-plan-5060ti.md Plan for the RTX 5060 Ti box: qwen3.8-27b-gsqrco (llama-server) and first vLLM tests
+vllm-plan.md        Copy-paste steps: Qwen3.5-9B AWQ on vLLM for agentic tool calling (RTX 5060 Ti 16 GB)
+                    (the second-card upgrade lives in the serving repo:
+                    ~/GIT/llm-service-provider/upgrade-dual-5060.md — tp=2 Qwen3.8-27B target,
+                    capacity and DDR5 sizing, benchmark steps point back here)
 docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier
 next-runs.md        Referenced throughout this file and models/*.txt, but NOT tracked in git
                     (absent on the RTX 5060 Ti box as of 2026-09-15). See Known Issues.
@@ -1183,21 +1187,30 @@ traffic being served through the tunnel. Coordinate before launching a benchmark
 via `llmctl stop backend` there would interrupt a live remote pipeline, so don't do that
 unilaterally — check with whoever/whatever depends on it first).
 
+**On the RTX 5060 Ti box this is no longer hypothetical**: its units are enabled, so a lane is
+serving on boot and holds most of the 16 GB card. Since 2026-09-16 that lane may be **llama-server
+running `qwen3.8-flash-next`** (this repo's own 37/38 model, served through
+`profiles/rtx5060ti/models.ini` with `--fit` + NVMe expert paging, ~10.5 GB VRAM and ~75 GB of page
+cache) rather than the vLLM 9B — check `backend:` in the status output, because the flash-next lane
+competes for page cache as well as VRAM, and a benchmark started beside it will thrash both. `bin/llmctl stop` frees the GPU (the gateway and
+its request log stay up, and the pipeline would get a 503); `bin/llmctl start` puts it back. Its
+tunnel is disabled for now, so stopping the backend there disrupts only local clients.
+
 #### Known Issues
 
-- **⚠ Blocker for any future mainline llama.cpp rebuild past commit `14a9d09f7`** (2026-09-09):
-  upstream removed `--mmap`/`--no-mmap`/`--mlock`/`--direct-io` entirely, replaced by
-  `--load-mode {auto,none,mmap,mlock,mmap+mlock,dio}`. Every model line in every `models/*.txt`
-  file uses `no_mmap`, which `lib/llama_server_client.py` currently converts to a bare
-  `--no-mmap` — that flag no longer exists past this commit, so llama-server will refuse to
-  start for every model until the harness is updated (translate `no_mmap` → `--load-mode none`,
-  following the same pattern already used for `_BOOL_EMIT_VALUE`/`--flash-attn`). Not urgent —
-  every currently-pinned binary predates this — but fix it before rebuilding mainline for any
-  other reason (e.g. to pick up the GDN/CUDA-race/checkpoint fixes noted below). See
-  `next-runs.md` for the full diagnosis and fix sketch; not yet applied.
-  Verified 2026-09-14: the pinned `67a17c17c` already defines `--load-mode` (common/arg.cpp:2718)
-  and only marks `--no-mmap` as deprecated, so emitting `--load-mode none` for `no_mmap` works on
-  both the pinned binary and newer builds.
+- **FIXED 2026-09-16: `--no-mmap` removal in mainline llama.cpp past `14a9d09f7`** (2026-09-09):
+  upstream removed `--mmap`/`--no-mmap`/`--mlock`/`--direct-io`, replaced by
+  `--load-mode {auto,none,mmap,mlock,mmap+mlock,dio}`, and every `models/*.txt` file uses `no_mmap`.
+  `lib/llama_server_client.py` (`_bool_flag`) now reads each binary's `--help` once: if it lists
+  `--load-mode` it emits `--load-mode none`, otherwise the legacy `--no-mmap` (release 10094, the
+  unsloth fork). `none` is exactly what `--no-mmap` set (`common/arg.cpp:2705`:
+  `load_mode = value ? MMAP : NONE`). The pinned `67a17c17c` has both flags and gets
+  `--load-mode none`. Tests: `tests/test_llama_server_flags.py`. Evidence, in case the wording is
+  questioned again (it was, 2026-09-16): `14a9d09f7`'s subject says "officially deprecate" but the
+  commit is 86 deletions removing the argument definitions, and `git grep no-mmap 14a9d09f7 --
+  common tools` finds nothing; the DEPRECATED warnings came earlier, with the `--load-mode` PR. Only `no_mmap` is translated; no
+  model file uses `mlock` or `direct_io`. Still to do on a rebuild: `llm-service-provider`'s
+  `presets/models.ini` passes `no-mmap = true` straight to the router (comment added there).
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
@@ -1324,7 +1337,7 @@ When asked to implement features:
     above, now with real headroom to spare at 32 GB for KV cache and vLLM's loader overhead, and
     the best documented capability of any model that fits this VRAM budget with a confidently
     supported architecture.
-  - **Runnable entries exist since 2026-09-14, not yet run**: `models/16gb.vllm` (the 14B smoke
+  - **Runnable entries since 2026-09-14, AWQ ones run 2026-09-15 (below)**: `models/16gb.vllm` (the 14B smoke
     test) and `models/2x16gb.vllm` (`qwen3.8-27b:nvfp4` via `QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4`,
     plus the 32B fallback), for an RTX 5060 Ti box. Qwen3.8-27B does not fit a single 16 GB card:
     every NVFP4 build found is ~17-23 GB of weights. **qwen3.8-flash-next is not a vLLM target on
@@ -1334,6 +1347,82 @@ When asked to implement features:
     In GGUF mode the harness passes `hf:` as `--tokenizer`, so a `.vllm` GGUF entry must name the
     ORIGINAL model repo (e.g. `Qwen/Qwen2.5-Coder-14B-Instruct`), not a GGUF-only repo such as
     bartowski's, which has no tokenizer files. Download the GGUF through a `models/*.txt` entry.
+    **Updated 2026-09-15**: the first smoke test is now AWQ on stock vLLM
+    (`Qwen/Qwen2.5-Coder-7B/14B-Instruct-AWQ`, no plugin), which avoids compiling the plugin's
+    CUDA extension on a box where PyTorch is CUDA 13.0 but `nvcc` is 12.8. Install vLLM from
+    upstream `main` with `VLLM_USE_PRECOMPILED=1`: `13cf9e05c1` (prefer W4A4 NVFP4 kernels on
+    SM120/121) and `f6326f53bd` (FlashInfer Gated DeltaNet prefill on SM12x) are not in the
+    0.29.0 release. The harness never tests tool calling, so the plan adds a manual tool-call
+    check (`--enable-auto-tool-choice --tool-call-parser hermes` for Qwen2.5-Coder). vLLM `main`
+    also gained `--engram-config '{"cpu_offload": true}'` (`3116c5d06b`) for Flash-Next's n-gram
+    table, which doesn't change the verdict: its main model still needs far more than 32 GB.
+    **First smoke test (2026-09-15) hung on a stalled Hugging Face Xet download** (weights frozen
+    at 1.0 GB, process asleep, no error). Fix: `HF_HUB_DISABLE_XET=1`, which `lib/vllm_client.py`
+    now sets by default for servers it starts, as `lib/fetch_hf.py` already did. FlashInfer's
+    `SM 12.x requires CUDA >= 12.9` warning means FlashInfer's JIT builds can't target SM120 with the
+    system CUDA 12.8. Pointing `CUDA_HOME` at the pip `nvidia/cu13` folder does NOT work: its nvcc is
+    13.4 but its headers are 13.0, which CCCL rejects ("CUDA compiler and CUDA toolkit headers are
+    incompatible"). Install `cuda-toolkit-13-0` (matches PyTorch's CUDA 13.0, within the driver's
+    13.1) and set `CUDA_HOME=/usr/local/cuda-13.0`; until then `VLLM_USE_FLASHINFER_SAMPLER=0` lets
+    simple models start.
+    More from that smoke test: the build helper is `/mnt/c/GIT/vllm/my-build.sh` (in the vLLM
+    checkout, not this repo). Never run `vllm serve` from inside that checkout: its stale kernels
+    shadow the build. The harness's token fallback now reads `HF_TOKEN.txt` (gitignored), then legacy
+    `hf-token.txt` (now also gitignored; it wasn't before). Under WSL, vLLM leaves pinned memory
+    off by default (expected startup warning). **Corrected 2026-09-16**: this is a default, not a hard
+    block — `CudaPlatformBase.is_pin_memory_available` (`vllm/platforms/cuda.py`) turns it on when
+    `VLLM_WSL2_ENABLE_PIN_MEMORY=1` and the WSL2 kernel is >= 4.19.121 (this box runs 6.6.87); only
+    older kernels are refused outright. So it does not by itself rule out `--engram-config
+    cpu_offload`, though Flash-Next still needs far more than this box's VRAM either way. Don't trust
+    `/proc/<pid>/environ` for vLLM processes: `setproctitle` overwrites the start of it. Slow downloads
+    that day (~1.2 MB/s) were the network (off-site Wi-Fi), not vLLM, Xet or the token. Full list:
+    the troubleshooting section of `test-plan-5060ti.md`. A manual `vllm serve` also needs the venv
+    activated: FlashInfer JIT-compiles its sampler during warmup and calls `ninja` from
+    `~/vllm-env/bin` (the harness puts that folder on PATH itself).
+    **FIRST WORKING vLLM RESULT on the RTX 5060 Ti (2026-09-15, by hand; harness run B4: 14B AWQ `python_safe_div` PASS, 33.5 tok/s)**:
+    `Qwen2.5-Coder-7B-Instruct-AWQ` serves at 75-81 tok/s (streaming TTFT 50 ms, KV 119,760 tokens
+    at 0.90 memory use), with `CUDA_HOME=/usr/local/cuda-13.0` after installing `cuda-toolkit-13-0`.
+    Tool calling with `tool_choice=auto` fails: the 7B model wraps calls in `<tools>` instead of
+    `<tool_call>`, so the `hermes` parser misses them; `tool_choice=required` or a named function
+    works. Under WSL mirrored networking, `curl` to `127.0.0.1:8000` hangs for vLLM (bound to
+    `0.0.0.0`); use the box's address. Details: `test-plan-5060ti.md` B3 and Troubleshooting.
+    `Qwen2.5-Coder-14B-Instruct-AWQ` (same day): 43-44 tok/s, TTFT 53 ms, KV 9,152 tokens at
+    `--max-model-len 8192 --gpu-memory-utilization 0.92`. 0.95 can't start: Windows holds ~1.1 GiB of
+    the card, which `nvidia-smi` inside WSL doesn't show (check `torch.cuda.mem_get_info()`). Tool
+    calling fails with `tool_choice=auto` exactly like the 7B (a system prompt only changed `<tools>`
+    to `<json>`), so the Qwen2.5-Coder family needs `required`/named tool choice for agentic use.
+    **Agentic pick: `cyankiwi/Qwen3.5-9B-AWQ-4bit`** (same day, by hand, `--tool-call-parser qwen3_coder
+    --reasoning-parser qwen3`): tool calls PASS with `tool_choice=auto` (thinking on and off), plus
+    required, named, a tool round trip and a no-tool question. ~60 tok/s, TTFT 40 ms, 7.55 GiB weights,
+    KV 127,272 tokens at 0.92 with `--max-model-len 32768` on that day's build (Gated DeltaNet
+    hybrid). **MEASURED PROPERLY 2026-09-17**: the KV pool is **6.75 GiB = 209,615 tokens** and is
+    essentially independent of `--max-num-seqs` — 8 slots costs 0.03 GiB (0.5%), A/B/A/B with each
+    start gated on an idle GPU, reproducing to the token. The 127,272 figure is NOT reproducible on
+    the current build at any setting (even 32k/default gives 178,086); treat it as stale. The trap
+    that produced it: servers started back-to-back measure whatever VRAM the previous one has not
+    finished releasing, so always wait for `nvidia-smi` to show an idle card before comparing two
+    configurations. Steps and results: `vllm-plan.md`. Harness
+    entry `qwen3.5:9b-awq` in `models/16gb.vllm`, not yet run (the harness passes any param, `reasoning_parser`
+    included, to `vllm serve`). Every `vllm serve` shell needs
+    `CUDA_HOME=/usr/local/cuda-13.0`: `~/.bashrc` puts CUDA 12.8 first on PATH, and without it FlashInfer
+    fails with a misleading `FlashInfer requires GPUs with sm75 or higher`. 2026-09-16: the
+    `llm-service-provider` selftest (Claude Code through its gateway, served as `local-coder`, 65536)
+    PASSES in 4 turns and 20 s; Claude Code accepts vLLM's thinking blocks, and prefix caching brings
+    time to first token from 7.0 s to ~0.8 s. Now built in as that repo's machine profile `rtx5060ti`
+    (one vLLM process for both lanes; `smoke.sh` checks the health status code now): smoke 9/9 and
+    selftest both lanes PASS through `serve-vllm.sh` + the gateway. Its systemd units are installed and
+    running on that box since 2026-09-16 (`llm-gateway` + `vllm-local-coder`, enabled at boot), so the
+    lane holds most of the card: run `~/GIT/llm-service-provider/bin/llmctl stop` before benchmarking
+    there. Since 2026-09-16 that lane may instead be llama-server serving `qwen3.8-flash-next`
+    (~10.5 GB VRAM plus ~75 GB of page cache) — check `backend:` in its status output. Its `awtunnel` is deliberately disabled (`TUNNEL=off` in that profile's `host.env`) until the
+    Hetzner host has that box's `~/.ssh/id_awtunnel.pub`. Also 2026-09-16: that lane now serves a real
+    agent all day through `~/GIT/pi-local-dev` (Pi 0.85.1 on Node 22, provider `llm-service-provider`,
+    model `local-coder`) — a 79-message games session ended 42 turns on `toolUse` with no token-ceiling
+    stop, which is the agentic-use evidence this benchmark itself cannot produce. Two facts from that:
+    the lane emits reasoning on every turn whatever the client's thinking setting (the backend lever is
+    `--default-chat-template-kwargs '{"enable_thinking": false}'`, which would cover both lanes here),
+    and `llmctl stats` records OpenAI-style clients as `kind = chat` with full token/stop/tool detail
+    since that day's gateway fix, while `llmctl status` names the model behind each lane.
   - Both picks trade "best documented capability at this VRAM size" for "most likely to actually
     load cleanly on the first try" — deliberately, since this plugin has never been exercised on
     this rig. Once either loads successfully, that's the point to branch out to a GDN-hybrid or
@@ -1382,9 +1471,32 @@ When asked to implement features:
   Always enable for coding benchmarks — reduces TTFT on repeated system prompts. No quality impact.
 - **Recommended baseline params for tp=2 coding workloads** (not yet tested on this bench):
   `tp=2,dtype=auto,kv_cache_dtype=fp8,enable_prefix_caching,gpu_mem_util=0.94,max_model_len=65536`
-- **Concurrency strength**: vLLM's primary advantage over llama-server is multi-request scheduling.
-  A concurrency benchmark (1/2/4/8 simultaneous coding requests; measure aggregate tok/s, TTFT,
-  per-request latency) would capture what llama-server single-request benchmarks cannot show.
+  Two notes from the 2026-09-17 single-card measurements: `max_num_seqs` can be set from the client
+  count rather than hoarded (it costs ~0.5% of the KV pool, not the large fraction once assumed),
+  and `gpu_mem_util=0.94` only works where nothing else holds the card — under WSL the display GPU
+  loses ~1.1 GiB invisibly, which is why the 5060 Ti lane runs 0.92.
+- **Concurrency strength — MEASURED 2026-09-17, no longer an open question.** vLLM's primary
+  advantage over llama-server is multi-request scheduling, and `vllm bench serve` quantifies it
+  (this build ships `vllm bench {serve,latency,throughput,sweep,startup}`; there is also a `BFCL`
+  dataset that replays Berkeley Function-Calling traffic, untried here but the obvious next step for
+  an agentic lane). On one RTX 5060 Ti with Qwen3.5-9B AWQ, 12k-token prompts, 256-token answers,
+  cold prefix cache:
+  | `--max-num-seqs` | concurrency | output tok/s | median TTFT | mean TPOT |
+  |---|---|---|---|---|
+  | 2 | 1 | 28.5 | 4.4 s | 17.8 ms |
+  | 2 | 2 | 53.2 | 3.0 s | 24.1 ms |
+  | 2 | 4 | 53.5 | 8.3 s | 25.5 ms |
+  | 2 | 8 | 39.4 | 46.2 s | 33.3 ms |
+  | 8 | 4 | 44.1 | 7.4 s | 59.6 ms |
+  | 8 | 8 | 49.9 | 7.5 s | 119.2 ms |
+  Aggregate throughput doubles from one client to two and then stops at the slot count; beyond it
+  requests queue (at 2 slots and 8 clients, half wait 46 s for a first token and throughput *falls*).
+  More slots remove the queue but split the GPU: per-stream decode goes ~30 -> ~8 tok/s at 8-way.
+  Per-stream decode alone is ~56 tok/s; 12k-token prefill runs ~2,700 tok/s, which is why the
+  concurrency-1 row reads 28.5 (4.4 s of prefill inside each request). Choose `--max-num-seqs` from
+  the client count, not from VRAM — KV never binds here (8 x 12k = 96k against 209k available), and
+  the flag itself costs only 0.5% of the pool. Real agent traffic is faster than this table because
+  it hits the prefix cache 95% of the time; `--dataset-name random` never does.
 - **WSL2 mirrored-mode**: startup uses log-based readiness detection; inference uses LAN IP
   fallback. See `lib/vllm_client.py` `_wait_ready()` and `_detect_connect_url()`.
 

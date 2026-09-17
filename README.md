@@ -203,6 +203,11 @@ and diffs against a saved state so re-runs only show what changed.
 Windows drives are reached over 9p and are far slower, which matters most for large models that
 page weights from disk (see [`how-to-test-flash-next.md`](how-to-test-flash-next.md)).
 
+**Hugging Face token:** export `HF_TOKEN`, or put it in `HF_TOKEN.txt` in the repo root (gitignored);
+the vLLM backend reads that file when `HF_TOKEN` isn't set. Both `fetch-hf.sh` and vLLM servers
+started by the harness disable Hugging Face's Xet download backend (`HF_HUB_DISABLE_XET=1`), which
+has stalled large downloads here without any error.
+
 ---
 
 ## Multi-GPU
@@ -228,8 +233,10 @@ page weights from disk (see [`how-to-test-flash-next.md`](how-to-test-flash-next
 | `candidates.txt` | Models under active evaluation — pairs with `--task-group spot` |
 
 `.vllm` files mirror the same tiers with vLLM-specific params (`tp`, `enforce_eager`, `gpu_mem_util`).
-`16gb.vllm` / `2x16gb.vllm` target an RTX 5060 Ti box; see [`how-to-vllm.md`](how-to-vllm.md) and
-[`test-plan-5060ti.md`](test-plan-5060ti.md).
+`16gb.vllm` / `2x16gb.vllm` (and `16gb.txt` / `2x16gb.txt` for llama-server) target an RTX 5060 Ti
+box; see [`how-to-vllm.md`](how-to-vllm.md) and
+[`test-plan-5060ti.md`](test-plan-5060ti.md), and for agentic tool calling on that box
+[`vllm-plan.md`](vllm-plan.md).
 
 ---
 

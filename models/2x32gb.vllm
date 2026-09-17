@@ -18,7 +18,7 @@
 
 # ── llama3.3:70b — more context vs. 2x24gb.vllm ──────────────────────────────
 # Q4_K_S (~37 GiB): proven at max_model_len=32768 on 48 GB; extra 16 GiB → 65536 feasible.
-# Tokenizer is gated (meta-llama) — set HF_TOKEN or populate hf-token.txt.
+# Tokenizer is gated (meta-llama) — set HF_TOKEN or populate HF_TOKEN.txt.
 llama3.3:70b-q4ks  Llama-3.3-70B-Instruct-Q4_K_S.gguf  tp=2,dtype=auto,max_model_len=65536  hf:meta-llama/Llama-3.3-70B-Instruct
 
 # Q5_K_M (~48 GiB): higher quality; leaves ~8 GiB KV total → max_model_len=32768.

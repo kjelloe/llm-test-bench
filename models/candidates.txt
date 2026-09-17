@@ -1280,9 +1280,16 @@ qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.ggu
 #     repacked into anonymous RAM and can no longer be evicted/re-read from NVMe.
 # Keep mmap ON: never add no_mmap here. Speed is unknown — expect well below the 3×24 GB rig's
 # ~19-24 tok/s, and much worse if the hot expert set doesn't stay in page cache (NVMe thrash).
-# Build llama.cpp pinned to 67a17c17c: same commit validated for this model, and it predates
-# 14a9d09f7 (the --no-mmap removal that breaks every other models/*.txt entry). Blackwell needs
+# Build llama.cpp pinned to 67a17c17c: same commit validated for this model. (The --no-mmap removal in
+# 14a9d09f7 no longer breaks other entries: the harness sends --load-mode none when supported.) Blackwell needs
 # CUDA 12.8+ (llamacpp/README.md).
+# SERVING (2026-09-16/17): this model is now a real lane, not only a benchmark subject —
+#   ~/GIT/llm-service-provider/profiles/rtx5060ti/models.ini serves it as local-coder + local-strong
+#   through the llama-server router (fit=on, fit-target=512, no-repack, NO n-gpu-layers, mmap left on).
+#   Loads in ~70 s to 10.5 GB VRAM; smoke 9/9 incl. tool_use. First full day of agent traffic:
+#   261 requests, 7.5M in / 233k out, 90% tool-calling, 47% prefix-cached, ~82 s average per request
+#   (the same Pi workload averages ~6.6 s on the box's 9B vLLM lane). One 500 "Context size has been
+#   exceeded" — a client-side window/maxTokens trap, see that repo's models.ini comment.
 qwen3.8-flash-next-16gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — same file as qwen3.8-flash-next
 #
 # RESULT — CONFIRMED 2026-09-14, 10-task spot check: **9/10 at 18.4 tok/s avg** (17.4-19.7 range),

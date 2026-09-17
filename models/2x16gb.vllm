@@ -2,11 +2,19 @@
 #
 # NOT YET RUNNABLE as of 2026-09-15 — the second RTX 5060 Ti has not arrived yet.
 # This file preps the ground so the config is ready the moment it's installed.
-# Companion to models/16gb.vllm (single-card smoke test). Steps: test-plan-5060ti.md, Part B.
+# Companion to models/16gb.vllm (single-card smoke tests). Steps: test-plan-5060ti.md, Part B.
+#
+# The second card goes in via PCIe bifurcation, so each card likely runs at x8. tp=2 sends
+# an all-reduce over PCIe for every layer of every token, so link width is a real speed
+# factor (on the 4090 rig, AWQ tp=2 ran 16.6 tok/s vs 28.5 tok/s at tp=1). Check with:
+#   nvidia-smi --query-gpu=index,pcie.link.gen.current,pcie.link.width.current --format=csv
 #
 # Don't run fetch-hf.sh on this file (see the format note in models/16gb.vllm):
-#   - qwen3.8-27b:nvfp4 downloads itself from the Hub on the first `vllm serve`.
+#   - HF-format entries (gguf-file "-") download themselves on the first `vllm serve`.
 #   - The 32B GGUF comes via: ./fetch-hf.sh models/candidates.txt --models qwen2.5-coder:32b-q4
+#
+# Operational steps for the whole upgrade (hardware checks, the serving-side switch to tp=2, how many
+# users it serves, DDR5 sizing, rollback): ~/GIT/llm-service-provider/upgrade-dual-5060.md
 #
 # Run once the second card is in (./gpu-mode.sh multi first):
 #   VLLM_BIN=~/vllm-env/bin/vllm ./run.sh --backend vllm --model-file models/2x16gb.vllm \
@@ -16,8 +24,10 @@
 # Same dense Gated-DeltaNet-hybrid architecture as this repo's own extensively
 # tested qwen3.8:27b (llama-server Q4_K_M, f16 KV — see 24gb.txt/2x24gb.txt/
 # 3x24gb.txt and the python_hashmap precision-canary notes in CLAUDE.md).
-# RTX 5060 Ti is Blackwell (sm_120) with native NVFP4 tensor cores, so this is not an
-# emulated/fallback quant path.
+# RTX 5060 Ti is Blackwell (sm_120) with native NVFP4 tensor cores.
+# Two vLLM main commits help this exact combo and are NOT in the 0.29.0 release:
+# 13cf9e05c1 (prefer W4A4 NVFP4 linear kernels on SM120/121) and f6326f53bd (FlashInfer
+# Gated DeltaNet prefill kernel on SM12x). Install vLLM from main.
 #
 # VERIFIED 2026-09-15 on the HF Hub: repo exists, 19 files, 20.6 GB, includes
 # tokenizer.json. config.json: Qwen3_5ForConditionalGeneration (model_type qwen3_5),
@@ -28,16 +38,20 @@
 # differently-named "Qwen3.8-27B NVFP4" repos claiming 14-23 GB), and 4-bit
 # activations are a real precision risk for python_hashmap — watch that task.
 #
-# ~20 GB of weights across 2× 16 GB leaves room for KV at tp=2. enforce_eager kept as a
-# precaution for the first run (vLLM's own recipe needs it on a single RTX 5090).
-# kv_cache_dtype intentionally NOT set to fp8: qwen3.6:27b/qwen3.8:27b need
+# enforce_eager kept as a precaution for the first run (vLLM's own recipe needs it on a
+# single RTX 5090). kv_cache_dtype intentionally NOT set to fp8: qwen3.6:27b/qwen3.8:27b need
 # f16-equivalent KV precision or python_hashmap silently drops the `_EMPTY` sentinel
 # (see CLAUDE.md's python_hashmap precision-canary section).
 qwen3.8-27b:nvfp4  -  tp=2,dtype=auto,max_model_len=32768,enforce_eager,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
 
-# ── Fallback if the NVFP4 repo/quant doesn't load cleanly ───────────────────
-# Same architecture-confidence reasoning as models/16gb.vllm's smoke test, scaled to
-# 32 GB: dense Qwen2.5, in the plugin's tested-coverage table, PERFECT 19/19 coding on
-# this repo's llama-server benchmark (its strongest coder overall).
-# GGUF from bartowski via models/candidates.txt; hf: below is the tokenizer repo.
-qwen2.5-coder:32b-5060ti  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=65536,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct
+# ── Fallbacks: Qwen2.5-Coder-32B, the strongest coder on this repo's llama-server benchmark ──
+# (PERFECT 19/19 coding.) KV sizing: ~256 KB/token at fp16 (64 layers, 8 KV heads, dim 128),
+# i.e. ~128 KB/token per card at tp=2. Each card holds ~9.7 GB of weights plus ~3.5 GB of vLLM
+# overhead (measured on one 5060 Ti with the 14B, 2026-09-15), leaving ~1.5 GiB of KV per card at
+# 0.92: 8192 tokens (~1 GiB per card) fits, 16384 doesn't. vLLM prints the real limit.
+# Not 0.95: Windows holds ~1.1 GiB of the display card (invisible to nvidia-smi in WSL), so
+# only 0.929 is free there, and tp=2 applies one utilization value to both cards.
+# AWQ first: stock vLLM, no plugin. Verified 2026-09-15: 19.3 GB, ships a tokenizer.
+qwen2.5-coder:32b-awq  -  tp=2,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct-AWQ
+# GGUF via vllm-gguf-plugin. GGUF from bartowski via models/candidates.txt; hf: is the tokenizer repo.
+qwen2.5-coder:32b-5060ti  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct
