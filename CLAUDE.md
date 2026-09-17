@@ -1497,6 +1497,21 @@ When asked to implement features:
   the client count, not from VRAM — KV never binds here (8 x 12k = 96k against 209k available), and
   the flag itself costs only 0.5% of the pool. Real agent traffic is faster than this table because
   it hits the prefix cache 95% of the time; `--dataset-name random` never does.
+  **Prompt length decides whether concurrency helps.** Same lane, 4 slots, replaying real
+  tool-calling traffic (BFCL: `--dataset-name hf --dataset-path
+  gorilla-llm/Berkeley-Function-Calling-Leaderboard`, ~450-token prompts, 24 requests, 2026-09-18):
+  | concurrency | duration | output tok/s | median TTFT | mean TPOT |
+  |---|---|---|---|---|
+  | 1 | 77.3 s | 55.8 | 172 ms | 16.9 ms |
+  | 4 | 24.7 s | **176.2** | 191 ms | 20.1 ms |
+  **3.1x aggregate throughput with latency essentially unchanged** — the opposite of the 12k-prompt
+  table above, where a fourth client only queued. Short prompts make prefill cheap, so the GPU
+  spends its time decoding and genuinely parallelises; long prompts make prefill the bottleneck and
+  extra clients wait. Agentic traffic is short *per tool call* but carries a large conversation
+  prefix, so real sessions land between the two tables — which is exactly why prefix caching matters
+  here. 24/24 requests succeeded, so real function schemas round-trip through the lane and its
+  `qwen3_coder` parser cleanly; note vLLM's bench measures latency and throughput, NOT tool-call
+  correctness (that needs BFCL's own scoring harness).
 - **WSL2 mirrored-mode**: startup uses log-based readiness detection; inference uses LAN IP
   fallback. See `lib/vllm_client.py` `_wait_ready()` and `_detect_connect_url()`.
 
