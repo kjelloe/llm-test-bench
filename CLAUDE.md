@@ -1092,7 +1092,7 @@ bench.py            CLI runner
 install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
-powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
+powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@260W, 3090@240W — tightened 2026-08-29, see hw-upgrade-july-2026.md); WSL2-aware — prints an elevated PowerShell one-liner since nvidia-smi -pl is blocked inside WSL2 (fixed 2026-09-17: a prior version embedded a raw " inside a single-quoted -ArgumentList element, which any outer shell's own quote parser closed prematurely, silently running the tail unelevated instead of inside the RunAs child — see tests/test_powerlimit_output.py)
 compare.sh          Runs canonical 7-model set (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; pre-checks repos for 404/deleted before downloading
@@ -1132,6 +1132,7 @@ tests/
   test_export_task.py         --export-task bundling unit tests
   test_hwmonitor.py           hwmonitor threshold state-machine unit tests
   test_reporting.py           lib/reporting skill-level scoring unit tests
+  test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=8000 model_timeout=600

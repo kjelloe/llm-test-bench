@@ -78,6 +78,7 @@ tests/
   test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP)
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)
   test_reporting.py           Unit tests for lib/reporting._skill_level / _peak_skill_level (consecutive-tier vs peak-tier scoring logic)
+  test_powerlimit_output.py   Regression test for powerlimit.sh's WSL2 elevated-PowerShell one-liner (invokes the real script; skipped off-WSL2 since the non-WSL path calls sudo nvidia-smi for real)
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
   python_safe_div/        calc.py (baseline), conftest.py, tests/test_calc.py

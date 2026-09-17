@@ -121,7 +121,7 @@ if $PER_GPU; then
         cmds=$(while IFS=':' read -r idx watts; do
             printf 'nvidia-smi -i %s -pl %s; ' "$idx" "$watts"
         done < <(_per_gpu_pairs))
-        printf '  powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '\''-Command \"%s\"'\''"\n' "${cmds%; }"
+        printf "  powershell.exe -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-Command','%s'\"\n" "${cmds%; }"
         echo ""
         echo "Note: power limits reset on reboot."
         exit 0
@@ -166,7 +166,7 @@ if $_IS_WSL; then
     echo "  • Or: right-click the Start button → Terminal (Admin)"
     echo ""
     echo "To apply from WSL itself (saves the round-trip) you can also run:"
-    printf '  \033[1mpowershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '\''-Command nvidia-smi -pl %s'\''"\033[0m\n' "$WATTS"
+    printf "  \033[1mpowershell.exe -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-Command','nvidia-smi -pl %s'\"\033[0m\n" "$WATTS"
     echo ""
     echo "Note: power limits reset on reboot; run this again after each restart."
     exit 0

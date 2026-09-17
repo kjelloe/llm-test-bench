@@ -1,8 +1,15 @@
-### Product Spec: Local LLM Benchmark Harness (Ollama)
+### Product Spec: Local LLM Benchmark Harness
+
+> **⚠ Title/intro updated 2026-09-17** — this doc originally framed the whole project around
+> Ollama; the harness has since grown two more backends (`llama-server` — now the default/
+> primary choice for serious runs, 2-4× faster than Ollama; `vllm` — for AWQ/GPTQ/FP8/GGUF-
+> plugin formats) via `--backend {ollama,llama-server,vllm}`. The body of "Type 1" below was
+> already kept current for all three; only this framing paragraph and the title lagged.
 
 #### Problem
 
-We want a repeatable, locally-runnable way to compare Ollama-served LLMs across three capability dimensions:
+We want a repeatable, locally-runnable way to compare locally-served LLMs (via Ollama,
+llama-server, or vLLM) across three capability dimensions:
 
 - **Coding** — fix broken code so deterministic tests pass (Node.js, Python, .NET)
 - **Reasoning** — read supplied documents and answer structured questions correctly
@@ -30,8 +37,8 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 | Type | Version | Status | Entry point | Task data |
 |---|---|---|---|---|
 | Coding | v1 | Implemented | `compare.sh` | `task_data/` |
-| Reasoning | v2 | Designed, not yet implemented | `compare-reasoning.sh` | `task_data_reasoning/` |
-| Agent tasks | v3 | Early design only | `compare-agent.sh` | `task_data_agent/` |
+| Reasoning | v2 | **Implemented — differently than designed below** (see note at start of that section) | `compare.sh --task-group context\|multihop` | `task_data/context_*`, `task_data/multihop_*`, `task_data/distractor_notes` |
+| Agent tasks | v3 | Early design only, still not implemented | `compare-agent.sh` | `task_data_agent/` |
 
 ---
 
@@ -45,7 +52,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - Configurable flags:
   - `--models` (required, one or more)
   - `--tasks` (optional subset; default: all built-in)
-  - `--backend ollama|llama-server` (default: `ollama`; env var `BENCH_BACKEND` as fallback)
+  - `--backend ollama|llama-server|vllm` (default: `ollama`; env var `BENCH_BACKEND` as fallback; `llama-server` is the de facto default for real benchmark runs — see `CLAUDE.md`)
   - `--model-file PATH` (path to a `models/*.txt` file for GGUF/param lookup; required when `--backend llama-server`; env var `BENCH_MODEL_FILE` as fallback)
   - `--ollama-url` (default: `http://localhost:11434`; ignored when `--backend llama-server`)
   - `--num-ctx` (default: 8192; overridden by `DEFAULT_CTX` env var if set — see §4a)
@@ -270,11 +277,30 @@ Per model × task run:
 
 ## Type 2: Reasoning Benchmark
 
+> **⚠ IMPLEMENTED, but not as designed below (updated 2026-09-17).** Everything from here to
+> "Type 3" describes the original plan — a parallel harness with its own scripts
+> (`compare-reasoning.sh`), model list, history file, task directory (`task_data_reasoning/`),
+> and a bespoke `answer.txt` + `expected.json` scoring system with typed match rules
+> (`exact`/`normalized`/`contains`/`numeric`). **That parallel harness was never built.** Instead,
+> reasoning/retrieval capability was folded directly into the *existing* coding-benchmark task
+> suite as ordinary `Task` entries in `lib/tasks.py` — `context_8k`/`16k`/`32k`/`64k`/`128k`/`256k`,
+> `multihop_forward`/`reverse`, `distractor_notes`, `multihop_chain_5`/`cross_5` (10 tasks total,
+> select with `--task-group context` or `--task-group multihop`). Confirmed directly:
+> `context_8k`'s `editable_files` is `["answer.txt"]` and its `test_cmd` is the same
+> `pytest tests/` pattern every coding task uses — so the actual implementation landed on
+> essentially the same `answer.txt` + `BEGIN_FILE`/`END_FILE` protocol this section proposes,
+> just scored with a task-specific `pytest` check per task instead of a generic
+> `expected.json` + match-type engine, and living in `task_data/` rather than a separate
+> `task_data_reasoning/` tree. No `compare-reasoning.sh`, no separate history file, no
+> `bench-reasoning-models.sh` — it's just more entries in the one task suite `compare.sh`
+> already runs. The design below is historical context for *why* the task shape looks the way
+> it does, not a description of unbuilt work.
+
 ### Overview
 
 Models are given one or more documents (plain text, extracted PDF, CSV, scraped news article) as context and must answer a set of structured questions. Answers are written to a single output file (`answer.txt`) using the same `BEGIN_FILE/END_FILE` protocol as coding tasks — requiring **zero harness code changes**.
 
-**Status: designed, not yet implemented.**
+**Status (as originally designed here): not implemented — see the warning above this section for what was actually built instead.**
 
 ### Functional Requirements
 
