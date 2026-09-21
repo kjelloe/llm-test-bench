@@ -495,6 +495,7 @@ def main() -> None:
 
     hw = get_hw_snapshot(
         llama_server_bin=bin_path or None,
+        server_name="vllm" if args.backend == "vllm" else "llama-server",
         models_dir=models_dir or None,
     )
     # GPU VRAM is reported in MiB and is never exactly a round number (e.g. RTX 4090 = 24564 MiB,

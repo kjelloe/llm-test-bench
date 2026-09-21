@@ -1,0 +1,105 @@
+# Dual 16 GB VRAM model set — 2× RTX 5060 Ti 16 GB (32 GB total), llama-server backend
+#
+# Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
+#   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR
+#   params     comma-separated llama-server flags ( | becomes , inside a value)
+#   hf:        HuggingFace repo for ./fetch-hf.sh
+#
+# ⚠ NOTHING HERE IS MEASURED ON THIS HARDWARE. The second 5060 Ti is not installed as of
+# 2026-09-16. Scores are carried over from the 24 GB/48 GB tiers (same GGUF, same tasks) and are
+# expected to hold; SPEEDS ARE ESTIMATES. An RTX 5060 Ti has ~448 GB/s of memory bandwidth against
+# an RTX 4090's ~1008, and decode is bandwidth-bound, so assume **~0.45× the 4090 numbers** in
+# 24gb.txt/2x24gb.txt until measured. Replace each estimate with a real figure as it is run.
+# Upgrade steps (serving side, hardware, rollback): ~/GIT/llm-service-provider/upgrade-dual-5060.md
+#
+# Hardware notes for this pair, all confirmed on card #1 (2026-09-16):
+# - Blackwell sm_120. MXFP4 models are fine (they need Ampere+, this is newer).
+# - PCIe gen 5 but the slot reports **x8**, and the second card lands on a bifurcated x8. Every
+#   token's layers cross that link with tensor_split, so it is the main unknown for speed here.
+#   Check under load: nvidia-smi --query-gpu=index,pcie.link.gen.current,pcie.link.width.current --format=csv
+# - No NVLink.
+# - **Windows holds ~1.1 GiB of whichever card drives the display**, invisible to nvidia-smi inside
+#   WSL (card #1 shows 14.8 of 15.93 GiB free). tensor_split=1|1 splits evenly and can therefore OOM
+#   on the display card first. If that happens, shave that card's share (e.g. tensor_split=0.93|1)
+#   or drop max_ctx — untested, but the arithmetic is simple.
+# - llama.cpp pinned at 67a17c17c (~/GIT/llama.cpp), which still accepts --no-mmap. A build past
+#   14a9d09f7 removes it; the harness translates no_mmap to --load-mode none automatically
+#   (lib/llama_server_client.py), so these entries need no edit on a rebuild.
+# - llama-server is NOT on PATH on this box; run with
+#   LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server
+# - **Model location matters.** $LLAMA_MODELS_DIR defaults to ~/GIT/ollama-code-bench/llama_models,
+#   which is a symlink to /mnt/c/GIT/llm-test-bench — i.e. the Windows drive over 9p, ~190 MB/s. A
+#   17 GB model takes ~90 s to load from there every start. Copy the ones you use to ~/models
+#   (WSL ext4) and set LLAMA_MODELS_DIR=~/models. Already on /mnt/c (2026-09-16): qwen3.5:27b,
+#   qwen3.6:27b, qwen2.5-coder:32b-q4, devstral-small-2, qwen3.8-27b-gsqrco.
+#
+# VRAM budget: keep weights + KV under ~29 GB of the 32, leaving room for compute buffers and the
+# display card's missing gigabyte. KV precision is NOT free choice — see CLAUDE.md's python_hashmap
+# precision canary: qwen3.6:27b and qwen3.8:27b REQUIRE f16 KV (q8_0 makes them drop `_EMPTY`),
+# while qwen3.5:27b and the 32B coder pass cleanly at q8_0 and get twice the context for it.
+#
+# Speed index (all ESTIMATED for this pair; scores confirmed on other tiers):
+# qwen3.5:27b          ~13 tok/s est  dense 27B, Skill L6 (19/19 coding + 4/4 web + 4/4 L6 + 6/6 ctx + 3/3 multihop), q8_0 KV
+# qwen3.6:27b          ~18 tok/s est  dense 27B, 32/33 Skill L5, f16 KV required
+# qwen2.5-coder:32b-q4 ~17 tok/s est  dense 32B, 19/19 coding PERFECT, ctx caps at 32k in the GGUF itself
+# devstral-small-2     ~25 tok/s est  dense 24B, 17/19 coding, 4/4 web
+# gemma4:26b-qat       ~58 tok/s est  A4B MoE QAT Q4_0, 18/19 coding + 4/4 web + 4/4 L6 chain
+# glm4.7-flash         ~50 tok/s est  A4B MoE MXFP4, 29/33 Skill L4
+# tiel-coder:35b       ~74 tok/s est  A3B MoE MXFP4, 18/19 coding + 4/4 web, fastest good coder in this class
+# qwen3.8-flash-next   ~18 tok/s MEASURED on ONE card — see its entry; the second card should help
+#
+# ── Dense, the quality end ────────────────────────────────────────────────────
+# Skill L6 on 2×24 GB. q8_0 KV is correct for this one (hashmap passes) and buys context.
+qwen3.5:27b  Qwen_Qwen3.5-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen_Qwen3.5-27B-GGUF
+# f16 KV is mandatory here (precision canary). ~17 GB of weights plus f16 KV is why max_ctx is 65536
+# and not 131072: dense 27B f16 KV runs ~3.75 GB at 32k, so 64k already costs ~7.5 GB of the 32.
+qwen3.6:27b  Qwen_Qwen3.6-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:bartowski/Qwen_Qwen3.6-27B-GGUF
+# The strongest coder in the repo (19/19). Its own GGUF metadata caps context at 32768 whatever you
+# ask for — confirmed at 24, 48 and 72 GB, so it is not a VRAM limit and 32 GB will not change it.
+qwen2.5-coder:32b-q4  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Qwen2.5-Coder-32B-Instruct-GGUF
+# Dense 24B, the cheapest full pass: 17/19 coding, 4/4 web, and it fits with room to spare.
+devstral-small-2  Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=256,max_ctx=131072  hf:lmstudio-community/Devstral-Small-2-24B-Instruct-2512-GGUF
+#
+# ── MoE, the fast end (all fit with large context at 32 GB) ───────────────────
+# QAT Q4_0: no Ampere+ requirement, 18/19 coding, 4/4 web, completes the L6 stepped chain at 32k ctx.
+gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
+glm4.7-flash  GLM-4.7-Flash-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:noctrex/GLM-4.7-Flash-MXFP4_MOE-GGUF
+# Coder fine-tune that also passes web 4/4 (unusual for one) and 6/6 context to 256k on ONE 24 GB
+# card; fails node_para_entities. 16.5 GB.
+tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF
+#
+# ── The big one: 180B MoE paged from NVMe, now with two cards ─────────────────
+# Same 104 GB file as qwen3.8-flash-next-16gb in candidates.txt, which scored 37/38 eligible at
+# 18.1 tok/s on ONE of these cards (2026-09-14/15). NO no_mmap and NO mlock — both defeat the
+# paging this depends on. --fit places what it can on the GPUs and leaves MoE experts on the CPU by
+# itself (common/fit.cpp:522 at 67a17c17c), so with 32 GB it should keep more resident and read less
+# from NVMe; --no-repack is what lets the CPU-side experts be re-read from disk instead of being
+# copied into anonymous RAM. Whether the second card actually buys speed here is the open question —
+# decode was CPU/RAM-bound at 43 W and 34% GPU util on one card, so do not assume it does.
+# Needs ~104 GB on a fast filesystem and ~75 GB of page cache; keep it on ~/models (ext4), never /mnt/c.
+# Run with --model-timeout 2400: the harness cannot tell a slow answer from a hang.
+qwen3.8-flash-next-32gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+#
+# ── Not enabled, and why ──────────────────────────────────────────────────────
+# qwen3.8:27b — 19/19 coding, 4/4 web, and the first model ever to pass node_paratrooper (L6-full).
+#   Two reasons it is not active here. (1) The only build that reliably passes that task is one
+#   specific unsloth Q4_K_M file that upstream deleted, which lives on the 3-GPU rig and is NOT on
+#   this box; 6 other builds were tested and fail. (2) node_paratrooper FAILS reproducibly under
+#   2-way tensor_split (3 runs) from cross-GPU floating-point reduction order — exactly this
+#   config. Everything else (27/27 coding+web+L6-stepped) does pass at 2-way, so enable it if you
+#   want those groups, with f16 KV, and use a single card for any L6-full claim:
+# qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# qwen3-next:80b (~41 GB MXFP4) and gpt-oss:120b (~60 GB) — do not fit 32 GB. CPU-MoE paging could
+#   run them (-ngl 999 --n-cpu-moe N --no-repack, no no_mmap) but at RAM speed; flash-next above is
+#   the better use of that trick on this box.
+# qwen3.5-122b:a10b, laguna-s-2.1:118b — 3×24 GB tier, far beyond 32 GB.
+# qwen3.8-27b-gsqrco (IQ3_S, 11 GB, already on disk) — fits ONE card; use models/16gb.txt for it,
+#   there is no reason to split it across two.
+#
+# How to run (LLAMA_SERVER_BIN is required on this box, llama-server is not on PATH):
+#   ~/GIT/llm-service-provider/bin/llmctl stop          # free the GPUs from the vLLM lane first
+#   ./gpu-mode.sh multi
+#   export LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server
+#   export LLAMA_MODELS_DIR=~/models                    # if you copied the GGUFs to ext4
+#   ./run.sh --backend llama-server --model-file models/2x16gb.txt --models qwen3.5:27b --task-group spot
+#   ./fetch-hf.sh models/2x16gb.txt                     # download the ones not on disk

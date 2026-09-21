@@ -1,0 +1,96 @@
+# Single 16 GB VRAM GPU — vLLM (RTX 5060 Ti 16GB / RTX 4080 / similar, Ampere+/Blackwell)
+#
+# Prepping the ground for a new box: RTX 5060 Ti #1 now, RTX 5060 Ti #2 arriving later
+# (see models/2x16gb.vllm for the tp=2 config once that card is installed).
+# 7B and 14B AWQ run by hand 2026-09-15 (results at those entries); through the harness (B4) the
+# 14B AWQ passed python_safe_div at 33.5 tok/s. Agentic pick (tool calls): vllm-plan.md.
+# Step-by-step: test-plan-5060ti.md, Part B.
+#
+# Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<repo>]
+#   HF-format mode (gguf-file omitted or "-"): vLLM downloads straight from the
+#     HF Hub on the first `vllm serve` call and auto-detects the quantization
+#     (AWQ/GPTQ/NVFP4/safetensors). Stock vLLM only, no plugin.
+#   GGUF mode (gguf-file set, not "-"): the harness serves the local file with
+#     --tokenizer <hf_repo> --quantization gguf (see lib/vllm_client.py). Needs
+#     vllm-gguf-plugin. hf: must be the ORIGINAL model repo, which holds the
+#     tokenizer; GGUF-only repos such as bartowski's have no tokenizer files. So
+#     don't run fetch-hf.sh on this file: download each GGUF through its
+#     models/*.txt entry (noted per entry below).
+#
+# Setup (details in test-plan-5060ti.md):
+#   1. Confirm the GPU: nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
+#      (RTX 5060 Ti reports compute_cap 12.0.)
+#   2. Install vLLM from upstream main with VLLM_USE_PRECOMPILED=1 into a fresh venv on
+#      WSL ext4. The SM120 speedups (NVFP4 W4A4 kernel preference, Gated DeltaNet prefill)
+#      landed after the 0.29.0 release. The repo's .venv has vLLM 0.21.0 (May 2026).
+#   3. AWQ entries need nothing else. For the GGUF entry, also install
+#      vllm-gguf-plugin into the same venv (uv pip install -e . --no-build-isolation).
+#   4. Run: VLLM_BIN=~/vllm-env/bin/vllm ./run.sh --backend vllm --model-file models/16gb.vllm \
+#             --models qwen2.5-coder:7b-awq
+#      Without VLLM_BIN, run.sh picks up the old vLLM in the repo's .venv.
+
+# ── Smoke test 1: stock vLLM, no plugin (AWQ, official Qwen repos) ─────────────
+# Verified 2026-09-15 on the HF Hub: 7B-AWQ 5.6 GB, 14B-AWQ 10.0 GB, both ship a tokenizer.
+# AWQ needs no plugin, so the first test does not depend on compiling the plugin's CUDA
+# extension (PyTorch here is CUDA 13.0, the installed nvcc is 12.8). vLLM picks its
+# Marlin AWQ kernel by itself when available; don't force --quantization awq.
+# KV sizing, MEASURED 2026-09-15: besides the weights, vLLM needs ~2.4 GB (7B) to ~3.5 GB (14B)
+# on a 16 GB card (CUDA context, activations, CUDA graphs). Qwen2.5-14B's KV cache is ~192 KB/token
+# (48 layers, 8 KV heads, dim 128): at 0.90 only 1.36 GiB was left, max 7,424 tokens, so 16384
+# failed to start. 0.95 can't start at all: Windows (display/desktop) holds ~1.1 GiB of the card,
+# invisible to nvidia-smi inside WSL, so CUDA sees only 14.80 of 15.93 GiB free (max util 0.929;
+# check with torch.cuda.mem_get_info()). At gpu_mem_util=0.92 (~1.68 GiB, ~9k tokens), 8192 fits. The 7B (~56 KB/token)
+# had 6.4 GiB of KV (119,760 tokens) at 0.90, so 32768 fits easily. Tasks needing more context
+# than max_model_len show as SKIPPED_CTX.
+# RESULT 2026-09-15, 7B AWQ by hand (vllm serve, vLLM main 2c2cbd84fd, CUDA_HOME=/usr/local/cuda-13.0):
+#   loads and serves. 300-token reply at 75.5 tok/s including prefill; streaming TTFT 50 ms, decode
+#   80.7 tok/s. KV cache 6.4 GiB = 119,760 tokens at gpu_memory_utilization 0.90.
+#   Tool calling with tool_choice=auto FAILS (deterministic): the model wraps the call in
+#   <tools>...</tools>, copying the template's tool-list tag, instead of <tool_call>...</tool_call>,
+#   so the hermes parser returns it as plain content. tool_choice="required" or a named function
+#   PASS (vLLM constrains the output). The model's chat template is correct; this is the model.
+# RESULT 2026-09-15, 14B AWQ by hand (same setup, --max-model-len 8192 --gpu-memory-utilization 0.92):
+#   KV cache 9,152 tokens (572 blocks). 400-token reply at 42.7-43.8 tok/s including prefill; streaming
+#   TTFT 53 ms, decode 44.1 tok/s. GPU 13.7 GB used, 97% util, ~116 W. Tool calling: same as the 7B,
+#   tool_choice=auto FAILS 2/2 (emits <tools>...</tools>); a system prompt naming <tool_call> just
+#   switched it to <json>...</json>. required and named PASS. So the whole Qwen2.5-Coder family needs
+#   tool_choice=required/named (or a different model) for agentic use on vLLM.
+# AGENTIC PICK, 2026-09-15, by hand (harness entry qwen3.5:9b-awq below): cyankiwi/Qwen3.5-9B-AWQ-4bit with
+#   --max-model-len 32768 --gpu-memory-utilization 0.92 --enable-auto-tool-choice --tool-call-parser qwen3_coder
+#   --reasoning-parser qwen3 --limit-mm-per-prompt '{"image":0,"video":0}'. 7.55 GiB weights, KV 127,272 tokens,
+#   on the 2026-09-15 build; re-measured 2026-09-17 the pool is 6.75 GiB = 209,615 tokens and does NOT depend on
+#   --max-num-seqs (8 slots costs 0.5%). 127,272 no longer reproduces; compare configs only from an idle GPU.
+#   ~60 tok/s, TTFT 40 ms (the lane measures ~54). Tool calls PASS with tool_choice=auto (thinking on and off), required, named; a tool
+#   round trip and a no-tool question also PASS. Steps and full results: vllm-plan.md. Harness
+#   entry: qwen3.5:9b-awq below (the harness passes any param to vllm serve, reasoning_parser included).
+#   2026-09-16: llm-service-provider selftest (Claude Code CLI through its gateway, served as local-coder,
+#   --max-model-len 65536) PASS: 4 turns, 20 s, add.js + add.test.js written and node --test green.
+qwen2.5-coder:7b-awq  -  tp=1,dtype=auto,max_model_len=32768,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-7B-Instruct-AWQ
+qwen2.5-coder:14b-awq  -  tp=1,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-14B-Instruct-AWQ
+# The agentic pick as a benchmark entry, NOT YET RUN through the harness. Thinking model: reasoning_parser
+# moves the thinking into reasoning_content, so BEGIN_FILE parsing sees only the answer. 65536 leaves room
+# for the tasks' 8000-24000 token budgets (KV cache ~127k tokens). JSON commas are written as | (vllm_client
+# turns | into ,). Export CUDA_HOME=/usr/local/cuda-13.0 before run.sh.
+qwen3.5:9b-awq  -  tp=1,dtype=auto,max_model_len=65536,gpu_mem_util=0.92,max_num_seqs=2,enable_prefix_caching,reasoning_parser=qwen3,limit_mm_per_prompt={"image":0|"video":0},thinking  hf:cyankiwi/Qwen3.5-9B-AWQ-4bit
+
+# ── Smoke test 2: the GGUF plugin path ──────────────────────────────────────
+# Dense Qwen2.5 architecture — listed in the plugin's own "tested model coverage" table
+# (at Q6_K; this is Q4_K_M). Same model as qwen2.5-coder:14b-awq above, so the two runs
+# compare GGUF-via-plugin with AWQ-on-stock-vLLM directly. ~9 GB of weights; max_model_len
+# 8192 at gpu_mem_util=0.92 for the same KV reason as above. GGUF comes from bartowski via models/16gb.txt:
+#   ./fetch-hf.sh models/16gb.txt --models qwen2.5-coder:14b
+# hf: below is the tokenizer repo.
+qwen2.5-coder:14b-5060ti  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  tp=1,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-14B-Instruct
+
+# ── Qwen3.8-27B does NOT fit a single 16 GB card ─────────────────────────────
+# Same dense Gated-DeltaNet-hybrid base as this repo's extensively-tested
+# qwen3.8:27b (llama-server, 24gb.txt/2x24gb.txt/3x24gb.txt). Every NVFP4/quantized
+# build found (2026-09-14 web check) has weights alone in the ~17-23 GB range —
+# already bigger than this card's 16 GB before any KV cache or vLLM overhead.
+# → See models/2x16gb.vllm for the tp=2 (32 GB) config once the second RTX 5060 Ti
+#   is installed. On one 16 GB card, qwen3.8-27b-gsqrco (llama-server, models/16gb.txt)
+#   is the way to run this model family.
+#
+# Qwen3-Coder-30B-A3B AWQ (~16-17 GB of weights) doesn't fit one 16 GB card either; it's a
+# 2x16gb candidate. Earlier results on the 4090 rig: 28.5 tok/s single GPU (4× slower than
+# llama-server) and python_hashmap FAIL (a base-model gap).

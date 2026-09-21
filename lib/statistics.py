@@ -256,6 +256,7 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None,
             "platform":           platform,
             "cuda_toolkit":       cuda_toolkit,
             "llama_server_ver":   llama_server_ver,
+            "server_name":        _server_name(hw, backend),
             "ollama_ver":         ollama_ver,
             "models_storage":     storage,
             "model":              model,
@@ -278,6 +279,19 @@ def summary_rows(path: Path, results: list[dict], hw: dict | None,
             "tool_error":         err_counts.get("TOOL_ERROR", 0),
         })
     return rows
+
+
+def _server_name(hw: dict | None, backend: str) -> str:
+    """Engine that llama_server_ver belongs to: "llama-server", "vllm", or "" when there is none.
+
+    Result files from before 2026-09-16 lack hw["server_name"]; their version came from the vllm
+    binary on vllm runs and from llama-server otherwise."""
+    name = _hw_str(hw, "server_name")
+    if name:
+        return name
+    if not _hw_str(hw, "llama_server_version"):
+        return ""
+    return "vllm" if backend == "vllm" else "llama-server"
 
 
 def detail_rows(path: Path, results: list[dict], hw: dict | None,
@@ -321,6 +335,7 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None,
             "platform":           platform,
             "cuda_toolkit":       cuda_toolkit,
             "llama_server_ver":   llama_server_ver,
+            "server_name":        _server_name(hw, r.get("backend", "ollama")),
             "ollama_ver":         ollama_ver,
             "models_storage":     storage,
             "model":              r["model"],

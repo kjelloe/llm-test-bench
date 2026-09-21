@@ -11,7 +11,9 @@
 #                                       use for debugging; ~20% slower)
 #                   gpu_mem_util=0.9  → --gpu-memory-utilization 0.9
 #   hf:           HuggingFace repo ID — used as vLLM --tokenizer source when
-#                 loading GGUFs; also used for fetch-hf.sh
+#                 loading GGUFs, so it names the ORIGINAL model repo. The GGUF itself
+#                 isn't in that repo: download it through a models/*.txt entry
+#                 (fetch-hf.sh on this file can't find the GGUFs).
 
 # Run with:
 #   ./compare.sh --backend vllm             (reads this file automatically)
@@ -119,7 +121,7 @@ deepseek-r1:32b-sg     DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf         tp=1,dty
 # ── Dual-GPU models (tp=2, require 2× RTX 3090 = 48 GB total) ────────────────
 # llama3.3:70b — primary vLLM target; cannot run on single 24 GB GPU at all.
 # Q4_K_S at 40 GB fits 48 GB with ~8 GB for KV. Capped at 32k context.
-# Tokenizer is gated (meta-llama) — set HF_TOKEN env var or populate hf-token.txt.
+# Tokenizer is gated (meta-llama) — set HF_TOKEN env var or populate HF_TOKEN.txt.
 llama3.3:70b-q4ks    Llama-3.3-70B-Instruct-Q4_K_S.gguf     tp=2,dtype=auto,max_model_len=32768  hf:meta-llama/Llama-3.3-70B-Instruct
 
 # qwq:32b — strong reasoning model; previously unusable on 24 GB (22 GB weights,

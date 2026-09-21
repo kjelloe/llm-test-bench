@@ -154,11 +154,17 @@ class VLLMManager:
                 cmd.extend([flag, str(val).replace("|", ",")])
 
         # Propagate HF token for gated models (e.g. meta-llama/Llama-3.3).
-        # Falls back to hf-token.txt in the repo root if HF_TOKEN is not set.
+        # If HF_TOKEN is not set, falls back to HF_TOKEN.txt (gitignored), then legacy hf-token.txt,
+        # in the repo root.
         env = os.environ.copy()
+        # HF's Xet backend silently stalls large downloads here (see lib/fetch_hf.py); plain HTTP is reliable.
+        env.setdefault("HF_HUB_DISABLE_XET", "1")
         if not env.get("HF_TOKEN") and not env.get("HUGGING_FACE_HUB_TOKEN"):
-            _token_file = Path(__file__).parent.parent / "hf-token.txt"
-            if _token_file.exists():
+            _root = Path(__file__).parent.parent
+            _token_file = next(
+                (p for p in (_root / "HF_TOKEN.txt", _root / "hf-token.txt") if p.exists()), None
+            )
+            if _token_file is not None:
                 _token = _token_file.read_text(encoding="utf-8").strip()
                 if _token:
                     env["HF_TOKEN"] = _token

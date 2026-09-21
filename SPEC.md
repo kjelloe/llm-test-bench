@@ -206,9 +206,9 @@ gemma4:26b         gemma-4-27b-it-Q4_K_M.gguf       n_cpu_moe=18,no_mmap
 
 ### Result Record Schema
 
-Results file top-level: `{"hardware": {"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str, "cuda_toolkit": str, "ollama_version": str, "llama_server_version": str, "models_storage": {"device": str, "transport": str}}, "results": [...]}`.
+Results file top-level: `{"hardware": {"gpu": [...], "cpu": str, "ram_total_gb": float, "platform": str, "cuda_toolkit": str, "ollama_version": str, "llama_server_version": str, "server_name": str, "models_storage": {"device": str, "transport": str}}, "results": [...]}`.
 
-GPU list entries include: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`, `compute_cap` (float, e.g. `12.0`; absent on older drivers that don't support the field). Multiple GPUs are all recorded. The `llama_server_version` field is only present for llama-server runs.
+GPU list entries include: `name`, `vram_total_mb`, `vram_free_mb`, `driver`, `temp_c`, `power_draw_w`, `power_limit_w`, `clock_mhz`, `clock_max_mhz`, `compute_cap` (float, e.g. `12.0`; absent on older drivers that don't support the field). Multiple GPUs are all recorded. The `llama_server_version` field is only present for llama-server and vLLM runs (it holds the vLLM version on vLLM runs); `server_name` (`llama-server` or `vllm`, added 2026-09-16) says which. `lib/statistics.py` exports both, inferring `server_name` from the backend for older files.
 
 Per model × task run:
 

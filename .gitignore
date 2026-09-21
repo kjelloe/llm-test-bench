@@ -20,4 +20,5 @@ llama_models
 /backup-to-NAS.sh
 /HF_TOKEN.txt
 *_TOKEN.txt
+hf-token.txt
 .env

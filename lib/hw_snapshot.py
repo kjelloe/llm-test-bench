@@ -10,6 +10,7 @@ from pathlib import Path
 def get_hw_snapshot(
     llama_server_bin: str | None = None,
     models_dir: str | None = None,
+    server_name: str = "llama-server",
 ) -> dict:
     """Return a dict with gpu, cpu, ram, platform, and optional software/storage info."""
     # Resolve model storage path: explicit dir (llama-server) or Ollama's store
@@ -27,7 +28,9 @@ def get_hw_snapshot(
         "models_storage": _storage_type(_storage_path) if _storage_path else {},
     }
     if llama_server_bin:
+        # Key kept for older result files; server_name says which engine (llama-server or vllm) it is.
         snap["llama_server_version"] = _llama_server_version(llama_server_bin)
+        snap["server_name"] = server_name
     return snap
 
 
@@ -50,7 +53,7 @@ def hw_summary(hw: dict) -> str:
         parts.append(f"{ram} GB RAM")
     lsv = hw.get("llama_server_version")
     if lsv:
-        parts.append(f"llama-server {lsv}")
+        parts.append(f"{hw.get('server_name', 'llama-server')} {lsv}")
     return "  |  ".join(parts) if parts else "unknown hardware"
 
 
