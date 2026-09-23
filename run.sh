@@ -33,7 +33,7 @@ fi
 
 source "$VENV/bin/activate"
 
-pip install --quiet -r requirements.txt
+"$VENV/bin/python3" -m pip install --quiet -r requirements.txt
 
 # ── Strip --no-hwmonitor before forwarding args to bench.py ─────────────────
 _NO_HWMONITOR=0
