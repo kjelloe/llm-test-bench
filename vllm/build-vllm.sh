@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
 # my-build.sh — Install vLLM from this checkout into its own venv, using prebuilt kernels
 # (VLLM_USE_PRECOMPILED=1, no CUDA compile), and optionally build vllm-gguf-plugin into the
-# same venv. Written for the RTX 5060 Ti (Blackwell, sm_120) WSL2 box; see
-# llm-test-bench/test-plan-5060ti.md, Part B.
+# same venv. Written for the RTX 5060 Ti (Blackwell, sm_120) box, first under WSL2, since
+# 2026-09-22 bare-metal Ubuntu; see llm-test-bench/test-plan-5060ti.md, Part B.
 #
-# Why not just `pip install vllm`: the SM120 speedups this box needs (13cf9e05c1, f6326f53bd)
-# landed on main after the 0.29.0 release.
+# Why not just `pip install vllm`: the SM120 speedups this box needs (13cf9e05c1: W4A4 NVFP4
+# kernels preferred on SM120; f6326f53bd: FlashInfer GDN prefill on SM12x) landed on main on
+# 2026-09-08, after the 0.29.0 release. The build checks for both and warns if they are missing:
+# the 2026-09-06 build lacked them unnoticed until 2026-09-24.
 #
-# By default the checkout is copied to WSL's ext4 filesystem first: this checkout lives on
-# /mnt/c (9p), which makes an editable install slow to import. Only committed changes are copied.
+# By default the checkout is copied to ~/src/vllm first (under WSL this checkout lived on /mnt/c,
+# 9p, where an editable install imports slowly). Only committed changes are copied.
+#
+# Precompiled wheels appear on wheels.vllm.ai some hours after a commit merges, so a freshly
+# merged HEAD often has none yet. --latest-wheel builds the newest commit at or below HEAD that
+# is on upstream/main and has a wheel, instead of falling back to a mismatched --nightly.
+#
+# Keep a working install while trying a new one: build side by side, then point VLLM_BIN at it.
+#   BUILD_SRC=~/src/vllm-next VENV_DIR=~/vllm-env-next ./my-build.sh --latest-wheel
 #
 # Usage: ./my-build.sh [options]
 #   --with-plugin     also build vllm-gguf-plugin into the venv (needed for GGUF models only)
@@ -17,6 +26,8 @@
 #   --recreate-venv   delete and recreate the venv
 #   --nightly         use the newest already-built nightly wheel instead of this exact commit's
 #                     (only if this commit's wheel isn't published yet; kernels may not match)
+#   --latest-wheel    build the newest upstream/main commit at or below HEAD that has a wheel
+#   --commit=SHA      build this commit instead of HEAD (must be on a branch of the checkout)
 #   -h, --help        show this help
 #
 # Env overrides:
@@ -39,7 +50,7 @@ section() { echo; echo -e "${BOLD}── $* ──${NC}"; }
 die() { fail "$*"; exit 1; }
 
 # ── Options ───────────────────────────────────────────────────────────────────
-WITH_PLUGIN=0; FORCE_PLUGIN=0; IN_PLACE=0; RECREATE_VENV=0; NIGHTLY=0
+WITH_PLUGIN=0; FORCE_PLUGIN=0; IN_PLACE=0; RECREATE_VENV=0; NIGHTLY=0; LATEST_WHEEL=0; COMMIT=""
 for arg in "$@"; do
     case "$arg" in
         --with-plugin)   WITH_PLUGIN=1 ;;
@@ -47,6 +58,8 @@ for arg in "$@"; do
         --in-place)      IN_PLACE=1 ;;
         --recreate-venv) RECREATE_VENV=1 ;;
         --nightly)       NIGHTLY=1 ;;
+        --latest-wheel)  LATEST_WHEEL=1 ;;
+        --commit=*)      COMMIT="${arg#--commit=}" ;;
         -h|--help)       sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
         *)               die "Unknown option: $arg (see --help)" ;;
     esac
@@ -60,6 +73,10 @@ PYTHON_VERSION="${PYTHON_VERSION:-3.12}"
 PLUGIN_SRC="${PLUGIN_SRC:-$VLLM_SRC/../vllm-gguf-plugin}"
 PLUGIN_BUILD_SRC="${PLUGIN_BUILD_SRC:-$HOME/src/vllm-gguf-plugin}"
 VPY="$VENV_DIR/bin/python"
+# Commits this box's speedups depend on (see the header). Missing ones are a warning, not an error.
+REQUIRED_COMMITS=(13cf9e05c1 f6326f53bd)
+(( NIGHTLY && LATEST_WHEEL )) && die "--nightly and --latest-wheel are exclusive"
+[[ -n "$COMMIT" ]] && (( LATEST_WHEEL )) && die "--commit and --latest-wheel are exclusive"
 
 fs_type() { findmnt -T "$(realpath "$1")" -n -o FSTYPE 2>/dev/null || echo unknown; }
 
@@ -67,8 +84,8 @@ fs_type() { findmnt -T "$(realpath "$1")" -n -o FSTYPE 2>/dev/null || echo unkno
 # matters: vLLM's setup.py runs `git merge-base <upstream main> <current branch>`, which
 # fails on a detached HEAD and silently falls back to the nightly wheel.
 sync_checkout() {
-    local src="$1" dst="$2" sha
-    sha="$(git -C "$src" rev-parse HEAD)"
+    local src="$1" dst="$2" sha="${3:-}"
+    [[ -n "$sha" ]] || sha="$(git -C "$src" rev-parse HEAD)"
     if ! git -C "$src" diff --quiet HEAD -- 2>/dev/null; then
         warn "$src has uncommitted changes to tracked files; they are NOT copied (commit them first)"
     fi
@@ -104,16 +121,44 @@ ok "vLLM source: $VLLM_SRC [$(fs_type "$VLLM_SRC")]"
 
 # ── 2. Source ─────────────────────────────────────────────────────────────────
 section "Source"
-SRC_SHA="$(git -C "$VLLM_SRC" rev-parse HEAD)"
-info "$(git -C "$VLLM_SRC" log -1 --format='%h %cs %s')"
+has_wheel() { [[ "$(curl -s -o /dev/null -w '%{http_code}' "https://wheels.vllm.ai/$1/vllm/")" == 200 ]]; }
+if [[ -n "$COMMIT" ]]; then
+    SRC_SHA="$(git -C "$VLLM_SRC" rev-parse --verify --quiet "$COMMIT^{commit}")" \
+        || die "--commit=$COMMIT: no such commit in $VLLM_SRC"
+elif (( LATEST_WHEEL )); then
+    git -C "$VLLM_SRC" rev-parse --verify --quiet upstream/main >/dev/null \
+        || die "--latest-wheel needs an 'upstream' remote with main fetched (git fetch upstream)"
+    SRC_SHA=""
+    head_sha="$(git -C "$VLLM_SRC" rev-parse HEAD)"
+    base="$(git -C "$VLLM_SRC" merge-base "$head_sha" upstream/main)"
+    info "Looking for the newest wheel at or below ${base:0:10} (probing wheels.vllm.ai)"
+    for c in $(git -C "$VLLM_SRC" rev-list --first-parent -n 48 "$base"); do
+        if has_wheel "$c"; then SRC_SHA="$c"; break; fi
+    done
+    [[ -n "$SRC_SHA" ]] || die "No wheel among the last 48 upstream commits below ${base:0:10}"
+    [[ "$SRC_SHA" == "$head_sha" ]] \
+        || warn "HEAD ${head_sha:0:10} has no wheel yet; building ${SRC_SHA:0:10} ($(git -C "$VLLM_SRC" rev-list --count "$SRC_SHA..$head_sha") commits older)"
+else
+    SRC_SHA="$(git -C "$VLLM_SRC" rev-parse HEAD)"
+fi
+info "$(git -C "$VLLM_SRC" log -1 --format='%h %cs %s' "$SRC_SHA")"
+for c in "${REQUIRED_COMMITS[@]}"; do
+    if git -C "$VLLM_SRC" merge-base --is-ancestor "$c" "$SRC_SHA" 2>/dev/null; then
+        ok "contains $c ($(git -C "$VLLM_SRC" log -1 --format=%s "$c" | cut -c1-70))"
+    else
+        warn "does NOT contain $c: this box's SM120 speedups are missing (merge upstream/main)"
+    fi
+done
 if (( IN_PLACE )); then
+    [[ "$SRC_SHA" == "$(git -C "$VLLM_SRC" rev-parse HEAD)" ]] \
+        || die "--in-place installs the working tree, so it cannot build another commit; drop --in-place"
     INSTALL_SRC="$VLLM_SRC"
     [[ "$(fs_type "$VLLM_SRC")" == "9p" ]] \
         && warn "Installing in place on /mnt/c (9p): imports will be slow. Drop --in-place to copy to ext4."
     [[ -n "$(git -C "$VLLM_SRC" branch --show-current)" ]] \
         || die "Detached HEAD in $VLLM_SRC: setup.py needs a branch to find its wheel. Check out a branch."
 else
-    sync_checkout "$VLLM_SRC" "$BUILD_SRC"
+    sync_checkout "$VLLM_SRC" "$BUILD_SRC" "$SRC_SHA"
     INSTALL_SRC="$BUILD_SRC"
 fi
 

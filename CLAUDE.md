@@ -1293,6 +1293,21 @@ When asked to implement features:
 
 #### vLLM backend constraints (updated 2026-07-06)
 
+- **2× RTX 5060 Ti, Qwen3.8-27B NVFP4 at tp=2 — CONFIRMED 2026-09-23/24** (`models/2x16gb.vllm`).
+  `qwen3.8-27b:nvfp4-next` (vLLM bbd7c24d6e via `VLLM_BIN=~/vllm-env-next/bin/vllm`, W4A4
+  FlashInferCutlass kernel, FlashInfer GDN prefill, CUDA graphs): **spot 10/10 at 32.6 tok/s**, incl.
+  python_hashmap (PASS ×2 — 4-bit activations do NOT trip the canary on this QAT checkpoint) and
+  node_paratrooper (PASS once, 134 s; unrepeated, treat as a data point). The same model on the
+  2026-09-06 build ran W4A16 (spot 9/10, 30.0 tok/s): builds before 2026-09-08 lack `13cf9e05c1` and
+  `f6326f53bd`, silently. Always read the server log's `for NVFP4 GEMM` line. Harness entries for
+  this model need `language_model_only,max_num_seqs=4` or startup OOMs on 16 GB cards. vLLM runs
+  need `LLAMA_MODELS_DIR` exported even for HF-format models (bench.py refuses to start without it).
+  Serving-side A/B (throughput, TTFT, KV 155,830 tokens): `~/GIT/llm-service-provider/upgrade-dual-5060.md` Step 6.
+  **FULL RUN 2026-09-24**: coding 19/19, web 4/4, L6 stepped 4/4, context 8k-128k 5/5 (context_128k
+  PASS in 71 s at tp=2 vs 1,542 s on one 4090 with llama.cpp), multihop 5/5; node_paratrooper 1/7
+  runs (the spot PASS did not repeat). dotnet_sas needs .NET 9: on this bare-metal Ubuntu it lives in
+  `~/.dotnet` (dotnet-install.sh), so put `$HOME/.dotnet` FIRST on PATH (`/usr/bin/dotnet` is 8.0).
+
 - **⚠ SUPERSEDED 2026-09-06 — GGUF support moved out-of-tree, no patch needed anymore.**
   Checked a fresh `~/GIT/vllm` checkout (merged from upstream `main` 2026-09-06): the in-tree
   GGUF kernels this "ally's patched flag" note describes were deleted upstream back in June

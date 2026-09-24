@@ -213,8 +213,16 @@ the lane to tp=2, capacity and DDR5 sizing, rollback — live in
    then `qwen3.8-27b:nvfp4` from `models/2x16gb.vllm` through the harness. Watch `python_hashmap`.
 4. Fallbacks: `qwen2.5-coder:32b-awq` (stock vLLM), then `qwen2.5-coder:32b-5060ti` (plugin).
 
+   **Done 2026-09-23/24.** Links under load: card 0 gen5 x8, card 1 gen4 x4 (chipset slot); no
+   GPU P2P, so NCCL all-reduces through host memory. `qwen3.8-27b:nvfp4` (eager, W4A16 on the
+   old build): hashmap PASS, spot 9/10 at 30.0 tok/s. Tuned `qwen3.8-27b:nvfp4-next` (new build,
+   W4A4, CUDA graphs): hashmap PASS, spot 10/10 at 32.6 tok/s. Serving-side A/B table:
+   `upgrade-dual-5060.md` Step 6. Fallbacks (step 4) not needed.
+
 **B8. Record** results in the `.vllm` files and in `CLAUDE.md`'s vLLM section, replacing its
-"not yet vLLM-tested" notes.
+"not yet vLLM-tested" notes. Done 2026-09-24, full B7 run: coding 19/19, web 4/4, L6 stepped 4/4,
+context 8k-128k 5/5, multihop 5/5, node_paratrooper 1/7. Multi-agent serving results:
+`upgrade-dual-5060.md` Step 7.
 
 ## Adjustments to the helper's notes
 

@@ -1,7 +1,7 @@
 # Dual 16 GB VRAM GPU — vLLM (2× RTX 5060 Ti 16GB = 32 GB total, tp=2, Blackwell)
 #
-# NOT YET RUNNABLE as of 2026-09-15 — the second RTX 5060 Ti has not arrived yet.
-# This file preps the ground so the config is ready the moment it's installed.
+# RUNNING since 2026-09-23 (second card fitted). Results per entry below; serving-side tuning and
+# multi-agent numbers: ~/GIT/llm-service-provider/upgrade-dual-5060.md, Steps 6-7.
 # Companion to models/16gb.vllm (single-card smoke tests). Steps: test-plan-5060ti.md, Part B.
 #
 # The second card goes in via PCIe bifurcation, so each card likely runs at x8. tp=2 sends
@@ -38,8 +38,11 @@
 # differently-named "Qwen3.8-27B NVFP4" repos claiming 14-23 GB), and 4-bit
 # activations are a real precision risk for python_hashmap — watch that task.
 #
-# enforce_eager kept as a precaution for the first run (vLLM's own recipe needs it on a
-# single RTX 5090). kv_cache_dtype intentionally NOT set to fp8: qwen3.6:27b/qwen3.8:27b need
+# RESULTS on 2x RTX 5060 Ti (2026-09-23/24): python_hashmap PASS; spot 9/10 at 30.0 tok/s on vLLM
+# 569adb5a97 with enforce_eager (W4A16 kernel; node_paratrooper the only fail). This entry is kept
+# as that baseline; the tuned serving config is `qwen3.8-27b:nvfp4-next` below (10/10 spot).
+# enforce_eager was a first-run precaution; CUDA graphs are fine on this model (Step 6 of
+# ~/GIT/llm-service-provider/upgrade-dual-5060.md). kv_cache_dtype intentionally NOT set to fp8: qwen3.6:27b/qwen3.8:27b need
 # f16-equivalent KV precision or python_hashmap silently drops the `_EMPTY` sentinel
 # (see CLAUDE.md's python_hashmap precision-canary section).
 qwen3.8-27b:nvfp4  -  tp=2,dtype=auto,max_model_len=32768,enforce_eager,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
@@ -55,3 +58,23 @@ qwen3.8-27b:nvfp4  -  tp=2,dtype=auto,max_model_len=32768,enforce_eager,enable_p
 qwen2.5-coder:32b-awq  -  tp=2,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct-AWQ
 # GGUF via vllm-gguf-plugin. GGUF from bartowski via models/candidates.txt; hf: is the tokenizer repo.
 qwen2.5-coder:32b-5060ti  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct
+
+# Step-6 tuning of the serving lane (2026-09-24): CUDA graphs on (no enforce_eager) and the CUTLASS
+# W4A4 kernel forced. vLLM builds before 13cf9e05c1 (2026-09-08) auto-pick FlashInferCuteDslNvFp4W4A16
+# (bf16 activations) on sm_120; `cutlass` runs activations in FP4 too — ~2x prefill, the precision
+# risk python_hashmap watches. RESULT (569adb5a97): hashmap PASS x2, spot 9/10 at 32.8 tok/s, 330.8 s.
+# language_model_only + max_num_seqs=4: without them startup OOMs (vision profiling, 256 slots).
+qwen3.8-27b:nvfp4-w4a4  -  tp=2,dtype=auto,max_model_len=32768,linear_backend=cutlass,language_model_only,max_num_seqs=4,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
+# Same, on vLLM >= bbd7c24d6e (has 13cf9e05c1 + f6326f53bd, FlashInfer 0.7.0): no linear_backend
+# needed — auto picks FlashInferCutlassNvFp4 (W4A4) and the FlashInfer GDN prefill kernel on sm_120.
+# RESULT 2026-09-24 (VLLM_BIN=~/vllm-env-next/bin/vllm, bbd7c24d6e): spot 10/10 at 32.6 tok/s,
+# 354.3 s — node_paratrooper PASS (134 s, one run); python_hashmap PASS x2.
+# FULL RUN 2026-09-24: coding 19/19 (dotnet_sas needs .NET 9 — this Ubuntu has 8 system-wide, 9 in
+# ~/.dotnet), web 4/4, L6 stepped 4/4, node_paratrooper 1/7 over all runs (a rare pass),
+# ~32-33 tok/s. Context/multihop: the -128k entry below.
+# This is the configuration the llm-service-provider lane serves.
+qwen3.8-27b:nvfp4-next  -  tp=2,dtype=auto,max_model_len=32768,language_model_only,max_num_seqs=4,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
+# Context/multihop variant of the above: 131072 cap (the ~140k-token KV pool holds one 128k
+# request; context_256k is skipped by its min_vram_gb guard and this cap).
+# RESULT 2026-09-24: context 8k-128k 5/5 (context_128k 71 s), multihop 5/5, context_256k skipped.
+qwen3.8-27b:nvfp4-next-128k  -  tp=2,dtype=auto,max_model_len=131072,language_model_only,max_num_seqs=4,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4

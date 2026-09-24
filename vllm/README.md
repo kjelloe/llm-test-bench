@@ -22,8 +22,12 @@ the recommended path on this card.
 ## Why build from source at all
 
 `pip install vllm` gives you the last release. Two commits this card needs landed on `main`
-afterwards: `13cf9e05c1` (prefer W4A4 NVFP4 kernels on SM120/121) and `f6326f53bd` (FlashInfer
-Gated DeltaNet prefill on SM12x). `build-vllm.sh` installs from a checkout with
+afterwards, on 2026-09-08: `13cf9e05c1` (prefer W4A4 NVFP4 kernels on SM120/121) and `f6326f53bd`
+(FlashInfer Gated DeltaNet prefill on SM12x). A build from before that date works but runs NVFP4
+models weight-only at half the prefill speed, silently — this box's first build (569adb5a97,
+2026-09-06) did, unnoticed until 2026-09-24. The script now lists both commits and warns if the
+commit it builds lacks one; the server's startup log names the kernels it chose
+(`Using ... for NVFP4 GEMM`, `Using ... GDN prefill kernel`). `build-vllm.sh` installs from a checkout with
 `VLLM_USE_PRECOMPILED=1`, so it downloads prebuilt kernels instead of compiling CUDA — minutes, not
 hours, and no nvcc needed for vLLM itself.
 
@@ -39,7 +43,11 @@ Driver: install the NVIDIA driver for a Blackwell card (580+; this box runs 591.
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
 ```
 
-## 2. CUDA toolkit 13.0 — needed for FlashInfer, not for vLLM
+## 2. CUDA toolkit matching PyTorch's CUDA — needed for FlashInfer, not for vLLM
+
+(Written for torch's CUDA 13.0; the 2026-09 builds on this box ship torch with CUDA 13.2, and
+`/usr/local/cuda-13.2` is installed. The rule is: toolkit major.minor = `torch.version.cuda`.
+`llm-service-provider`'s `CUDA_HOME=auto` finds it; by hand, `export CUDA_HOME=/usr/local/cuda-13.2`.)
 
 vLLM installs prebuilt, but **FlashInfer JIT-compiles its sampler at the end of every server
 startup** and needs `nvcc` >= 12.9 to target SM120. Without it the server dies at the last moment
@@ -76,8 +84,24 @@ script lives in", which is true for `my-build.sh` inside the checkout but not fo
 — without it the script exits with `... is not a vLLM checkout`. Add `--with-plugin` for GGUF
 support; it compiles a CUDA extension and needs PyTorch's CUDA major to match nvcc's.
 
-The script creates `~/vllm-env` and (on WSL only) copies the checkout to ext4 first. On bare metal
-that copy is pointless — pass `--in-place`. Useful flags: `--recreate-venv`, `--nightly`, `-h`.
+The script creates `~/vllm-env` and copies the checkout's committed HEAD to `~/src/vllm` first
+(that was for WSL's slow `/mnt/c`; on bare metal `--in-place` skips it). Useful flags:
+`--recreate-venv`, `--nightly`, `--latest-wheel`, `--commit=SHA`, `-h`.
+
+**Precompiled wheels lag the merge by hours.** Right after `git merge upstream/main` the newest
+commits usually have no wheel yet (on 2026-09-24 the newest three returned 404). `--latest-wheel`
+walks back from HEAD to the newest upstream commit that has one and builds that, instead of
+`--nightly`'s kernels-may-not-match fallback.
+
+**Upgrade side by side,** so the working install stays as a rollback, then point `VLLM_BIN` at it
+(`llm-service-provider`'s profile `host.env` for the serving lane, `VLLM_BIN=...` for the harness):
+
+```bash
+BUILD_SRC=~/src/vllm-next VENV_DIR=~/vllm-env-next ~/GIT/vllm/my-build.sh --latest-wheel
+```
+
+The RTX 5060 Ti box serves from `~/vllm-env-next` (bbd7c24d6e, FlashInfer 0.7.0, torch 2.13 +
+CUDA 13.2) since 2026-09-24; `~/vllm-env` (569adb5a97) is the rollback.
 
 ## 4. Environment for every serving shell
 
@@ -126,7 +150,8 @@ Available KV cache memory: 6.75 GiB
 
 | Setting | Value | Reason |
 |---|---|---|
-| `--gpu-memory-utilization` | 0.92 under WSL, 0.95 bare metal | Windows holds ~1.1 GiB of the display card, invisible to `nvidia-smi` inside WSL. Headless bare metal has no such tax. |
+| `--gpu-memory-utilization` | 0.92 | Under WSL, Windows holds ~1.1 GiB of the display card, invisible to `nvidia-smi`. On bare metal 0.95 fits, but FlashInfer's startup autotune then OOMs on nearly every kernel tactic and retries them one by one: starts of 30+ minutes (measured 2026-09-24, 2x 5060 Ti). 0.92 starts in ~90 s. |
+| `--kv-offloading-backend native --kv-offloading-size N` | 32 (GiB) for several agents | KV blocks evicted from the cards go to host RAM (`/dev/shm`) instead of being recomputed. With 6-8 agents of 25-45k tokens each it halved the batch wall time on the 2x 5060 Ti box. |
 | `--max-num-seqs` | from client count | Measured 2026-09-17: costs ~0.5% of the KV pool, so set it for concurrency, not memory. See below. |
 | `--max-model-len` | 65536 | Claude Code and Pi send ~20k tokens of prompt and tools per request. Prompt **plus** requested answer must fit. |
 | `--enable-prefix-caching` | always | Agent clients resend an identical system prompt every turn; measured 95-96% hit rate in real traffic. |
