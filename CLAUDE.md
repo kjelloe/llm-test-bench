@@ -1148,7 +1148,9 @@ tests/
   test_llama_server_flags.py  _bool_flag unit tests (--load-mode none vs legacy --no-mmap, by binary --help support)
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
-  test_export_task.py         --export-task bundling unit tests
+  test_export_task.py         --export-task bundling unit tests; also pins the TASK.md format that
+                              llm-service-provider's `selftest.sh --bench` parses ("## Files you may
+                              edit" bullets, the fenced line under "## Check your work", **Setup:**)
   test_hwmonitor.py           hwmonitor threshold state-machine unit tests
   test_reporting.py           lib/reporting skill-level scoring unit tests
   test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
@@ -1450,8 +1452,10 @@ When asked to implement features:
     running on that box since 2026-09-16 (`llm-gateway` + `vllm-local-coder`, enabled at boot), so the
     lane holds most of the card: run `~/GIT/llm-service-provider/bin/llmctl stop` before benchmarking
     there. Since 2026-09-16 that lane may instead be llama-server serving `qwen3.8-flash-next`
-    (~10.5 GB VRAM plus ~75 GB of page cache) — check `backend:` in its status output. Its `awtunnel` is deliberately disabled (`TUNNEL=off` in that profile's `host.env`) until the
-    Hetzner host has that box's `~/.ssh/id_awtunnel.pub`. Also 2026-09-16: that lane now serves a real
+    (~10.5 GB VRAM plus ~75 GB of page cache) — check `backend:` in its status output. Its `awtunnel` was disabled (`TUNNEL=off`) until the Hetzner host had that box's key; since
+    2026-09-24 the tunnel is on and the remote pipeline sends real work to its `local-coder` lane, so a
+    benchmark there must stop that lane first (`llmctl stop`, which the pipeline sees as a 503) or be
+    coordinated (`./tunnel.sh off` keeps the pipeline out while you benchmark). Also 2026-09-16: that lane now serves a real
     agent all day through `~/GIT/pi-local-dev` (Pi 0.85.1 on Node 22, provider `llm-service-provider`,
     model `local-coder`) — a 79-message games session ended 42 turns on `toolUse` with no token-ceiling
     stop, which is the agentic-use evidence this benchmark itself cannot produce. Two facts from that:
