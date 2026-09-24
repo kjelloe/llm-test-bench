@@ -13,7 +13,7 @@ output/
 /task_data/dotnet_sas/tests/*/obj/
 *.log
 llama_models
-/allmodels/
+/allmodels
 *.gguf
 /kv-stream-experiment/
 .gpu-mode
@@ -22,3 +22,4 @@ llama_models
 *_TOKEN.txt
 hf-token.txt
 .env
+.venv/
