@@ -72,13 +72,17 @@ tests/
   conftest.py             sys.path shim
   test_parsing.py             Unit tests for the BEGIN_FILE/END_FILE parser
   test_model_config.py        Unit tests for the models/*.txt parser (ModelConfig, max_ctx, hf: field)
-  test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split)
+  test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split) plus the foreign-port-occupant startup guard and the LLAMA_SERVER_PORT env override (reloads the module with the env var set, not just a monkeypatched constant)
+  test_llama_server_flags.py  Unit tests for _bool_flag — emits --load-mode none vs legacy --no-mmap depending on whether the target binary's --help lists --load-mode
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
   test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP)
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)
   test_reporting.py           Unit tests for lib/reporting._skill_level / _peak_skill_level (consecutive-tier vs peak-tier scoring logic)
+  test_hw_snapshot.py         Unit tests for hw_summary — the results header attributes llama_server_ver to the right serving engine
+  test_statistics_server_name.py  Unit tests for statistics._server_name — same engine-attribution logic, exercised from the aggregation side
   test_powerlimit_output.py   Regression test for powerlimit.sh's WSL2 elevated-PowerShell one-liner (invokes the real script; skipped off-WSL2 since the non-WSL path calls sudo nvidia-smi for real)
+  test_run_sh_pip_bootstrap.py  Static regression guard for run.sh's venv/pip setup (ensurepip fallback present; requirements.txt installed via "$VENV/bin/python3" -m pip, never a bare pip — see the Debian externally-managed-environment finding in CLAUDE.md)
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
   python_safe_div/        calc.py (baseline), conftest.py, tests/test_calc.py
@@ -252,7 +256,13 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` a
 - **`_parse_body(body, elapsed_ns)`** — vLLM does not expose llama.cpp `timings` fields, so `eval_duration` is set to wall time and `prompt_eval_duration` to 0. `tok_per_s` in results is therefore `completion_tokens / wall_time`.
 - `unload_model(...)` — no-op; lifecycle managed by `VLLMManager.stop()`.
 
-**Port allocation:** vLLM uses port 8090; llama-server uses 8080. Both can coexist on the same machine, though `bench.py` runs only one backend at a time.
+**Port allocation:** vLLM uses port 8090; llama-server uses 8080 by default, overridable via the
+`LLAMA_SERVER_PORT` env var. Both can coexist on the same machine, though `bench.py` runs only one
+backend at a time. **Port 8080 collides with `~/GIT/llm-service-provider`'s own `llm-gateway`**
+(confirmed 2026-09-24) — with that gateway active, `LlamaServerManager._start()` checks for a
+foreign `/health` responder before spawning and raises loudly instead of silently talking to the
+wrong server (a prior version of this check didn't exist, and every request would 400 with a
+misleading "model 'None' not found"). Set `LLAMA_SERVER_PORT` to a free port to run alongside it.
 
 #### `model_config.py` — Model Config Parser
 

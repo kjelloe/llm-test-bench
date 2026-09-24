@@ -1098,7 +1098,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 ```
 bench.py            CLI runner
 install.sh          Interactive dependency installer
-run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
+run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; bootstraps a missing venv pip via ensurepip before installing requirements.txt (Debian/Ubuntu boxes without python3-pip otherwise hit a confusing externally-managed-environment error, see the Debian pip finding below; added 2026-09-24, test_run_sh_pip_bootstrap.py); auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
 compare.sh          Runs the canonical models/default.txt set (10 models as of 2026-09-15) (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
@@ -1144,13 +1144,17 @@ llamacpp/
 tests/
   test_parsing.py             Parser unit tests  →  python3 -m pytest tests/
   test_model_config.py        Model config parser unit tests
-  test_llama_server_client.py llama_server_client._parse_body unit tests (reasoning_content, timings, content/thinking split)
+  test_llama_server_client.py llama_server_client._parse_body unit tests (reasoning_content, timings, content/thinking split) + foreign-port-occupant startup guard + LLAMA_SERVER_PORT env override
+  test_llama_server_flags.py  _bool_flag unit tests (--load-mode none vs legacy --no-mmap, by binary --help support)
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
   test_export_task.py         --export-task bundling unit tests
   test_hwmonitor.py           hwmonitor threshold state-machine unit tests
   test_reporting.py           lib/reporting skill-level scoring unit tests
+  test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
+  test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
+  test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=20000 num_ctx=32768 model_timeout=600
@@ -1196,6 +1200,22 @@ cache) rather than the vLLM 9B — check `backend:` in the status output, becaus
 competes for page cache as well as VRAM, and a benchmark started beside it will thrash both. `bin/llmctl stop` frees the GPU (the gateway and
 its request log stay up, and the pipeline would get a 503); `bin/llmctl start` puts it back. Its
 tunnel is disabled for now, so stopping the backend there disrupts only local clients.
+
+**Port collision, not just GPU contention (confirmed 2026-09-24):** `llm-service-provider`'s
+`llm-gateway` binds `127.0.0.1:8080` — the exact same fixed port `lib/llama_server_client.py`
+always used for its own llama-server subprocess. If that gateway is active and you run a
+llama-server-backend benchmark, `LlamaServerManager._start()`'s readiness poll used to succeed
+instantly against the *gateway* instead of your own (never-actually-bound) subprocess, and every
+task then failed with a misleading `TOOL_ERROR: model 'None' not found` that looks like a
+model/task problem, not an infra one. Fixed: `_start()` now checks for a foreign `/health`
+responder before spawning and raises loudly instead (`tests/test_llama_server_client.py::
+test_start_refuses_foreign_occupant`); the port is also overridable via `LLAMA_SERVER_PORT` for
+running llama-server-backend benchmarks alongside an active gateway (e.g.
+`LLAMA_SERVER_PORT=8099 ./run.sh --backend llama-server ...`). **This means any past
+llama-server-backend benchmark result recorded while the gateway happened to be active is
+suspect** — it would have failed loudly as TOOL_ERROR post-fix, so a suspiciously bad/uniform
+result predating 2026-09-24 alongside `llm-service-provider` being live is worth re-running, not
+trusting as-is.
 
 #### Known Issues
 

@@ -1,3 +1,1 @@
-sudo apt install python3-full python3-pip   # or python3-venv, whichever's missing
-  rm -rf .venv
-  ./run.sh ...   # recreates .venv with a working pip this time
+EOF

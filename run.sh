@@ -31,6 +31,16 @@ if [[ ! -d "$VENV" ]]; then
   python3 -m venv "$VENV"
 fi
 
+# Debian/Ubuntu's python3-venv omits pip unless python3-pip is installed at the OS level — bootstrap
+# it here the same way install.sh does, instead of letting the pip call below fail confusingly.
+if [[ ! -x "$VENV/bin/pip" ]]; then
+  "$VENV/bin/python3" -m ensurepip --upgrade &>/dev/null || {
+    echo "pip is missing from $VENV and ensurepip failed — install it and recreate the venv:" >&2
+    echo "  sudo apt-get install -y python3-pip && rm -rf $VENV" >&2
+    exit 1
+  }
+fi
+
 source "$VENV/bin/activate"
 
 "$VENV/bin/python3" -m pip install --quiet -r requirements.txt

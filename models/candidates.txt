@@ -1490,3 +1490,40 @@ qwen3.8-27b-gsqrco  Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf  ngl=999,no_mmap,cache_type_k
 #   which DID see a real (if insufficient) 2.2x gain from the same technique. High acceptance
 #   rate alone does not predict a real speedup; check baseline headroom first. Not pursued
 #   further. Full detail in next-runs.md.
+
+# ── Dirk-Qwen3.8-27B (peculiar-ragdoll, added 2026-09-24) ──────────────────────
+# Found via scout 2026-09-24. Same uploader as our promoted tiel-coder:35b (18/19 coding,
+# 4/4 web incl. fastapi, 6/6 context incl. 256k single-GPU — a genuine standout in this VRAM
+# tier). Unclear fine-tune/merge lineage from the name alone ("Dirk") — untested, spot-checking
+# on the base model's proven-good uploader track record, not a specific claim about this file.
+# ~13.3 GB IQ4_XS — smaller than the base qwen3.8:27b Q4_K_M (18.4 GB), so worth checking whether
+# it holds the f16-KV python_hashmap precision canary at this lower quant tier (see CLAUDE.md).
+# Same runtime params as the confirmed qwen3.8:27b config; only gguf-file/repo differ.
+#
+# CONFIRMED 2026-09-24 10-task spot check (single RTX 3090, GPU2, isolated from the two live
+# llm-service-provider lanes on GPU0/GPU1): 8/10 at 29.4 tok/s avg — meets the 8/10 promotion bar.
+# PASS: csv_nordic_property, python_safe_div, node_csv_parser, python_lru_cache, python_expr_eval,
+#   python_hashmap (L5 precision canary — holds at IQ4_XS/13.3GB with f16 KV, a smaller/lower
+#   quant tier than the confirmed base file's Q4_K_M/18.4GB), python_tokenizer, node_para_core.
+# FAIL: node_slugify (NO_BLOCKS — raw ```javascript fence instead of BEGIN_FILE, a genuine format-
+#   compliance regression not present in the base qwen3.8:27b, which passes this cleanly at L2),
+#   node_paratrooper (TESTS_STILL_FAIL — expected; only the original irreplaceable qwen3.8:27b
+#   Q4_K_M file has ever cleanly passed this task, see the closed investigation above).
+# Speed caveat: 29.4 tok/s was measured on an RTX 3090 (GPU2), not the RTX 4090 the base
+# qwen3.8:27b's ~45 tok/s figure used — not a like-for-like speed comparison; only the pass/fail
+# profile is comparable.
+#
+# PROMOTED to full 19-task coding run, CONFIRMED 2026-09-24 (same RTX 3090/GPU2): 18/19 at
+# 29.2 tok/s avg, 344s total. Only failure: node_slugify (NO_BLOCKS — raw ```javascript fence
+# instead of BEGIN_FILE), same format-compliance issue as the spot check, confirmed not a fluke.
+# Every other task PASSES, including both L5 canaries (python_hashmap, python_dijkstra) and all
+# three L3 CSV/data tasks (csv_nordic_property, node_csv_parser, java_word_freq).
+# NOTABLE: tiel-coder:35b (same uploader, peculiar-ragdoll) ALSO fails node_slugify specifically
+# (as TESTS_STILL_FAIL there, a wrong-output bug, vs NO_BLOCKS/format here — different failure
+# mode, same task) — two-for-two on this one uploader's fine-tunes failing this exact L2 task is
+# a pattern worth watching on any future peculiar-ragdoll release, not just these two files.
+# VERDICT: NOT promoted to 24gb.txt — the base qwen3.8:27b (PERFECT 19/19, faster on the RTX
+# 4090, and the sole file with a confirmed node_paratrooper PASS) already occupies this tier and
+# this file doesn't beat it on any axis except a smaller GGUF (13.3 vs 18.4 GB), which isn't a
+# scarce resource at the 24 GB tier. Kept here as a documented, solid-but-not-best candidate.
+qwen3.8-27b-dirk  Dirk-Qwen3.8-27B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF

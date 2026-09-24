@@ -1,8 +1,72 @@
-"""Unit tests for llama_server_client._parse_body response parsing."""
+"""Unit tests for llama_server_client._parse_body response parsing and startup safety."""
 
+import http.server
+import importlib
+import os
+import socket
+import threading
+
+import pytest
+
+from lib import llama_server_client as lsc
 from lib.llama_server_client import _parse_body
+from lib.model_config import ModelConfig
 
 _ELAPSED = 1_000_000_000  # 1 s in nanoseconds (arbitrary)
+
+
+def test_llama_server_port_env_override(monkeypatch):
+    """_PORT is read from LLAMA_SERVER_PORT at import time (see CLAUDE.md's pre-flight port-
+    collision section, 2026-09-24) — reload the module with the env var set to prove the actual
+    read path works, not just that _PORT can be monkeypatched directly."""
+    monkeypatch.setenv("LLAMA_SERVER_PORT", "19191")
+    try:
+        reloaded = importlib.reload(lsc)
+        assert reloaded._PORT == 19191
+        assert reloaded._BASE_URL == "http://127.0.0.1:19191"
+        assert reloaded._HEALTH_URL == "http://127.0.0.1:19191/health"
+    finally:
+        monkeypatch.delenv("LLAMA_SERVER_PORT", raising=False)
+        importlib.reload(lsc)  # restore the default (8080) for every later test in this file
+
+
+def test_llama_server_port_default_is_8080():
+    assert lsc._PORT == 8080
+
+
+def test_start_refuses_foreign_occupant(monkeypatch, tmp_path):
+    """A pre-existing /health responder on our port (e.g. llm-service-provider's gateway,
+    which also binds :8080) must raise loudly instead of being silently treated as our own
+    freshly-started server (see next-runs.md, 2026-09-24)."""
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    free_port = s.getsockname()[1]
+    s.close()
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok"}')
+
+        def log_message(self, *args):
+            pass
+
+    httpd = http.server.HTTPServer(("127.0.0.1", free_port), _Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setattr(lsc, "_PORT", free_port)
+        monkeypatch.setattr(lsc, "_BASE_URL", f"http://127.0.0.1:{free_port}")
+        monkeypatch.setattr(lsc, "_HEALTH_URL", f"http://127.0.0.1:{free_port}/health")
+        mgr = lsc.LlamaServerManager(models_dir=str(tmp_path))
+        cfg = ModelConfig(ollama_name="x", gguf_file="x.gguf")
+        with pytest.raises(RuntimeError, match="already serving something else"):
+            mgr._start(cfg, 8192)
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
 
 
 def test_reasoning_content_fallback():

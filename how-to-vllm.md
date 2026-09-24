@@ -40,6 +40,17 @@ it's just where the vLLM experiment is now actually running. Full background: `C
   Blackwell should report compute capability 12.0 (e.g. RTX 5070 Ti and similar RTX 50-series
   parts). If CUDA/driver isn't picking the card up correctly, nothing below will work — confirm
   this first.
+- **`./run.sh` failing with `error: externally-managed-environment` (2026-09-24, hit on this
+  box):** Debian-family distros create a `.venv` *without pip* unless `python3-pip`/`python3-full`
+  is installed at the OS level — `python3 -m venv .venv` succeeds structurally, but a bare `pip`
+  call then falls through `PATH` to the system pip, which refuses (PEP 668). Fix:
+  `sudo apt install python3-full python3-pip; rm -rf .venv` and re-run. `run.sh` itself was also
+  hardened (`"$VENV/bin/python3" -m pip install ...` instead of a bare `pip`) so a repeat gives a
+  clearer `No module named pip` instead of the confusing externally-managed error.
+- **`VLLM_BIN` must prefix the exact same command as `./run.sh`**, on one line —
+  `VLLM_BIN=~/vllm-env/bin/vllm ./run.sh --backend vllm ...`. Setting it as its own statement
+  (`VLLM_BIN=... && ./run.sh ...` counts, but `VLLM_BIN=...` alone on a line before `./run.sh` on
+  the next does not) leaves it unexported, and `run.sh` — a new process — never sees it.
 
 ## 2. Models to download
 
