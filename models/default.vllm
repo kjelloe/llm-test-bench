@@ -1,3 +1,11 @@
+# ⚠ NOT RUN ON THIS RIG ANYMORE (2026-09-25) — vLLM moved to a dedicated host (the RTX 5060 Ti
+# box; see how-to-vllm.md and models/16gb.vllm / 2x16gb.vllm for its current, active playbook).
+# This file also predates the vllm-gguf-plugin migration (uses the old --load-format gguf /
+# --quantization gguf patched-flag convention, superseded 2026-09-06 — see CLAUDE.md's vLLM
+# backend constraints section) — doubly obsolete. Kept as historical reference only; the
+# cpatonn AWQ artifact it references was deleted from this rig's ~/.cache/huggingface (2026-09-25
+# cleanup) since vLLM isn't run here — re-fetch on the dedicated host instead if ever needed.
+#
 # Default vLLM model set
 # Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<tokenizer-repo>]
 #

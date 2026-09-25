@@ -683,7 +683,8 @@
 # Skill: L6-full — first paratrooper pass, reliable on single GPU and 2×24 GB 3-GPU auto-dist;
 #   config-sensitive (FAILS) with explicit tensor_split=1|1 on 2×24 GB — see WARNING above;
 #   19/19 coding + 4/4 web + 4/4 L6 + ctx 6/6 (all confirmed) + multihop 5/5.
-qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# CLOSED, not a next-run download target — CLOSED 2026-08-23, irreplaceable original already on disk — do NOT re-fetch (upstream deleted the repo's matching file):
+# qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
 
 # ── Unsloth Dynamic V3 requant of qwen3.8:27b (added 2026-08-20) ───────────────
 # unsloth re-uploaded unsloth/Qwen3.8-27B-GGUF on 2026-08-19 using their new "Dynamic V3"
@@ -787,7 +788,8 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_typ
 #   yet that going up one quant tier reliably clears this task. Worth considering as the
 #   recommended qwen3.8:27b build for anyone who wants node_paratrooper reliability without
 #   depending on one irreplaceable, hard-to-recover Q4_K_M file.
-qwen3.8:27b-q5km  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+# CLOSED, not a next-run download target — CLOSED 2026-08-23 — final tiebreaker recommendation reached, already downloaded:
+# qwen3.8:27b-q5km  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
 
 # 2-GPU control variant — added 2026-08-23. NEEDED to resolve the confound found on
 # qwen3.8:27b-ud-plain-q8/-ud-q8kxl (both FAIL 5/5 at tensor_split=1|1, but that split is already
@@ -796,13 +798,15 @@ qwen3.8:27b-q5km  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cach
 # same split? If yes, the split explains everything and node_paratrooper testing above single-GPU
 # capacity should move to 3-GPU instead. If no, that's a real, still-unexplained difference.
 # No download needed — same file as qwen3.8:27b-q5km, already on disk.
-qwen3.8:27b-q5km-2gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+# CLOSED, not a next-run download target — CLOSED 2026-08-23 — same file as above, config variant only:
+# qwen3.8:27b-q5km-2gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
 
 # 3-GPU variant — added 2026-08-23. Final open question from the confound-resolution follow-up:
 # does bartowski's Q5_K_M share the original file's split-independence (PASS on both single-GPU
 # AND 3-GPU), or is that trait unique to the one irreplaceable file? No download needed — same
 # file as qwen3.8:27b-q5km, already on disk.
-qwen3.8:27b-q5km-3gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
+# CLOSED, not a next-run download target — CLOSED 2026-08-23 — same file as above, config variant only:
+# qwen3.8:27b-q5km-3gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:bartowski/Qwen3.8-27B-GGUF
 
 # ── unsloth Dynamic V3 UD-Q5_K_M — second Q5 tiebreaker (added 2026-08-22) ─────────────
 # bartowski's Q5_K_M passed node_paratrooper 5/5 (see above) — but that's one build from one
@@ -949,7 +953,8 @@ qwen3.8:27b-q5km-3gpu  Qwen3.8-27B-Q5_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1
 # tier jashepp used for the qwopus3.6 release. Fits single 24 GB comfortably.
 # STATUS: TESTED AND PROMOTED — see the CONFIRMED 2026-08-24 result blocks below this entry;
 # added to models/24gb.txt as the 14th L6-stepped-chain completer.
-ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
+# CLOSED, not a next-run download target — CONFIRMED, promoted to models/24gb.txt (14th L6-stepped completer) — fetch via that file instead:
+# ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
 #
 # RESULT — CONFIRMED 2026-08-23/24, single RTX 4090: **10/10 spot check PASS, Skill L6, 45.3 tok/s
 #   avg.** All L1-L5 tasks (csv_nordic_property, node_slugify, python_safe_div, node_csv_parser,
@@ -1032,7 +1037,8 @@ ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,
 # tok/s, fastest confirmed model in the 12/16 GB tiers. Full detail in models/12gb.txt and
 # models/16gb.txt (where it's promoted). Already deleted upstream as of the 2026-08-30 scout —
 # local copy is now irreplaceable.
-ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
+# CLOSED, not a next-run download target — CONFIRMED, promoted to models/12gb.txt + 16gb.txt — fetch via those files instead:
+# ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
 
 # Tiel-Coder-35B-A3B (peculiar-ragdoll) — found via scout 2026-09-05, flagged via an external
 # Reddit thread (same thread that surfaced Ornith/Ninfer) as "literally Ornith on steroids for
@@ -1076,7 +1082,8 @@ ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type
 # the identical two failing tasks). Consistent with sharing Ornith's lineage either way. GPU
 # temps healthy (max 65°C). Full profile now: 18/19 coding + 4/4 web + 3/4 L6-stepped (entities
 # FAILS) + 6/6 context (8k-256k) + 3/5 multihop.
-tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF
+# CLOSED, not a next-run download target — CONFIRMED, promoted to models/24gb.txt — fetch via that file instead:
+# tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF
 
 # ── Qwen3.8-Flash-Next — new Qwen4-preview architecture (added 2026-08-28) ─────────────
 # Official Qwen release (2026-08-26), NOT a community fine-tune. New architecture: Gated DeltaNet
@@ -1237,7 +1244,8 @@ qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
 # the spec-type value itself contains a comma) — test that via a direct manual server launch
 # instead of through this model-file entry. Investigation in progress 2026-09-03, see
 # next-runs.md.
-qwen3.8-flash-next-ikllama  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — requires LLAMA_SERVER_BIN=~/GIT/ik_llama.cpp/build/bin/llama-server
+# CLOSED, not a next-run download target — CLOSED — MTP self-speculative decoding tested, "not currently a win on this hardware":
+# qwen3.8-flash-next-ikllama  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — requires LLAMA_SERVER_BIN=~/GIT/ik_llama.cpp/build/bin/llama-server
 #
 # RESULT — CONFIRMED 2026-09-04: baseline (this line, no spec-decoding) is 7.8 tok/s INCLUDING a
 #   full <think> block — this fork does not honor enable_thinking:false for this model (528/546
@@ -1266,7 +1274,8 @@ qwen3.8-flash-next-ikllama  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00
 # ceiling we found (93% GPU util, unoptimized kernels) dominates regardless of offload volume.
 # unsloth's own quality table: ~80% top-token agreement at this tier (vs ~93% at Q4_K_XL) — a
 # real capability risk, not just a speed experiment. Testing added 2026-08-30.
-qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 3-part model — use mainline llama.cpp (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server)
+# CLOSED, not a next-run download target — CLOSED — real capability regression confirmed, "not a practical everyday config"; UD-IQ1_S/ deleted from disk 2026-09-25 to reclaim 68 GB, do NOT re-fetch:
+# qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 3-part model — use mainline llama.cpp (LLAMA_SERVER_BIN=~/GIT/llama.cpp/build/bin/llama-server)
 #
 # ── 16 GB VRAM + 96 GB RAM + NVMe variant (RTX 5060 Ti box, added 2026-09-14) — CONFIRMED 9/10 ──
 # Spot-check results are below the model line.
@@ -1290,7 +1299,8 @@ qwen3.8-flash-next-iq1s  UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.ggu
 #   261 requests, 7.5M in / 233k out, 90% tool-calling, 47% prefix-cached, ~82 s average per request
 #   (the same Pi workload averages ~6.6 s on the box's 9B vLLM lane). One 500 "Context size has been
 #   exceeded" — a client-side window/maxTokens trap, see that repo's models.ini comment.
-qwen3.8-flash-next-16gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — same file as qwen3.8-flash-next
+# CLOSED, not a next-run download target — CONFIRMED 2026-09-14, now a production lane on the RTX 5060 Ti box (llm-service-provider), not a benchmark candidate here:
+# qwen3.8-flash-next-16gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — same file as qwen3.8-flash-next
 #
 # RESULT — CONFIRMED 2026-09-14, 10-task spot check: **9/10 at 18.4 tok/s avg** (17.4-19.7 range),
 #   893.5s of task time, 16:05 total runtime.
@@ -1477,7 +1487,8 @@ qwen3.8-flash-next-16gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004
 # ~0.2 GB for KV) — the smaller GSQ-RCO tiers (IQ2_S 9.3 GB, IQ3_XXS 10.1 GB) are untested but
 # would be the ones to try for a genuine 12 GB fit, and per the author's own published numbers
 # both still score close to the BF16 baseline.
-qwen3.8-27b-gsqrco  Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+# CLOSED, not a next-run download target — CONFIRMED, promoted to models/16gb.txt — fetch via that file instead:
+# qwen3.8-27b-gsqrco  Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
 #
 # MTP FOLLOW-UP — CONFIRMED 2026-09-04: the official repo ships an MTP-embedded variant of this
 #   exact quant (Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf, 11.29 GB, downloaded to allmodels/). Tested
@@ -1526,4 +1537,79 @@ qwen3.8-27b-gsqrco  Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf  ngl=999,no_mmap,cache_type_k
 # 4090, and the sole file with a confirmed node_paratrooper PASS) already occupies this tier and
 # this file doesn't beat it on any axis except a smaller GGUF (13.3 vs 18.4 GB), which isn't a
 # scarce resource at the 24 GB tier. Kept here as a documented, solid-but-not-best candidate.
-qwen3.8-27b-dirk  Dirk-Qwen3.8-27B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF
+# CLOSED, not a next-run download target — CONFIRMED 2026-09-24, full 19-task run complete, not promoted — testing done:
+# qwen3.8-27b-dirk  Dirk-Qwen3.8-27B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NEXT RUNS — genuinely untested, active fetch entries (curated 2026-09-25)
+# Matches next-runs.md's "## NEXT UP" list. Everything above this line is
+# CLOSED — historical record only, not meant to be re-fetched.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── pfeifferj/Qwen3.8-Flash-Next-GSQ-RCO (2026-09-13 lead, still untested) ─────
+# 3.5-bit GSQ-RCO quant of qwen3.8-flash-next, 44.6 GB compute weights — could meaningfully
+# ease the --fit/RAM-offload juggling the current 106 GB UD-Q4_K_XL quant needs. New uploader
+# (pfeifferj), not previously seen elsewhere. Same runtime pattern as qwen3.8-flash-next above
+# (pinned mainline 67a17c17c, --fit on). See next-runs.md item 3.
+# CLOSED, not a next-run download target — TESTED 2026-09-25: FILE IS BROKEN, not fetchable.
+# The published Qwen3.8-Flash-Next-GSQ-RCO-3.5bit.gguf has internal metadata claiming
+# split.no=0/split.count=2 (i.e. it declares itself as half of a 2-part split), but the repo
+# only ever published this one file under a plain (non-split-pattern) filename, so llama.cpp
+# refuses to load it ("invalid split file name"). Patched the split.count metadata to 1
+# in-place (byte offset 10945341, u16, 2->1) to test whether it was just stale metadata on an
+# otherwise-complete merged file — it was NOT: loading then fails with
+# "check_tensor_dims: tensor 'token_embd.weight' not found", confirming roughly half the
+# model's tensors are genuinely missing from this file. This is an uploader defect, not
+# something fixable locally short of them publishing the missing second part. Do not re-fetch
+# until/unless the repo is updated. The 45 GB download was NOT deleted (kept in case the
+# uploader fixes it and a byte-range diff would help), but it is not currently loadable.
+#qwen3.8-flash-next-gsqrco  Qwen3.8-Flash-Next-GSQ-RCO-3.5bit.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:pfeifferj/Qwen3.8-Flash-Next-GSQ-RCO-GGUF
+
+# ── ornith-ai/Ornith-1.0-35B (scout 2026-09-23, untested) ──────────────────────
+# New sibling of the promoted ornith:1.5-35b (14th L6-stepped completer). Same runtime pattern
+# as other single-GPU MoE candidates in this file. See next-runs.md item 6.
+# CLOSED, not a next-run download target — CONFIRMED 2026-09-25, PROMOTED to models/24gb.txt.
+# 8/10 spot check + 4/4 L6-stepped + 3/3 verified node_paratrooper (L6-full, MD5-identical
+# across repeats) + 3/4 web. SECOND model ever to complete both the full stepped chain and
+# the from-scratch task (after qwen3.8:27b), on standard Q4_K_M with no Ampere+ requirement.
+# See models/24gb.txt for the full writeup. Context/multihop not yet run.
+#ornith:1.0-35b  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:ornith-ai/Ornith-1.0-35B-GGUF
+
+# ── peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B (flagged 2026-09-10, still untested) ──
+# Apparent successor/sibling to the promoted tiel-coder:35b, same uploader. Note: both
+# tiel-coder:35b and qwen3.8-27b-dirk (this uploader's other tested model, see CLOSED section
+# above) independently failed node_slugify — worth checking this one too as a discriminator.
+# Base (non-MTP) repo — test capability first before the separate -GGUF-MTP variant.
+# CLOSED, not a next-run download target — CONFIRMED 2026-09-25: 7/10 spot check at 121 tok/s.
+# REJECTED (below the 8/10 promotion threshold). FAILS csv_nordic_property AND node_slugify
+# (worse than this same uploader's other two tested models, tiel-coder:35b and
+# qwen3.8-27b-dirk, which each fail only node_slugify) — 3/3 of this uploader's models now
+# fail node_slugify specifically, a stronger pattern than previously noted. PASSES
+# python_hashmap (L5 canary) — a real positive signal, just not enough to clear the bar.
+# node_paratrooper FAILS as expected.
+#cyber-tiel-coder:35b  Cyber-Tiel-Coder-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:peculiar-ragdoll/Cyber-Tiel-Coder-35B-A3B-GGUF
+
+# ── ISTA-DASLab Qwen3.8-27B-GSQ-RCO — smaller tiers for a genuine 12 GB fit (untested) ──
+# The IQ3_S tier (11.8 GB) is already promoted to models/16gb.txt at 9/10 — these smaller tiers
+# are the ones to try for a real 12 GB-tier fit, per the author's own published near-BF16 numbers
+# at these sizes. Non-MTP variants (the -mtp IQ3_S tier already tested "zero net gain").
+# CLOSED, not a next-run download target — CONFIRMED 2026-09-25: 8/10 spot check at 32.4 tok/s.
+# Meets the promotion bar numerically, but FAILS python_hashmap (L5 precision canary) — this
+# IQ2_S (9.3 GB) tier crosses the precision floor that IQ3_XXS (10.1 GB, PROMOTED to
+# models/12gb.txt) and IQ3_S (11.8 GB, in models/16gb.txt) both sit above. NOT promoted:
+# IQ3_XXS is only 0.8 GB bigger and holds the precision canary (at least in isolation — see
+# its own borderline note in 12gb.txt), making it the better choice at this size class.
+#qwen3.8-27b-gsqrco-iq2s  Qwen3.8-27B-GSQ-RCO-IQ2_S.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+# CLOSED, not a next-run download target — CONFIRMED 2026-09-25, PROMOTED to models/12gb.txt.
+# 9/10 spot check + 18/19 full coding run. python_hashmap is borderline: PASSED in the spot
+# check, FAILED in the full 19-task run (same model/config — a context-size/sequence-order
+# floating-point sensitivity, not a flat result). See models/12gb.txt for the full writeup.
+#qwen3.8-27b-gsqrco-iq3xxs  Qwen3.8-27B-GSQ-RCO-IQ3_XXS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+
+# ── ornith:1.0-35b multi-GPU node_paratrooper re-verification (2026-09-25) ─────
+# Testing whether the L6-full pass (3/3 single-GPU, MD5-verified deterministic — see
+# models/24gb.txt) holds under cross-GPU tensor-split, following the qwen3.8:27b precedent
+# (that model's identical pass reproducibly FLIPS to FAIL at explicit 2-GPU tensor_split=1|1
+# due to floating-point reduction-order effects, confirmed via output diff — see CLAUDE.md).
+ornith:1.0-35b-2gpu  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:ornith-ai/Ornith-1.0-35B-GGUF
+ornith:1.0-35b-3gpu  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:ornith-ai/Ornith-1.0-35B-GGUF

@@ -962,6 +962,32 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     completion — a genuinely different (and, on the hardest single task, arguably more
     impressive) achievement than the stepped-chain completers listed below. See
     `models/candidates.txt` and `next-runs.md` for full diagnostic detail.
+  - **🏆🦄 node_paratrooper (L6-full) THIRD CONFIRMED PASS, AND SECOND FULL-CHAIN+L6-FULL MODEL:
+    ornith:1.0-35b (ornith-ai/Ornith-1.0-35B-GGUF, Q4_K_M, ~21 GB), CONFIRMED 2026-09-25, single
+    RTX 3090 (24 GB), ~130 tok/s, default ctx=8192.** 3/3 PASS (1 spot-check run + 2 independent
+    repeats), with the two kept-workdir repeats' generated `game.js` **byte-identical (same
+    MD5)** — genuine determinism, matching the same rigor used for `qwen3.8:27b`'s original
+    confirmation. Unlike both prior passes, this is a standard, no-Ampere+-required Q4_K_M GGUF
+    on the default mainline binary — no pinned commit, no irreplaceable file, no exotic quant
+    format. **Also completes the full L6 stepped chain (4/4 PASS, `--num-ctx 32768`, ~131 tok/s
+    avg)** — making it only the **second model ever** (after `qwen3.8:27b`) to do both
+    simultaneously, and at ~3× `qwen3.8:27b`'s speed. Full profile: coding spot 8/10 (FAILS
+    csv_nordic_property + python_hashmap), web 3/4 (FAILS python_config_loader, NO_BLOCKS).
+    Context/multihop not yet run.
+    **Multi-GPU re-verification, CONFIRMED 2026-09-25 — the qwen3.8:27b precedent holds
+    exactly.** 2-GPU explicit `tensor_split=1|1`: FAIL (TESTS_STILL_FAIL, 149.3 tok/s, 35.7s).
+    3-GPU explicit `tensor_split=1|1|1`: PASS (13.0 tok/s, 343.9s — much slower, matching
+    qwen3.8:27b's own 3-GPU slowdown). Diffed all kept workdirs: the two single-GPU passes are
+    byte-identical (MD5 match); the 2-GPU FAIL and 3-GPU PASS each produce genuinely different
+    generated code (different MD5s from each other and from single-GPU) that happens to be
+    correct in one case, not the other — same root cause as qwen3.8:27b's own diagnosis:
+    cross-GPU floating-point reduction-order non-determinism causes real token-level
+    divergence at greedy decoding, landing on broken vs. valid logic effectively
+    probabilistically per-config. **Use single-GPU to reliably reproduce the L6-full pass; do
+    not trust 2-GPU tensor_split=1|1 for this task.** Second independent model now confirming
+    this exact GPU-split fragility class — not a qwen3.8:27b-specific quirk. Config variants
+    (`ornith:1.0-35b-2gpu`, `-3gpu`) kept in `models/candidates.txt` for reference. Added to
+    `models/24gb.txt`.
   - 3×24 GB: gpt-oss:120b (~55 tok/s), qwen3.5-122b:a10b (~17 tok/s), laguna-s-2.1:118b-iq4 (~21 tok/s)
   - 2×24 GB (--num-ctx 32768): noctrex-qwen3.6:35b (~91 tok/s), qwen3.6:35b-A3B unsloth (~97 tok/s),
       qwopus3.6:35b (~123 tok/s), gemma4:26b-qat (~82 tok/s), gemma4:31b-qat (~32 tok/s),
@@ -974,6 +1000,10 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     MoE Q8_0-Imatrix; 14th completer, CONFIRMED 2026-08-24; entities PASS suggests Qwen3.6-A3B
     base, same lineage as qwopus3.6:35b; node_paratrooper/L6-full separately confirmed NOT
     reproducible for this model — 1 PASS / 6 attempts, see full entry in candidates.txt)
+  - 1×24 GB (--num-ctx 32768, **L6-full — paratrooper PASS, 3/3 MD5-verified deterministic**):
+    **ornith:1.0-35b** (~131 tok/s, ornith-ai/Ornith-1.0-35B-GGUF, Q4_K_M, no Ampere+ required;
+    15th stepped-chain completer AND second model (after qwen3.8:27b) to also pass L6-full,
+    CONFIRMED 2026-09-25 — only tested single-GPU so far, see full entry in models/24gb.txt)
   - 1×16 GB + CPU/NVMe expert paging (default per-task ctx): **qwen3.8-flash-next-16gb** (~18 tok/s,
     RTX 5060 Ti 16 GB + 88 GB WSL RAM; 15th completer, CONFIRMED 2026-09-14/15). Same UD-Q4_K_XL
     file and llama.cpp commit 67a17c17c as the 3×24 GB qwen3.8-flash-next entry, whose
@@ -1463,6 +1493,18 @@ When asked to implement features:
     `--default-chat-template-kwargs '{"enable_thinking": false}'`, which would cover both lanes here),
     and `llmctl stats` records OpenAI-style clients as `kind = chat` with full token/stop/tool detail
     since that day's gateway fix, while `llmctl status` names the model behind each lane.
+  - **`qwen3.8-27b:nvfp4-next` CONFIRMED 2026-09-24/25** — the actual benchmark run this whole
+    `models/2x16gb.vllm` target was built toward. QUASAR-QAT NVFP4 W4A4, `tp=2`, vLLM main
+    (`0.30.1rc1.dev68+gbbd7c24d6`): **27/28 effective coding pass, `python_hashmap` passes
+    despite 4-bit activations, ~32 tok/s single-stream, context clean through 128k.**
+    `node_paratrooper` (L6-full) borderline (1/7) — the same cross-GPU tensor-split fragility
+    already confirmed for `qwen3.8:27b` on llama.cpp, now confirmed on vLLM's `tp=2` path too
+    (cross-engine, not an llama.cpp quirk). Real concurrency data from the serving deployment:
+    ~35 tok/s at 1 concurrent agent, ~51 tok/s aggregate at 8. `models/2x16gb.vllm` updated with
+    the exact config that was run (dropped `enforce_eager`, added `language_model_only` +
+    `max_num_seqs=4`). Full writeup: `reports/models-status-Sept-2026.md`'s dedicated vLLM
+    section. **Practical read**: llama-server + `qwen3.8:27b` single-GPU is still faster for one
+    user (45 vs 32 tok/s) and more reliably reaches L6-full; vLLM's real win is concurrency.
   - Both picks trade "best documented capability at this VRAM size" for "most likely to actually
     load cleanly on the first try" — deliberately, since this plugin has never been exercised on
     this rig. Once either loads successfully, that's the point to branch out to a GDN-hybrid or

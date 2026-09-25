@@ -1,7 +1,8 @@
 # Dual 16 GB VRAM GPU — vLLM (2× RTX 5060 Ti 16GB = 32 GB total, tp=2, Blackwell)
 #
-# RUNNING since 2026-09-23 (second card fitted). Results per entry below; serving-side tuning and
-# multi-agent numbers: ~/GIT/llm-service-provider/upgrade-dual-5060.md, Steps 6-7.
+# RUNNING since 2026-09-23 (second card fitted). qwen3.8-27b:nvfp4-next is CONFIRMED 2026-09-24/25
+# — full writeup in reports/models-status-Sept-2026.md's dedicated vLLM section. Serving-side
+# tuning and multi-agent numbers: ~/GIT/llm-service-provider/upgrade-dual-5060.md, Steps 6-7.
 # Companion to models/16gb.vllm (single-card smoke tests). Steps: test-plan-5060ti.md, Part B.
 #
 # The second card goes in via PCIe bifurcation, so each card likely runs at x8. tp=2 sends
@@ -18,7 +19,7 @@
 #
 # Run once the second card is in (./gpu-mode.sh multi first):
 #   VLLM_BIN=~/vllm-env/bin/vllm ./run.sh --backend vllm --model-file models/2x16gb.vllm \
-#     --models qwen3.8-27b:nvfp4
+#     --models qwen3.8-27b:nvfp4-next
 
 # ── Primary target: Qwen3.8-27B, NVFP4, native Blackwell tensor-core path ────
 # Same dense Gated-DeltaNet-hybrid architecture as this repo's own extensively
@@ -38,13 +39,15 @@
 # differently-named "Qwen3.8-27B NVFP4" repos claiming 14-23 GB), and 4-bit
 # activations are a real precision risk for python_hashmap — watch that task.
 #
-# RESULTS on 2x RTX 5060 Ti (2026-09-23/24): python_hashmap PASS; spot 9/10 at 30.0 tok/s on vLLM
-# 569adb5a97 with enforce_eager (W4A16 kernel; node_paratrooper the only fail). This entry is kept
-# as that baseline; the tuned serving config is `qwen3.8-27b:nvfp4-next` below (10/10 spot).
+# BASELINE RESULTS on 2x RTX 5060 Ti (2026-09-23/24): python_hashmap PASS; spot 9/10 at 30.0 tok/s
+# on vLLM 569adb5a97 with enforce_eager (W4A16 kernel — this build predates 13cf9e05c1, so it
+# auto-picks the bf16-activation kernel over the FP4-activation one; node_paratrooper the only
+# fail). This entry is kept as that documented baseline; see "Step-6 tuning" below for the
+# optimized and CONFIRMED-final serving config (qwen3.8-27b:nvfp4-next, 10/10 spot).
 # enforce_eager was a first-run precaution; CUDA graphs are fine on this model (Step 6 of
-# ~/GIT/llm-service-provider/upgrade-dual-5060.md). kv_cache_dtype intentionally NOT set to fp8: qwen3.6:27b/qwen3.8:27b need
-# f16-equivalent KV precision or python_hashmap silently drops the `_EMPTY` sentinel
-# (see CLAUDE.md's python_hashmap precision-canary section).
+# ~/GIT/llm-service-provider/upgrade-dual-5060.md). kv_cache_dtype intentionally NOT set to fp8:
+# qwen3.6:27b/qwen3.8:27b need f16-equivalent KV precision or python_hashmap silently drops the
+# `_EMPTY` sentinel (see CLAUDE.md's python_hashmap precision-canary section).
 qwen3.8-27b:nvfp4  -  tp=2,dtype=auto,max_model_len=32768,enforce_eager,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
 
 # ── Fallbacks: Qwen2.5-Coder-32B, the strongest coder on this repo's llama-server benchmark ──
@@ -59,21 +62,25 @@ qwen2.5-coder:32b-awq  -  tp=2,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,e
 # GGUF via vllm-gguf-plugin. GGUF from bartowski via models/candidates.txt; hf: is the tokenizer repo.
 qwen2.5-coder:32b-5060ti  Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf  tp=2,dtype=auto,max_model_len=8192,gpu_mem_util=0.92,enable_prefix_caching  hf:Qwen/Qwen2.5-Coder-32B-Instruct
 
-# Step-6 tuning of the serving lane (2026-09-24): CUDA graphs on (no enforce_eager) and the CUTLASS
-# W4A4 kernel forced. vLLM builds before 13cf9e05c1 (2026-09-08) auto-pick FlashInferCuteDslNvFp4W4A16
-# (bf16 activations) on sm_120; `cutlass` runs activations in FP4 too — ~2x prefill, the precision
-# risk python_hashmap watches. RESULT (569adb5a97): hashmap PASS x2, spot 9/10 at 32.8 tok/s, 330.8 s.
+# ── Step-6 tuning of the serving lane, ending in the CONFIRMED-final config (2026-09-24) ──────
+# Intermediate step: CUDA graphs on (no enforce_eager) and the CUTLASS W4A4 kernel forced. vLLM
+# builds before 13cf9e05c1 (2026-09-08) auto-pick FlashInferCuteDslNvFp4W4A16 (bf16 activations)
+# on sm_120; `cutlass` runs activations in FP4 too — ~2x prefill, the precision risk
+# python_hashmap watches. RESULT (569adb5a97): hashmap PASS x2, spot 9/10 at 32.8 tok/s, 330.8 s.
 # language_model_only + max_num_seqs=4: without them startup OOMs (vision profiling, 256 slots).
 qwen3.8-27b:nvfp4-w4a4  -  tp=2,dtype=auto,max_model_len=32768,linear_backend=cutlass,language_model_only,max_num_seqs=4,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
-# Same, on vLLM >= bbd7c24d6e (has 13cf9e05c1 + f6326f53bd, FlashInfer 0.7.0): no linear_backend
-# needed — auto picks FlashInferCutlassNvFp4 (W4A4) and the FlashInfer GDN prefill kernel on sm_120.
-# RESULT 2026-09-24 (VLLM_BIN=~/vllm-env-next/bin/vllm, bbd7c24d6e): spot 10/10 at 32.6 tok/s,
-# 354.3 s — node_paratrooper PASS (134 s, one run); python_hashmap PASS x2.
+#
+# Final config: on vLLM >= bbd7c24d6e (has 13cf9e05c1 + f6326f53bd, FlashInfer 0.7.0), no
+# linear_backend override is needed — it auto-picks FlashInferCutlassNvFp4 (W4A4) and the
+# FlashInfer GDN prefill kernel on sm_120, matching the forced-cutlass result above without the
+# override. RESULT 2026-09-24 (VLLM_BIN=~/vllm-env-next/bin/vllm, bbd7c24d6e): spot 10/10 at
+# 32.6 tok/s, 354.3 s — node_paratrooper PASS (134 s, one run); python_hashmap PASS x2.
 # FULL RUN 2026-09-24: coding 19/19 (dotnet_sas needs .NET 9 — this Ubuntu has 8 system-wide, 9 in
-# ~/.dotnet), web 4/4, L6 stepped 4/4, node_paratrooper 1/7 over all runs (a rare pass),
-# ~32-33 tok/s. Context/multihop: the -128k entry below.
-# This is the configuration the llm-service-provider lane serves.
+# ~/.dotnet), web 4/4, L6 stepped 4/4, node_paratrooper 1/7 over all runs (a rare pass; see
+# CLAUDE.md/the report for the cross-GPU-split-fragility read on this specific number), ~32-33
+# tok/s. This is the configuration the llm-service-provider lane serves — **use this entry**.
 qwen3.8-27b:nvfp4-next  -  tp=2,dtype=auto,max_model_len=32768,language_model_only,max_num_seqs=4,enable_prefix_caching  hf:QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4
+#
 # Context/multihop variant of the above: 131072 cap (the ~140k-token KV pool holds one 128k
 # request; context_256k is skipped by its min_vram_gb guard and this cap).
 # RESULT 2026-09-24: context 8k-128k 5/5 (context_128k 71 s), multihop 5/5, context_256k skipped.

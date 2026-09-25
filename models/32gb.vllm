@@ -1,3 +1,7 @@
+# ⚠ NOT RUN ON THIS RIG (2026-09-25) — this rig doesn't have a 32 GB card, and vLLM has moved
+# to a dedicated host anyway (the RTX 5060 Ti box; see how-to-vllm.md). Speculative/aspirational
+# tier, predates the vllm-gguf-plugin migration too — kept as historical reference only.
+#
 # Single 32 GB GPU model set — RTX 6000 Ada / A6000 / A100 40 GB / similar
 # Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<tokenizer-repo>]
 #

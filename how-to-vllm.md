@@ -178,22 +178,29 @@ is `Qwen3.8-27B` — architecturally identical to this repo's own extensively-te
 (Gated DeltaNet hybrid, confirmed via `config.json`: `Qwen3_5ForConditionalGeneration` /
 `qwen3_5`), but tried here in vLLM-native quant formats instead of GGUF. For 2×16 GB:
 
-- **Try first**: `QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4` (20.6 GB, best VRAM headroom, `vllm`-
-  tagged, published eval results, native Blackwell NVFP4 acceleration).
-- **Second try** if quality disappoints: `unsloth/Qwen3.8-27B-NVFP4` (23.4 GB, but VL-capable —
-  carries unused vision-tower weight for a text-only coding use case).
+- **✅ CONFIRMED 2026-09-24/25, this was the right pick**: `QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4`
+  (20.6 GB, native Blackwell NVFP4 acceleration) — **27/28 effective coding pass, `python_hashmap`
+  passes despite 4-bit activations, ~32 tok/s, context clean through 128k.** `node_paratrooper`
+  (L6-full) borderline (1/7) — the same cross-GPU tensor-split fragility already confirmed on
+  this model's llama.cpp side, now confirmed on vLLM's `tp=2` too. Full writeup:
+  `reports/models-status-Sept-2026.md`'s dedicated vLLM section. `models/2x16gb.vllm` now has
+  the confirmed-working entry (`qwen3.8-27b:nvfp4-next`, dropped `enforce_eager`, added
+  `language_model_only` + `max_num_seqs=4`).
+- **Not tried, no longer needed**: `unsloth/Qwen3.8-27B-NVFP4` (23.4 GB, VL-capable fallback) —
+  the primary pick worked, so this backup was never exercised.
 - Skip `Qwen/Qwen3.8-27B-FP8` (official, 30.9 GB) for this VRAM budget — leaves ~1 GB across the
   whole 32 GB, no real context room; that one wants a single 32 GB+ card instead.
 
-None of these are GGUF — plain `vllm serve <repo>` should work directly, no plugin needed (the
-GGUF plugin only matters for the GGUF path in §1-5). Full rationale, sizes, and the source of
-this lead (a Reddit thread) in `next-runs.md`'s "Reddit-sourced vLLM-native Qwen3.8-27B quant
-leads" section.
+None of these are GGUF — plain `vllm serve <repo>` works directly, no plugin needed (the GGUF
+plugin only matters for the GGUF path in §1-5). Full rationale, sizes, and the source of this
+lead (a Reddit thread) in `next-runs.md`'s "Reddit-sourced vLLM-native Qwen3.8-27B quant leads"
+section.
 
-**Worth testing directly, not assuming**: multiple people in that thread claim vLLM flatly
-doesn't support GGUF and to not bother — contradicts this repo's own source-verified
-`vllm-gguf-plugin` finding from §1-5's setup. This box is the first opportunity to actually
-resolve that disagreement instead of trusting either side.
+**Resolved**: multiple people in that Reddit thread claimed vLLM flatly doesn't support GGUF —
+that claim was about GGUF specifically, and this confirmed result doesn't test that (NVFP4 is a
+different, non-GGUF loading path); this repo's own source-verified `vllm-gguf-plugin` finding
+from §1-5 remains the actual answer on the GGUF question, still not independently re-benchmarked
+here since the plugin migration.
 
 ## 6c. Model files for this box (added 2026-09-14)
 
@@ -214,9 +221,11 @@ the same 4-bit weights, plus repeated mentions of a "NInfer" proprietary runtime
 low-quality SEO content, not verified fact). Stuck with the QUASAR-QAT pick this section already
 named before that search, since it's independently corroborated at ~19.7-20.6 GB and was chosen
 for a documented reason (best VRAM headroom, `vllm`-tagged) rather than search-result noise.
-**Verify the repo/file actually exists and re-check its real size on huggingface.co before
-downloading** — don't treat the comment block in `2x16gb.vllm` as CONFIRMED the way the rest of
-this project's dated findings are.
+**Update 2026-09-24/25: it paid off — see the CONFIRMED result above.** The repo, size, and pick
+rationale all held up; the caution below is now historical (kept for context on how the pick was
+made, not because the result is still unverified): originally, verify the repo/file actually
+exists and re-check its real size on huggingface.co before downloading, since the comment block
+in `2x16gb.vllm` wasn't yet CONFIRMED the way the rest of this project's dated findings are.
 
 Also resolved in that same check: **`qwen3.8-flash-next` (already in `models/candidates.txt` for
 llama-server) is NOT a realistic vLLM target on this box at all**, regardless of how many 5060

@@ -41,3 +41,21 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # ~3.1 GB headroom), context beyond ~16k is UNTESTED — reduce max_ctx further if you see OOM.
 # Web/context/multihop/L6-stepped groups not yet run — coding-only profile so far.
 ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
+
+# ── ISTA-DASLab GSQ-RCO IQ3_XXS — smallest tier matching the IQ3_S profile ──────
+# CONFIRMED 2026-09-25, single RTX 3090 (24 GB, quality data portable — speed is not).
+# 10-task spot 9/10 at 31.1 tok/s, promoted to full 19-task: 18/19 at 31.2 tok/s (7.9k gen).
+# Same 9/10 spot-check score as the IQ3_S tier already in models/16gb.txt, at 10.1 GB instead
+# of 11.8 GB — a genuine fit for this tier (IQ3_S was deliberately kept in 16gb.txt, not here,
+# because it only leaves ~0.2 GB headroom on a real 12 GB card). FAILS: node_paratrooper
+# (L6-full, expected universal wall). python_hashmap (L5 precision canary) is BORDERLINE at
+# this tier — PASSED in the 10-task spot check, FAILED in the full 19-task run (same model,
+# same config; a context-size/request-sequence-dependent floating-point sensitivity, not a
+# flat capability result — treat this specific task as unreliable on this quant, not a clean
+# PASS). Qwen3.8:27b's Gated DeltaNet architecture gives an unusually small KV footprint
+# (~16 KB/token vs ~128 KB/token for standard dense), so the ~1.9 GB nominal headroom on a
+# real 12 GB card goes further than the "3 GB rule of thumb" at the top of this file implies —
+# untested how far, though. Requires f16 KV (same rule as base qwen3.8:27b) and llama-server
+# ≥ 2026-08-13 (qwen35.cpp support). See models/candidates.txt for the sibling IQ2_S tier
+# (REJECTED — python_hashmap fails cleanly there, the precision floor sits between the two).
+qwen3.8-27b-gsqrco-iq3xxs  Qwen3.8-27B-GSQ-RCO-IQ3_XXS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF

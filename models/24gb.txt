@@ -239,3 +239,37 @@ ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,
 # 6/6 PASS 8k-256k, including 256k on a single GPU (86-104 tok/s). Multihop: 3/5 (forward/
 # reverse/distractor PASS; chain_5 and cross_5 FAIL — same profile as ornith:1.5-35b).
 tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF
+
+# Ornith-1.0-35B (ornith-ai) — new sibling of ornith:1.5-35b, found via scout 2026-09-23.
+# CONFIRMED 2026-09-25, single RTX 3090 (24 GB): 8/10 spot check at 131.3 tok/s. FAILS:
+# csv_nordic_property, python_hashmap (both TESTS_STILL_FAIL, L3/L5 capability gaps).
+# 🏆 node_paratrooper (L6-full): PASS, 3/3 confirmed across the spot check + 2 independent
+#   repeat runs, with byte-identical MD5 output across the two kept workdirs — genuine
+#   determinism, not a fluke. THIRD model ever to pass this task (after qwen3.8:27b's
+#   file-specific original and qwen3.8-flash-next's general pass) — and unlike either of
+#   those, this is a standard Q4_K_M GGUF with no Ampere+ requirement and no pinned-binary
+#   dependency. node_para_core (L6 stepped step 1) ALSO PASS.
+# 🦄 L6 stepped (CONFIRMED 2026-09-25, --num-ctx 32768): 4/4 PASS at ~131 tok/s avg — core
+#   134.6, turret 130.4, entities 130.4, combat 127.1 tok/s. Completes the FULL stepped chain
+#   AND the from-scratch task — SECOND model ever to do both simultaneously (after
+#   qwen3.8:27b), and at ~3x qwen3.8:27b's speed (131 vs 45 tok/s) with none of its file-
+#   specificity or GPU-split fragility (untested at 2×/3×24 GB — the qwen3.8:27b precedent
+#   means this should NOT be assumed to hold at other GPU splits without re-verification).
+# Web (CONFIRMED 2026-09-25): 3/4 — bash_preflight, node_express_validation, python_fastapi_
+#   endpoint (a standard-instruction-MoE PASS, consistent with the Qwen3.6-A3B-lineage pattern)
+#   all PASS; python_config_loader FAILS (NO_BLOCKS, format compliance).
+# Context/multihop groups NOT YET RUN — this profile is coding+web+L6 only.
+# MULTI-GPU node_paratrooper re-verification (CONFIRMED 2026-09-25) — EXACT same pattern as
+# qwen3.8:27b's own investigation: 2-GPU explicit tensor_split=1|1 FLIPS TO FAIL
+# (TESTS_STILL_FAIL, 149.3 tok/s, 35.7s); 3-GPU explicit tensor_split=1|1|1 PASSES (13.0 tok/s,
+# 343.9s — much slower, matching qwen3.8:27b's own 3-GPU slowdown). Diffed all 4 kept workdirs:
+# the two single-GPU passes are BYTE-IDENTICAL (MD5 0bbcb341...) confirming determinism; the
+# 2-GPU FAIL and 3-GPU PASS each produce GENUINELY DIFFERENT code (different MD5s from each
+# other and from single-GPU) that happens to be correct in one case and not the other — the
+# same root cause already confirmed for qwen3.8:27b: cross-GPU floating-point reduction-order
+# non-determinism causes real token-level divergence at greedy decoding, and whether that
+# divergence lands on broken vs. equally-valid logic is effectively probabilistic per-config,
+# not a property of "N-way splits are safe/unsafe." **Use single-GPU to reliably reproduce the
+# L6-full pass; do not trust 2-GPU tensor_split=1|1 for this task.** Config variants
+# (ornith:1.0-35b-2gpu, -3gpu) kept in models/candidates.txt for reference.
+ornith:1.0-35b  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:ornith-ai/Ornith-1.0-35B-GGUF

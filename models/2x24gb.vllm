@@ -1,3 +1,10 @@
+# ⚠ NOT RUN ON THIS RIG ANYMORE (2026-09-25) — vLLM moved to a dedicated host (the RTX 5060 Ti
+# box; see how-to-vllm.md and models/16gb.vllm / 2x16gb.vllm for its current, active playbook).
+# This file also predates the vllm-gguf-plugin migration (old --load-format gguf /
+# --quantization gguf patched-flag convention, superseded 2026-09-06) — doubly obsolete. Kept as
+# historical reference only; the cpatonn AWQ artifact it references was deleted from this rig's
+# ~/.cache/huggingface (2026-09-25 cleanup) since vLLM isn't run here anymore.
+#
 # Dual 24 GB GPU model set — 2× RTX 3090 / 2× RTX 4090 / similar (48 GB total, tp=2)
 # Format: <short-name>  [<gguf-file>]  [<params>]  [hf:<tokenizer-repo>]
 #
