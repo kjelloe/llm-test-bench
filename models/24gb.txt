@@ -96,6 +96,11 @@ qwen3-coder:30b  Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # FAIL: java_word_freq (L3, quick 4.38s fail — Java gap), node_paratrooper (L6 universal wall).
 # node_para_core PASS (L3 spot). f16 KV. max_ctx=32768. No Ampere+ required.
 # MULTIHOP: chain_5 PASS (91 tok/s); cross_5 PASS (98 tok/s). 5/5 multihop (confirmed 2026-08-15).
+# SPEED NOTE (2026-09-25): spot-checked on llama.cpp commit d81aef199 (395 commits past the
+#   qwen3.8-flash-next pin point, same rebuild that regressed that model) — 9/10 (capability
+#   unchanged), but ~103-117 tok/s here vs the ~129.3 tok/s baseline above, despite a commit in
+#   that range (c350a40bb) specifically targeting this model's flash-attention shape. One data
+#   point; worth rechecking whether it's this specific commit range or general binary drift.
 gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
 # glm4.7-flash: MXFP4 MOE (~16 GB); CONFIRMED 2026-06-26 full 33-task run: 29/33, 110.9 tok/s avg.
 # Passes ALL L1–L4 tasks (on prior binary). Fails python_dijkstra (L5), python_hashmap (L5), node_paratrooper (L6-full), context_256k (capability gap — wrong answer after 476s, not OOM).
@@ -258,7 +263,14 @@ tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=
 # Web (CONFIRMED 2026-09-25): 3/4 — bash_preflight, node_express_validation, python_fastapi_
 #   endpoint (a standard-instruction-MoE PASS, consistent with the Qwen3.6-A3B-lineage pattern)
 #   all PASS; python_config_loader FAILS (NO_BLOCKS, format compliance).
-# Context/multihop groups NOT YET RUN — this profile is coding+web+L6 only.
+# CONTEXT + MULTIHOP (CONFIRMED 2026-09-25, single RTX 3090/GPU2): context 3/3 PASS at the
+#   current max_ctx=32768 cap (8k *115.0 7.2s, 16k *118.6 13.7s, 32k *82.1 27.8s); 64k/128k/256k
+#   SKIPPED_CTX — this is the config's conservative max_ctx, NOT a confirmed architectural limit
+#   (other single-GPU models this size support up to 131072-262144; untested here whether this
+#   one would too — bump max_ctx and retest if that headroom is ever needed).
+#   MULTIHOP: 5/5 PASS — forward *106.7 (28.8s), reverse *105.3 (28.9s), distractor_notes *114.1
+#   (29.1s), multihop_chain_5 *90.2 (2.0s), multihop_cross_5 *103.2 (1.6s). Full 5/5 is a strong
+#   result — many models score 3/5 or 4/5. GPU2 max 68°C.
 # MULTI-GPU node_paratrooper re-verification (CONFIRMED 2026-09-25) — EXACT same pattern as
 # qwen3.8:27b's own investigation: 2-GPU explicit tensor_split=1|1 FLIPS TO FAIL
 # (TESTS_STILL_FAIL, 149.3 tok/s, 35.7s); 3-GPU explicit tensor_split=1|1|1 PASSES (13.0 tok/s,

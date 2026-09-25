@@ -1232,7 +1232,16 @@
 #   until the regression is understood. Do not assume "mainline is newer" == "mainline is
 #   faster" for qwen4exp going forward — verify the 3-task speed comparison after every rebuild
 #   before switching. GGML_CUDA_GRAPH_OPT=1 specifically: do not enable for this model/topology.
-qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b, 2026-09-04, is a CONFIRMED REGRESSION for this model — see comment block above; verify speed after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
+# ⚠ SECOND, WORSE REGRESSION CONFIRMED 2026-09-25 at commit `d81aef199` (395 commits past
+#   `67a17c17c`, origin/master that day). Routine "verify before trusting" rebuild, not chasing a
+#   specific lever this time. python_hashmap 23.0→4.4 tok/s (-81%), python_expr_eval 23.2→4.8
+#   tok/s (-79%) — worse than the 49c0dc82b regression above (-55%/-27% on the same two tasks).
+#   python_safe_div ~19-24→15.5 tok/s (roughly in range). Capability held (3/3 PASS). Not
+#   bisected. Rebuilt back to 67a17c17c immediately after to restore the correct production
+#   binary. PIN REAFFIRMED, more strongly: two independent later commits (82 and 395 out) have
+#   now both regressed this model; zero rebuilds since the pin have improved it. Full detail:
+#   CLAUDE.md's qwen3.8-flash-next entry and reports/models-status-Sept-2026.md's speed table.
+qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b/d81aef199 are CONFIRMED REGRESSIONS for this model, the second worse than the first — see comment block above; verify speed after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
 
 # ik_llama.cpp (ikawrakow fork) variant — CLI conventions differ from mainline: `--fit` is a bare
 # boolean here (mainline takes `--fit on`), so `fit=on` errors with "unknown argument: on" — use

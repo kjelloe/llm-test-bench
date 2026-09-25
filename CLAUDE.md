@@ -1776,6 +1776,23 @@ When asked to implement features:
     every rebuild before switching. Current recommendation: pin to commit `67a17c17c` for
     production use of this model; do not enable `GGML_CUDA_GRAPH_OPT=1` for it.** Full detail in
     `next-runs.md` and `models/candidates.txt`.
+    **⚠ SECOND, WORSE REGRESSION CONFIRMED 2026-09-25** at commit `d81aef199` (395 commits past
+    `67a17c17c`, current `origin/master` as of that date). Rebuilt as part of a routine "verify
+    before trusting" check, not chasing a specific lever this time. `python_hashmap`:
+    23.0 → **4.4 tok/s (-81%)**. `python_expr_eval`: 23.2 → **4.8 tok/s (-79%)**. `python_safe_div`:
+    ~19-24 → 15.5 tok/s (roughly in range, the short task again least affected — same pattern as
+    both prior rebuilds). Capability held (all 3 still PASS). This is a substantially worse
+    regression than the 2026-09-04 one (-55%/-27%) on the same two tasks — whatever degraded the
+    per-token decode rate for this architecture has gotten worse over these 395 commits, not
+    better, not bisected. **The pin to `67a17c17c` is reaffirmed, more strongly than before** —
+    two independent later commits, 82 and 395 commits out respectively, have both regressed this
+    model, zero rebuilds since the pin have improved on it. Rebuilt back to `67a17c17c` afterward
+    to restore the correct production binary on this rig (do not leave `origin/master` checked
+    out for this model's use). A same-day spot check of `gemma4:26b-qat` on the regressed
+    `d81aef199` build also showed a real, if smaller, slowdown (~110 vs the documented ~129 tok/s
+    baseline) despite a commit in that range (`c350a40bb`) specifically targeting that model's
+    flash-attention shape — possibly a broader regression in this commit range, not isolated to
+    qwen4exp, though only one data point so far outside the qwen3.8-flash-next 3-task comparison.
   - **llama.cpp-adaptive-kv-streaming fork** (`RaymondHuang210129/llama.cpp-adaptive-kv-streaming`,
     investigated 2026-09-01/02): adds `--kv-stream-stage-mib` to `llama-server`, streaming the KV
     cache between pinned host memory and a bounded CUDA pool for long contexts on GPUs too small
