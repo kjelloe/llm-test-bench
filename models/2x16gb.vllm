@@ -44,6 +44,8 @@
 # auto-picks the bf16-activation kernel over the FP4-activation one; node_paratrooper the only
 # fail). This entry is kept as that documented baseline; see "Step-6 tuning" below for the
 # optimized and CONFIRMED-final serving config (qwen3.8-27b:nvfp4-next, 10/10 spot).
+# Full 28-task + 128k-context results in statistics.sh format, with an export bundle for sharing:
+#   docs/reports/qwen3.8-27b-nvfp4-2x-rtx5060ti-vllm.md (26/28 recorded, 27/28 after the .NET 9 rerun).
 # enforce_eager was a first-run precaution; CUDA graphs are fine on this model (Step 6 of
 # ~/GIT/llm-service-provider/upgrade-dual-5060.md). kv_cache_dtype intentionally NOT set to fp8:
 # qwen3.6:27b/qwen3.8:27b need f16-equivalent KV precision or python_hashmap silently drops the

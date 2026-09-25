@@ -1,0 +1,2543 @@
+{
+  "format": "ollama-code-bench-export",
+  "version": 2,
+  "instance_id": "07ad1fba",
+  "exported_at": "2026-09-25T10:07:32.577675+00:00",
+  "source_hardware": {
+    "gpu": "NVIDIA GeForce RTX 5060 Ti 15GB + NVIDIA GeForce RTX 5060 Ti 15GB",
+    "gpu_slug": "2x_RTX_5060_Ti_31GB",
+    "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor (16 logical cores)",
+    "ram_total_gb": 92.0,
+    "total_vram_gb": 31.857421875,
+    "platform": "Linux 6.8.0-139-generic",
+    "cuda_toolkit": "13.2",
+    "llama_server_version": "0.30.1rc1.dev68+gbbd7c24d6.precompiled",
+    "server_name": "vllm"
+  },
+  "run_count": 3,
+  "total_task_results": 40,
+  "distinct_models": [
+    "qwen3.8-27b:nvfp4-next",
+    "qwen3.8-27b:nvfp4-next-128k"
+  ],
+  "runs": [
+    {
+      "filename": "results-20260924-121237.json",
+      "hardware": {
+        "gpu": [
+          {
+            "name": "NVIDIA GeForce RTX 5060 Ti",
+            "vram_total_mb": 16311,
+            "vram_free_mb": 15849,
+            "driver": "595.91.07",
+            "temp_c": 39,
+            "power_draw_w": 3.4,
+            "power_limit_w": 180.0,
+            "power_limit_max_w": 198.0,
+            "clock_mhz": 172,
+            "clock_max_mhz": 3090,
+            "compute_cap": 12.0
+          },
+          {
+            "name": "NVIDIA GeForce RTX 5060 Ti",
+            "vram_total_mb": 16311,
+            "vram_free_mb": 15849,
+            "driver": "595.91.07",
+            "temp_c": 37,
+            "power_draw_w": 4.7,
+            "power_limit_w": 180.0,
+            "power_limit_max_w": 206.0,
+            "clock_mhz": 180,
+            "clock_max_mhz": 3090,
+            "compute_cap": 12.0
+          }
+        ],
+        "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor (16 logical cores)",
+        "ram_total_gb": 92.0,
+        "platform": "Linux 6.8.0-139-generic",
+        "cuda_toolkit": "13.2",
+        "ollama_version": "",
+        "models_storage": {
+          "device": "nvme0n",
+          "transport": "nvme"
+        },
+        "llama_server_version": "0.30.1rc1.dev68+gbbd7c24d6.precompiled",
+        "server_name": "vllm"
+      },
+      "results": [
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "csv_nordic_property",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE solution.py\n\"\"\"\nNorwegian residential property transaction data processor.\nSource: SSB 06726 - Omsetning av boligeiendommer med bygning i f\n…\nas f:\n        for a in answers:\n            f.write(str(a) + \"\\n\")\n    transform(rows)\n    print(\"Done: answers.txt and output.csv written.\")\nEND_FILE",
+          "response_tail": "in(f'\"{col}\"' for col in out_cols) + \"\\n\")\n        # Write rows\n        for row in selected:\n            vals = [f'\"{row.get(col, \"\")}\"' for col in out_cols]\n            f.write(\";\".join(vals) + \"\\n\")\n\n\nif __name__ == \"__main__\":\n    header, rows = load_data()\n    answers = answer_questions(rows)\n    with open(\"answers.txt\", \"w\", encoding=\"utf-8\") as f:\n        for a in answers:\n            f.write(str(a) + \"\\n\")\n    transform(rows)\n    print(\"Done: answers.txt and output.csv written.\")\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "solution.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 6429,
+            "eval_count": 2968,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 90904.8,
+            "total_duration_ms": 90904.8
+          },
+          "tok_per_s": 32.6,
+          "wall_s": 91.29,
+          "kv_cache": {
+            "vram_before_mb": 30552,
+            "vram_after_mb": 30792,
+            "delta_mb": 240,
+            "prompt_tokens": 6429,
+            "gen_tokens": 2968,
+            "total_tokens": 9397,
+            "kv_mb_per_1k_tokens": 25.5,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30552,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30788,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_slugify",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/slug.js\nexport function slugify(str) {\n  return str\n    .toLowerCase()\n    .replace(/'/g, '')\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/^-+|-+$/g, '');\n}\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "src/slug.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 643,
+            "eval_count": 67,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 2213.5,
+            "total_duration_ms": 2213.5
+          },
+          "tok_per_s": 30.3,
+          "wall_s": 2.4,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 643,
+            "gen_tokens": 67,
+            "total_tokens": 710,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 75
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30552,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 75
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_safe_div",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE calc.py\ndef safe_div(a: float, b: float) -> float:\n    \"\"\"Divide a by b. Must raise ValueError (not ZeroDivisionError) when b is 0.\"\"\"\n    if b == 0:\n        raise ValueError(\"Divisor cannot be zero\")\n    return a / b\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "calc.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 421,
+            "eval_count": 72,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 2260.9,
+            "total_duration_ms": 2260.9
+          },
+          "tok_per_s": 31.8,
+          "wall_s": 2.52,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 421,
+            "gen_tokens": 72,
+            "total_tokens": 493,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 30
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30552,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 30
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "dotnet_sas",
+          "baseline_failed": null,
+          "baseline_rc": null,
+          "edit_parse_ok": false,
+          "edit_policy_ok": false,
+          "tests_pass": false,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "",
+          "response_snippet": null,
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [],
+          "error_kind": "TOOL_ERROR",
+          "error_detail": "setup failed: \nWelcome to .NET 8.0!\n---------------------\nSDK Version: 8.0.131\n\n----------------\nInstalled an ASP.NET Core HTTPS development certificate.\nTo trust the certificate, view the instructions: https://aka.ms/dotnet-https-linux\n\n----------------\nWrite your first app: https://aka.ms/dotnet-hello-world\nFind out what's new: https://aka.ms/dotnet-whats-new\nExplore documentation: https://aka.ms/dotnet-docs\nReport issues and find source on GitHub: https://github.com/dotnet/core\nUse 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli\n--------------------------------------------------------------------------------------\n  Determining projects to restore...\n/usr/lib/dotnet/sdk/8.0.131/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets(166,5): error NETSDK1045: The current .NET SDK does not support targeting .NET 9.0.  Either target .NET 8.0 or lower, or use a version of the .NET SDK that supports .NET 9.0. Download the .NET SDK from https://aka.ms/dotnet/download [/tmp/bench_dotnet_sas_5y840hzv/src/MicroAzureSas/MicroAzureSas.csproj]\n/usr/lib/dotnet/sdk/8.0.131/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.TargetFrameworkInference.targets(166,5): error NETSDK1045: The current .NET SDK does not support targeting .NET 9.0.  Either target .NET 8.0 or lower, or use a version of the .NET SDK that supports .NET 9.0. Download the .NET SDK from https://aka.ms/dotnet/download [/tmp/bench_dotnet_sas_5y840hzv/tests/MicroAzureSasTests/MicroAzureSasTests.csproj]\n",
+          "metrics": {},
+          "tok_per_s": 0.0,
+          "wall_s": 0.58,
+          "kv_cache": null,
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_csv_parser",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/csv.js\nexport function parseCSV(text) {\n  const lines = text.trim().split('\\n');\n  return lines.map(line => {\n    const fields = [];\n  \n…\ni++;\n        } else {\n          current += char;\n          i++;\n        }\n      }\n    }\n\n    fields.push(current);\n    return fields;\n  });\n}\nEND_FILE",
+          "response_tail": "         i += 2;\n          } else {\n            inQuotes = false;\n            i++;\n          }\n        } else {\n          current += char;\n          i++;\n        }\n      } else {\n        if (char === '\"') {\n          inQuotes = true;\n          i++;\n        } else if (char === ',') {\n          fields.push(current);\n          current = '';\n          i++;\n        } else {\n          current += char;\n          i++;\n        }\n      }\n    }\n\n    fields.push(current);\n    return fields;\n  });\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/csv.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 660,
+            "eval_count": 263,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 7855.5,
+            "total_duration_ms": 7855.5
+          },
+          "tok_per_s": 33.5,
+          "wall_s": 7.95,
+          "kv_cache": {
+            "vram_before_mb": 30516,
+            "vram_after_mb": 30606,
+            "delta_mb": 90,
+            "prompt_tokens": 660,
+            "gen_tokens": 263,
+            "total_tokens": 923,
+            "kv_mb_per_1k_tokens": 97.5,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 24
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30606,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 24
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_lru_cache",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE lru_cache.py\nclass Node:\n    def __init__(self, key, value):\n        self.key = key\n        self.value = value\n        self.prev = None\n   \n…\n       if len(self.cache) > self.capacity:\n            lru = self.head.next\n            self._remove(lru)\n            del self.cache[lru.key]\nEND_FILE",
+          "response_tail": " self.cache[key]\n            self._remove(node)\n            self._insert_tail(node)\n            return node.value\n        return -1\n\n    def put(self, key: int, value: int) -> None:\n        if key in self.cache:\n            self._remove(self.cache[key])\n        node = Node(key, value)\n        self.cache[key] = node\n        self._insert_tail(node)\n        if len(self.cache) > self.capacity:\n            lru = self.head.next\n            self._remove(lru)\n            del self.cache[lru.key]\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "lru_cache.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1347,
+            "eval_count": 369,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 11286.1,
+            "total_duration_ms": 11286.1
+          },
+          "tok_per_s": 32.7,
+          "wall_s": 11.52,
+          "kv_cache": {
+            "vram_before_mb": 30606,
+            "vram_after_mb": 30634,
+            "delta_mb": 28,
+            "prompt_tokens": 1347,
+            "gen_tokens": 369,
+            "total_tokens": 1716,
+            "kv_mb_per_1k_tokens": 16.3,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 20
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30634,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 20
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_lfu_cache",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE lfu_cache.py\nfrom collections import defaultdict, OrderedDict\n\n\nclass LFUCache:\n    def __init__(self, capacity: int):\n        self.capacit\n…\nse)\n            del self.cache[evict_key]\n        self.freq_map[1][key] = None\n        self.cache[key] = [value, 1]\n        self.min_freq = 1\nEND_FILE",
+          "response_tail": "cache[key][0]\n\n    def put(self, key: int, value: int) -> None:\n        if self.capacity <= 0:\n            return\n        if key in self.cache:\n            self.cache[key][0] = value\n            self._promote(key)\n            return\n        if len(self.cache) >= self.capacity:\n            evict_key, _ = self.freq_map[self.min_freq].popitem(last=False)\n            del self.cache[evict_key]\n        self.freq_map[1][key] = None\n        self.cache[key] = [value, 1]\n        self.min_freq = 1\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "lfu_cache.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1670,
+            "eval_count": 369,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 11426.4,
+            "total_duration_ms": 11426.4
+          },
+          "tok_per_s": 32.3,
+          "wall_s": 11.66,
+          "kv_cache": {
+            "vram_before_mb": 30634,
+            "vram_after_mb": 30860,
+            "delta_mb": 226,
+            "prompt_tokens": 1670,
+            "gen_tokens": 369,
+            "total_tokens": 2039,
+            "kv_mb_per_1k_tokens": 110.8,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 18
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30860,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 18
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_minheap",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE minheap.py\nclass MinHeap:\n    def __init__(self):\n        self._data: list[int] = []\n\n    def push(self, val: int) -> None:\n        self._d\n…\nt)\n            i = smallest\n\n    def _swap(self, i: int, j: int) -> None:\n        self._data[i], self._data[j] = self._data[j], self._data[i]\nEND_FILE",
+          "response_tail": " + 1\n            right = 2 * i + 2\n            smallest = i\n            if left < n and self._data[left] < self._data[smallest]:\n                smallest = left\n            if right < n and self._data[right] < self._data[smallest]:\n                smallest = right\n            if smallest == i:\n                break\n            self._swap(i, smallest)\n            i = smallest\n\n    def _swap(self, i: int, j: int) -> None:\n        self._data[i], self._data[j] = self._data[j], self._data[i]\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "minheap.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1124,
+            "eval_count": 436,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 13122.1,
+            "total_duration_ms": 13122.1
+          },
+          "tok_per_s": 33.2,
+          "wall_s": 13.36,
+          "kv_cache": {
+            "vram_before_mb": 30860,
+            "vram_after_mb": 30860,
+            "delta_mb": 0,
+            "prompt_tokens": 1124,
+            "gen_tokens": 436,
+            "total_tokens": 1560,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 60
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30860,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 60
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_multifile_rename",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE inventory.py\nfrom product import Product\n\n\ndef total_value(products: list[Product]) -> float:\n    \"\"\"Return total inventory value in dollar\n…\n    totals: dict[str, float] = {}\n    for p in products:\n        totals[p.category] = totals.get(p.category, 0.0) + p.price\n    return totals\nEND_FILE",
+          "response_tail": "s: list[Product]) -> list[str]:\n    \"\"\"Return one formatted line per product: 'Name: $X.XX'.\"\"\"\n    lines = []\n    for p in products:\n        dollars = p.price\n        lines.append(f\"{p.name}: ${dollars:.2f}\")\n    return lines\n\n\ndef category_summary(products: list[Product]) -> dict[str, float]:\n    \"\"\"Return total value per category in dollars.\"\"\"\n    totals: dict[str, float] = {}\n    for p in products:\n        totals[p.category] = totals.get(p.category, 0.0) + p.price\n    return totals\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "inventory.py",
+            "reports.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 16384,
+            "prompt_eval_count": 1195,
+            "eval_count": 298,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 9172.0,
+            "total_duration_ms": 9172.0
+          },
+          "tok_per_s": 32.5,
+          "wall_s": 9.44,
+          "kv_cache": {
+            "vram_before_mb": 30404,
+            "vram_after_mb": 30464,
+            "delta_mb": 60,
+            "prompt_tokens": 1195,
+            "gen_tokens": 298,
+            "total_tokens": 1493,
+            "kv_mb_per_1k_tokens": 40.2,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 20
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30464,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 20
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_memoize_bug",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/memoize.js\nexport function memoize(fn) {\n  const cache = new Map();\n  return function (...args) {\n    const key = JSON.stringify(args);\n…\n    if (cache.has(key)) return cache.get(key);\n    const result = fn.apply(this, args);\n    cache.set(key, result);\n    return result;\n  };\n}\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "src/memoize.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 911,
+            "eval_count": 86,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 2897.8,
+            "total_duration_ms": 2897.8
+          },
+          "tok_per_s": 29.7,
+          "wall_s": 2.99,
+          "kv_cache": {
+            "vram_before_mb": 30464,
+            "vram_after_mb": 30468,
+            "delta_mb": 4,
+            "prompt_tokens": 911,
+            "gen_tokens": 86,
+            "total_tokens": 997,
+            "kv_mb_per_1k_tokens": 4.0,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 13
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30468,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 13
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_ledger_bug",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE ledger.py\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass Ledger:\n    def __init__(self):\n        self.transactions = []\n\n    def tran\n…\n )\n        from_acc.balance -= amount\n        to_acc.balance += amount\n        self.transactions.append((from_acc.name, to_acc.name, amount))\nEND_FILE",
+          "response_tail": "LE ledger.py\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass Ledger:\n    def __init__(self):\n        self.transactions = []\n\n    def transfer(self, from_acc, to_acc, amount):\n        if from_acc.balance < amount:\n            raise InsufficientFunds(\n                f\"{from_acc.name} has {from_acc.balance}, cannot transfer {amount}\"\n            )\n        from_acc.balance -= amount\n        to_acc.balance += amount\n        self.transactions.append((from_acc.name, to_acc.name, amount))\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "ledger.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 883,
+            "eval_count": 120,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 3871.7,
+            "total_duration_ms": 3871.7
+          },
+          "tok_per_s": 31.0,
+          "wall_s": 4.1,
+          "kv_cache": {
+            "vram_before_mb": 30468,
+            "vram_after_mb": 30476,
+            "delta_mb": 8,
+            "prompt_tokens": 883,
+            "gen_tokens": 120,
+            "total_tokens": 1003,
+            "kv_mb_per_1k_tokens": 8.0,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 67
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30476,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 67
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_expr_eval",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "I need to analyze the problem. The issue is that the `expr` and `term` methods have their operator handling swapped.\n\nLooking at the current code:\n- `\n…\nate(expression: str) -> int:\n    \"\"\"Evaluate an integer arithmetic expression and return the result.\"\"\"\n    return Parser(expression).parse()\nEND_FILE",
+          "response_tail": "\":\n            return self.lex.consume()[1]\n        if tok == (\"OP\", \"(\"):\n            self.lex.consume()\n            val = self.expr()\n            if self.lex.peek() != (\"OP\", \")\"):\n                raise ValueError(\"Expected ')'\")\n            self.lex.consume()\n            return val\n        raise ValueError(f\"Unexpected token: {tok}\")\n\n\ndef evaluate(expression: str) -> int:\n    \"\"\"Evaluate an integer arithmetic expression and return the result.\"\"\"\n    return Parser(expression).parse()\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "expr_eval.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 1649,
+            "eval_count": 872,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 26149.3,
+            "total_duration_ms": 26149.3
+          },
+          "tok_per_s": 33.3,
+          "wall_s": 26.39,
+          "kv_cache": {
+            "vram_before_mb": 30516,
+            "vram_after_mb": 30792,
+            "delta_mb": 276,
+            "prompt_tokens": 1649,
+            "gen_tokens": 872,
+            "total_tokens": 2521,
+            "kv_mb_per_1k_tokens": 109.5,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_dijkstra",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE dijkstra.py\nimport heapq\n\n\ndef dijkstra(\n    graph: dict[str, list[tuple[str, int]]],\n    start: str,\n) -> tuple[dict[str, int], dict[str, \n…\n    node: str | None = end\n    while node is not None:\n        path.append(node)\n        node = prev[node]\n    path.reverse()\n    return path\nEND_FILE",
+          "response_tail": "\n    graph: dict[str, list[tuple[str, int]]],\n    start: str,\n    end: str,\n) -> list[str] | None:\n    \"\"\"\n    Return the node list of the shortest path from start to end,\n    inclusive of both endpoints, or None if end is unreachable.\n    \"\"\"\n    _, prev = dijkstra(graph, start)\n    if end not in prev:\n        return None\n    path: list[str] = []\n    node: str | None = end\n    while node is not None:\n        path.append(node)\n        node = prev[node]\n    path.reverse()\n    return path\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "dijkstra.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1594,
+            "eval_count": 462,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 14172.9,
+            "total_duration_ms": 14172.9
+          },
+          "tok_per_s": 32.6,
+          "wall_s": 14.41,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1594,
+            "gen_tokens": 462,
+            "total_tokens": 2056,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_hashmap",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "I need to fix the HashMap's delete method to use tombstones instead of clearing slots to _EMPTY, which breaks linear probing chains.\n\nBEGIN_FILE hashm\n…\ns__(self, key: int) -> bool:\n        try:\n            self.get(key)\n            return True\n        except KeyError:\n            return False\nEND_FILE",
+          "response_tail": "_slots[i]\n            if slot is _EMPTY:\n                raise KeyError(key)\n            if slot is not _TOMBSTONE and slot[0] == key:\n                self._slots[i] = _TOMBSTONE\n                self._size -= 1\n                return\n            i = (i + 1) % self._CAPACITY\n\n    def __len__(self) -> int:\n        return self._size\n\n    def __contains__(self, key: int) -> bool:\n        try:\n            self.get(key)\n            return True\n        except KeyError:\n            return False\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "hashmap.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1580,
+            "eval_count": 581,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 17636.1,
+            "total_duration_ms": 17636.1
+          },
+          "tok_per_s": 32.9,
+          "wall_s": 17.87,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1580,
+            "gen_tokens": 581,
+            "total_tokens": 2161,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_tokenizer",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE tokenizer.py\n\"\"\"\nSimple string tokenizer using an explicit state machine.\n\nToken types:\n  STRING  — a double-quoted string, supporting esca\n…\npend((\"WORD\", buf))\n    elif state == \"STRING\":\n        tokens.append((\"STRING\", buf))  # unterminated — emit what we have\n\n    return tokens\nEND_FILE",
+          "response_tail": "     elif ch.isdigit():\n                    state = \"NUMBER\"\n                    buf = ch\n                elif ch not in (\" \", \"\\t\", \"\\n\"):\n                    tokens.append((\"UNKNOWN\", ch))\n\n    # flush any in-progress token\n    if state == \"NUMBER\" and buf:\n        tokens.append((\"NUMBER\", buf))\n    elif state == \"WORD\" and buf:\n        tokens.append((\"WORD\", buf))\n    elif state == \"STRING\":\n        tokens.append((\"STRING\", buf))  # unterminated — emit what we have\n\n    return tokens\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "tokenizer.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1508,
+            "eval_count": 687,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 20680.5,
+            "total_duration_ms": 20680.5
+          },
+          "tok_per_s": 33.2,
+          "wall_s": 20.92,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1508,
+            "gen_tokens": 687,
+            "total_tokens": 2195,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 23
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 23
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_debounce",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/debounce.js\nexport function debounce(fn, delay) {\n  let timer;\n  return function (...args) {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), delay);\n  };\n}\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "src/debounce.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 971,
+            "eval_count": 55,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 2032.6,
+            "total_duration_ms": 2032.6
+          },
+          "tok_per_s": 27.1,
+          "wall_s": 3.44,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 971,
+            "gen_tokens": 55,
+            "total_tokens": 1026,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 24
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 24
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_merge_intervals",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE merge_intervals.py\ndef merge_intervals(intervals):\n    if not intervals:\n        return []\n    \n    # Sort intervals by start time\n    sort\n…\nse:\n            # No overlap, add current interval as a new merged interval\n            merged.append(current)\n            \n    return merged\nEND_FILE",
+          "response_tail": "  merged = [sorted_intervals[0]]\n    \n    for current in sorted_intervals[1:]:\n        last = merged[-1]\n        # If current interval overlaps with the last merged interval\n        if current[0] <= last[1]:\n            # Update the end of the last merged interval if current extends it\n            merged[-1][1] = max(last[1], current[1])\n        else:\n            # No overlap, add current interval as a new merged interval\n            merged.append(current)\n            \n    return merged\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "merge_intervals.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 707,
+            "eval_count": 178,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 5456.5,
+            "total_duration_ms": 5456.5
+          },
+          "tok_per_s": 32.6,
+          "wall_s": 5.72,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 707,
+            "gen_tokens": 178,
+            "total_tokens": 885,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 76
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 76
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "awk_csv_stats",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE stats.awk\n# Compute per-region sales totals from a comma-separated CSV.\n# Input columns: date,region,amount  (header on row 1)\n# Output: on\n…\necimal places)\nBEGIN {\n    FS = \",\"\n}\nNR > 1 {\n    totals[$2] += $3\n}\nEND {\n    for (r in totals)\n        printf \"%s: %.2f\\n\", r, totals[r]\n}\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "stats.awk"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 711,
+            "eval_count": 115,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 3627.4,
+            "total_duration_ms": 3627.4
+          },
+          "tok_per_s": 31.7,
+          "wall_s": 3.88,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 711,
+            "gen_tokens": 115,
+            "total_tokens": 826,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 21
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 21
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "java_word_freq",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE WordFreq.java\nimport java.util.*;\n\npublic class WordFreq {\n    private final Map<String, Integer> counts = new HashMap<>();\n\n    /** Split \n…\n(int i = 0; i < Math.min(k, entries.size()); i++) {\n            result.add(entries.get(i).getKey());\n        }\n        return result;\n    }\n}\nEND_FILE",
+          "response_tail": "order is unspecified.\n     * Returns fewer than k entries if the vocabulary is smaller than k.\n     */\n    public List<String> topK(int k) {\n        List<Map.Entry<String, Integer>> entries = new ArrayList<>(counts.entrySet());\n        entries.sort((a, b) -> b.getValue() - a.getValue());\n        List<String> result = new ArrayList<>();\n        for (int i = 0; i < Math.min(k, entries.size()); i++) {\n            result.add(entries.get(i).getKey());\n        }\n        return result;\n    }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "WordFreq.java"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1394,
+            "eval_count": 272,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 8545.3,
+            "total_duration_ms": 8545.3
+          },
+          "tok_per_s": 31.8,
+          "wall_s": 9.36,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1394,
+            "gen_tokens": 272,
+            "total_tokens": 1666,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 22
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 22
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_config_loader",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE config.py\nimport os\nfrom dataclasses import dataclass\n\n\n@dataclass\nclass Config:\n    host: str\n    port: int\n    debug: bool\n    max_connec\n…\nfalse\").lower() == \"true\",\n        max_connections=int(_get_env(\"APP_MAX_CONN\", \"10\")),\n        app_name=_get_env(\"APP_NAME\", \"myapp\"),\n    )\nEND_FILE",
+          "response_tail": "tr:\n    value = os.environ.get(key)\n    if value is None:\n        return default\n    value = value.strip()\n    if value == \"\":\n        return default\n    return value\n\n\ndef load_config() -> Config:\n    return Config(\n        host=_get_env(\"APP_HOST\", \"localhost\"),\n        port=int(_get_env(\"APP_PORT\", \"8080\")),\n        debug=_get_env(\"APP_DEBUG\", \"false\").lower() == \"true\",\n        max_connections=int(_get_env(\"APP_MAX_CONN\", \"10\")),\n        app_name=_get_env(\"APP_NAME\", \"myapp\"),\n    )\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "config.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1064,
+            "eval_count": 208,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 6536.0,
+            "total_duration_ms": 6536.0
+          },
+          "tok_per_s": 31.8,
+          "wall_s": 6.77,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1064,
+            "gen_tokens": 208,
+            "total_tokens": 1272,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 51
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 51
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "bash_preflight",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE preflight.sh\n#!/usr/bin/env bash\n# preflight.sh — check required tools and environment variables.\n# Prints \"OK\" to stdout if all checks pas\n…\n \"MISSING_VAR: $var\" >&2\n        errors=$((errors + 1))\n    fi\ndone\n\nif [ \"$errors\" -eq 0 ]; then\n    echo \"OK\"\n    exit 0\nelse\n    exit 1\nfi\nEND_FILE",
+          "response_tail": ".\n\nREQUIRED_CMDS=(git python3 curl)\nREQUIRED_VARS=(DATABASE_URL APP_SECRET)\n\nerrors=0\n\nfor cmd in \"${REQUIRED_CMDS[@]}\"; do\n    if ! command -v \"$cmd\" >/dev/null 2>&1; then\n        echo \"MISSING_CMD: $cmd\" >&2\n        errors=$((errors + 1))\n    fi\ndone\n\nfor var in \"${REQUIRED_VARS[@]}\"; do\n    val=\"${!var:-}\"\n    if [ -z \"$val\" ]; then\n        echo \"MISSING_VAR: $var\" >&2\n        errors=$((errors + 1))\n    fi\ndone\n\nif [ \"$errors\" -eq 0 ]; then\n    echo \"OK\"\n    exit 0\nelse\n    exit 1\nfi\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "preflight.sh"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 939,
+            "eval_count": 238,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 7335.3,
+            "total_duration_ms": 7335.3
+          },
+          "tok_per_s": 32.4,
+          "wall_s": 7.58,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 939,
+            "gen_tokens": 238,
+            "total_tokens": 1177,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 20
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 20
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_express_validation",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/router.js\nimport { Router } from 'express';\n\nexport const itemsRouter = Router();\n\nconst items = [];\nlet nextId = 1;\n\nitemsRouter.post(\n…\nme, price };\n    items.push(item);\n    return res.status(201).json(item);\n});\n\nitemsRouter.get('/', (_req, res) => {\n    res.json(items);\n});\nEND_FILE",
+          "response_tail": ".status(400).json({ error: 'price is required' });\n    }\n\n    if (typeof price !== 'number' || Number.isNaN(price)) {\n        return res.status(400).json({ error: 'price must be a number' });\n    }\n\n    if (price <= 0) {\n        return res.status(400).json({ error: 'price must be positive' });\n    }\n\n    const item = { id: nextId++, name: trimmedName, price };\n    items.push(item);\n    return res.status(201).json(item);\n});\n\nitemsRouter.get('/', (_req, res) => {\n    res.json(items);\n});\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/router.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1478,
+            "eval_count": 305,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 9535.8,
+            "total_duration_ms": 9535.8
+          },
+          "tok_per_s": 32.0,
+          "wall_s": 10.39,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1478,
+            "gen_tokens": 305,
+            "total_tokens": 1783,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 21
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 21
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "python_fastapi_endpoint",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE products.py\nfrom fastapi import FastAPI, HTTPException\nfrom pydantic import BaseModel, Field, field_validator\n\napp = FastAPI()\n\n\nclass Prod\n…\nuct = _db.get(product_id)\n    if product is None:\n        raise HTTPException(status_code=404, detail=\"Product not found\")\n    return product\nEND_FILE",
+          "response_tail": "_id = 1\n\n\n@app.post(\"/products\", status_code=201)\ndef create_product(body: ProductIn) -> Product:\n    global _next_id\n    product = Product(id=_next_id, name=body.name.strip(), price=body.price)\n    _db[_next_id] = product\n    _next_id += 1\n    return product\n\n\n@app.get(\"/products/{product_id}\")\ndef get_product(product_id: int) -> Product:\n    product = _db.get(product_id)\n    if product is None:\n        raise HTTPException(status_code=404, detail=\"Product not found\")\n    return product\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "products.py"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1156,
+            "eval_count": 293,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 9048.5,
+            "total_duration_ms": 9048.5
+          },
+          "tok_per_s": 32.4,
+          "wall_s": 11.03,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1156,
+            "gen_tokens": 293,
+            "total_tokens": 1449,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 20
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 20
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_paratrooper",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": false,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/game.js\n// Paratrooper (1982) — headless game backend\n// Implement the Game class below.\n//\n// Coordinate system: (0,0) top-left, x rig\n…\np(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome\n    };\n  }\n}\nEND_FILE",
+          "response_tail": " {\n      tick: this.tickCount,\n      score: this.score,\n      turret: { ...this.turret },\n      landedLeft: this.landedLeft,\n      landedRight: this.landedRight,\n      helicopters: this.helicopters.map(h => ({ ...h })),\n      jets: this.jets.map(j => ({ ...j })),\n      paratroopers: this.paratroopers.map(p => ({ ...p })),\n      bombs: this.bombs.map(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome\n    };\n  }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/game.js"
+          ],
+          "error_kind": "TESTS_STILL_FAIL",
+          "error_detail": "✔ initial score is 0 (0.604141ms)\n✔ initial turret angle is 90 (straight up) (0.06907ms)\n✔ turret is at center-bottom (0.07089ms)\n✔ game starts not over (0.06086ms)\n✔ landedLeft and landedRight start at 0 (0.05494ms)\n✔ rotate_left decreases angle (0.235141ms)\n✔ rotate_right increases angle (0.06031ms)\n✔ angle clamps at 0 (0.0998ms)\n✔ angle clamps at 180 (0.184681ms)\n✔ firing costs 1 point (0.497871ms)\n✔ firing twice costs 2 points (0.09437ms)\n✔ fire creates a projectile (0.078361ms)\n✔ projectile at 90° travels upward (dy < 0) (0.05859ms)\n✔ projectile at 0° travels left (dx < 0) (0.05971ms)\n✔ projectile at 180° travels right (dx > 0) (0.03786ms)\n✔ projectile moves each tick (0.03078ms)\n✔ projectile disappears off the top of the screen (0.03362ms)\n✖ helicopter spawns after spawn interval (33.558165ms)\n✔ helicopter moves horizontally each tick (0.075741ms)\n✔ helicopter moving left-to-right exits and is removed (0.03981ms)\n✔ helicopter drops paratrooper at drop interval (0.04566ms)\n✔ paratrooper descends each tick while in chute state (0.03953ms)\n✔ paratrooper landing left of turret increments landedLeft (0.02712ms)\n✔ paratrooper landing right of turret increments landedRight (0.02079ms)\n✔ landed paratrooper state is landed (0.01871ms)\n✔ 4 paratroopers landing left ends game with overrun_left (0.03399ms)\n✔ 4 paratroopers landing right ends game with overrun_right (0.02902ms)\n✔ 3 left + 3 right does not end game (0.02237ms)\n✔ game does not continue ticking once over (0.02052ms)\n✔ shooting paratrooper body kills it and awards points (0.04025ms)\n✔ shooting parachute converts to freefall (0.036791ms)\n✔ freefall paratrooper descends faster than chute (0.02574ms)\n✖ freefall paratrooper landing kills landed paratroopers below (0.24469ms)\n✔ bomb falls downward each tick (0.07426ms)\n✔ bomb hitting turret ends game with bomb_hit (0.04045ms)\n✔ shooting bomb destroys it and awards points (0.047751ms)\n✔ killing helicopter awards scoreHelicopter points (0.0485ms)\n✔ getResult reflects current score (0.02734ms)\n✔ getState returns tick count (0.03036ms)\n✔ getState snapshot is a copy (mutation does not affect game) (0.08148ms)\nℹ tests 40\nℹ suites 0\nℹ pass 38\nℹ fail 2\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 69.582626\n\n✖ failing tests:\n\ntest at tests/game.test.js:163:1\n✖ helicopter spawns after spawn interval (33.558165ms)\n  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n  \n    assert.ok(g.helicopters.length > 0)\n  \n      at TestContext.<anonymous> (file:///tmp/bench_node_paratrooper_18yb55x9/tests/game.test.js:166:10)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: false,\n    expected: true,\n    operator: '==',\n    diff: 'simple'\n  }\n\ntest at tests/game.test.js:290:1\n✖ freefall paratrooper landing kills landed paratroopers below (0.24469ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  'landed' !== 'dead'\n  \n      at TestContext.<anonymous> (file:///tmp/bench_node_paratrooper_18yb55x9/tests/game.test.js:302:10)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 'landed',\n    expected: 'dead',\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n",
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 5464,
+            "eval_count": 4597,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 138750.9,
+            "total_duration_ms": 138750.9
+          },
+          "tok_per_s": 33.1,
+          "wall_s": 138.9,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 5464,
+            "gen_tokens": 4597,
+            "total_tokens": 10061,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_para_core",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/game.js\n// Paratrooper (1982) — headless game backend\n// STEP 1 OF 4: Core structure — constructor, state methods, tick counter.\n//\n// \n…\nrs],\n      bombs: [...this.bombs],\n      projectiles: [...this.projectiles],\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "response_tail": "eft,\n      landedRight: this.landedRight,\n    };\n  }\n\n  getState() {\n    return {\n      tick: this.tickCount,\n      score: this.score,\n      turret: { ...this.turret },\n      landedLeft: this.landedLeft,\n      landedRight: this.landedRight,\n      helicopters: [...this.helicopters],\n      jets: [...this.jets],\n      paratroopers: [...this.paratroopers],\n      bombs: [...this.bombs],\n      projectiles: [...this.projectiles],\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/game.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1856,
+            "eval_count": 1247,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 37246.6,
+            "total_duration_ms": 37246.6
+          },
+          "tok_per_s": 33.5,
+          "wall_s": 37.34,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 1856,
+            "gen_tokens": 1247,
+            "total_tokens": 3103,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_para_turret",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/game.js\n// Paratrooper (1982) — headless game backend\n// STEP 2 OF 4: Turret rotation, firing, and projectile physics.\n//\n// The constr\n…\n(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "response_tail": "{\n      tick: this.tickCount,\n      score: this.score,\n      turret: { ...this.turret },\n      landedLeft: this.landedLeft,\n      landedRight: this.landedRight,\n      helicopters: this.helicopters.map(h => ({ ...h })),\n      jets: this.jets.map(j => ({ ...j })),\n      paratroopers: this.paratroopers.map(p => ({ ...p })),\n      bombs: this.bombs.map(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/game.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 3488,
+            "eval_count": 1761,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 53320.9,
+            "total_duration_ms": 53320.9
+          },
+          "tok_per_s": 33.0,
+          "wall_s": 53.42,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 3488,
+            "gen_tokens": 1761,
+            "total_tokens": 5249,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_para_entities",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/game.js\n// Paratrooper (1982) — headless game backend\n// STEP 3 OF 4: Helicopters, paratroopers, and overrun conditions.\n//\n// Steps 1-\n…\n(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "response_tail": "{\n      tick: this.tickCount,\n      score: this.score,\n      turret: { ...this.turret },\n      landedLeft: this.landedLeft,\n      landedRight: this.landedRight,\n      helicopters: this.helicopters.map(h => ({ ...h })),\n      jets: this.jets.map(j => ({ ...j })),\n      paratroopers: this.paratroopers.map(p => ({ ...p })),\n      bombs: this.bombs.map(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/game.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 5111,
+            "eval_count": 2672,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 81249.6,
+            "total_duration_ms": 81249.6
+          },
+          "tok_per_s": 32.9,
+          "wall_s": 81.38,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 5111,
+            "gen_tokens": 2672,
+            "total_tokens": 7783,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "node_para_combat",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/game.js\n// Paratrooper (1982) — headless game backend\n// STEP 4 OF 4: Jets, bombs, and collision detection.\n//\n// Steps 1-3 are already\n…\n(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "response_tail": "{\n      tick: this.tickCount,\n      score: this.score,\n      turret: { ...this.turret },\n      landedLeft: this.landedLeft,\n      landedRight: this.landedRight,\n      helicopters: this.helicopters.map(h => ({ ...h })),\n      jets: this.jets.map(j => ({ ...j })),\n      paratroopers: this.paratroopers.map(p => ({ ...p })),\n      bombs: this.bombs.map(b => ({ ...b })),\n      projectiles: this.projectiles.map(p => ({ ...p })),\n      over: this.over,\n      outcome: this.outcome,\n    };\n  }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/game.js"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 16384,
+            "prompt_eval_count": 7379,
+            "eval_count": 3916,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 119984.0,
+            "total_duration_ms": 119984.0
+          },
+          "tok_per_s": 32.6,
+          "wall_s": 120.12,
+          "kv_cache": {
+            "vram_before_mb": 30792,
+            "vram_after_mb": 30792,
+            "delta_mb": 0,
+            "prompt_tokens": 7379,
+            "gen_tokens": 3916,
+            "total_tokens": 11295,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30792,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        }
+      ]
+    },
+    {
+      "filename": "results-20260924-122813.json",
+      "hardware": {
+        "gpu": [
+          {
+            "name": "NVIDIA GeForce RTX 5060 Ti",
+            "vram_total_mb": 16311,
+            "vram_free_mb": 15849,
+            "driver": "595.91.07",
+            "temp_c": 52,
+            "power_draw_w": 52.2,
+            "power_limit_w": 180.0,
+            "power_limit_max_w": 198.0,
+            "clock_mhz": 2820,
+            "clock_max_mhz": 3090,
+            "compute_cap": 12.0
+          },
+          {
+            "name": "NVIDIA GeForce RTX 5060 Ti",
+            "vram_total_mb": 16311,
+            "vram_free_mb": 15849,
+            "driver": "595.91.07",
+            "temp_c": 47,
+            "power_draw_w": 43.8,
+            "power_limit_w": 180.0,
+            "power_limit_max_w": 206.0,
+            "clock_mhz": 2692,
+            "clock_max_mhz": 3090,
+            "compute_cap": 12.0
+          }
+        ],
+        "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor (16 logical cores)",
+        "ram_total_gb": 92.0,
+        "platform": "Linux 6.8.0-139-generic",
+        "cuda_toolkit": "13.2",
+        "ollama_version": "",
+        "models_storage": {
+          "device": "nvme0n",
+          "transport": "nvme"
+        },
+        "llama_server_version": "0.30.1rc1.dev68+gbbd7c24d6.precompiled",
+        "server_name": "vllm"
+      },
+      "results": [
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "context_8k",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-4412\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 7336,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 3812.3,
+            "total_duration_ms": 3812.3
+          },
+          "tok_per_s": 3.9,
+          "wall_s": 4.07,
+          "kv_cache": {
+            "vram_before_mb": 30552,
+            "vram_after_mb": 30788,
+            "delta_mb": 236,
+            "prompt_tokens": 7336,
+            "gen_tokens": 15,
+            "total_tokens": 7351,
+            "kv_mb_per_1k_tokens": 32.1,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30552,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30788,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "context_16k",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-7738\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 16384,
+            "prompt_eval_count": 14392,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 7275.0,
+            "total_duration_ms": 7275.0
+          },
+          "tok_per_s": 2.1,
+          "wall_s": 7.51,
+          "kv_cache": {
+            "vram_before_mb": 30552,
+            "vram_after_mb": 30788,
+            "delta_mb": 236,
+            "prompt_tokens": 14392,
+            "gen_tokens": 15,
+            "total_tokens": 14407,
+            "kv_mb_per_1k_tokens": 16.4,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30552,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30788,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "context_32k",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-2291\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 28455,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 15024.8,
+            "total_duration_ms": 15024.8
+          },
+          "tok_per_s": 1.0,
+          "wall_s": 15.25,
+          "kv_cache": {
+            "vram_before_mb": 30552,
+            "vram_after_mb": 30788,
+            "delta_mb": 236,
+            "prompt_tokens": 28455,
+            "gen_tokens": 15,
+            "total_tokens": 28470,
+            "kv_mb_per_1k_tokens": 8.3,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30552,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30788,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "context_64k",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-8856\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 65536,
+            "prompt_eval_count": 56722,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 33710.4,
+            "total_duration_ms": 33710.4
+          },
+          "tok_per_s": 0.4,
+          "wall_s": 33.97,
+          "kv_cache": {
+            "vram_before_mb": 30404,
+            "vram_after_mb": 30640,
+            "delta_mb": 236,
+            "prompt_tokens": 56722,
+            "gen_tokens": 15,
+            "total_tokens": 56737,
+            "kv_mb_per_1k_tokens": 4.2,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 13
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30640,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 13
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "multihop_forward",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "I need to find the other incident handled by K. Vasquez. The anchor incident is INCIDENT-2000. Let me search through the archive for the second K. Vas\n…\nsolution RC-5521 (the other one)\n\nThe other K. Vasquez incident is INCIDENT-4299 with resolution code RC-5521.\n\nBEGIN_FILE answer.txt\nRC-5521\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 28855,
+            "eval_count": 144,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 19265.0,
+            "total_duration_ms": 19265.0
+          },
+          "tok_per_s": 7.5,
+          "wall_s": 19.49,
+          "kv_cache": {
+            "vram_before_mb": 30640,
+            "vram_after_mb": 30640,
+            "delta_mb": 0,
+            "prompt_tokens": 28855,
+            "gen_tokens": 144,
+            "total_tokens": 28999,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30640,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "multihop_reverse",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-8847\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 28905,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 15260.2,
+            "total_duration_ms": 15260.2
+          },
+          "tok_per_s": 1.0,
+          "wall_s": 15.49,
+          "kv_cache": {
+            "vram_before_mb": 30640,
+            "vram_after_mb": 30640,
+            "delta_mb": 0,
+            "prompt_tokens": 28905,
+            "gen_tokens": 15,
+            "total_tokens": 28920,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 18
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30640,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 18
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "distractor_notes",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-3847\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 32768,
+            "prompt_eval_count": 28875,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 15246.9,
+            "total_duration_ms": 15246.9
+          },
+          "tok_per_s": 1.0,
+          "wall_s": 15.48,
+          "kv_cache": {
+            "vram_before_mb": 30640,
+            "vram_after_mb": 30640,
+            "delta_mb": 0,
+            "prompt_tokens": 28875,
+            "gen_tokens": 15,
+            "total_tokens": 28890,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 19
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30640,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 19
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "multihop_chain_5",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\n90\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 941,
+            "eval_count": 11,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 743.6,
+            "total_duration_ms": 743.6
+          },
+          "tok_per_s": 14.8,
+          "wall_s": 0.97,
+          "kv_cache": {
+            "vram_before_mb": 30640,
+            "vram_after_mb": 30644,
+            "delta_mb": 4,
+            "prompt_tokens": 941,
+            "gen_tokens": 11,
+            "total_tokens": 952,
+            "kv_mb_per_1k_tokens": 4.2,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 75
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30644,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 75
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "multihop_cross_5",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\noncall-emea-w-high@corp.example\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1034,
+            "eval_count": 19,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 1006.9,
+            "total_duration_ms": 1006.9
+          },
+          "tok_per_s": 18.9,
+          "wall_s": 1.23,
+          "kv_cache": {
+            "vram_before_mb": 30644,
+            "vram_after_mb": 30644,
+            "delta_mb": 0,
+            "prompt_tokens": 1034,
+            "gen_tokens": 19,
+            "total_tokens": 1053,
+            "kv_mb_per_1k_tokens": null,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 20
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30644,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 20
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "context_128k",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE answer.txt\nRC-4471\nEND_FILE",
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [
+            "answer.txt"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 131072,
+            "prompt_eval_count": 100534,
+            "eval_count": 15,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 70871.8,
+            "total_duration_ms": 70871.8
+          },
+          "tok_per_s": 0.2,
+          "wall_s": 71.1,
+          "kv_cache": {
+            "vram_before_mb": 30404,
+            "vram_after_mb": 30640,
+            "delta_mb": 236,
+            "prompt_tokens": 100534,
+            "gen_tokens": 15,
+            "total_tokens": 100549,
+            "kv_mb_per_1k_tokens": 2.3,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 18
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30640,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 18
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        },
+        {
+          "model": "qwen3.8-27b:nvfp4-next-128k",
+          "backend": "vllm",
+          "task": "context_256k",
+          "baseline_failed": null,
+          "baseline_rc": null,
+          "edit_parse_ok": false,
+          "edit_policy_ok": false,
+          "tests_pass": false,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "",
+          "response_snippet": null,
+          "response_tail": null,
+          "slow": false,
+          "edited_files": [],
+          "error_kind": "SKIPPED_VRAM",
+          "error_detail": "task requires 48 GB VRAM; hardware has 32 GB",
+          "metrics": {},
+          "tok_per_s": 0.0,
+          "wall_s": 0.0,
+          "kv_cache": null,
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30404,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": null
+          }
+        }
+      ]
+    },
+    {
+      "filename": "results-20260924-150814.json",
+      "hardware": {
+        "gpu": [
+          {
+            "name": "NVIDIA GeForce RTX 5060 Ti",
+            "vram_total_mb": 16311,
+            "vram_free_mb": 15849,
+            "driver": "595.91.07",
+            "temp_c": 46,
+            "power_draw_w": 18.3,
+            "power_limit_w": 180.0,
+            "power_limit_max_w": 198.0,
+            "clock_mhz": 2212,
+            "clock_max_mhz": 3090,
+            "compute_cap": 12.0
+          },
+          {
+            "name": "NVIDIA GeForce RTX 5060 Ti",
+            "vram_total_mb": 16311,
+            "vram_free_mb": 15849,
+            "driver": "595.91.07",
+            "temp_c": 41,
+            "power_draw_w": 20.6,
+            "power_limit_w": 180.0,
+            "power_limit_max_w": 206.0,
+            "clock_mhz": 2580,
+            "clock_max_mhz": 3090,
+            "compute_cap": 12.0
+          }
+        ],
+        "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor (16 logical cores)",
+        "ram_total_gb": 92.0,
+        "platform": "Linux 6.8.0-139-generic",
+        "cuda_toolkit": "13.2",
+        "ollama_version": "",
+        "models_storage": {
+          "device": "nvme0n",
+          "transport": "nvme"
+        },
+        "llama_server_version": "0.30.1rc1.dev68+gbbd7c24d6.precompiled",
+        "server_name": "vllm"
+      },
+      "results": [
+        {
+          "model": "qwen3.8-27b:nvfp4-next",
+          "backend": "vllm",
+          "task": "dotnet_sas",
+          "baseline_failed": true,
+          "baseline_rc": 1,
+          "edit_parse_ok": true,
+          "edit_policy_ok": true,
+          "tests_pass": true,
+          "response_truncated": false,
+          "ctx_truncated": false,
+          "finish_reason": "stop",
+          "response_snippet": "BEGIN_FILE src/MicroAzureSas/SasHelper.cs\nusing Azure.Storage.Blobs;\nusing Azure.Storage.Sas;\n\nnamespace MicroAzureSas;\n\npublic static class SasHelper\n…\ns in the past\n        };\n        builder.SetPermissions(BlobSasPermissions.Read);\n\n        return blobClient.GenerateSasUri(builder);\n    }\n}\nEND_FILE",
+          "response_tail": "ient(connectionString)\n            .GetBlobContainerClient(containerName)\n            .GetBlobClient(blobName);\n\n        var builder = new BlobSasBuilder\n        {\n            BlobContainerName = containerName,\n            BlobName = blobName,\n            Resource = \"b\",\n            ExpiresOn = DateTimeOffset.UtcNow.AddMinutes(60), // BUG: expiry is in the past\n        };\n        builder.SetPermissions(BlobSasPermissions.Read);\n\n        return blobClient.GenerateSasUri(builder);\n    }\n}\nEND_FILE",
+          "slow": false,
+          "edited_files": [
+            "src/MicroAzureSas/SasHelper.cs"
+          ],
+          "error_kind": null,
+          "error_detail": null,
+          "metrics": {
+            "num_ctx": 8192,
+            "prompt_eval_count": 1036,
+            "eval_count": 188,
+            "prompt_eval_duration_ms": 0.0,
+            "eval_duration_ms": 5905.7,
+            "total_duration_ms": 5905.7
+          },
+          "tok_per_s": 31.8,
+          "wall_s": 11.28,
+          "kv_cache": {
+            "vram_before_mb": 30516,
+            "vram_after_mb": 30624,
+            "delta_mb": 108,
+            "prompt_tokens": 1036,
+            "gen_tokens": 188,
+            "total_tokens": 1224,
+            "kv_mb_per_1k_tokens": 88.2,
+            "gpu_util_peak": 100,
+            "mem_bw_util_peak": 20
+          },
+          "gpu_snapshots": {
+            "before_load": {
+              "vram_used_mb": 924,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0,
+              "dirty": false
+            },
+            "after_load": {
+              "vram_used_mb": 30516,
+              "gpu_util": 0,
+              "mem_bandwidth_util": 0
+            },
+            "peak_during_gen": {
+              "vram_used_mb": 30624,
+              "gpu_util": 100,
+              "mem_bandwidth_util": 20
+            }
+          },
+          "hf_repo": "QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4"
+        }
+      ]
+    }
+  ]
+}

@@ -507,6 +507,9 @@ When asked to implement features:
   this model need `language_model_only,max_num_seqs=4` or startup OOMs on 16 GB cards. vLLM runs
   need `LLAMA_MODELS_DIR` exported even for HF-format models (bench.py refuses to start without it).
   Serving-side A/B (throughput, TTFT, KV 155,830 tokens): `~/GIT/llm-service-provider/upgrade-dual-5060.md` Step 6.
+  Shareable report in `statistics.sh` format plus an export bundle (full run, 128k run, dotnet_sas rerun):
+  `docs/reports/qwen3.8-27b-nvfp4-2x-rtx5060ti-vllm.md`. A curated `--export` (the CLI bundles all of
+  `output/`) is made by setting `lib.export.OUTPUT_DIR` to a directory holding only the chosen files.
   **FULL RUN 2026-09-24**: coding 19/19, web 4/4, L6 stepped 4/4, context 8k-128k 5/5 (context_128k
   PASS in 71 s at tp=2 vs 1,542 s on one 4090 with llama.cpp), multihop 5/5; node_paratrooper 1/7
   runs (the spot PASS did not repeat). dotnet_sas needs .NET 9: on this bare-metal Ubuntu it lives in
