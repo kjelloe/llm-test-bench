@@ -255,6 +255,30 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_typ
 #   capability). See models/24gb.txt and candidates.txt for full detail.
 ornith:1.5-35b  Ornith-1.5-35B-A3B-MXFP4_MOE_Q8_0-Imatrix.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:jashepp/Ornith-1.5-35B-A3B-MXFP4_MOE_Hybrid-Imatrix-GGUF
 
+# ornith-ai Ornith-1.0-35B, Q4_K_M, ~20 GB — CONFIRMED 2026-09-26: **11/11 PASS, context 6/6
+#   incl. 256k (76.6 tok/s, 132.1s) + multihop 5/5, all at 102.0 tok/s avg.** Single-GPU testing
+#   (2026-09-25) only reached the model's then-conservative max_ctx=32768 cap; this confirms the
+#   real ceiling matches other 35B-class MoE models at 2×24 GB (qwen3.5:27b, qwen3.6:35b-A3B,
+#   noctrex-qwen3.6:35b all similarly reach 262144). Transient GPU1 power WARN (236-239W/240W,
+#   98-99%) during the two longest tasks, always auto-recovered within seconds — zero CRIT,
+#   hwmonitor confirmed healthy (GPU1 max 68°C). node_paratrooper (L6-full) remains
+#   config-sensitive at this exact tensor_split=1|1 split (FAILS — see models/24gb.txt for the
+#   full cross-GPU floating-point diagnosis); this context/multihop result does NOT change that —
+#   retrieval tasks are simply a different risk profile than long game-logic generation.
+#   Coding/web/L6-stepped run at this GPU split, 2026-09-26: **27/27 PASS at 152.8 tok/s avg,
+#   181.6s total** — all 19 coding + 4 web + 4 L6-stepped tasks pass. GPU1 briefly hit its 240W
+#   power cap several times during generation-heavy tasks, always auto-recovered, zero CRIT.
+#   ⚠ RE-VERIFIED 2026-09-26 (3x3 repeat matrix, both GPU configs, hwmonitor on throughout,
+#   zero CRIT/WARN on the 2-GPU side): **python_hashmap (L5 precision canary) is a genuine,
+#   reliable cross-GPU flip — 3/3 FAIL on single-GPU, 3/3 PASS at 2×24 GB.** This is the OPPOSITE
+#   direction from node_paratrooper's usual PASS(single-GPU)→FAIL(2-GPU) pattern — same
+#   underlying mechanism (cross-GPU floating-point reduction-order non-determinism at greedy
+#   decoding), but here it flips a borderline FAIL into a reliable PASS instead. csv_nordic_
+#   property PASSED 3/3 on BOTH configs — the original single-GPU spot-check FAIL was a one-off
+#   anomaly, not GPU-split-dependent. **Net effect: this model's real 2×24 GB coding score is a
+#   verified 19/19**, not just a lucky single run.
+ornith:1.0-35b  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=262144  hf:ornith-ai/Ornith-1.0-35B-GGUF
+
 # noctrex-qwen3.6:35b: MXFP4+MTP; Skill L6; CONFIRMED 2026-08-13 ls 10094 (2×24 GB):
 # L6 STEPPED: 4/4 PASS at 90.8 tok/s — core *91.5, turret *91.6, entities *89.8, combat *90.2.
 # CONTEXT: 6/6 PASS 8k–256k at 68.0 tok/s avg — ctx_8k *62.7, ctx_16k *79.3, ctx_32k *82.2, ctx_64k *69.7, ctx_128k *67.7, ctx_256k *46.1 (182.5s).

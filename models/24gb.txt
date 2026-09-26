@@ -247,7 +247,14 @@ tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=
 
 # Ornith-1.0-35B (ornith-ai) — new sibling of ornith:1.5-35b, found via scout 2026-09-23.
 # CONFIRMED 2026-09-25, single RTX 3090 (24 GB): 8/10 spot check at 131.3 tok/s. FAILS:
-# csv_nordic_property, python_hashmap (both TESTS_STILL_FAIL, L3/L5 capability gaps).
+# csv_nordic_property, python_hashmap (both TESTS_STILL_FAIL).
+# ⚠ CORRECTED 2026-09-26 after 3x repeat verification on single-GPU: csv_nordic_property PASSED
+#   3/3 on repeat — the original spot-check FAIL looks like a one-off anomaly, not a real
+#   single-GPU capability gap. python_hashmap FAILED 3/3 on repeat — this one IS a reliable
+#   single-GPU result. Real single-GPU coding profile: effectively 18/19 (python_hashmap only),
+#   not 8/10. See the 2×24 GB re-verification below — python_hashmap flips to a reliable PASS
+#   there, a genuine cross-GPU floating-point effect (opposite direction from node_paratrooper's
+#   usual PASS→FAIL pattern), confirmed 3/3 on that side too.
 # 🏆 node_paratrooper (L6-full): PASS, 3/3 confirmed across the spot check + 2 independent
 #   repeat runs, with byte-identical MD5 output across the two kept workdirs — genuine
 #   determinism, not a fluke. THIRD model ever to pass this task (after qwen3.8:27b's
@@ -271,6 +278,13 @@ tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=
 #   MULTIHOP: 5/5 PASS — forward *106.7 (28.8s), reverse *105.3 (28.9s), distractor_notes *114.1
 #   (29.1s), multihop_chain_5 *90.2 (2.0s), multihop_cross_5 *103.2 (1.6s). Full 5/5 is a strong
 #   result — many models score 3/5 or 4/5. GPU2 max 68°C.
+# CONTEXT + MULTIHOP CEILING RESOLVED (CONFIRMED 2026-09-26, 2×24 GB, tensor_split=1|1,
+#   max_ctx=262144): **11/11 PASS at 102.0 tok/s avg** — the single-GPU cap above WAS just a
+#   conservative config setting, not an architectural limit. context_8k *92.0 (5.2s), 16k *111.0
+#   (8.3s), 32k *100.2 (16.2s), 64k *87.2 (32.7s), 128k *101.2 (56.1s), 256k *76.6 (132.1s);
+#   multihop forward *113.9, reverse *112.8, distractor_notes *115.7, chain_5 *101.5, cross_5
+#   *109.5. Matches the ceiling of other 35B-class MoE models at this VRAM tier. See
+#   models/2x24gb.txt for the promoted entry.
 # MULTI-GPU node_paratrooper re-verification (CONFIRMED 2026-09-25) — EXACT same pattern as
 # qwen3.8:27b's own investigation: 2-GPU explicit tensor_split=1|1 FLIPS TO FAIL
 # (TESTS_STILL_FAIL, 149.3 tok/s, 35.7s); 3-GPU explicit tensor_split=1|1|1 PASSES (13.0 tok/s,

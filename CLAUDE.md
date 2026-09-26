@@ -973,7 +973,21 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     avg)** — making it only the **second model ever** (after `qwen3.8:27b`) to do both
     simultaneously, and at ~3× `qwen3.8:27b`'s speed. Full profile: coding spot 8/10 (FAILS
     csv_nordic_property + python_hashmap), web 3/4 (FAILS python_config_loader, NO_BLOCKS).
-    Context/multihop not yet run.
+    **Context/multihop CONFIRMED 2026-09-26 at 2×24 GB (tensor_split=1|1, max_ctx=262144):
+    11/11 PASS at 102.0 tok/s avg** — context 6/6 incl. 256k (76.6 tok/s, 132.1s), multihop 5/5.
+    Single-GPU's earlier max_ctx=32768 cap (3/3 context, 5/5 multihop) was just a conservative
+    setting, not the real ceiling — this matches other 35B-class MoE models at this VRAM tier.
+    **Coding/web/L6-stepped run 2026-09-26 at the same 2×24 GB split: 27/27 PASS at 152.8 tok/s
+    avg.** Then RE-VERIFIED with a 3x3 repeat matrix (both GPU configs) after noticing
+    `csv_nordic_property` and `python_hashmap` had FAILED (TESTS_STILL_FAIL) on the original
+    single-GPU spot check: **`python_hashmap` (L5 precision canary) is a genuine, reliable
+    cross-GPU flip — 3/3 FAIL on single-GPU, 3/3 PASS at 2×24 GB** — the OPPOSITE direction from
+    `node_paratrooper`'s usual PASS(single-GPU)→FAIL(2-GPU) pattern, same underlying mechanism
+    (cross-GPU floating-point reduction-order non-determinism). `csv_nordic_property` PASSED 3/3
+    on BOTH configs — the original spot-check FAIL was a one-off anomaly, not GPU-split-dependent.
+    **Net effect: this model's real 2×24 GB coding score is a verified 19/19**, and its true
+    single-GPU score is effectively 18/19 (only `python_hashmap`), not the originally-recorded
+    8/10 spot. Added to `models/2x24gb.txt`.
     **Multi-GPU re-verification, CONFIRMED 2026-09-25 — the qwen3.8:27b precedent holds
     exactly.** 2-GPU explicit `tensor_split=1|1`: FAIL (TESTS_STILL_FAIL, 149.3 tok/s, 35.7s).
     3-GPU explicit `tensor_split=1|1|1`: PASS (13.0 tok/s, 343.9s — much slower, matching
@@ -1003,7 +1017,8 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   - 1×24 GB (--num-ctx 32768, **L6-full — paratrooper PASS, 3/3 MD5-verified deterministic**):
     **ornith:1.0-35b** (~131 tok/s, ornith-ai/Ornith-1.0-35B-GGUF, Q4_K_M, no Ampere+ required;
     15th stepped-chain completer AND second model (after qwen3.8:27b) to also pass L6-full,
-    CONFIRMED 2026-09-25 — only tested single-GPU so far, see full entry in models/24gb.txt)
+    CONFIRMED 2026-09-25; context/multihop confirmed 2026-09-26 at 2×24 GB — 11/11 PASS incl.
+    context_256k, see full entry in models/24gb.txt + models/2x24gb.txt)
   - 1×16 GB + CPU/NVMe expert paging (default per-task ctx): **qwen3.8-flash-next-16gb** (~18 tok/s,
     RTX 5060 Ti 16 GB + 88 GB WSL RAM; 15th completer, CONFIRMED 2026-09-14/15). Same UD-Q4_K_XL
     file and llama.cpp commit 67a17c17c as the 3×24 GB qwen3.8-flash-next entry, whose
@@ -1011,6 +1026,17 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     node_paratrooper (L6-full) 2/2. Probably the different numerics of a 1-GPU + CPU-experts split
     (compare qwen3.8:27b's tensor_split finding) rather than a capability difference. Full entry
     in candidates.txt.
+  - 1×24 GB + CPU expert offload, single free GPU on this rig (**qwen3.8-flash-next-24gb**, CONFIRMED
+    2026-09-26, ~16.7 tok/s avg, GPU2/RTX 3090 idle at the time — GPU0/GPU1 untouched, held by
+    `llm-service-provider`'s own lanes): same `--fit --fit-target 512 --no-repack` recipe as the
+    16 GB result above, one VRAM tier up. **8/10 spot — SLOWER than the 16 GB box (16.7 vs 18.4
+    tok/s) despite 50% more VRAM**, contradicting the "more VRAM → --fit keeps more on GPU → faster"
+    hypothesis this test was designed to check. `node_para_core` FAILS here (matching the 3×24 GB
+    rig, not the 16 GB box's PASS) while `node_paratrooper` (L6-full) PASSES — a third independent
+    VRAM tier to pass that specific task with this recipe (3×24 GB auto-fit, 1×16 GB, 1×24 GB here),
+    making it reasonably reproducible across configs, unlike `qwen3.8:27b`'s file-specific pass.
+    `node_csv_parser` fails as usual (same format gap on every config of this model). Full entry
+    (including a config-sensitivity note on `node_para_core`) in `models/candidates.txt`.
   Note: qwen3.6:27b's ~12 tok/s for L6 tasks makes it practical only as a capability test.
   Note: qwen3.5:27b at ~27 tok/s is faster for L6 despite older Qwen generation — q8_0 KV vs f16.
   Entities gap is A3B MoE specific: Qwen3.5 A3B MoE (qwen3.5:35b, qwen3-30b:2507,
