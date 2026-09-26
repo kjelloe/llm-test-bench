@@ -1685,3 +1685,15 @@ qwen3.8-flash-next-24gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004
 #   config-sensitive for node_paratrooper specifically (see above) but NOT for context/multihop
 #   retrieval tasks on any model tested so far — different risk profile, worth running regardless.
 ornith:1.0-35b-2gpu-ctx  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=262144  hf:ornith-ai/Ornith-1.0-35B-GGUF
+
+# ---- 2026-09-26: cross-GPU sweep round 2 — 2 missing configs for new pairs ----
+# qwen3.6:35b-A3B (unsloth) single-GPU variant, for pairing with the existing 2x24gb.txt entry.
+# RESULT: paired with csv_nordic_property for the cross-GPU sweep round 2. FAIL/FAIL (2/2 each
+# side, single-GPU and 2x24GB) — stable, no flip. Notably does NOT reproduce noctrex-qwen3.6:35b's
+# own confirmed flip on this exact task — the boundary-proneness is file-specific to noctrex's
+# MXFP4 build, not a property of "Qwen3.6-A3B running csv_nordic_property" in general.
+qwen3.6:35b-A3B-1gpu  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:unsloth/Qwen3.6-35B-A3B-GGUF
+# qwen3.8-27b-gsqrco-iq3xxs 2x24GB tensor_split=1|1 variant, for pairing with the existing 12gb.txt single-GPU entry.
+# RESULT: paired with python_hashmap for the cross-GPU sweep round 2. PASS/PASS (2/2 each side,
+# single-GPU 31.9 tok/s, 2x24GB 50.1 tok/s) — stable, no flip.
+qwen3.8-27b-gsqrco-iq3xxs-2gpu  Qwen3.8-27B-GSQ-RCO-IQ3_XXS.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF

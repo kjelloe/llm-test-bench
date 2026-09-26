@@ -938,6 +938,13 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
     (same failure cluster as all other post-trained A3B MoE models). Matches prior ollama result.
   **Full capability (2026-08-13): 17/19 coding + 2/4 web + 4/4 L6 stepped + 6/6 ctx (8k–256k) + 3/3 multihop. (all groups CONFIRMED ls 10094)**
     Skill L6 (from L6 stepped chain). node_paratrooper FAIL (universal L6 wall). python_hashmap FAIL (ls 10094 regression).
+    ⚠ UPDATE 2026-09-26: on the current pinned 67a17c17c binary, python_hashmap is itself
+    GPU-split-dependent for this model — 3/3 PASS single-GPU, 3/3 FAIL at 2×24 GB
+    tensor_split=1|1 (confirmed via the cross-GPU sensitivity sweep, see the precision-canary
+    bullet below). The "17/19" figure above was measured on ls 10094 with a flat python_hashmap
+    FAIL; on the current binary this task's result depends on which GPU split you run it on —
+    treat this model's coding score as provisional until re-verified on 67a17c17c at whichever
+    config is actually deployed.
   tensor_split=1|1 added to 2x24gb.txt model config — prior missing config was root cause of 3-GPU auto-dist.
   Full L6 chain completer list (confirmed with current task definition):
   - **🏆 node_paratrooper (L6-full) FIRST PASS: qwen3.8:27b, 2026-08-15, ~45 tok/s, single 24 GB, default ctx=8192**
@@ -1122,7 +1129,7 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   glm4.7-flash TESTS_STILL_FAIL, deepseek-r1:32b TESTS_STILL_FAIL, qwen3-30b:2507
   TESTS_STILL_FAIL, qwen3-coder:30b-mxfp4 TESTS_STILL_FAIL, glm4-tulu:32b TESTS_STILL_FAIL,
   qwen3-48b:a4b TESTS_STILL_FAIL, huihui-60b TESTS_STILL_FAIL,
-  quest:35b TESTS_STILL_FAIL with llama-server 10094 f16 KV (was PASS with ollama 2026-06-24 — llama-server 10094 kq-mask regression specific to this model; entities PASS still confirms Qwen3.6 base),
+  quest:35b TESTS_STILL_FAIL with llama-server 10094 f16 KV (was PASS with ollama 2026-06-24 — llama-server 10094 kq-mask regression specific to this model; entities PASS still confirms Qwen3.6 base; ⚠ UPDATE 2026-09-26 — on the current pinned 67a17c17c binary this task's result is itself GPU-split-dependent for quest:35b: 3/3 PASS single-GPU, 3/3 FAIL at 2×24 GB tensor_split=1|1, see the cross-GPU sensitivity paragraph below — treat any single-config result for this model+task as provisional),
   north-mini-code PASS, gemma4:26b PASS, gemma4:31b-qat PASS, qwen3.5-122b:a10b PASS), and thinking models exhaust their
   budget in reasoning before emitting code (mellum2:12b-thinking, qwq:32b, gpt-oss:20b on this task).
   Note: glm4-tulu:32b (dense 32B) fails despite being larger than glm4.7-flash (MoE 16 GB) which
@@ -1131,6 +1138,53 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
   2026-07-24 at f16 KV) — dense Gemma 4 architecture preserves L5 precision at Q4_0.
   qwen3.5-122b:a10b PASS (confirmed 2026-08-13, q8_0 KV) — A10B active-param tier clears the ceiling
   that blocks all A3B models. gpt-oss:120b also passes (thinking model, q8_0 KV).
+
+- **Cross-GPU floating-point sensitivity is a general phenomenon, not a `node_paratrooper`/
+  `ornith:1.0-35b` quirk — CONFIRMED 2026-09-26 via a targeted sweep.** Background: `node_paratrooper`
+  had shown a reproducible single-GPU-PASS→multi-GPU-FAIL flip across 3 models (`qwen3.8:27b`,
+  `qwen3.8-flash-next`, `ornith:1.0-35b`), and `ornith:1.0-35b`'s `python_hashmap` had just shown the
+  *opposite* direction (single-GPU-FAIL→2-GPU-PASS) — raising the question of whether that was a
+  fluke. Designed a sweep: picked 3 model+task pairs already known to be borderline for *other*
+  reasons (documented binary-version-induced flips, unrelated to GPU topology) — `quest:35b` ×
+  `python_hashmap`, `glm4.7-flash` × `python_config_loader`, `noctrex-qwen3.6:35b` ×
+  `csv_nordic_property` — and ran each at both single-GPU and 2×24 GB `tensor_split=1|1`, 3×
+  repeat-verified wherever a disagreement appeared. **Result: 2 of 3 pairs showed a genuine,
+  fully-reproducible flip — one in each direction.** `quest:35b`/`python_hashmap`: 3/3 PASS
+  single-GPU, 3/3 FAIL 2×24 GB (hurts, matching `node_paratrooper`'s usual pattern).
+  `noctrex-qwen3.6:35b`/`csv_nordic_property`: 3/3 FAIL single-GPU, 3/3 PASS 2×24 GB (helps,
+  matching `ornith:1.0-35b`'s pattern) — a **second** model+task pair in the helping direction.
+  `glm4.7-flash`/`python_config_loader` showed no flip (FAIL on both configs) — not every
+  borderline task is GPU-split-sensitive. **A 2/3 hit rate on a 3-pair sample pre-selected for
+  borderline status is strong evidence this is a real, broad pattern**, not a two-off coincidence:
+  cross-GPU floating-point reduction-order non-determinism at greedy decoding can flip *any*
+  sufficiently close-call task result, in either direction, on any model, once real computation is
+  split across ≥2 physical GPUs. Direction is not a property of the task or the model — the same
+  task (`python_hashmap`) flips in opposite directions on different models (hurts `quest:35b`,
+  helps `ornith:1.0-35b`), consistent with each case being its own coincidence of which specific
+  token choice sits closest to the decision boundary for that exact model. **Practical
+  implication: any single-GPU-only (or any single-config-only) benchmark result for a model that
+  has EVER shown binary-version or precision sensitivity on a given task should be treated as
+  provisional until verified at the GPU split it will actually be deployed on** — this extends well
+  beyond `node_paratrooper`. Zero hwmonitor CRIT throughout.
+  **Round 2 (5 more pairs — 3 borderline + 2 stable controls) CONFIRMED 2026-09-26: ZERO flips
+  (0/5)**, a much steadier picture than round 1's 2/3. Tested: `quest:35b`×`python_multifile_rename`
+  (FAIL/FAIL, stable), `qwen3.6:35b-A3B` unsloth × `csv_nordic_property` (FAIL/FAIL, stable —
+  **notably, `noctrex-qwen3.6:35b`'s own flip on this exact task does NOT generalize to this other
+  Qwen3.6-A3B build**, confirming the boundary-proneness is file-specific, not architecture-wide),
+  `qwen3.8-27b-gsqrco-iq3xxs`×`python_hashmap` (PASS/PASS, stable), plus two controls anchored on
+  `python_hashmap`: `qwen2.5-coder:32b-q4` (stable PASS, as predicted) and `glm4.7-flash` (stable
+  FAIL, as predicted). **Combined hit rate across both rounds: 2 flips out of 8 pre-selected
+  borderline pairs (25%)** — still clearly better than the stable controls' 0/2, so "pre-select
+  for borderline history" remains a real, useful heuristic, just at a more modest hit rate than
+  round 1's small sample suggested. Diminishing returns on further rounds unless new candidates
+  surface naturally.
+  **`ornith:1.0-35b`'s `csv_nordic_property` single-GPU anomaly: CLOSED 2026-09-26.** Replayed the
+  exact original spot-check 4-task prefix (`python_safe_div → node_slugify → python_lru_cache →
+  csv_nordic_property`, same server session, single-GPU) 3 times — PASSED 3/3, ruling out
+  session/request-history state as the explanation (GPU-split sensitivity was already ruled out
+  earlier). The task has now passed 9/9 times across every condition tested since the one original
+  spot-check FAIL. No reproducible trigger found; not investigated further.
+  Full result detail: `next-runs.md`'s 2026-09-26 sweep entries; `memory/project_benchmark_findings.md`.
 
 #### Edit Protocol Enforcement
 
