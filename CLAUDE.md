@@ -297,6 +297,11 @@ gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu
 powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
 compare.sh          Runs the canonical models/default.txt set (10 models as of 2026-09-15) (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
+statistics.sh       Aggregate all output/*.json into one sharable dataset: summary/detail/context-speed
+                     tables, VRAM-scalability estimation, CSV/JSON export; --export bundles output/*.json
+                     into a portable file, --import pulls an export (or a plain results file) back into
+                     output/ on another machine — used to pull in the vLLM box's benchmark exports (see
+                     docs/reports/qwen3.8-27b-nvfp4-2x-rtx5060ti-vllm-export.json)
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; pre-checks repos for 404/deleted before downloading
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
 scout-hf.sh         Periodic HF Hub scanner; diffs against saved state (output/hf-scout-state.json); use --vllm for AWQ/GPTQ/FP8 transformers repos (state: output/hf-scout-vllm-state.json); --no-save for dry-run; --show-all to include unchanged repos
@@ -678,8 +683,20 @@ When asked to implement features:
     ~35 tok/s at 1 concurrent agent, ~51 tok/s aggregate at 8. `models/2x16gb.vllm` updated with
     the exact config that was run (dropped `enforce_eager`, added `language_model_only` +
     `max_num_seqs=4`). Full writeup: `reports/models-status-Sept-2026.md`'s dedicated vLLM
-    section. **Practical read**: llama-server + `qwen3.8:27b` single-GPU is still faster for one
-    user (45 vs 32 tok/s) and more reliably reaches L6-full; vLLM's real win is concurrency.
+    section; the raw runs + a shareable `statistics.sh`-format report are now also in
+    `docs/reports/qwen3.8-27b-nvfp4-2x-rtx5060ti-vllm-export.json` and `...vllm.md` (pulled
+    into this repo 2026-10-04 from the vLLM box) — `./statistics.sh --import
+    docs/reports/qwen3.8-27b-nvfp4-2x-rtx5060ti-vllm-export.json` pulls the 3 runs into
+    `output/` so they show up in any `statistics.sh` view alongside the llama.cpp rows; not yet
+    run, so those rows aren't in `output/` yet. **Practical read**: llama-server + `qwen3.8:27b`
+    single-GPU is still faster for one user (45 vs 32 tok/s) and more reliably reaches L6-full;
+    vLLM's real win is concurrency. **Reading vLLM's per-task `tok_per_s` column**: vLLM's API
+    has no prefill/decode split like llama.cpp's, so the harness divides generated tokens by
+    total wall time — for coding tasks (short prompts) that's effectively decode speed, but for
+    the `context_*` tasks (which emit ~15 tokens after a 7k-100k-token prompt) the same column
+    is actually prefill speed in disguise: context_128k's "0.2 tok/s" is not a catastrophic
+    decode collapse, it's 100,534 prompt tokens in 71.1s (~1,414 tok/s prefill). Don't read a low
+    vLLM `ctx_*` tok/s figure as a decode regression without checking prompt_tokens/wall_s first.
   - Both picks trade "best documented capability at this VRAM size" for "most likely to actually
     load cleanly on the first try" — deliberately, since this plugin has never been exercised on
     this rig. Once either loads successfully, that's the point to branch out to a GDN-hybrid or
