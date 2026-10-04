@@ -39,7 +39,10 @@ qwen2.5-coder:14b  Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf  ngl=999,no_mmap,cache
 # Requires Ampere+ (sm_86+) — MXFP4 format, RTX 30/40 series only.
 # Tested with f16 KV, no explicit max_ctx (server default). At real 12 GB VRAM (8.9 GB weights,
 # ~3.1 GB headroom), context beyond ~16k is UNTESTED — reduce max_ctx further if you see OOM.
-# Web/context/multihop/L6-stepped groups not yet run — coding-only profile so far.
+# Web/L6/context/multihop CONFIRMED 2026-10-03 at the 16 GB tier (max_ctx=32768, this entry uses
+# a tighter 16384 for the real 12 GB budget) — see models/16gb.txt for the full breakdown: web
+# 3/4 (FAILS fastapi_endpoint), L6-stepped 3/4 (FAILS node_para_entities — Qwen3.5-A3B lineage
+# signature), context 3/3 within cap, multihop 3/5 (FAILS chain_5 + cross_5).
 ornith:1.5-9b  Ornith-1.5-9B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=16384  hf:jashepp/Ornith-1.5-9B-MXFP4_Hybrid-Imatrix-GGUF
 
 # ── ISTA-DASLab GSQ-RCO IQ3_XXS — smallest tier matching the IQ3_S profile ──────

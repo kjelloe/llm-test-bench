@@ -226,6 +226,14 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_t
 # tensor_split to this line. Needs mainline llama.cpp at commit c841aeeb8+ (PR #27742/#27880
 # merged, 2026-08-27/28) — rebuild if your checkout predates that. Only ~34 GB spills to RAM
 # (72 GB VRAM + ~82 GB usable RAM easily covers the 106 GB weights).
+# ⚠ PIN CEILING, NOT JUST A FLOOR: use mainline commit `67a17c17c` specifically, not just
+# "c841aeeb8 or later". Three independent later commits (49c0dc82b, d81aef199, bed0a8566) all
+# regressed this model's decode speed, and bed0a8566 additionally breaks node_paratrooper
+# capability outright. The speed regression is root-caused (git bisect, 2026-10-03) to commit
+# c61b98b875 — present from almost immediately past the pin. A real fix attempt (not just a
+# re-pin) was tried and closed 2026-10-04 without success — "pin stands, root cause narrowed but
+# not found," see candidates.txt's comment block for the full attempt. Do not rebuild past
+# 67a17c17c for this model without re-running the full verification there.
 # CONFIRMED 2026-08-29: 9/10 on the 10-task spot check (only node_csv_parser genuinely fails —
 # format compliance). Includes python_hashmap (L5 precision canary) PASS and a node_paratrooper
 # (L6-full) PASS — the latter NOT independently re-verified given how unreliable single passes on

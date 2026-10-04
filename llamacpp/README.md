@@ -117,14 +117,20 @@ cmake --build build --config Release -j$(nproc)
 ```
 
 **⚠ For `qwen4exp` (qwen3.8-flash-next) specifically, do NOT just build latest `master`.**
-Confirmed 2026-09-04: mainline commit `49c0dc82b` (82 commits past `67a17c17c`) is a real
-regression — 27–55% slower on longer-generation tasks than `67a17c17c`, and a newer multi-GPU
-CUDA-graph optimization (`GGML_CUDA_GRAPH_OPT=1`) measured *worse* on this rig's topology, not
-better. This architecture is under fast-moving, non-monotonic upstream development — **checkout
+**Three independent later commits have now regressed this model** — `49c0dc82b` (confirmed
+2026-09-04, 27–55% slower on longer-generation tasks), `d81aef199` (confirmed 2026-09-25, worse
+still: -81%/-79% on the same two tasks), and `bed0a8566` (confirmed 2026-10-03, -64.5%/-72.5%
+**and the first to also break `node_paratrooper` capability outright**, not just slow it down).
+A newer multi-GPU CUDA-graph optimization (`GGML_CUDA_GRAPH_OPT=1`) also measured *worse* on
+this rig's topology, not better. The speed regression has been root-caused via `git bisect` to
+commit `c61b98b875` (#25444) — a scalar-to-accessor change in `build_moe_ffn` made for an
+unrelated model — but **an actual fix attempt (branch + patch + rebuild, 2026-10-04) did NOT
+restore speed**; the investigation is closed as "pin stands, root cause narrowed but not found."
+This architecture is under fast-moving, non-monotonic upstream development — **checkout
 `67a17c17c` explicitly** (`git checkout 67a17c17c` before building) rather than `master`, and
-re-verify speed on a 3-task comparison (`python_hashmap`, `python_expr_eval`,
-`python_safe_div`) before trusting any newer commit for this model. Full history in this repo's
-`CLAUDE.md` and `next-runs.md`.
+re-verify speed AND `node_paratrooper` determinism (not just the 3-task speed comparison —
+`python_hashmap`, `python_expr_eval`, `python_safe_div`) before trusting any newer commit for
+this model. Full history in this repo's `CLAUDE.md` and `next-runs.md`.
 
 ---
 

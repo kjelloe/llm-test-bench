@@ -1247,7 +1247,58 @@
 #   binary. PIN REAFFIRMED, more strongly: two independent later commits (82 and 395 out) have
 #   now both regressed this model; zero rebuilds since the pin have improved it. Full detail:
 #   CLAUDE.md's qwen3.8-flash-next entry and reports/models-status-Sept-2026.md's speed table.
-qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b/d81aef199 are CONFIRMED REGRESSIONS for this model, the second worse than the first — see comment block above; verify speed after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
+# ⚠ THIRD REGRESSION CONFIRMED 2026-10-03 at commit `bed0a8566` (608 commits past `67a17c17c`).
+#   Not routine this time — a specific cluster of qwen4exp commits landed since the pin that
+#   looked genuinely promising (MTP support `c061df198`, re-enabled `-sm tensor` true-split mode
+#   `10f340d1a`, the long-flagged GDN L2-norm fix `5fdfa6282`). Rebuilt and ran the fullest
+#   verification yet: 3-task speed check, 3x node_paratrooper determinism, and — new — the first
+#   3x24GB context group attempt ever on this rig. python_hashmap 23.0→8.16 tok/s (-64.5%),
+#   python_expr_eval 23.2→6.38 tok/s (-72.5%), python_safe_div ~19-24→30.47 tok/s (faster, same
+#   short-task-spared pattern as both priors). **Worse than before: node_paratrooper FAILS 3/3
+#   deterministically (identical eval_count=5311 every run)** — the first of the three rebuild
+#   attempts to lose an actual confirmed capability, not just slow down. New data point from the
+#   same session: context_256k PASSED (8.13 tok/s) on the first-ever 3x24GB context group run —
+#   exceeds gpt-oss:120b's hard 131072 architecture ceiling — but the speed number is from this
+#   regressed binary, not representative; re-run on 67a17c17c before citing it. Rebuilt back to
+#   67a17c17c same day; binary verified correct. PIN REAFFIRMED a third time: three independent
+#   later commits (82/395/608 out) have now regressed this model, zero have improved it. Full
+#   detail: CLAUDE.md's qwen3.8-flash-next entry and next-runs.md's 2026-10-03 results entry.
+# ✅ SPEED REGRESSION ROOT-CAUSED 2026-10-03 via git bisect (67a17c17c good -> 49c0dc82b bad,
+#   5 rebuild+test cycles, real commit-graph distance 35, not the "82" figure above which was
+#   computed a different way). Culprit: c61b98b875 ("model: add NVIDIA Nemotron-3-Puzzle-75B-A9B
+#   support", #25444) - every bisection step came back bad, meaning the regression sits almost
+#   immediately after the pin. Mechanism (confirmed via direct diff, not just bisection):
+#   src/llama-graph.cpp's build_moe_ffn (the per-decode-step MoE expert-aggregation loop every
+#   MoE arch runs) changed hparams.n_expert_used (plain scalar read) to hparams.n_expert_used(il)
+#   (per-layer accessor call), added to support Nemotron-3-Puzzle's heterogeneous per-layer expert
+#   counts - value-equivalent for qwen4exp's uniform expert count, not performance-equivalent.
+#   Why a function-call/array-index swap costs 3-4x decode throughput is unexplained (needs GGML
+#   graph profiling, beyond what bisection alone establishes) - reporting the confirmed commit and
+#   mechanism location, not a full performance root-cause. This is confirmed to be ONE bug behind
+#   the speed drop in ALL THREE rebuild attempts (49c0dc82b/d81aef199/bed0a8566), not three
+#   separate issues. The SEPARATE node_paratrooper capability loss (only at bed0a8566, not at
+#   d81aef199) was NOT bisected (Phase 2, ~213-commit range, skipped after Phase 1's ~4hr cost) -
+#   still unexplained. hwmonitor clean throughout. Full trail in next-runs.md.
+# ⚠ FIX ATTEMPTED AND CLOSED, 2026-10-03/04: "pin stands, root cause narrowed but not found."
+#   Checked all ~861 ggml-org/llama.cpp remote branches for an existing fix - none exists; the
+#   only commit that has ever touched the regressed code is the culprit itself. Branched
+#   fix/qwen4exp-moe-perf off current master to attempt a real fix: a straight `git revert
+#   c61b98b875` conflicts in 6 files (too many later archs depend on the array infra it added) -
+#   not viable. A narrow patch (inline the array read, bypass the accessor call) was built and
+#   TESTED - did NOT restore speed (6.22/4.95 tok/s, no better than the regressed baseline) -
+#   hypothesis disproven. Systematically ruled out every other file in the 56-file commit by
+#   source analysis: llama-model.cpp's one substantive non-load-time hunk
+#   (llama_meta_device_get_split_state) is structurally unreachable for --fit (common/fit.cpp
+#   throws on SPLIT_MODE_TENSOR); llama-model-loader.cpp/llama-model-saver.cpp are load/export-
+#   only; nemotron-h.cpp/bailingmoe3.cpp are different archs. llama-hparams.h's struct growth was
+#   MEASURED precisely (31,968->36,104 bytes, +4,136 exactly, via a standalone sizeof() probe) but
+#   the one relevant by-value copy for qwen4exp happens at most once per decode step (often less,
+#   given its own can_reuse() caching) - too small in magnitude to explain a 3-4x regression, not
+#   worth another rebuild to test directly. No profiling tools (perf/nsys/ncu/valgrind) installed
+#   on this rig to go further (would need sudo) - real mechanism is likely GPU-side kernel
+#   dispatch, not source-readable. fix/qwen4exp-moe-perf branch kept locally for reference, not
+#   merged; repo restored to and rebuilt at the 67a17c17c pin. Full trail in next-runs.md.
+qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b/d81aef199/bed0a8566 are CONFIRMED REGRESSIONS for this model, bed0a8566 is the first to also cost a capability (node_paratrooper) not just speed; speed regression root-caused to c61b98b875 but a real fix attempt failed, pin stands — see comment block above; verify speed AND node_paratrooper determinism after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
 
 # ik_llama.cpp (ikawrakow fork) variant — CLI conventions differ from mainline: `--fit` is a bare
 # boolean here (mainline takes `--fit on`), so `fit=on` errors with "unknown argument: on" — use
