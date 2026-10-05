@@ -262,6 +262,22 @@ specific tier's number is cross-referenced elsewhere in this file — those are 
   for borderline history" remains a real, useful heuristic, just at a more modest hit rate than
   round 1's small sample suggested. Diminishing returns on further rounds unless new candidates
   surface naturally.
+  **Round 3 (2026-10-04) — new dimension, not new pairs: does the flip hold at a 3-way GPU
+  split, or is it 2-way-specific?** No new borderline candidates had surfaced since round 2, so
+  rather than a fresh blind search, extended the two already-confirmed round-1 flips
+  (`quest:35b`×`python_hashmap`, hurts; `noctrex-qwen3.6:35b`×`csv_nordic_property`, helps) to
+  explicit 3×24 GB `tensor_split=1|1|1` — a split neither round 1 nor round 2 tested. **Result:
+  both flips hold at 3-way exactly as at 2-way, 3/3 each** — `quest:35b`/`python_hashmap` FAILS
+  at 3-way (matching 2-way FAIL, not the single-GPU PASS); `noctrex-qwen3.6:35b`/
+  `csv_nordic_property` PASSES at 3-way (matching 2-way PASS, not the single-GPU FAIL). Neither
+  pair shows a THIRD distinct behavior at 3-way — once cross-GPU computation is involved at all
+  (2-way or 3-way), the result is stable in whichever direction that specific model+task pair
+  already showed at 2-way; it's "single-GPU vs. any-multi-GPU" that matters for these two pairs,
+  not the exact split arity. This contrasts with `node_paratrooper`'s own cross-GPU history
+  (qwen3.8:27b: 2-way FAILs, 3-way PASSES — a genuine 3-way-specific difference) — confirming
+  split-arity sensitivity is itself per-model-per-task, not a fixed rule. hwmonitor: zero
+  WARN/CRIT across all 6 runs (max 40-59°C). Round 3 complete; no further rounds planned unless
+  new candidates surface.
   **`ornith:1.0-35b`'s `csv_nordic_property` single-GPU anomaly: CLOSED 2026-09-26.** Replayed the
   exact original spot-check 4-task prefix (`python_safe_div → node_slugify → python_lru_cache →
   csv_nordic_property`, same server session, single-GPU) 3 times — PASSED 3/3, ruling out
@@ -316,6 +332,9 @@ vllm-plan.md        Copy-paste steps: Qwen3.5-9B AWQ on vLLM for agentic tool ca
 docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier
 next-runs.md        Referenced throughout this file and models/*.txt, but NOT tracked in git
                     (absent on the RTX 5060 Ti box as of 2026-09-15). See Known Issues.
+hw-upgrade-july-2026.md    Hardware state/crash-incident log + VRAM-tier upgrade analysis for the
+                    3-GPU rig; also NOT tracked in git. October 2026 addendum corrects the
+                    "node_paratrooper never passes" premise and adds the vLLM-concurrency axis.
 hwmonitor/
   hwmonitor.py      Live hardware watchdog: GPU temp/power/VRAM, CPU temp, RAM; WARN/CRIT on threshold breach; aborts bench.py on CRIT (SIGINT → SIGTERM)
   SPEC.md           hwmonitor specification and threshold reference

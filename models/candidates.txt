@@ -1748,3 +1748,13 @@ qwen3.6:35b-A3B-1gpu  Qwen3.6-35B-A3B-UD-Q4_K_M.gguf  ngl=999,no_mmap,cache_type
 # RESULT: paired with python_hashmap for the cross-GPU sweep round 2. PASS/PASS (2/2 each side,
 # single-GPU 31.9 tok/s, 2x24GB 50.1 tok/s) — stable, no flip.
 qwen3.8-27b-gsqrco-iq3xxs-2gpu  Qwen3.8-27B-GSQ-RCO-IQ3_XXS.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF
+
+# ---- 2026-10-04: cross-GPU sweep round 3 — explicit 3x24GB tensor_split=1|1|1 variants ----
+# Tests whether round 1's two confirmed flips (quest:35b x python_hashmap, noctrex-qwen3.6:35b x
+# csv_nordic_property) hold at a 3-way split, not just the 2-way tensor_split=1|1 already in
+# 2x24gb.txt. RESULT: both flips hold exactly as at 2-way, 3/3 each — quest:35b-3gpu FAILS
+# python_hashmap (81.6/78.8/82.1 tok/s), noctrex-qwen3.6:35b-3gpu PASSES csv_nordic_property
+# (11.9/11.9/12.2 tok/s). Neither shows a 3-way-specific result (unlike node_paratrooper's own
+# qwen3.8:27b history, where 2-way and 3-way genuinely differ) — closes the investigation.
+quest:35b-3gpu  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/QUEST-35B-RL-MXFP4_MOE-GGUF
+noctrex-qwen3.6:35b-3gpu  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
