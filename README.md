@@ -155,6 +155,17 @@ If `nvidia-ml-py` is installed (it is, via `requirements.txt`), each result reco
 telemetry: VRAM before/after model load, peak GPU utilization during generation, and KV-cache memory
 delta per call — useful for comparing quantizations without guessing.
 
+### Partial credit
+
+Pass/fail stays the headline and the basis of Skill, but a failing task that misses one test of
+thirty is very different from one that doesn't compile. Every result therefore also records
+`test_score` — tests passed, total, and a weighted score from 0 to 1 — parsed from the test runner's
+full output (pytest, `node --test`, `dotnet test`). Tasks can weight their own tests
+(`Task.test_weights` in `lib/tasks.py`); the `gamedev` tasks weight core-contract tests ×2-3 and
+argument validation ×0.5. It shows as a "partial credit" line per model in the failure detail and as
+the `partial` column of `./statistics.sh --detail`. Results written before 2026-10-08 are re-scored,
+unweighted, from the summary line they kept.
+
 ---
 
 ## Backends

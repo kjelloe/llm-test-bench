@@ -1456,6 +1456,48 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    number predates that flag. Test: rebuild 67a17c17c with `-DGGML_CUDA_GRAPHS=OFF` (~25 min), re-run
    the control. Capability results are unaffected (byte-identical re-run).
 
+**Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
+will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
+write); re-prioritise this list against that before building anything. Each test idea names the gap
+in the current nine it would close.
+
+*Suggested tests:*
+1. **Port a real engine module JS→C# with parity fixtures** (e.g. boombrawl `shared/movement.mjs`,
+   Fireline `client/js/interpolator.js`, CarrierDominion `shared/fixed.js`): closest to the actual
+   native-port work; reuses the `crossplay_statehash_parity` fixture pattern (JS generates, C# must
+   match). Gap: today's ports are re-implementations of patterns, not of the user's own code.
+2. **Frame-rate-independent fixed timestep** (accumulator; the same simulation result at 30, 60 and
+   144 fps render rates; the design doc's "display frame rate must not alter gameplay"). Gap: no task
+   exercises the tick-vs-frame split.
+3. **Allocation-free hot path**: an Update-style method whose test asserts zero managed allocations
+   (`GC.GetAllocatedBytesForCurrentThread` before/after) — the GC-pressure point in the port-strategy
+   doc. Gap: nothing measures performance hygiene.
+4. **IL2CPP/AOT-safe code**: banned-API scan (reflection, `dynamic`, `System.Reflection.Emit`,
+   `Activator.CreateInstance` on open generics) plus compile — Unity's player builds strip/AOT-compile.
+5. **Unity lifecycle knowledge**: extend the shim with a fake MonoBehaviour driver (Awake → OnEnable
+   → Start → FixedUpdate/Update/LateUpdate ordering, coroutines via `IEnumerator`/`yield`, `LayerMask`
+   bitmasks). Gap: the nine tasks test C# for Unity, not Unity itself.
+6. **Cross-play integration (L6)**: a real WebSocket round trip between a Node authority and a C#
+   client (`ClientWebSocket`), including reconnect — the design doc's actual acceptance test. Heavier:
+   two runtimes in one test command.
+7. **"Doesn't compile under Unity" metric** (harness, not a task): record CS codes, flag
+   language-version / missing-API ones separately (see "Findings along the way" item 2). Data so far:
+   CS8773 (C# > 9) 7 times, missing-API CS0246/CS0117/CS0103 recurring.
+8. **Rotation-convention canary**: keep or split out the Three.js→Unity quaternion mirror (0/27) as a
+   named canary like `python_hashmap`, so a model that finally gets it right is visible.
+
+*Suggested model runs:*
+1. Cross-GPU sensitivity on the top single-GPU models (equinox:31b, qwen3.6:27b, gemma4:31b-qat) at
+   2×24 GB `tensor_split=1|1` — split arity has flipped close calls before.
+2. The vLLM box: `qwen3.8-27b:nvfp4-next` (tp=2, 2× RTX 5060 Ti) — needs .NET 9 SDK and Node there.
+3. DeepSeek-V4.1-Flash on one or two short gamedev tasks (e.g. `cs_coord_bam`) as a capability
+   ceiling; expect ~1 h per task at its measured prefill/decode rates.
+4. A frontier coding agent via `--export-task` on all nine, for an upper bound to set levels against.
+5. qwen3.8-flash-next speed root cause: rebuild `67a17c17c` with `-DGGML_CUDA_GRAPHS=OFF` and re-run
+   the `python_hashmap` control (finding 9).
+6. After any task change (re-levelling, softened `node_seat_reconnect`), re-run the top ~6 models only,
+   not all 27.
+
 #### What NOT to do
 
 - Don't implement multi-turn autonomous "agent loops" in v1.
