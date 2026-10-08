@@ -348,6 +348,9 @@ lib/
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
   gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
+  load_check.py           Pre-flight warning (run.sh, every run) for competing work: processes >50% of a core, GPUs
+                          already holding >3 GB VRAM; BENCH_ABORT_ON_BUSY=1 aborts instead (added 2026-10-09 after a
+                          stuck Unity smoke test pegged a core for 70+ min; the teammate's Unity builder shares this rig)
   power_check.py          Pre-flight GPU power-limit safety check for 3+ GPU runs; evaluate() unit-tested in tests/test_power_check.py; called by run.sh (added 2026-08-29)
   history.py              Run history writer and header printer
   test_results.py         Partial credit: per-test outcomes from runner output → weighted score (record test_score; added 2026-10-08)
@@ -367,6 +370,7 @@ tests/
   test_llama_server_flags.py  _bool_flag unit tests (--load-mode none vs legacy --no-mmap, by binary --help support)
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
+  test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored)
   test_export_task.py         --export-task bundling unit tests; also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)

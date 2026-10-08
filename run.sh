@@ -85,6 +85,11 @@ if [[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${SKIP_POWER_CHECK:-0}" -ne 1 ]]; 
     python3 "$_SCRIPT_DIR/lib/power_check.py" "${MAX_PSU_WATT:-1200}" "${SYSTEM_OVERHEAD_WATT:-175}" || exit 1
 fi
 
+# ── Pre-flight: other work competing for CPU/GPU (added 2026-10-09) ─────────
+# Warns about processes using >50% of a core and GPUs already holding >3 GB of VRAM (e.g. a
+# stuck Unity smoke test, a leftover llama-server). BENCH_ABORT_ON_BUSY=1 aborts instead.
+python3 "$_SCRIPT_DIR/lib/load_check.py" || exit 1
+
 # ── Launch bench.py in background ────────────────────────────────────────────
 python3 bench.py "${_GPU_ARGS[@]+"${_GPU_ARGS[@]}"}" "$@" &
 _BENCH_PID=$!
