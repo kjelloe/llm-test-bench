@@ -82,6 +82,13 @@ def _wait_port_free(port: int, timeout: float = 8.0) -> None:
         time.sleep(0.3)
 
 
+def missing_gguf_files(cfgs: list[ModelConfig], models_dir: str) -> list[str]:
+    """GGUF paths that don't exist, so a multi-model run can fail before any model runs
+    instead of aborting halfway (only the first file of a split GGUF is checked)."""
+    return [str(Path(models_dir) / c.gguf_file) for c in cfgs
+            if c.gguf_file and not (Path(models_dir) / c.gguf_file).exists()]
+
+
 class LlamaServerManager:
     """Manages a single llama-server subprocess for the duration of a benchmark run."""
 

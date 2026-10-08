@@ -385,7 +385,7 @@ def main() -> None:
 
     if args.backend == "llama-server":
         import shutil
-        from lib.llama_server_client import LlamaServerManager
+        from lib.llama_server_client import LlamaServerManager, missing_gguf_files
         from lib.llama_server_client import chat as _chat_fn
         from lib.llama_server_client import unload_model as _unload_fn
         from lib.model_config import load_model_file
@@ -410,6 +410,9 @@ def main() -> None:
 
         cfgs = load_model_file(args.model_file)
         model_configs = {c.ollama_name: c for c in cfgs}
+        missing = missing_gguf_files([model_configs[m] for m in args.models if m in model_configs], models_dir)
+        if missing:
+            parser.error("GGUF file(s) not found (fetch with ./fetch-hf.sh):\n  " + "\n  ".join(missing))
         llama_manager = LlamaServerManager(models_dir=models_dir, bin_path=bin_path,
                                             debug=args.debug, single_gpu_index=args.single_gpu)
 

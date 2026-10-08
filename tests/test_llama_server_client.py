@@ -177,3 +177,11 @@ def test_fallback_to_wall_when_no_timings():
     }
     resp = _parse_body(body, _ELAPSED)
     assert resp.metrics.eval_duration == _ELAPSED
+
+
+def test_missing_gguf_files_lists_only_absent_files(tmp_path):
+    (tmp_path / "here.gguf").write_bytes(b"x")
+    cfgs = [ModelConfig(ollama_name="a", gguf_file="here.gguf"),
+            ModelConfig(ollama_name="b", gguf_file="gone.gguf"),
+            ModelConfig(ollama_name="c", gguf_file="")]
+    assert lsc.missing_gguf_files(cfgs, str(tmp_path)) == [str(tmp_path / "gone.gguf")]
