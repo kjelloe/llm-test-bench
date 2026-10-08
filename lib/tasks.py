@@ -938,8 +938,8 @@ CS_COORD_CONVERT = Task(
     test_timeout=180,
     setup_cmd=["dotnet", "restore"],
     setup_timeout=180,
-    num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
-    min_predict=8000,
+    num_ctx=24576,      # ~6k-token prompt (shim included) + 12k thinking budget
+    min_predict=12000,  # 8000 truncated thinking models mid-reasoning (quest:35b, 2026-10-08)
     test_weights={"Rotation_": 2.0, "RejectsMalformedInput": 0.5},
 )
 
@@ -970,8 +970,8 @@ CS_COORD_BAM = Task(
     test_timeout=180,
     setup_cmd=["dotnet", "restore"],
     setup_timeout=180,
-    num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
-    min_predict=8000,
+    num_ctx=24576,      # ~6k-token prompt (shim included) + 12k thinking budget
+    min_predict=12000,  # 8000 truncated thinking models mid-reasoning (quest:35b, 2026-10-08)
     test_weights={"RotationTurnsUnityForward": 2.0, "MovingAlongForward": 2.0, "_Rejects": 0.5},
 )
 
@@ -1003,8 +1003,8 @@ CS_MAIN_THREAD_DISPATCH = Task(
     test_timeout=180,
     setup_cmd=["dotnet", "restore"],
     setup_timeout=180,
-    num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
-    min_predict=8000,
+    num_ctx=24576,      # ~6k-token prompt (shim included) + 12k thinking budget
+    min_predict=12000,  # 8000 truncated thinking models mid-reasoning (quest:35b, 2026-10-08)
     test_weights={"ConcurrentEnqueue": 2.0, "WorkEnqueuedDuringDrain": 2.0, "Constructor_Rejects": 0.5, "Enqueue_Null": 0.5},
 )
 
@@ -1165,6 +1165,7 @@ NODE_ROOM_AUTHORITY = Task(
     context_files=["tests/room.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/room.test.js"],
     test_timeout=60,
+    num_ctx=24576,      # the 8192 default cut thinking models off mid-file (2026-10-08)
     min_predict=12000,
     test_weights={"accepts a valid move": 2.0, "ownership is checked": 2.0, "token bucket per seat": 2.0},
 )
@@ -1199,6 +1200,7 @@ NODE_SEAT_RECONNECT = Task(
     context_files=["tests/seats.test.js", "package.json"],
     test_cmd=["node", "--test", "tests/seats.test.js"],
     test_timeout=60,
+    num_ctx=24576,      # the 8192 default cut thinking models off mid-file (2026-10-08)
     min_predict=12000,
     test_weights={"reclaim within grace": 2.0, "newest socket wins": 2.0},
 )

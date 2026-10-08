@@ -56,3 +56,11 @@ def test_every_test_weight_key_names_a_real_test():
         text = "".join((TASK_DATA_DIR / task.subdir / f).read_text(encoding="utf-8") for f in test_files)
         for key in task.test_weights or {}:
             assert key in text, f"{tid}: weight key {key!r} matches no test in {test_files}"
+
+
+def test_context_fits_prompt_plus_thinking_budget():
+    # Longest measured gamedev prompt: ~9.3k tokens (cs_predict_reconcile, 2026-10-08). The node
+    # tasks once ran at the 8192 default and cut thinking models off mid-file.
+    for tid in TASK_GROUPS["gamedev"]:
+        task = TASK_MAP[tid]
+        assert task.num_ctx and task.num_ctx >= task.min_predict + 9500, tid
