@@ -39,3 +39,11 @@ def test_statehash_fixtures_match_js_spec():
     task_dir = TASK_DATA_DIR / "crossplay_statehash_parity"
     out = subprocess.run(["node", "js/make-fixtures.js"], cwd=task_dir, capture_output=True, text=True, timeout=30, check=True)
     assert out.stdout == (task_dir / "tests" / "GameClientTests" / "fixtures.json").read_text(encoding="utf-8")
+
+
+def test_gamedev_is_opt_in_for_default_runs():
+    from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS
+
+    default_ids = {t.id for t in DEFAULT_TASKS}
+    assert not default_ids & set(TASK_GROUPS["gamedev"]), "gamedev must not change default totals or Skill levels"
+    assert len(DEFAULT_TASKS) == len(BUILTIN_TASKS) - len(TASK_GROUPS["gamedev"])

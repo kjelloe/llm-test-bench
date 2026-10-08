@@ -923,6 +923,37 @@ CS_COORD_CONVERT = Task(
     min_predict=8000,
 )
 
+CS_COORD_BAM = Task(
+    id="cs_coord_bam",
+    difficulty=3,
+    description=(
+        "EngineCoords in src/GameClient/EngineCoords.cs was ported from a Three.js client and still uses "
+        "Three.js conventions; make it correct for Unity. Engine: x east, y north, z up (altitude), 256 "
+        "units per meter, integers; headings are BAM, 0..65535 per full turn, 0 = east, counter-clockwise "
+        "toward north. Unity: x east, y up, z north, left-handed, and Quaternion.Euler(0, yaw, 0) turns "
+        "Vector3.forward clockwise (seen from above) by yaw degrees. Required behavior: "
+        "(1) Position(x, y, altitude) returns meters as (x, altitude, y) / 256, keeping fractions; "
+        "(2) ToUnits(meters) converts back exactly like the server's JavaScript Math.round(meters * 256) "
+        "(halves round toward positive infinity, so 2.5 -> 3 and -2.5 -> -2), and throws an "
+        "ArgumentException (or subclass) for NaN or infinity; "
+        "(3) YawDegrees(bam) is the Unity yaw that faces the heading, in [0, 360); Rotation(bam) = "
+        "Quaternion.Euler(0, YawDegrees(bam), 0), so Rotation(bam) * Vector3.forward equals Forward(bam); "
+        "(4) Forward(bam) is the unit vector of the heading in Unity space; "
+        "(5) YawDegrees and Forward throw ArgumentOutOfRangeException for bam outside 0..65535; "
+        "(6) HeadingFromYaw(yaw) is the inverse of YawDegrees for any finite yaw (including negative or "
+        "above 360), rounding half a BAM up like Math.round, wrapped into 0..65535." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_coord_bam",
+    editable_files=["src/GameClient/EngineCoords.cs"],
+    context_files=["tests/GameClientTests/EngineCoordsTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
+    min_predict=8000,
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1251,6 +1282,7 @@ BUILTIN_TASKS: list[Task] = [
     NODE_EXPRESS_VALIDATION,
     PYTHON_FASTAPI_ENDPOINT,
     CS_COORD_CONVERT,
+    CS_COORD_BAM,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1318,8 +1350,14 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
 }
+
+# Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
+# totals and Skill levels) until their difficulty levels are validated across models.
+OPT_IN_GROUPS: tuple[str, ...] = ("gamedev",)
+_OPT_IN_IDS = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
+DEFAULT_TASKS: list[Task] = [t for t in BUILTIN_TASKS if t.id not in _OPT_IN_IDS]

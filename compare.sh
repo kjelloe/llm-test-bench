@@ -67,7 +67,7 @@ Extra options are forwarded to bench.py (run.sh --help for the full list).
   -h, --help                    show this help and exit
 
 Forwarded to bench.py (selection):
-  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop | web
+  --task-group GROUP [...]      coding | l6 | l6_full | context | multihop | web | gamedev (opt-in)
   --tasks TASK_ID [...]         explicit task subset
   --backend ollama|llama-server|vllm  inference backend (default: ollama)
   --num-predict INT             max output tokens (compare.sh default: 8000)
@@ -236,7 +236,7 @@ NUM_TASKS=$(
     _BA="$_bench_args_str" python3 -c "
 import sys, os
 sys.path.insert(0, '$SCRIPT_DIR')
-from lib.tasks import BUILTIN_TASKS, TASK_GROUPS
+from lib.tasks import DEFAULT_TASKS, TASK_GROUPS
 args = os.environ.get('_BA', '').split()
 groups=[]; task_ids=[]
 i=0
@@ -261,7 +261,7 @@ elif groups:
                 seen.add(t); n += 1
     print(n)
 else:
-    print(len(BUILTIN_TASKS))
+    print(len(DEFAULT_TASKS))
 " 2>/dev/null || echo 11
 )
 MAX_RUNTIME=$(( MODEL_TIMEOUT * NUM_MODELS * NUM_TASKS ))

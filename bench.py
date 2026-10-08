@@ -14,7 +14,7 @@ from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
-from lib.tasks import BUILTIN_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests
+from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests
 
 
 def _safe_model_name(model: str) -> str:
@@ -372,7 +372,7 @@ def main() -> None:
             parser.error(f"Unknown task IDs: {unknown}. Available: {sorted(TASK_MAP)}")
         tasks_to_run = [TASK_MAP[t] for t in args.tasks]
     else:
-        tasks_to_run = BUILTIN_TASKS
+        tasks_to_run = DEFAULT_TASKS
 
     # ── Backend setup ─────────────────────────────────────────────────────────
     num_thread_opt = args.num_thread if args.num_thread > 0 else None

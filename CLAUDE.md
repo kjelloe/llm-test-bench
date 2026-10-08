@@ -399,7 +399,8 @@ Task groups (--task-group):
   context   6 context retrieval tasks (8k–256k)
   multihop  5 multihop + distractor tasks (2-hop forward/reverse, 1 distractor, chain_5, cross_5)
   spot      10-task candidate spot check (standard evaluation subset)
-  gamedev   8 Unity-client C# + Node-authority tasks (L2-L5), derived from the user's multiplayer games
+  gamedev   9 Unity-client C# + Node-authority tasks (L2-L5), derived from the user's multiplayer games;
+            OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no --tasks/--task-group
             (boombrawl, CarrierDominion, RetroMultiCiv, Fireline); see "Game-dev task group" below
 ```
 
@@ -490,7 +491,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev's 9 are opt-in via --task-group gamedev)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1299,6 +1300,7 @@ version negotiation). Task code is re-implemented, not copied, so `--export-task
 | Task | L | Source pattern | Main traps |
 |---|---|---|---|
 | `cs_coord_convert` | 2 | Three.js→Unity (synthetic cm/radians) | mirrored quaternion sign, yaw wrap into [0,360), units |
+| `cs_coord_bam` | 3 | CarrierDominion `client/render/coords.js` (engine z-up, 16-bit BAM) | stub is a naive three.js port: Unity yaw is `90 - bam*360/65536`, not the source's unnegated yaw; back-conversion must round like JS `Math.round` (not banker's, not away-from-zero) |
 | `cs_main_thread_dispatch` | 3 | doc §5 main-thread rule | thread safety, bounded queue, re-entrant enqueue, no lock while running actions |
 | `cs_protocol_codec` | 4 | boombrawl positional snap codec + RetroMultiCiv reject codes, plus a version handshake | Newtonsoft (Unity's package), int32 range, forward-compatible extra fields |
 | `cs_snapshot_interp` | 4 | boombrawl/Fireline interpolators | never resurrect, teleport snap, brads shortest arc, heading vs motion (Fireline's real bug), capped extrapolation |
@@ -1322,12 +1324,8 @@ failed `cs_coord_convert` and `cs_main_thread_dispatch` with genuine bugs (inver
 re-entrant drain, wrong length validation, `Unsafe` not available on netstandard2.1). Full
 results: `next-runs.md`.
 
-**Planned, not built yet:** `cs_coord_bam` (L3), from CarrierDominion's `client/render/coords.js`:
-engine x east / y north / z up, 256 units per metre, 16-bit BAM headings counter-clockwise from
-east → Unity x east / y up / z north. Traps: Unity yaw is `90 - bam * 360 / 65536` (clockwise from
-north), not the unnegated three.js yaw the source file uses, so copying coords.js is wrong; the
-inverse must round half up like JS `Math.round`, not C#'s default banker's rounding; BAM wraps
-modulo 65536. Kept separate from `cs_coord_convert` so both conventions stay covered.
+`cs_coord_bam` was added the same day as the rest (it was first only planned); it is a separate task
+from `cs_coord_convert` so both coordinate conventions stay covered.
 
 #### What NOT to do
 

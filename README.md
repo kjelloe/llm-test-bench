@@ -89,7 +89,9 @@ BENCH_BACKEND=llama-server ./compare.sh --model-file models/experimental.txt
 
 `--task-group` and `--tasks` are mutually exclusive. Task groups: `coding` (19), `web` (4), `l6` /
 `para` (4 stepped Paratrooper steps), `l6_full` (1, the from-scratch Paratrooper implementation),
-`context` (6), `multihop` (5), `spot` (10-task candidate-evaluation subset).
+`context` (6), `multihop` (5), `spot` (10-task candidate-evaluation subset), `gamedev` (9 Unity-client
+C# + Node-authority tasks; **opt-in**: not part of a default all-tasks run, so it doesn't change the
+39-task totals or Skill levels until its difficulty levels are validated).
 
 ---
 

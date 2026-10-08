@@ -100,7 +100,15 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (37 total, difficulty L1–L6):
+- Built-in tasks (48 total, difficulty L1–L6; 39 run by default, the 9 `gamedev` tasks are opt-in):
+
+  **Game-dev tasks (9, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
+  netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`) and
+  Node.js authoritative-server logic (`node --test`), patterned on the user's multiplayer games. Not in a
+  default all-tasks run, so they don't change the 39-task totals or Skill levels until validated. Tasks:
+  `cs_coord_convert` (L2), `cs_coord_bam` (L3), `cs_main_thread_dispatch` (L3), `cs_protocol_codec` (L4), `cs_snapshot_interp`
+  (L4), `node_room_authority` (L4), `node_seat_reconnect` (L4), `cs_predict_reconcile` (L5),
+  `crossplay_statehash_parity` (L5). Rules, sources and traps: CLAUDE.md "Game-dev task group".
 
   **Web tasks (4) — select with `--task-group web`:**
   - `python_config_loader` (L2) — `load_config()` in `config.py` reads five environment variables with typed defaults; bugs: no whitespace-stripping on values (causing `int()` errors), and empty-string env values don't fall back to defaults. Fix so `APP_PORT='  9000  '` and `APP_NAME=''` behave correctly. `pytest`
