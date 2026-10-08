@@ -1190,7 +1190,8 @@ When asked to implement features:
     KV. 21m11s total; decode rate (0.94 tok/s) matches `node_para_core`'s own 0.93 tok/s on this
     same GPU almost exactly, confirming ~0.9-1.0 tok/s is this hardware's genuine short-task
     decode ceiling for this model, not noise. Full detail, every command, and every number:
-    `memory/project_deepseek_v41_flash_poc_plan.md`.
+    `memory/project_deepseek_v41_flash_poc_plan.md`. **Model files deleted 2026-10-08** to free disk (468 GB);
+    the fork build in `~/GIT/llama.cpp-dsv41` is kept, so re-running needs only the ~502 GB re-download.
   - **llama.cpp-adaptive-kv-streaming fork** (`RaymondHuang210129/llama.cpp-adaptive-kv-streaming`,
     investigated 2026-09-01/02): adds `--kv-stream-stage-mib` to `llama-server`, streaming the KV
     cache between pinned host memory and a bounded CUDA pool for long contexts on GPUs too small
@@ -1490,7 +1491,8 @@ in the current nine it would close.
 1. Cross-GPU sensitivity on the top single-GPU models (equinox:31b, qwen3.6:27b, gemma4:31b-qat) at
    2×24 GB `tensor_split=1|1` — split arity has flipped close calls before.
 2. The vLLM box: `qwen3.8-27b:nvfp4-next` (tp=2, 2× RTX 5060 Ti) — needs .NET 9 SDK and Node there.
-3. DeepSeek-V4.1-Flash on one or two short gamedev tasks (e.g. `cs_coord_bam`) as a capability
+3. DeepSeek-V4.1-Flash on one or two short gamedev tasks (e.g. `cs_coord_bam`) — its model files were
+   deleted 2026-10-08 to free disk, so this first needs the ~502 GB re-download — as a capability
    ceiling; expect ~1 h per task at its measured prefill/decode rates.
 4. A frontier coding agent via `--export-task` on all nine, for an upper bound to set levels against.
 5. qwen3.8-flash-next speed root cause: rebuild `67a17c17c` with `-DGGML_CUDA_GRAPHS=OFF` and re-run
