@@ -1321,10 +1321,75 @@ passes, and single-bug mutants of the reference are each caught. Real model runs
 weak tests of mine (rotation axis parallel to the test vector; a prediction test that only
 compared after the link settled) — trust model results over reference-only validation.
 
-First contact (2026-10-08, single RTX 4090, partial runs): qwen3.8:27b and tiel-coder:35b both
-failed `cs_coord_convert` and `cs_main_thread_dispatch` with genuine bugs (inverse quaternion,
-re-entrant drain, wrong length validation, `Unsafe` not available on netstandard2.1). Full
-results: `next-runs.md`.
+**Results, 2026-10-08 (27 models, 276 result records, ~10 h of GPU time).** Cell = **P** pass, else
+weighted partial credit (0-1); `cc` = does not compile, `syn` = JS syntax error (file won't load),
+`nb` = no usable file (reasoning loop / budget). Latest valid record per model × task (re-runs replace
+the 6 truncated pairs). Configs: single RTX 4090 from `models/24gb.txt`/`default.txt`/`16gb.txt`
+unless noted; gpt-oss:120b, qwen3.5-122b:a10b, laguna, qwen3.8-flash-next on 3×24 GB
+(`3x24gb.txt`); qwen3.5:27b, qwen3-coder:30b-1m, qwen3.6:35b-A3B, deepseek-r1:32b on 2×24 GB
+(`2x24gb.txt`, no single-GPU entry — cross-GPU caveat applies). gpt-oss:120b's and qwen3.8:27b's
+first runs predate per-test weights, so some of their cells are unweighted.
+
+| Model | coord (L2) | bam (L3) | disp (L3) | codec (L4) | interp (L4) | predict (L5) | room (L4) | seat (L4) | parity (L5) | pass | partial |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| gpt-oss:120b | 0.85 | **P** | **P** | 0.97 | 0.93 | **P** | 0.94 | 0.92 | 0.89 | 3/9 | 0.94 |
+| qwen3.8-flash-next | 0.74 | **P** | 0.77 | **P** | 0.94 | **P** | **P** | **P** | 0.92 | 5/9 | 0.93 |
+| equinox:31b | 0.74 | **P** | **P** | 0.90 | cc | **P** | 0.95 | **P** | 0.92 | 4/9 | 0.83 |
+| qwen3.6:27b | 0.58 | **P** | **P** | 0.97 | cc | **P** | 0.95 | **P** | 0.92 | 4/9 | 0.82 |
+| gemma4:31b-qat | 0.74 | **P** | 0.77 | cc | cc | **P** | **P** | **P** | 0.92 | 4/9 | 0.71 |
+| qwen3.8:27b | 0.74 | **P** | 0.77 | 0.97 | cc | **P** | 0.95 | **P** | cc | 3/9 | 0.71 |
+| gemma4:26b-qat | 0.74 | **P** | 0.23 | 0.94 | cc | **P** | 0.89 | 0.73 | 0.84 | 2/9 | 0.71 |
+| qwen3.5-122b:a10b | 0.74 | 0.90 | **P** | cc | 0.64 | **P** | 0.84 | 0.20 | cc | 2/9 | 0.59 |
+| qwen3.5:27b | 0.74 | **P** | cc | 0.62 | cc | **P** | syn | **P** | 0.92 | 3/9 | 0.59 |
+| laguna-s-2.1:118b-iq4 | 0.74 | 0.90 | cc | 0.94 | cc | **P** | syn | **P** | 0.52 | 2/9 | 0.57 |
+| qwen3.6:35b-A3B | 0.74 | 0.37 | 0.77 | 0.84 | cc | **P** | nb | 0.20 | 0.92 | 1/9 | 0.54 |
+| qwopus3.6:35b | 0.74 | 0.37 | 0.54 | 0.84 | cc | 0.64 | syn | 0.13 | **P** | 1/9 | 0.47 |
+| qwen3.5:35b | 0.48 | 0.37 | 0.54 | cc | cc | **P** | 0.63 | **P** | cc | 2/9 | 0.45 |
+| qwen3-coder:30b-1m | 0.48 | 0.27 | 0.54 | cc | cc | 0.95 | 0.84 | 0.40 | 0.44 | 0/9 | 0.44 |
+| quest:35b | 0.29 | 0.83 | nb | 0.75 | cc | 0.18 | 0.68 | nb | 0.92 | 0/9 | 0.41 |
+| qwen3-30b:2507 | 0.48 | 0.30 | **P** | cc | cc | **P** | 0.42 | syn | cc | 2/9 | 0.36 |
+| ornith:1.0-35b | 0.74 | 0.37 | cc | 0.84 | cc | **P** | syn | 0.20 | cc | 1/9 | 0.35 |
+| deepseek-r1:32b | 0.74 | 0.63 | cc | 0.71 | cc | **P** | syn | 0.00 | cc | 1/9 | 0.34 |
+| devstral-small-2 | 0.48 | 0.37 | cc | cc | cc | 0.90 | 0.68 | 0.20 | 0.44 | 0/9 | 0.34 |
+| qwen3-coder-rtpurbo:30b | 0.48 | 0.27 | 0.54 | cc | cc | 0.49 | 0.26 | 0.20 | 0.44 | 0/9 | 0.30 |
+| qwen2.5-coder:32b-q4 | 0.42 | 0.30 | cc | cc | cc | **P** | syn | 0.80 | cc | 1/9 | 0.28 |
+| gpt-oss:20b | 0.74 | **P** | nb | nb | nb | nb | 0.53 | nb | nb | 1/9 | 0.25 |
+| tiel-coder:35b | 0.45 | 0.47 | cc | cc | cc | **P** | syn | 0.20 | cc | 1/9 | 0.24 |
+| noctrex-qwen3.6:35b | 0.74 | 0.40 | 0.77 | cc | cc | cc | nb | 0.20 | cc | 0/9 | 0.23 |
+| glm4.7-flash | 0.42 | 0.27 | 0.23 | cc | 0.45 | 0.54 | syn | syn | cc | 0/9 | 0.21 |
+| ornith:1.5-35b | 0.32 | 0.47 | cc | cc | cc | **P** | nb | syn | cc | 1/9 | 0.20 |
+| ornith:1.5-9b | cc | 0.37 | cc | cc | cc | cc | syn | syn | cc | 0/9 | 0.04 |
+
+Per-task: pass rate / mean partial — coord 0/27 / 0.60, bam 9/27 / 0.64, disp 5/27 / 0.42, codec
+1/27 / 0.42, interp 0/27 / 0.11, predict 18/27 / 0.80, room 2/27 / 0.43, seat 8/27 / 0.46,
+parity 1/27 / 0.41. Every failure was triaged; none was a task defect after the fixes in
+"Findings along the way" (two weak tests, the num_ctx/min_predict defect). Determinism: equinox:31b
+and qwen3.8:27b re-runs reproduced exactly; qwen3.8-flash-next's re-run was byte-identical.
+
+**What the results say about C#/Unity ability:**
+- **Tiers.** ~0.93: gpt-oss:120b and qwen3.8-flash-next (both 3×24 GB and slow here: ~10 and
+  ~4.5 tok/s) — nearly every failure is a single test. ~0.82: equinox:31b (35 tok/s) and qwen3.6:27b,
+  the best single-GPU C# models. ~0.71: gemma4:31b-qat, qwen3.8:27b, gemma4:26b-qat (the latter at
+  ~110 tok/s: best quality per second on one GPU). Below 0.5: every A3B MoE coder/RL fine-tune
+  (qwopus, quest, tiel-coder, rtpurbo, qwen3-coder, ornith) and glm4.7-flash.
+- **Dense beats MoE for this work**, and coder fine-tunes are not better than their bases —
+  consistent with this repo's earlier dense-vs-MoE finding on multi-step tasks.
+- **Two universal gaps no model closes.** (1) The Three.js→Unity quaternion mirror: all 27 return
+  `(x, y, -z, w)` (the inverse rotation) instead of `(-x, -y, z, w)` — a shared misconception, so
+  model choice won't fix it; it needs a reference/test in the real project. (2) Compiling under
+  Unity's rules: about half of all C# failures are compile errors (missing `using System.Linq/
+  Threading/Newtonsoft.Json`, members invented on read-only types, `Mathf.Min(long, long)` picking
+  the float overload, scoping errors, C# 11 `>>>` 7 times). For a Unity agent, a compile-and-test
+  loop matters more than the model.
+- **New failure class: in-code reasoning loops** — the Qwen3.6-A3B family and quest open the file,
+  then reason in code comments until the budget runs out; gpt-oss:20b loops in prose.
+
+**Proposed re-levelling (NOT applied — for review with the user):** pass rates contradict several
+levels. coord L2→L4 (or keep as a named "handedness canary" like `python_hashmap`), disp L3→L4,
+codec L4→L5, interp L4→L5, room L4→L5, predict L5→L3 (a fix-the-bugs task with an explicit rule
+list is the easiest of the nine), bam/seat/parity keep L3/L4/L5. Even re-levelled, no model passes
+every task at L1-L3, so all-pass Skill would read <L1 for everyone: keep `gamedev` opt-in and rank
+models by mean partial credit plus pass count instead.
 
 `cs_coord_bam` was added the same day as the rest (it was first only planned); it is a separate task
 from `cs_coord_convert` so both coordinate conventions stay covered.
@@ -1381,6 +1446,15 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    restart the implementation...") until the budget runs out; gpt-oss:20b loops "Ok. Let's
    implement." The fix removed the harness limit; what remains is model behavior (in-code reasoning
    loops), which more budget would not cure.
+9. **qwen3.8-flash-next is ~2× slower than documented on this rig now — OPEN.** Gamedev decode ~4.5 tok/s;
+   the control `python_hashmap` run gave 10.6 tok/s against the documented 23.0 on the same pinned
+   `67a17c17c` and the same `3x24gb.txt` config (no concurrent I/O, 77 GB RAM free — I first wrongly
+   blamed a concurrent download). So there are two effects: a rig-level ~2× slowdown since the
+   2026-09-03 measurement, and a further ~2× at gamedev's `num_ctx=24576` (with `--fit`, a bigger KV
+   cache leaves fewer experts in VRAM). Leading hypothesis for the first, untested: the binary was
+   rebuilt with `GGML_CUDA_GRAPHS=ON` (added to build-llama.sh 2026-09-04), while the 23 tok/s
+   number predates that flag. Test: rebuild 67a17c17c with `-DGGML_CUDA_GRAPHS=OFF` (~25 min), re-run
+   the control. Capability results are unaffected (byte-identical re-run).
 
 #### What NOT to do
 
