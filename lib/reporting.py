@@ -2,6 +2,7 @@ import json
 import shutil
 from collections import defaultdict
 from pathlib import Path
+from lib.test_results import record_score
 
 
 def _backend_suffix(backend: str) -> str:
@@ -238,6 +239,12 @@ def print_summary(results: list[dict]) -> None:
         for r in failures:
             counts[r.get("error_kind") or "unknown"] += 1
         print(f"\nModel : {model}")
+        avg = sum(record_score(r) for r in recs) / len(recs)
+        print(f"  partial credit: {avg:.2f} avg over {len(recs)} tasks (pass = 1, no tests run = 0)")
+        near = [r for r in failures if r.get("test_score")]
+        if near:
+            print("  tests passed on failing tasks: " + ", ".join(
+                f"{r['task']} {r['test_score']['passed']}/{r['test_score']['total']}" for r in near))
         for kind, count in sorted(counts.items(), key=lambda x: -x[1]):
             print(f"  {kind}: {count}")
             samples = [r for r in failures if r.get("error_kind") == kind][:1]

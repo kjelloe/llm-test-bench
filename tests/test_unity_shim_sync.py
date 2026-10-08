@@ -47,3 +47,12 @@ def test_gamedev_is_opt_in_for_default_runs():
     default_ids = {t.id for t in DEFAULT_TASKS}
     assert not default_ids & set(TASK_GROUPS["gamedev"]), "gamedev must not change default totals or Skill levels"
     assert len(DEFAULT_TASKS) == len(BUILTIN_TASKS) - len(TASK_GROUPS["gamedev"])
+
+
+def test_every_test_weight_key_names_a_real_test():
+    for tid in TASK_GROUPS["gamedev"]:
+        task = TASK_MAP[tid]
+        test_files = [f for f in task.context_files if "test" in Path(f).name.lower()]
+        text = "".join((TASK_DATA_DIR / task.subdir / f).read_text(encoding="utf-8") for f in test_files)
+        for key in task.test_weights or {}:
+            assert key in text, f"{tid}: weight key {key!r} matches no test in {test_files}"

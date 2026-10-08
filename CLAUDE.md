@@ -350,6 +350,7 @@ lib/
   gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
   power_check.py          Pre-flight GPU power-limit safety check for 3+ GPU runs; evaluate() unit-tested in tests/test_power_check.py; called by run.sh (added 2026-08-29)
   history.py              Run history writer and header printer
+  test_results.py         Partial credit: per-test outcomes from runner output → weighted score (record test_score; added 2026-10-08)
 logs/
   run-NN.log          Per-run output (tee from run.sh); keeps last 10; run-latest.log symlink
   compare-NN.log      Per-compare output (tee from compare.sh); compare-latest.log symlink
@@ -375,7 +376,8 @@ tests/
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)
-  test_unity_shim_sync.py     gamedev guards: per-task UnityEngine shim copies match task_data/_shared/UnityShim,
+  test_test_results.py        partial-credit parsing (xunit/node:test/pytest per-test lines + summary counts) and weighting
+  test_unity_shim_sync.py     gamedev guards (incl. every test_weights key names a real test): per-task UnityEngine shim copies match task_data/_shared/UnityShim,
                               every gamedev task has a *.reference.* solution, parity fixtures match the JS spec
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
@@ -1326,6 +1328,51 @@ results: `next-runs.md`.
 
 `cs_coord_bam` was added the same day as the rest (it was first only planned); it is a separate task
 from `cs_coord_convert` so both coordinate conventions stay covered.
+
+**Findings along the way (2026-10-08) — analysis and status:**
+1. **Pass/fail hides near-misses → partial credit, IMPLEMENTED.** qwen3.8:27b's first 8 gamedev
+   tasks were 2/8 by pass/fail but scored 0.85 / 0.82 / 0.97 / 0.94 on four of the failures (1-2
+   tests each). Every result now carries `test_score` (`{passed, total, score, weighted}`, see
+   `lib/test_results.py`), scored from the FULL runner output — dotnet's is ~100 KB and the stored
+   `error_detail` keeps only 10 KB, so per-test lines must be read before truncation. Weights are
+   per task (`Task.test_weights`, test-name substring → weight, default 1); for gamedev the rule is
+   core-contract tests ×2-3 (e.g. exact convergence with the server, byte parity with the JS),
+   argument validation ×0.5, the rest ×1, and `test_unity_shim_sync.py` fails if a weight key
+   names no test. Shown as "partial credit" in the failure detail, and as a `partial` column in
+   `statistics.sh --detail` (older records re-scored, unweighted, from their stored output's
+   summary line). Pass/fail stays the headline and the basis of Skill; partial credit is a
+   finer signal, not a replacement — a 0.97 that doesn't compile in Unity is still unusable.
+2. **"Doesn't compile under Unity" is worth its own metric — PLANNED, not built.** Today a compile
+   error is TESTS_STILL_FAIL with `test_score` null (= 0), the same as wrong logic. The Unity
+   constraints already catch real model habits (`>>>` = C# 11, `System.Runtime.CompilerServices.
+   Unsafe` absent on netstandard2.1). Proposal: when the post-edit test output has `error CS`
+   lines, record `build_errors` (the CS codes), and flag `unity_incompatible` for language-version
+   / missing-API codes (CS8773, CS8400, CS0518 `IsExternalInit`, CS0103/CS0234/CS0246 on
+   framework names) vs. plain compile mistakes (CS0136, CS0173, CS1061...). Cheap, same parse
+   point as partial credit.
+3. **Port 8080 collision with llm-service-provider's gateway — guard FIXED, default UNCHANGED.**
+   The guard now refuses any HTTP answer (the gateway's 503 slipped through before). Every run
+   while the gateway is up still needs `LLAMA_SERVER_PORT=8099`. Nothing outside this harness
+   talks to its own llama-server, so changing the default port (e.g. to 8099) would remove the
+   collision outright; not done yet because it is a behavior change to a fixed default — ask first.
+4. **No real Unity validation — OUT OF SCOPE for now.** The shim plus netstandard2.1/C# 9 catches
+   language and API problems but not Unity runtime behavior (IL2CPP/AOT stripping, main-thread
+   rules enforced by the engine, Unity's own Newtonsoft package version). A real check needs the
+   Unity Editor on Linux (~10 GB), a Personal licence activated once, and `Unity -batchmode
+   -runTests` with the Unity Test Framework against a project template that copies these sources
+   in. Worth it only if gamedev results start driving real Unity decisions.
+5. **gpt-oss:120b decodes at ~9-12 tok/s on gamedev tasks** (3×24 GB, all on GPU) vs ~70 on
+   short-prompt coding tasks. The harness's tok/s is decode-only (llama-server's
+   `predicted_per_second`), so this is not prompt processing. It matches this model's historical
+   ~10 tok/s on `csv_nordic_property` (also a ~6k-token prompt), so it is a reproducible long-prompt
+   decode slowdown on this rig, not a fault in this run; the cause (3-way split at deeper KV,
+   q8_0 KV, reasoning length) is NOT established. Wall times per gamedev task: 3-12 min.
+6. **Weak tests found by real model runs, not by reference/mutant validation** — fixed (rotation
+   axis parallel to the test vector; prediction compared only after settling). Lesson recorded:
+   a model's wrong-but-plausible answer is a better test of the test than a hand-made mutant.
+7. **Stale results** from pre-fix task versions moved to `output/stale/` so `statistics.sh`
+   (which reads every `output/*.json`) doesn't mix them in. Do the same after any future task fix
+   that changes outcomes.
 
 #### What NOT to do
 

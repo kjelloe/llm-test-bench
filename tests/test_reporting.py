@@ -138,3 +138,18 @@ def test_peak_vs_skill_diverge():
     peak  = _peak_skill_level("m", TASKS, idx, DIFFICULTIES)
     assert skill == "L2"
     assert peak  == "L5"
+
+
+def test_failure_detail_reports_partial_credit(capsys):
+    from lib.reporting import print_summary
+
+    recs = [
+        {"model": "m", "task": "a", "tests_pass": True, "error_kind": None},
+        {"model": "m", "task": "b", "tests_pass": False, "error_kind": "TESTS_STILL_FAIL",
+         "error_detail": "x", "test_score": {"passed": 9, "total": 12, "score": 0.75, "weighted": True}},
+        {"model": "m", "task": "c", "tests_pass": False, "error_kind": "NO_BLOCKS", "error_detail": "y"},
+    ]
+    print_summary(recs)
+    out = capsys.readouterr().out
+    assert "partial credit: 0.58 avg over 3 tasks" in out
+    assert "b 9/12" in out

@@ -14,7 +14,7 @@ from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
-from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests
+from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests, run_tests_scored
 
 
 def _safe_model_name(model: str) -> str:
@@ -73,6 +73,7 @@ def run_one(
         "edit_parse_ok": False,
         "edit_policy_ok": False,
         "tests_pass": False,
+        "test_score": None,     # partial credit: {passed, total, score, weighted}; see lib/test_results.py
         "response_truncated": False,
         "ctx_truncated": False,
         "finish_reason": "",
@@ -231,8 +232,9 @@ def run_one(
         record["edited_files"] = [e.path for e in edits]
 
         # --- post-edit tests ---
-        passed, out = run_tests(task, workdir)
+        passed, out, score = run_tests_scored(task, workdir)
         record["tests_pass"] = passed
+        record["test_score"] = score
         if not passed:
             record["error_kind"] = "TESTS_STILL_FAIL"
             record["error_detail"] = out

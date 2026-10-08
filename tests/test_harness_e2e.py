@@ -96,6 +96,8 @@ def test_run_one_pass():
     assert rec["edit_parse_ok"] is True
     assert rec["edit_policy_ok"] is True
     assert rec["baseline_failed"] is True  # fixture must fail before fix
+    assert rec["test_score"]["score"] == 1.0
+    assert rec["test_score"]["passed"] == rec["test_score"]["total"] > 0
 
 
 def test_run_one_no_blocks():
@@ -114,6 +116,7 @@ def test_run_one_no_blocks():
     assert rec["tests_pass"] is False
     assert rec["error_kind"] == "NO_BLOCKS"
     assert rec["edit_parse_ok"] is False
+    assert rec["test_score"] is None
 
 
 def test_run_one_tests_still_fail():
@@ -133,6 +136,8 @@ def test_run_one_tests_still_fail():
     assert rec["error_kind"] == "TESTS_STILL_FAIL"
     assert rec["edit_parse_ok"] is True
     assert rec["edit_policy_ok"] is True
+    assert 0.0 <= rec["test_score"]["score"] < 1.0
+    assert rec["test_score"]["weighted"] is True
 
 
 def test_run_one_edited_noneditable():

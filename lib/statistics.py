@@ -35,6 +35,12 @@ try:
 except Exception:
     DIFFICULTIES = {}
 
+try:
+    from lib.test_results import record_score
+except Exception:
+    def record_score(r: dict) -> float:
+        return 1.0 if r.get("tests_pass") else 0.0
+
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
 
@@ -346,6 +352,7 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None,
             "task":               r["task"],
             "difficulty":         DIFFICULTIES.get(r["task"], ""),
             "pass":               r["tests_pass"],
+            "partial":            record_score(r),
             "slow":               r.get("slow", False),
             "error_kind":         r.get("error_kind") or "",
             "tok_per_s":          r.get("tok_per_s", 0.0),

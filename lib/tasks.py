@@ -4,6 +4,8 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from lib.test_results import score_output
+
 TASK_DATA_DIR = Path(__file__).parent.parent / "task_data"
 
 
@@ -25,6 +27,8 @@ class Task:
     min_vram_gb: int = 0                # skip task on hardware with less total VRAM (0 = no guard)
     wall_time_budget_s: int | None = None  # PASS_BUT_SLOW threshold; None = no limit
     thinking_budget: int | None = None  # max thinking tokens for thinking models; None = unlimited
+    # Partial-credit weights: test-name substring -> weight (first match wins, default 1).
+    test_weights: dict[str, float] | None = None
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -121,7 +125,7 @@ than by reading files directly from this directory.
     (dest_dir / "PROMPT.txt").write_text(build_prompt(task, dest_dir), encoding="utf-8")
 
 
-def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
+def _run_full(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
     try:
         r = subprocess.run(
             cmd,
@@ -130,13 +134,21 @@ def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
             text=True,
             timeout=timeout,
         )
-        out = r.stdout + r.stderr
-        # Keep the head (primary errors) and tail (summary) — both matter for cascading failures.
-        if len(out) > 12000:
-            out = out[:6000] + "\n…(truncated)…\n" + out[-4000:]
-        return r.returncode, out
+        return r.returncode, r.stdout + r.stderr
     except subprocess.TimeoutExpired:
         return -1, f"Timed out after {timeout}s"
+
+
+def _truncate(out: str) -> str:
+    # Keep the head (primary errors) and tail (summary) — both matter for cascading failures.
+    if len(out) > 12000:
+        out = out[:6000] + "\n…(truncated)…\n" + out[-4000:]
+    return out
+
+
+def _run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str]:
+    rc, out = _run_full(cmd, cwd, timeout)
+    return rc, _truncate(out)
 
 
 def run_setup(task: Task, workdir: Path) -> tuple[bool, str]:
@@ -149,6 +161,13 @@ def run_setup(task: Task, workdir: Path) -> tuple[bool, str]:
 def run_tests(task: Task, workdir: Path) -> tuple[bool, str]:
     rc, out = _run(task.test_cmd, workdir, task.test_timeout)
     return rc == 0, out
+
+
+def run_tests_scored(task: Task, workdir: Path) -> tuple[bool, str, dict | None]:
+    """run_tests plus partial credit, scored from the full output before truncation drops
+    the per-test lines (dotnet test output is often ~100 KB)."""
+    rc, out = _run_full(task.test_cmd, workdir, task.test_timeout)
+    return rc == 0, _truncate(out), score_output(out, task.test_weights)
 
 
 # ---------------------------------------------------------------------------
@@ -921,6 +940,7 @@ CS_COORD_CONVERT = Task(
     setup_timeout=180,
     num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
     min_predict=8000,
+    test_weights={"Rotation_": 2.0, "RejectsMalformedInput": 0.5},
 )
 
 CS_COORD_BAM = Task(
@@ -952,6 +972,7 @@ CS_COORD_BAM = Task(
     setup_timeout=180,
     num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
     min_predict=8000,
+    test_weights={"RotationTurnsUnityForward": 2.0, "MovingAlongForward": 2.0, "_Rejects": 0.5},
 )
 
 CS_MAIN_THREAD_DISPATCH = Task(
@@ -984,6 +1005,7 @@ CS_MAIN_THREAD_DISPATCH = Task(
     setup_timeout=180,
     num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
     min_predict=8000,
+    test_weights={"ConcurrentEnqueue": 2.0, "WorkEnqueuedDuringDrain": 2.0, "Constructor_Rejects": 0.5, "Enqueue_Null": 0.5},
 )
 
 CS_PROTOCOL_CODEC = Task(
@@ -1026,6 +1048,7 @@ CS_PROTOCOL_CODEC = Task(
     setup_timeout=180,
     num_ctx=24576,      # prompt + 12k thinking budget
     min_predict=12000,
+    test_weights={"Snap_DecodesPositionalRows": 2.0, "Hello_V3_PopulatesRoster": 2.0, "EncodeInput_MatchesServerFormatExactly": 2.0, "EncodeInput_RejectsInvalidInput": 0.5},
 )
 
 CS_SNAPSHOT_INTERP = Task(
@@ -1069,6 +1092,7 @@ CS_SNAPSHOT_INTERP = Task(
     setup_timeout=180,
     num_ctx=24576,      # ~10k-token prompt (shim included) + 12k thinking budget
     min_predict=12000,
+    test_weights={"Sample_InterpolatesDelayBehind": 2.0, "EntityMissingFromNewestSnapshot": 2.0, "Constructor_Rejects": 0.5},
 )
 
 CS_PREDICT_RECONCILE = Task(
@@ -1106,6 +1130,7 @@ CS_PREDICT_RECONCILE = Task(
     setup_timeout=180,
     num_ctx=24576,      # ~11k-token prompt (shim included) + 12k thinking budget
     min_predict=12000,
+    test_weights={"ConvergesExactly": 3.0, "PredictionMatchesServerEveryTick": 3.0, "Reconcile_": 2.0, "Constructor_Rejects": 0.5},
 )
 
 NODE_ROOM_AUTHORITY = Task(
@@ -1141,6 +1166,7 @@ NODE_ROOM_AUTHORITY = Task(
     test_cmd=["node", "--test", "tests/room.test.js"],
     test_timeout=60,
     min_predict=12000,
+    test_weights={"accepts a valid move": 2.0, "ownership is checked": 2.0, "token bucket per seat": 2.0},
 )
 
 NODE_SEAT_RECONNECT = Task(
@@ -1174,6 +1200,7 @@ NODE_SEAT_RECONNECT = Task(
     test_cmd=["node", "--test", "tests/seats.test.js"],
     test_timeout=60,
     min_predict=12000,
+    test_weights={"reclaim within grace": 2.0, "newest socket wins": 2.0},
 )
 
 CROSSPLAY_STATEHASH_PARITY = Task(
@@ -1208,6 +1235,7 @@ CROSSPLAY_STATEHASH_PARITY = Task(
     setup_timeout=180,
     num_ctx=24576,
     min_predict=12000,
+    test_weights={"StateBytes_Match": 3.0, "HashState_MatchesTheServerHash": 3.0, "RejectsOutOfRange": 0.5},
 )
 
 MULTIHOP_CHAIN_5 = Task(
