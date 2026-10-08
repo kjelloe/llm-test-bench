@@ -1368,16 +1368,19 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
 6. **Weak tests found by real model runs, not by reference/mutant validation** — fixed (rotation
    axis parallel to the test vector; prediction compared only after settling). Lesson recorded:
    a model's wrong-but-plausible answer is a better test of the test than a hand-made mutant.
+7. **Stale results** from pre-fix task versions moved to `output/stale/` so `statistics.sh`
+   (which reads every `output/*.json`) doesn't mix them in. Do the same after any future task fix
+   that changes outcomes.
 8. **Context/budget defect, FIXED 2026-10-08 (sweep 4):** the two Node tasks had no `num_ctx` and ran
    at the 8192 default, so thinking models (qwen3.6:35b-A3B, noctrex-qwen3.6:35b, quest:35b) were cut
    off mid-file (NO_BLOCKS, finish=length); three C# tasks had `min_predict=8000` and truncated quest
    and gpt-oss:20b mid-reasoning. All 9 tasks now use `num_ctx=24576` + `min_predict=12000`, guarded by
    `test_context_fits_prompt_plus_thinking_budget`; the 6 affected (model, task) pairs were re-run.
-   gpt-oss:20b's other 4 truncations at 12000/24576 are its documented verbose-reasoning pathology,
-   not a budget defect, and stand as failures.
-7. **Stale results** from pre-fix task versions moved to `output/stale/` so `statistics.sh`
-   (which reads every `output/*.json`) doesn't mix them in. Do the same after any future task fix
-   that changes outcomes.
+   **All 6 still failed at the full 12000 tokens**, and for a genuine reason: the Qwen3.6-A3B family
+   and quest:35b open BEGIN_FILE, then reason INSIDE the code as comments ("// Actually, let me
+   restart the implementation...") until the budget runs out; gpt-oss:20b loops "Ok. Let's
+   implement." The fix removed the harness limit; what remains is model behavior (in-code reasoning
+   loops), which more budget would not cure.
 
 #### What NOT to do
 
