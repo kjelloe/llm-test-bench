@@ -1,3 +1,4 @@
 pytest>=7.4
 nvidia-ml-py>=12.0       # optional: GPU snapshots via pynvml; bench.py warns and continues without it
 huggingface_hub>=0.23.0  # fetch-hf.sh / search-hf.sh; not needed for benchmarks themselves
+hf_xet                   # fetch-hf.sh only: single files above HF's plain-HTTP limit (e.g. 65 GB GGUFs); use with HF_HUB_DISABLE_XET=0

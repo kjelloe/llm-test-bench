@@ -70,6 +70,8 @@ def main() -> None:
     # project (confirmed 2026-08-28/30 on 100+ GB files) — the transfer silently stops
     # progressing with no error. Disabling it falls back to plain HTTP, which has been
     # reliable. setdefault() so an explicit user override (e.g. HF_HUB_DISABLE_XET=0) wins.
+    # The opposite failure exists too: a single file above HF's plain-HTTP size limit refuses to
+    # download without Xet ("install hf_xet"); the failure summary below prints the recovery.
     os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
     models_dir = os.environ.get("LLAMA_MODELS_DIR", "")
@@ -200,6 +202,12 @@ def main() -> None:
         print(f"{len(failed)} download(s) failed:")
         for cfg, err in failed:
             print(f"  {cfg.ollama_name}: {err}")
+        if any("hf_xet" in err for _, err in failed):
+            # Single files over HF's plain-HTTP limit need Xet, which this script disables by
+            # default (see above); hit for real on 65-100 GB single-file GGUFs (2026-10-08).
+            print("\nFiles too large for plain HTTP need Xet: install it and re-run with the override:\n"
+                  "  .venv/bin/pip install hf_xet\n"
+                  "  HF_HUB_DISABLE_XET=0 ./fetch-hf.sh <file> --models <name>")
         sys.exit(1)
     else:
         print(f"All {len(to_download)} download(s) complete.")
