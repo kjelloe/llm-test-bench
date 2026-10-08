@@ -164,7 +164,7 @@ if command -v dotnet &>/dev/null; then
   ok "dotnet $DOTNET_VER"
   DOTNET_MAJOR=$(echo "$DOTNET_VER" | cut -d. -f1)
   if [[ "$DOTNET_MAJOR" -lt 9 ]]; then
-    warn ".NET $DOTNET_VER — .NET 9+ required by the dotnet_sas task"
+    warn ".NET $DOTNET_VER — .NET 9+ required by dotnet_sas and the gamedev C# tasks"
   fi
 else
   fail "dotnet not found — https://dotnet.microsoft.com/download"
