@@ -63,7 +63,7 @@ def weight_of(name: str, weights: dict[str, float] | None) -> float:
 
 
 def score_output(output: str, weights: dict[str, float] | None = None) -> dict | None:
-    """{passed, total, score, weighted} for one test run, or None if nothing was reported
+    """{passed, total, score, weighted, failed} for one test run, or None if nothing was reported
     (for example a compile error before any test ran)."""
     outcomes = parse_outcomes(output)
     if outcomes:
@@ -74,11 +74,13 @@ def score_output(output: str, weights: dict[str, float] | None = None) -> dict |
             "total": len(outcomes),
             "score": round(passed_w / total_w, 4) if total_w else 0.0,
             "weighted": True,
+            # The stored error_detail is truncated; keep the names so failures stay analysable.
+            "failed": [n for n, ok in outcomes.items() if not ok][:50],
         }
     counts = parse_counts(output)
     if counts and counts[1]:
         passed, total = counts
-        return {"passed": passed, "total": total, "score": round(passed / total, 4), "weighted": False}
+        return {"passed": passed, "total": total, "score": round(passed / total, 4), "weighted": False, "failed": None}
     return None
 
 

@@ -393,7 +393,7 @@ Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. Th
 | `edit_parse_ok` | bool | |
 | `edit_policy_ok` | bool | |
 | `tests_pass` | bool | |
-| `test_score` | object or null | partial credit from the post-edit test run: `{passed, total, score, weighted}`; `score` is weighted by `Task.test_weights` (test-name substring → weight, default 1); `weighted: false` when only the runner's summary counts were available; null when no test reported (no code, compile error, timeout). `lib/test_results.record_score()` turns any record into 0..1 (1 for a pass), re-scoring older records from their stored output. Added 2026-10-08 |
+| `test_score` | object or null | partial credit from the post-edit test run: `{passed, total, score, weighted, failed}` (`failed` = failing test names, max 50, null when only summary counts were available); `score` is weighted by `Task.test_weights` (test-name substring → weight, default 1); `weighted: false` when only the runner's summary counts were available; null when no test reported (no code, compile error, timeout). `lib/test_results.record_score()` turns any record into 0..1 (1 for a pass), re-scoring older records from their stored output. Added 2026-10-08 |
 | `edited_files` | list[string] | |
 | `error_kind` | string\|null | `NO_BLOCKS`, `CTX_TRUNCATED`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR`, `SKIPPED_VRAM`, `SKIPPED_CTX` |
 | `error_detail` | string\|null | truncated, max ~500 chars |

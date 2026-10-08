@@ -73,13 +73,14 @@ def test_weighted_score():
     assert weight_of("GameClientTests.T.Position", weights) == 1.0
     s = score_output(XUNIT, weights)
     # passed: Position (1) + Bad {} (0.5) = 1.5 of 3 + 1 + 0.5 + 0.5 = 5
-    assert s == {"passed": 2, "total": 4, "score": 0.3, "weighted": True}
+    assert s["failed"] == ["GameClientTests.T.Rotation", 'GameClientTests.T.Bad(json: "[1,2]", expected: BadShape)']
+    assert {k: s[k] for k in ("passed", "total", "score", "weighted")} == {"passed": 2, "total": 4, "score": 0.3, "weighted": True}
     assert score_output(XUNIT)["score"] == 0.5
 
 
 def test_counts_fallback_when_per_test_lines_were_truncated_away():
     truncated = "…(truncated)…\nFailed!  - Failed:     3, Passed:     9, Skipped:     0, Total:    12, Duration: 5 ms"
-    assert score_output(truncated) == {"passed": 9, "total": 12, "score": 0.75, "weighted": False}
+    assert score_output(truncated) == {"passed": 9, "total": 12, "score": 0.75, "weighted": False, "failed": None}
 
 
 def test_compile_error_scores_nothing():
