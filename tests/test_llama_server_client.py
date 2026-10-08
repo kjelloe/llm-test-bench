@@ -34,10 +34,12 @@ def test_llama_server_port_default_is_8080():
     assert lsc._PORT == 8080
 
 
-def test_start_refuses_foreign_occupant(monkeypatch, tmp_path):
+@pytest.mark.parametrize("status", [200, 503])
+def test_start_refuses_foreign_occupant(monkeypatch, tmp_path, status):
     """A pre-existing /health responder on our port (e.g. llm-service-provider's gateway,
     which also binds :8080) must raise loudly instead of being silently treated as our own
-    freshly-started server (see next-runs.md, 2026-09-24)."""
+    freshly-started server (see next-runs.md, 2026-09-24). The gateway answers 503 while its
+    backend is down, which must also count as occupied (2026-10-08)."""
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
     free_port = s.getsockname()[1]
@@ -45,7 +47,7 @@ def test_start_refuses_foreign_occupant(monkeypatch, tmp_path):
 
     class _Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"status":"ok"}')

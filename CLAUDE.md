@@ -375,6 +375,8 @@ tests/
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)
+  test_unity_shim_sync.py     gamedev guards: per-task UnityEngine shim copies match task_data/_shared/UnityShim,
+                              every gamedev task has a *.reference.* solution, parity fixtures match the JS spec
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=20000 num_ctx=32768 model_timeout=600
@@ -383,6 +385,12 @@ task_data/
   distractor_notes/       L2 decoy-resistant retrieval
   multihop_chain_5/       L4 5-hop config inheritance (correct answer: 90; sibling distractor: 45; top-level distractor: 30)
   multihop_cross_5/       L4 5-doc cross-reference (correct: oncall-emea-w-high; criticality distractor: oncall-emea-w-crit)
+  _shared/UnityShim/      canonical minimal UnityEngine shim (Vector3, Quaternion, Mathf, Debug); copied into each
+                          C# gamedev task's shim/ (task dirs must stay self-contained); never a task itself
+  cs_*/, crossplay_*/     gamedev C# tasks: GameClient.sln, src/ at netstandard2.1 + LangVersion 9.0 (Unity's
+                          constraints), xunit tests at net9.0; reference solutions are *.reference.cs (excluded
+                          from compile and from --export-task)
+  node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
 Task groups (--task-group):
   coding    19 coding tasks (L1–L5)
   web       4 web tasks (Express/FastAPI)
@@ -391,6 +399,8 @@ Task groups (--task-group):
   context   6 context retrieval tasks (8k–256k)
   multihop  5 multihop + distractor tasks (2-hop forward/reverse, 1 distractor, chain_5, cross_5)
   spot      10-task candidate spot check (standard evaluation subset)
+  gamedev   8 Unity-client C# + Node-authority tasks (L2-L5), derived from the user's multiplayer games
+            (boombrawl, CarrierDominion, RetroMultiCiv, Fireline); see "Game-dev task group" below
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -431,7 +441,10 @@ model/task problem, not an infra one. Fixed: `_start()` now checks for a foreign
 responder before spawning and raises loudly instead (`tests/test_llama_server_client.py::
 test_start_refuses_foreign_occupant`); the port is also overridable via `LLAMA_SERVER_PORT` for
 running llama-server-backend benchmarks alongside an active gateway (e.g.
-`LLAMA_SERVER_PORT=8099 ./run.sh --backend llama-server ...`). **This means any past
+`LLAMA_SERVER_PORT=8099 ./run.sh --backend llama-server ...`). The guard had a hole until
+2026-10-08: with its backend down the gateway answers `/health` with **503**, and `HTTPError` (a
+`URLError` subclass) was swallowed as "port free", so llama-server then died on "couldn't bind
+:8080". Any HTTP answer now counts as occupied (the test covers 200 and 503). **This means any past
 llama-server-backend benchmark result recorded while the gateway happened to be active is
 suspect** — it would have failed loudly as TOOL_ERROR post-fix, so a suspiciously bad/uniform
 result predating 2026-09-24 alongside `llm-service-provider` being live is worth re-running, not
@@ -1123,6 +1136,58 @@ When asked to implement features:
     revisited). **"Pin stands, root cause narrowed but not found."** The `fix/qwen4exp-moe-perf`
     branch (one commit, `78646146f`, the disproven accessor-inlining patch) is kept locally in
     `~/GIT/llama.cpp` for reference — not merged, not used, repo restored to the `67a17c17c` pin.
+  - **DeepSeek-V4.1-Flash via the JigSawPT `dsv41-porte` llama.cpp fork** (552B total params,
+    40 layers, 384 routed experts, 189 GiB engram tables; `~/GIT/deepseek-v41-flash-on-5090`
+    technical report + `~/GIT/llama.cpp-dsv41` fork clone, tested 2026-10-06/07): a third,
+    separate fork from `ds4`/DwarfStar and from mainline — `--moe-stream` streams routed experts
+    from NVMe through a VRAM cache + a pinned-RAM "L2" tier. Goal was explicitly "biggest model
+    possible," not speed. **Build/download/load all succeeded** despite the fork's own README
+    saying "Linux builds are untested... nobody has run them" — clean compile on the first try,
+    all 502 GB/11 shards downloaded and byte-verified exact against the HF repo's own metadata
+    (hit and fixed one real snag: 2 of the 11 shards needed `hf_xet` installed, the opposite
+    problem from the usual "disable Xet" lesson — check the actual error before assuming either
+    default). Loaded on a single free 24 GB card (`--moe-stream-cache 18 --moe-stream-l2 32`,
+    `-c 32768`) — the single biggest model ever run on this rig.
+    **`node_para_core` (L6 step 1, exported via `bench.py --export-task` and sent to the running
+    server by hand): PASS, 7/7 tests, on both the 3090 and the 4090**, with byte-identical
+    generated code (same MD5) across both — genuine determinism confirmed. 3090: 46m8s (0.69
+    tok/s decode). 4090: 33m6s (0.93 tok/s decode) once correctly rebuilt — the first attempt on
+    the 4090 used a binary still compiled with `-DCMAKE_CUDA_ARCHITECTURES=86` (Ampere-only),
+    forcing PTX JIT fallback on the 4090's `sm_89` and making the "faster" card appear to hang
+    (didn't finish in 60 min) — a pure build-targeting artifact. **Lesson: always confirm
+    `CMAKE_CUDA_ARCHITECTURES` in `build/CMakeCache.txt` matches the GPU under test before
+    trusting any cross-GPU timing on this fork.**
+    **`node_paratrooper` (L6-full) was attempted on the (correctly-built) 4090 and abandoned
+    after ~8.8 hours — a genuine, valuable negative result, not a model failure.** Streamed via
+    SSE to watch tokens arrive live rather than waiting blind: the first ~35 min produced
+    completely coherent code (correct restated-spec comments, into `getResult()`/`getState()`),
+    but decode throughput collapsed roughly 15x as generation got longer (~90 tokens in 35 min
+    vs. only ~1,350 tokens after 7h13min) — independently reproducing, with real numbers on this
+    hardware, the original report's own finding that the working set (and disk-miss rate) grows
+    with generation length, which a 32 GiB L2 cache (vs. the report's own 72 GiB) can't keep up
+    with. **Headline capability ceiling for this rig: short-to-medium tasks (hundreds to ~1,200
+    tokens) are practically completable; full from-scratch L6-scale generations are not, at this
+    VRAM/RAM tier.** Separately, `--moe-stream-direct` (O_DIRECT) measured **slower** than the
+    buffered path here (0.98 vs 1.6 tok/s on a short test) — opposite of the report's own
+    native-Windows result, plausibly because WSL2's ext4 root is itself a vhdx on NTFS, so
+    bypassing the Linux page cache doesn't remove a layer of virtualization the way it does on
+    bare metal; one data point, treat as provisional.
+    **Follow-up, 2026-10-08 — two cheap/short tasks, both clean PASS, confirming the capability
+    ceiling is about task SIZE, not whether the model can reason or code correctly.**
+    `multihop_chain_5` (L4, genuine 5-hop config-inheritance reasoning, tiny ~3.5 KB prompt,
+    single-number answer): **PASS**, correct answer `90` (avoided both the sibling distractor
+    `45` and the top-level distractor `30`) — confirmed via the task's own pytest. Just **7m25s
+    total**, by far the fastest completion in this whole investigation — 918 prompt tokens @
+    2.14 tok/s prefill, only 10 completion tokens. `python_hashmap` (L5, this benchmark's own
+    signature precision canary): **PASS, 11/11 tests**, including the precision-boundary test
+    the canary exists to catch — correctly emitted the module-level `_EMPTY = None` that models
+    omit under precision stress. **First time this canary has been checked against a model
+    that's low-precision at the architecture level (native fp8/MXFP4), not just KV-cache
+    format — it holds clean**, same pattern as `qwen3.5:27b`/`qwen2.5-coder:32b-q4` with q8_0
+    KV. 21m11s total; decode rate (0.94 tok/s) matches `node_para_core`'s own 0.93 tok/s on this
+    same GPU almost exactly, confirming ~0.9-1.0 tok/s is this hardware's genuine short-task
+    decode ceiling for this model, not noise. Full detail, every command, and every number:
+    `memory/project_deepseek_v41_flash_poc_plan.md`.
   - **llama.cpp-adaptive-kv-streaming fork** (`RaymondHuang210129/llama.cpp-adaptive-kv-streaming`,
     investigated 2026-09-01/02): adds `--kv-stream-stage-mib` to `llama-server`, streaming the KV
     cache between pinned host memory and a bounded CUDA pool for long contexts on GPUs too small
@@ -1219,6 +1284,50 @@ When asked to implement features:
     consistent with sharing its lineage either way. GPU temps
     healthy (max 65°C). Full profile: 18/19 coding + 4/4 web + 3/4 L6-stepped (entities FAILS) +
     6/6 context (8k-256k) + 3/5 multihop.
+
+#### Game-dev task group (`--task-group gamedev`, added 2026-10-08)
+
+Purpose: test models on the code a Unity native client + existing Node.js authoritative backend
+needs (the stack recommended in `~/GIT/game-engine/*.md`, cross-play with the Three.js browser
+clients). The Unity Editor can't run in this harness, so the group covers only what is testable
+headless: the engine-agnostic client layers (which the design docs say to keep separate from
+GameObjects anyway) and the Node authority logic. Patterns come from the user's four multiplayer
+games (`~/GIT/boombrawl`, `~/GIT/CarrierDominion`, `~/GIT/RetroMultiCiv`, `~/GIT/Fireline`: all raw
+`ws` + JSON, server-authoritative, integer fixed-point 256 units per cell, no deltas, no wire
+version negotiation). Task code is re-implemented, not copied, so `--export-task` leaks nothing.
+
+| Task | L | Source pattern | Main traps |
+|---|---|---|---|
+| `cs_coord_convert` | 2 | Three.js→Unity (synthetic cm/radians) | mirrored quaternion sign, yaw wrap into [0,360), units |
+| `cs_main_thread_dispatch` | 3 | doc §5 main-thread rule | thread safety, bounded queue, re-entrant enqueue, no lock while running actions |
+| `cs_protocol_codec` | 4 | boombrawl positional snap codec + RetroMultiCiv reject codes, plus a version handshake | Newtonsoft (Unity's package), int32 range, forward-compatible extra fields |
+| `cs_snapshot_interp` | 4 | boombrawl/Fireline interpolators | never resurrect, teleport snap, brads shortest arc, heading vs motion (Fireline's real bug), capped extrapolation |
+| `cs_predict_reconcile` | 5 | boombrawl `predict.js` + `movement.mjs` | ack `<=`, reset-then-replay order, speed before replay; must match a fixed-point server every tick over a laggy link |
+| `node_room_authority` | 4 | CarrierDominion `checkAuthority` + RetroMultiCiv token buckets | identity from connection only, check order, `constructor`/`toString` as message types, per-seat bucket across reconnects |
+| `node_seat_reconnect` | 4 | CarrierDominion `reconnect.js`, boombrawl reclaim | newest socket wins (4000), superseded socket's late close must not hold the seat, AI takeover/reclaim, token retirement |
+| `crossplay_statehash_parity` | 5 | Fireline `canonical.js` (I32LE + FNV-1a 64) | C# `/` truncates, `int.MinValue / -1`, unit sort order, unpaired surrogates (.NET `Encoding.UTF8` substitutes U+FFFD) |
+
+C# tasks build `src/` at **netstandard2.1 + LangVersion 9.0** (Unity's constraints: a
+file-scoped namespace, `init`, or `System.Runtime.CompilerServices.Unsafe` fails to compile, as in
+Unity) against a minimal UnityEngine shim; tests run at net9.0 with xunit. The canonical shim is
+`task_data/_shared/UnityShim/`; each task carries a copy, guarded by `tests/test_unity_shim_sync.py`
+(also guards reference solutions and regenerates the parity fixtures with `node
+js/make-fixtures.js`). Every task was validated three ways: the stub fails, `*.reference.*`
+passes, and single-bug mutants of the reference are each caught. Real model runs still found two
+weak tests of mine (rotation axis parallel to the test vector; a prediction test that only
+compared after the link settled) — trust model results over reference-only validation.
+
+First contact (2026-10-08, single RTX 4090, partial runs): qwen3.8:27b and tiel-coder:35b both
+failed `cs_coord_convert` and `cs_main_thread_dispatch` with genuine bugs (inverse quaternion,
+re-entrant drain, wrong length validation, `Unsafe` not available on netstandard2.1). Full
+results: `next-runs.md`.
+
+**Planned, not built yet:** `cs_coord_bam` (L3), from CarrierDominion's `client/render/coords.js`:
+engine x east / y north / z up, 256 units per metre, 16-bit BAM headings counter-clockwise from
+east → Unity x east / y up / z north. Traps: Unity yaw is `90 - bam * 360 / 65536` (clockwise from
+north), not the unnegated three.js yaw the source file uses, so copying coords.js is wrong; the
+inverse must round half up like JS `Math.round`, not C#'s default banker's rounding; BAM wraps
+modulo 65536. Kept separate from `cs_coord_convert` so both conventions stay covered.
 
 #### What NOT to do
 

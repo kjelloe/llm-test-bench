@@ -140,17 +140,23 @@ class LlamaServerManager:
         # Fail loudly if something else already answers on our port — otherwise _wait_ready's
         # health check succeeds against that foreign server immediately, and every task then
         # fails with a misleading "model 'None' not found" instead of a clear startup error.
+        # Any HTTP answer means the port is taken: the llm-service-provider gateway answers 503
+        # while its backend is down, and HTTPError (a URLError subclass) must not read as "free".
+        occupied = False
         try:
-            with urllib.request.urlopen(_HEALTH_URL, timeout=1) as r:
-                if json.loads(r.read()).get("status") == "ok":
-                    raise RuntimeError(
-                        f"Port {_PORT} is already serving something else (not started by this "
-                        "run) — refusing to start here, since requests would silently hit the "
-                        "wrong server. Check ~/GIT/llm-service-provider/status.sh (its gateway "
-                        "also binds :8080) or set LLAMA_SERVER_PORT to a free port."
-                    )
+            with urllib.request.urlopen(_HEALTH_URL, timeout=1):
+                occupied = True
+        except urllib.error.HTTPError:
+            occupied = True
         except (urllib.error.URLError, TimeoutError, ConnectionRefusedError):
             pass  # port free, as expected
+        if occupied:
+            raise RuntimeError(
+                f"Port {_PORT} is already serving something else (not started by this "
+                "run) — refusing to start here, since requests would silently hit the "
+                "wrong server. Check ~/GIT/llm-service-provider/status.sh (its gateway "
+                "also binds :8080) or set LLAMA_SERVER_PORT to a free port."
+            )
         if not cfg.gguf_file:
             raise ValueError(
                 f"Model {cfg.ollama_name!r} has no GGUF file configured — "

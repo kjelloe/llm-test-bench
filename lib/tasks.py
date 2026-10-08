@@ -885,6 +885,300 @@ PYTHON_FASTAPI_ENDPOINT = Task(
     min_predict=8000,
 )
 
+# Game-dev tasks: Unity-client C# (compiled against a minimal UnityEngine shim, with
+# Unity's netstandard2.1 + C# 9 constraints) and Node.js authoritative-server logic.
+UNITY_CONSTRAINTS = (
+    " The project follows Unity's scripting constraints: it targets netstandard2.1 with "
+    "LangVersion 9.0, so C# 10+ features (file-scoped namespaces, global usings, record structs, "
+    "'required' members, collection expressions) do not compile. The only UnityEngine API that "
+    "exists is what shim/UnityShim/UnityEngine.cs defines."
+)
+UNITY_CONTEXT = ["shim/UnityShim/UnityEngine.cs", "src/GameClient/GameClient.csproj"]
+
+CS_COORD_CONVERT = Task(
+    id="cs_coord_convert",
+    difficulty=2,
+    description=(
+        "ThreeToUnity in src/GameClient/CoordConvert.cs converts state from a Node.js game server "
+        "that uses Three.js conventions (right-handed, Y-up, centimeters, radians, quaternions as "
+        "[x, y, z, w]) into Unity conventions (left-handed, Y-up, meters, degrees). The conversion "
+        "mirrors the Z axis. It has several bugs. Required behavior: "
+        "(1) Position and Velocity negate Z and convert centimeters to meters; "
+        "(2) Rotation returns the mirrored quaternion for the same physical rotation, normalized "
+        "(server quaternions may not be unit length); "
+        "(3) YawDegrees converts a Three.js rotation.y angle to the equivalent Unity Y rotation in "
+        "degrees, always in the range [0, 360); "
+        "(4) PositionToServer is the exact inverse of Position; "
+        "(5) null arrays, arrays of the wrong length, and NaN or infinite values throw an "
+        "ArgumentException (or subclass)." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_coord_convert",
+    editable_files=["src/GameClient/CoordConvert.cs"],
+    context_files=["tests/GameClientTests/CoordConvertTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
+    min_predict=8000,
+)
+
+CS_MAIN_THREAD_DISPATCH = Task(
+    id="cs_main_thread_dispatch",
+    difficulty=3,
+    description=(
+        "MainThreadDispatcher in src/GameClient/MainThreadDispatcher.cs lets network worker "
+        "threads hand work to Unity's main thread, which calls Drain() once per frame. The current "
+        "implementation is broken. Required behavior: "
+        "(1) the constructor throws ArgumentOutOfRangeException if capacity or maxPerFrame is < 1; "
+        "(2) Enqueue is safe to call from any number of threads concurrently, never blocks while an "
+        "action is running, and throws ArgumentNullException for null; "
+        "(3) the queue is bounded: when Pending equals Capacity, Enqueue rejects the new action, "
+        "returns false and increments DroppedCount; "
+        "(4) Drain runs at most MaxPerFrame actions in FIFO order and returns how many it ran; "
+        "(5) actions enqueued while Drain is running (including by a drained action) wait for the "
+        "next Drain call; "
+        "(6) an action that throws is logged with Debug.LogException, increments ExceptionCount, "
+        "still counts toward the budget and the return value, and does not stop the drain; "
+        "(7) actions run without holding any lock, so other threads can Enqueue meanwhile; "
+        "(8) the first thread that calls Drain becomes the main thread; Drain from any other thread "
+        "afterwards throws InvalidOperationException." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_main_thread_dispatch",
+    editable_files=["src/GameClient/MainThreadDispatcher.cs"],
+    context_files=["tests/GameClientTests/MainThreadDispatcherTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=16384,      # prompt carries the ~5k-token UnityEngine shim
+    min_predict=8000,
+)
+
+CS_PROTOCOL_CODEC = Task(
+    id="cs_protocol_codec",
+    difficulty=4,
+    description=(
+        "Implement Decode and EncodeInput in src/GameClient/SnapCodec.cs: the Unity client's side of "
+        "a Node.js game server's JSON WebSocket protocol, using Newtonsoft.Json (JToken.Parse). Types are "
+        "in the read-only src/GameClient/Messages.cs. Every message is a JSON object whose string field "
+        "\"t\" names its type. Decode rules: "
+        "(1) unparseable JSON throws ProtocolException(BadJson); a non-object or a missing/non-string "
+        "\"t\" throws BadShape; an unknown \"t\" throws UnknownType; "
+        "(2) \"hello\" carries v (protocol version), id (this client's player id) and roster "
+        "(objects with id, name, color, bot as 0/1). v must be checked first: missing or non-integer is "
+        "BadField, outside [MinSupportedVersion, ProtocolVersion] is VersionMismatch. Version 2 roster "
+        "entries have no color (use 0); version 3 requires it. A hello replaces the codec's Roster "
+        "entirely and returns a HelloMessage; "
+        "(3) \"snap\" carries tick, phase, and p / b: arrays of positional rows whose value order is "
+        "PlayerFields / BombFields. \"st\" codes are a=Alive, d=Dead, anything else Waiting. Name, "
+        "color and bot come from the Roster; ids not in the Roster get name \"?\", color 0, bot false; "
+        "(4) \"reject\" carries a string reason; "
+        "(5) unknown extra fields and extra trailing row values are ignored (newer servers add them), "
+        "but a missing required field, a row shorter than its field list, a wrong JSON type, or an "
+        "integer field that is not a whole number fitting in a 32-bit int throws BadField. "
+        "EncodeInput produces exactly {\"t\":\"in\",\"seq\":N,\"dx\":N,\"dy\":N} with no "
+        "whitespace and that key order, appending ,\"b\":1 only when bomb is true; it throws an "
+        "ArgumentException (or subclass) for negative seq, dx or dy outside -1..1, or diagonal "
+        "movement (both non-zero)." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_protocol_codec",
+    editable_files=["src/GameClient/SnapCodec.cs"],
+    context_files=[
+        "src/GameClient/Messages.cs",
+        "tests/GameClientTests/SnapCodecTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,      # prompt + 12k thinking budget
+    min_predict=12000,
+)
+
+CS_SNAPSHOT_INTERP = Task(
+    id="cs_snapshot_interp",
+    difficulty=4,
+    description=(
+        "Implement SnapshotInterpolator in src/GameClient/SnapshotInterpolator.cs (types in the read-only "
+        "src/GameClient/Snapshots.cs). A Unity client renders remote entities DelayMs behind real time, "
+        "interpolating between buffered authoritative snapshots. Required behavior: "
+        "(1) the constructor throws ArgumentOutOfRangeException for delayMs < 0, capacity < 2 or "
+        "maxExtrapolationMs < 0; Push(null) throws ArgumentNullException; "
+        "(2) Push ignores a snapshot whose atMs is earlier than the newest buffered one or whose Tick is not "
+        "greater than the newest buffered Tick; beyond Capacity the oldest snapshot is evicted; Count is the "
+        "number buffered; "
+        "(3) Sample(nowMs) returns null when empty. Render time is nowMs - DelayMs. The bracketing pair is "
+        "the latest snapshot with atMs <= render time (older) and the first with atMs > render time (newer); "
+        "interpolate with t = (render - older.atMs) / (newer.atMs - older.atMs), clamped to [0, 1]. The "
+        "entity list comes from the newer snapshot of the pair, but an entity absent from the newest "
+        "buffered snapshot is never returned. "
+        "(4) an entity with no previous state in the older snapshot, with Teleported set in the newer one, "
+        "or that moved more than TeleportDistanceUnits (Euclidean, in fixed-point units) is placed at its "
+        "newer position without interpolation; "
+        "(5) Heading (brads, 0..255 per full turn) interpolates along the shortest arc, wrapping through 0; "
+        "Rotation = Quaternion.Euler(0, brads * 360 / 256, 0) and follows Heading only, never the direction "
+        "of travel; MotionHeading is Mathf.Atan2(dY, dX) of the displacement between the two snapshots "
+        "used, or null when that displacement is zero or the entity was not interpolated/extrapolated "
+        "from a previous state; Position = (X / 256, 0, Y / 256); "
+        "(6) if render time is before every buffered snapshot, return the oldest snapshot's entities as-is "
+        "with MotionHeading null; "
+        "(7) if no snapshot is newer than render time, extrapolate each newest entity linearly from its "
+        "state in the previous buffered snapshot, by min(render - newest.atMs, MaxExtrapolationMs); "
+        "entities without a previous state, teleported or jumping too far are held at their newest "
+        "position; with only one snapshot everything holds; Heading is not extrapolated." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_snapshot_interp",
+    editable_files=["src/GameClient/SnapshotInterpolator.cs"],
+    context_files=["src/GameClient/Snapshots.cs", "tests/GameClientTests/SnapshotInterpolatorTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,      # ~10k-token prompt (shim included) + 12k thinking budget
+    min_predict=12000,
+)
+
+CS_PREDICT_RECONCILE = Task(
+    id="cs_predict_reconcile",
+    difficulty=5,
+    description=(
+        "Predictor in src/GameClient/Predictor.cs does client-side prediction and server reconciliation "
+        "for the local player of a real-time game whose Node.js server is authoritative. It must run the "
+        "exact integer math of the read-only src/GameClient/Movement.cs so the prediction matches the "
+        "server tick for tick, but it has several bugs. Required behavior: "
+        "(1) the constructor and OnSnapshot throw ArgumentNullException for null arguments; "
+        "(2) SetDirection throws ArgumentOutOfRangeException for values outside -1..1 and keeps movement "
+        "single-axis (if dx != 0, dy becomes 0); "
+        "(3) Tick increments the sequence number and always sends an InputCommand, but only while Active "
+        "does it also simulate the input locally (Movement.Step with the current speed) and remember it as "
+        "pending; "
+        "(4) OnSnapshot ignores a snapshot whose Tick is not greater than the last one applied; if the local "
+        "player is missing it deactivates and clears pending inputs; otherwise it takes the speed from "
+        "SpeedLevel (Movement.SpeedForLevel) and resets X/Y to the server position, then: in phase \"play\" "
+        "with status \"alive\" it becomes Active, discards every pending input the server has applied "
+        "(Seq <= the snapshot's Seq) and replays the remaining ones in order with that speed; in any other "
+        "phase or status it deactivates and clears pending inputs; "
+        "(5) RenderPosition is (X / 256, 0, Y / 256) in meters, keeping fractions." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_predict_reconcile",
+    editable_files=["src/GameClient/Predictor.cs"],
+    context_files=[
+        "src/GameClient/Movement.cs",
+        "src/GameClient/PredictionTypes.cs",
+        "tests/GameClientTests/PredictorTests.cs",
+    ] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,      # ~11k-token prompt (shim included) + 12k thinking budget
+    min_predict=12000,
+)
+
+NODE_ROOM_AUTHORITY = Task(
+    id="node_room_authority",
+    difficulty=4,
+    description=(
+        "Implement createRoom in src/room.js: the authoritative match room of a Node.js game server that "
+        "receives raw WebSocket text frames (string or Buffer) from untrusted clients. The returned object "
+        "has connect(connId, team) (team -1 = spectator; connecting again replaces the connection), "
+        "disconnect(connId), receive(connId, raw) returning {ok: true} or {ok: false, reason} with a "
+        "REJECT value, tick() returning {tick, applied}, and units() returning copies "
+        "[{id, team, x, y}] sorted by id. Commands are {type: 'move', seq, unitId, x, y} and "
+        "{type: 'stop', seq, unitId}. receive checks, in exactly this order: unknown connection -> "
+        "notConnected; frame over MAX_FRAME_BYTES UTF-8 bytes -> badFrame; invalid JSON -> badJson; not a "
+        "plain object or no string type -> badShape; type 'tick' -> serverOwned; any other type that is not "
+        "move/stop -> unknownType (beware names like 'constructor' or 'toString'); spectator -> spectator; "
+        "then one token is taken from the seat's token bucket, or rateLimited if none is left; then fields: "
+        "seq a non-negative integer, unitId an integer, and for move x/y integers inside 0..width-1 / "
+        "0..height-1, else badField; seq not greater than the last ACCEPTED seq of this connection -> "
+        "staleSeq; unknown unit -> noSuchUnit; unit of another team -> notYourUnit. The team always comes "
+        "from the connection; team or player fields inside the message are ignored. Token buckets are per "
+        "team (shared by every connection of that team and kept across reconnects): they start full at "
+        "cmdBurst and refill continuously at cmdRefillPerSec using the injected now() in milliseconds, "
+        "capped at cmdBurst. Accepted commands queue until tick(), which increments the tick number, applies "
+        "queued commands in arrival order (move sets the unit's target, stop clears it), skips commands "
+        "from connections that disconnected since (a reconnect gets a fresh seq history and does not revive "
+        "them), lists each applied one as {team, type, unitId}, then moves every unit with a target one cell "
+        "toward it on each axis (in id order), clearing the target on arrival."
+    ),
+    subdir="node_room_authority",
+    editable_files=["src/room.js"],
+    context_files=["tests/room.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/room.test.js"],
+    test_timeout=60,
+    min_predict=12000,
+)
+
+NODE_SEAT_RECONNECT = Task(
+    id="node_seat_reconnect",
+    difficulty=4,
+    description=(
+        "Implement createSeats in src/seats.js: seat ownership across disconnects for a Node.js match server. "
+        "Sockets are opaque ids; now() and newToken() are injected; side effects are returned as events. "
+        "Each team in options.teams is a seat in one of four states: free, live (bound to a socket), held "
+        "(owner disconnected, waiting out the grace window) or ai (grace expired, AI playing it). Methods: "
+        "join(socketId, name): alreadySeated if this socket owns a live seat; badName unless name is a "
+        "string of 1..16 characters after trimming (store it trimmed); take the lowest-numbered free team, "
+        "else the lowest-numbered ai team (adding event {type: 'aiRelease', team}), else full; held seats "
+        "are never given to newcomers; returns {ok: true, team, token: newToken(), events}. "
+        "reclaim(socketId, token): unknownToken unless token is a non-empty string matching a non-free "
+        "seat's current token; alreadySeated if this socket owns a different live seat; otherwise the seat "
+        "becomes live on this socket and returns {ok: true, team, name, events}, where events is "
+        "[{type: 'close', socketId: oldSocket, code: 4000, reason: 'superseded'}] when another socket held "
+        "it live, [{type: 'aiRelease', team}] when it was ai, else []. A newcomer taking an ai seat issues a "
+        "new token, so the previous owner's token stops working. "
+        "disconnect(socketId): if the socket owns a live seat it becomes held until now() + graceMs and "
+        "returns {held: true, team, untilMs}; otherwise {held: false} (a superseded socket closing later "
+        "must not affect the seat). sweep(): every held seat whose untilMs <= now() becomes ai, returning "
+        "[{type: 'aiTakeover', team}] in team order (each seat once). leave(socketId): the socket's live "
+        "seat becomes free (token retired), returning {left: true, team} or {left: false}. seats(): "
+        "[{team, state, name}] in ascending team order, name null when free."
+    ),
+    subdir="node_seat_reconnect",
+    editable_files=["src/seats.js"],
+    context_files=["tests/seats.test.js", "package.json"],
+    test_cmd=["node", "--test", "tests/seats.test.js"],
+    test_timeout=60,
+    min_predict=12000,
+)
+
+CROSSPLAY_STATEHASH_PARITY = Task(
+    id="crossplay_statehash_parity",
+    difficulty=5,
+    description=(
+        "Implement src/GameClient/StateHash.cs: a C# port of the Node.js server's read-only "
+        "js/statehash.js, which is the specification. The Unity client hashes its own copy of the "
+        "authoritative state and compares it with the hash the server publishes, so the port must match "
+        "the JavaScript exactly for every input, byte for byte and value for value (the tests use "
+        "fixtures generated by running the JavaScript). FixedMath.FloorDiv / TruncDiv / SampleCellX must "
+        "return what floorDiv / truncDiv / sampleCellX return for every int32 argument, including negative "
+        "values and int.MinValue (the JavaScript wraps results to int32 with |0). ByteWriter mirrors "
+        "createByteWriter (methods U8, U16, U32, I32, Bool, OptU32, Str, ToBytes; little-endian; each "
+        "returns the writer for chaining; out-of-range values throw ArgumentOutOfRangeException and a null "
+        "string throws ArgumentNullException); Str must encode exactly as the JavaScript does, including "
+        "strings that contain unpaired UTF-16 surrogates. StateHash.Fnv1a64 returns the 16-digit lowercase "
+        "hex FNV-1a 64 hash; StateBytes writes the canonical layout from js/statehash.js without reordering "
+        "the caller's Units list; HashState = Fnv1a64(StateBytes(state))." + UNITY_CONSTRAINTS
+    ),
+    subdir="crossplay_statehash_parity",
+    editable_files=["src/GameClient/StateHash.cs"],
+    context_files=[
+        "js/statehash.js",
+        "src/GameClient/GameState.cs",
+        "tests/GameClientTests/StateHashParityTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
 MULTIHOP_CHAIN_5 = Task(
     id="multihop_chain_5",
     difficulty=4,
@@ -956,6 +1250,14 @@ BUILTIN_TASKS: list[Task] = [
     BASH_PREFLIGHT,
     NODE_EXPRESS_VALIDATION,
     PYTHON_FASTAPI_ENDPOINT,
+    CS_COORD_CONVERT,
+    CS_MAIN_THREAD_DISPATCH,
+    CS_PROTOCOL_CODEC,
+    CS_SNAPSHOT_INTERP,
+    CS_PREDICT_RECONCILE,
+    NODE_ROOM_AUTHORITY,
+    NODE_SEAT_RECONNECT,
+    CROSSPLAY_STATEHASH_PARITY,
     NODE_PARATROOPER,
     NODE_PARA_CORE,
     NODE_PARA_TURRET,
@@ -1014,5 +1316,10 @@ TASK_GROUPS: dict[str, list[str]] = {
         "bash_preflight",
         "node_express_validation",
         "python_fastapi_endpoint",
+    ],
+    "gamedev": [
+        "cs_coord_convert", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
+        "crossplay_statehash_parity",
     ],
 }

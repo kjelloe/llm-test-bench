@@ -1,0 +1,300 @@
+{
+  "div": [
+    {
+      "a": 7,
+      "b": 2,
+      "floor": 3,
+      "trunc": 3
+    },
+    {
+      "a": -7,
+      "b": 2,
+      "floor": -4,
+      "trunc": -3
+    },
+    {
+      "a": 7,
+      "b": -2,
+      "floor": -4,
+      "trunc": -3
+    },
+    {
+      "a": -7,
+      "b": -2,
+      "floor": 3,
+      "trunc": 3
+    },
+    {
+      "a": -1,
+      "b": 256,
+      "floor": -1,
+      "trunc": 0
+    },
+    {
+      "a": -256,
+      "b": 256,
+      "floor": -1,
+      "trunc": -1
+    },
+    {
+      "a": -257,
+      "b": 256,
+      "floor": -2,
+      "trunc": -1
+    },
+    {
+      "a": 255,
+      "b": 256,
+      "floor": 0,
+      "trunc": 0
+    },
+    {
+      "a": 0,
+      "b": 5,
+      "floor": 0,
+      "trunc": 0
+    },
+    {
+      "a": -2147483648,
+      "b": 256,
+      "floor": -8388608,
+      "trunc": -8388608
+    },
+    {
+      "a": 2147483647,
+      "b": 256,
+      "floor": 8388607,
+      "trunc": 8388607
+    },
+    {
+      "a": -2147483648,
+      "b": -1,
+      "floor": -2147483648,
+      "trunc": -2147483648
+    },
+    {
+      "a": -2147483648,
+      "b": 1,
+      "floor": -2147483648,
+      "trunc": -2147483648
+    },
+    {
+      "a": -5,
+      "b": 1000,
+      "floor": -1,
+      "trunc": 0
+    }
+  ],
+  "sampleCellX": [
+    {
+      "world": 0,
+      "mapWidth": 128,
+      "cell": 0
+    },
+    {
+      "world": 255,
+      "mapWidth": 128,
+      "cell": 0
+    },
+    {
+      "world": 256,
+      "mapWidth": 128,
+      "cell": 1
+    },
+    {
+      "world": 16384,
+      "mapWidth": 128,
+      "cell": 64
+    },
+    {
+      "world": 16385,
+      "mapWidth": 128,
+      "cell": 64
+    },
+    {
+      "world": 16640,
+      "mapWidth": 128,
+      "cell": 64
+    },
+    {
+      "world": 32512,
+      "mapWidth": 128,
+      "cell": 126
+    },
+    {
+      "world": -1,
+      "mapWidth": 128,
+      "cell": -1
+    },
+    {
+      "world": -256,
+      "mapWidth": 128,
+      "cell": -1
+    },
+    {
+      "world": -257,
+      "mapWidth": 128,
+      "cell": -2
+    },
+    {
+      "world": 2560,
+      "mapWidth": 20,
+      "cell": 10
+    },
+    {
+      "world": 2816,
+      "mapWidth": 20,
+      "cell": 10
+    }
+  ],
+  "fnv": [
+    {
+      "bytesHex": "",
+      "hash": "cbf29ce484222325"
+    },
+    {
+      "bytesHex": "61",
+      "hash": "af63dc4c8601ec8c"
+    },
+    {
+      "bytesHex": "666f6f626172",
+      "hash": "85944171f73967e8"
+    },
+    {
+      "bytesHex": "c3a974c3a9",
+      "hash": "009a8f0e88b51857"
+    },
+    {
+      "bytesHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      "hash": "4242dc5249c33625"
+    }
+  ],
+  "states": [
+    {
+      "tick": 0,
+      "units": [],
+      "bytesHex": "000000000000",
+      "hash": "d7e4fcfa299d713d"
+    },
+    {
+      "tick": 1042,
+      "units": [
+        {
+          "id": 7,
+          "team": 1,
+          "x": -2048,
+          "y": 33024,
+          "heading": 192,
+          "hp": 100,
+          "alive": true,
+          "target": null,
+          "nameUnits": [
+            66,
+            114,
+            97,
+            118,
+            111
+          ]
+        },
+        {
+          "id": 2,
+          "team": 0,
+          "x": 1408,
+          "y": 896,
+          "heading": 0,
+          "hp": 0,
+          "alive": false,
+          "target": 7,
+          "nameUnits": [
+            65,
+            108,
+            112,
+            104,
+            97
+          ]
+        },
+        {
+          "id": 4000000000,
+          "team": 255,
+          "x": -2147483648,
+          "y": 2147483647,
+          "heading": 255,
+          "hp": 65535,
+          "alive": true,
+          "target": 0,
+          "nameUnits": []
+        }
+      ],
+      "bytesHex": "120400000300020000000080050000800300000000000001070000000500416c706861070000000100f8ffff00810000c0640001000500427261766f00286beeff00000080ffffff7fffffff0101000000000000",
+      "hash": "979e31d04b1f3e4d"
+    },
+    {
+      "tick": 4294967295,
+      "units": [
+        {
+          "id": 3,
+          "team": 2,
+          "x": 0,
+          "y": 0,
+          "heading": 64,
+          "hp": 50,
+          "alive": true,
+          "target": 4294967295,
+          "nameUnits": [
+            83,
+            248,
+            114,
+            101,
+            110,
+            32,
+            198,
+            114,
+            248
+          ]
+        },
+        {
+          "id": 1,
+          "team": 2,
+          "x": 1,
+          "y": -1,
+          "heading": 1,
+          "hp": 1,
+          "alive": true,
+          "target": null,
+          "nameUnits": [
+            23567,
+            40857,
+            32,
+            55357,
+            56960
+          ]
+        },
+        {
+          "id": 9,
+          "team": 3,
+          "x": 5,
+          "y": 6,
+          "heading": 2,
+          "hp": 3,
+          "alive": false,
+          "target": null,
+          "nameUnits": [
+            98,
+            114,
+            111,
+            107,
+            101,
+            110,
+            55296,
+            112,
+            97,
+            105,
+            114
+          ]
+        }
+      ],
+      "bytesHex": "ffffffff0300010000000201000000ffffffff01010001000b00e5b08fe9be9920f09f9a80030000000200000000000000004032000101ffffffff0c0053c3b872656e20c38672c3b80900000003050000000600000002030000000d0062726f6b656eeda08070616972",
+      "hash": "bf16026d2bc3364a"
+    }
+  ]
+}
