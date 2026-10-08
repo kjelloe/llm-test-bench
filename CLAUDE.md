@@ -443,8 +443,8 @@ task then failed with a misleading `TOOL_ERROR: model 'None' not found` that loo
 model/task problem, not an infra one. Fixed: `_start()` now checks for a foreign `/health`
 responder before spawning and raises loudly instead (`tests/test_llama_server_client.py::
 test_start_refuses_foreign_occupant`); the port is also overridable via `LLAMA_SERVER_PORT` for
-running llama-server-backend benchmarks alongside an active gateway (e.g.
-`LLAMA_SERVER_PORT=8099 ./run.sh --backend llama-server ...`). The guard had a hole until
+running llama-server-backend benchmarks alongside an active gateway. **Since 2026-10-08 the harness
+default IS 8099** (`lib/llama_server_client.py`), so no override is needed next to the gateway. The guard had a hole until
 2026-10-08: with its backend down the gateway answers `/health` with **503**, and `HTTPError` (a
 `URLError` subclass) was swallowed as "port free", so llama-server then died on "couldn't bind
 :8080". Any HTTP answer now counts as occupied (the test covers 200 and 503). **This means any past
@@ -1350,11 +1350,9 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    / missing-API codes (CS8773, CS8400, CS0518 `IsExternalInit`, CS0103/CS0234/CS0246 on
    framework names) vs. plain compile mistakes (CS0136, CS0173, CS1061...). Cheap, same parse
    point as partial credit.
-3. **Port 8080 collision with llm-service-provider's gateway — guard FIXED, default UNCHANGED.**
-   The guard now refuses any HTTP answer (the gateway's 503 slipped through before). Every run
-   while the gateway is up still needs `LLAMA_SERVER_PORT=8099`. Nothing outside this harness
-   talks to its own llama-server, so changing the default port (e.g. to 8099) would remove the
-   collision outright; not done yet because it is a behavior change to a fixed default — ask first.
+3. **Port 8080 collision with llm-service-provider's gateway — FIXED both ways.** The guard refuses
+   any HTTP answer (the gateway's 503 slipped through before), and with the user's go-ahead the
+   harness default moved to 8099, so runs next to the gateway need no override.
 4. **No real Unity validation — OUT OF SCOPE for now.** The shim plus netstandard2.1/C# 9 catches
    language and API problems but not Unity runtime behavior (IL2CPP/AOT stripping, main-thread
    rules enforced by the engine, Unity's own Newtonsoft package version). A real check needs the

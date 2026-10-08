@@ -260,13 +260,13 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` a
 - **`_parse_body(body, elapsed_ns)`** — vLLM does not expose llama.cpp `timings` fields, so `eval_duration` is set to wall time and `prompt_eval_duration` to 0. `tok_per_s` in results is therefore `completion_tokens / wall_time`.
 - `unload_model(...)` — no-op; lifecycle managed by `VLLMManager.stop()`.
 
-**Port allocation:** vLLM uses port 8090; llama-server uses 8080 by default, overridable via the
-`LLAMA_SERVER_PORT` env var. Both can coexist on the same machine, though `bench.py` runs only one
-backend at a time. **Port 8080 collides with `~/GIT/llm-service-provider`'s own `llm-gateway`**
-(confirmed 2026-09-24) — with that gateway active, `LlamaServerManager._start()` checks for a
-foreign `/health` responder before spawning and raises loudly instead of silently talking to the
-wrong server (a prior version of this check didn't exist, and every request would 400 with a
-misleading "model 'None' not found"). Set `LLAMA_SERVER_PORT` to a free port to run alongside it.
+**Port allocation:** vLLM uses port 8090; llama-server uses **8099** by default (8080 until
+2026-10-08), overridable via the `LLAMA_SERVER_PORT` env var. Both can coexist on the same machine,
+though `bench.py` runs only one backend at a time. The default moved off 8080 because
+`~/GIT/llm-service-provider`'s `llm-gateway` binds it (collision confirmed 2026-09-24). Independently,
+`LlamaServerManager._start()` refuses to start if ANY HTTP server already answers `/health` on the
+chosen port (a 503 included — the gateway answers 503 while its backend is down, which slipped
+through until 2026-10-08), instead of silently talking to the wrong server.
 
 #### `model_config.py` — Model Config Parser
 

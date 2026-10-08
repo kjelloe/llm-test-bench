@@ -27,11 +27,12 @@ def test_llama_server_port_env_override(monkeypatch):
         assert reloaded._HEALTH_URL == "http://127.0.0.1:19191/health"
     finally:
         monkeypatch.delenv("LLAMA_SERVER_PORT", raising=False)
-        importlib.reload(lsc)  # restore the default (8080) for every later test in this file
+        importlib.reload(lsc)  # restore the default (8099) for every later test in this file
 
 
-def test_llama_server_port_default_is_8080():
-    assert lsc._PORT == 8080
+def test_llama_server_port_default_is_8099():
+    # Not 8080: llm-service-provider's gateway binds that (moved 2026-10-08).
+    assert lsc._PORT == 8099
 
 
 @pytest.mark.parametrize("status", [200, 503])

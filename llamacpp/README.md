@@ -224,4 +224,4 @@ Models pre-configured for dual 24 GB GPUs (48 GB total): `llama3.3:70b`, `qwq:32
 | `LLAMA_MODELS_DIR not set` | `export LLAMA_MODELS_DIR=/path/to/gguf` |
 | `GGUF file not found` | Run `./fetch-hf.sh` for live repos; copy manually for GONE repos (see table above) |
 | OpenSSL warning during cmake | Harmless — HTTPS is disabled but local serving is unaffected |
-| `llama-server exited unexpectedly` with wrong model running | `_kill_port_occupant` fix is in `lib/llama_server_client.py` — stale server on port 8080 is evicted automatically since 2026-06-07 |
+| `llama-server exited unexpectedly` with wrong model running | `_kill_port_occupant` fix is in `lib/llama_server_client.py` — stale server on the harness port (8099 since 2026-10-08, was 8080) is evicted automatically since 2026-06-07 |

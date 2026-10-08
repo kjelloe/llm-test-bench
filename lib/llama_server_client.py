@@ -60,11 +60,10 @@ def _bool_flag(cli_key: str, bin_path: str) -> list[str]:
         return ["--" + cli_key, _BOOL_EMIT_VALUE[cli_key]]
     return ["--" + cli_key]
 
-# Overridable because 8080 collides with ~/GIT/llm-service-provider's own gateway port (confirmed
-# 2026-09-24) — when that gateway is active, _wait_ready's health check silently succeeds against
-# ITS server instead of ours, and every task then fails with a misleading "model 'None' not found"
-# TOOL_ERROR that looks like a task/model problem. Set LLAMA_SERVER_PORT to any free port to avoid it.
-_PORT = int(os.environ.get("LLAMA_SERVER_PORT", "8080"))
+# Default 8099, not llama-server's own 8080: ~/GIT/llm-service-provider's gateway binds 8080 and is
+# often up on this rig (collision confirmed 2026-09-24; default moved 2026-10-08). Nothing outside
+# this harness talks to the llama-server it spawns. Overridable with LLAMA_SERVER_PORT.
+_PORT = int(os.environ.get("LLAMA_SERVER_PORT", "8099"))
 _BASE_URL = f"http://127.0.0.1:{_PORT}"
 _HEALTH_URL = f"{_BASE_URL}/health"
 
@@ -162,7 +161,7 @@ class LlamaServerManager:
                 f"Port {_PORT} is already serving something else (not started by this "
                 "run) — refusing to start here, since requests would silently hit the "
                 "wrong server. Check ~/GIT/llm-service-provider/status.sh (its gateway "
-                "also binds :8080) or set LLAMA_SERVER_PORT to a free port."
+                "binds :8080, this harness defaults to :8099) or set LLAMA_SERVER_PORT to a free port."
             )
         if not cfg.gguf_file:
             raise ValueError(
