@@ -334,3 +334,28 @@ def test_is_thinking_false_uses_plain_message():
         sys_msg = captured["messages"][0]["content"]
         assert not sys_msg.startswith("After your reasoning,"), repr(sys_msg)
         assert "BEGIN_FILE" in sys_msg
+
+
+@pytest.mark.parametrize("task_timeout,global_timeout,expected", [(600, 2400, 2400), (3600, 1200, 3600), (None, 900, 900)])
+def test_task_timeout_never_lowers_the_global_timeout(task_timeout, global_timeout, expected):
+    """A per-task model_timeout exists to RAISE the limit for slow tasks; it must not undercut an
+    explicit --model-timeout (csv_nordic_property's 600 s cut off a 4 tok/s model, 2026-10-09)."""
+    seen = {}
+    inner = _mock_chat(_file_block(CORRECT_CALC))
+
+    def chat_fn(**kwargs):
+        seen["timeout"] = kwargs.get("timeout")
+        return inner(**kwargs)
+
+    run_one(
+        model="mock-model",
+        task=dataclasses.replace(TASK, model_timeout=task_timeout),
+        client_url="http://unused",
+        num_ctx=4096,
+        temperature=0.0,
+        seed=1,
+        num_predict=400,
+        model_timeout=global_timeout,
+        chat_fn=chat_fn,
+    )
+    assert seen["timeout"] == expected

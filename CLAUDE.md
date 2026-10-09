@@ -97,8 +97,12 @@ You are helping build a local benchmark harness repo. Optimize for correctness, 
 - Default `--model-timeout` is 300s for `bench.py`. `compare.sh` sets `--model-timeout 1200`
   because large RAM-bound models (gpt-oss:120b) at ~1–2 tok/s need up to
   ~1200s for 1200 tokens; 300s causes spurious TOOL_ERROR timeouts on those models.
-  Individual tasks may override with `model_timeout` on the Task dataclass (e.g. context_128k
-  uses 3600s and context_256k uses 7200s because prompt-eval alone can exceed 1200s).
+  Individual tasks may raise it with `model_timeout` on the Task dataclass (e.g. context_128k
+  uses 3600s and context_256k uses 7200s because prompt-eval alone can exceed 1200s). The
+  effective timeout is `max(--model-timeout, task.model_timeout)` since 2026-10-09 — before that a
+  task's value REPLACED the global one, so csv_nordic_property's 600s cut off slow models even
+  under `--model-timeout 2400` (TOOL_ERROR results for slow models on tasks with a smaller
+  `model_timeout` before that date are suspect).
   Note: qwen3-coder:30b at context_128k (ctx=131072) on RTX 3090 24GB ran at 3.8 tok/s for
   1870s — KV cache for a 30B model at 131072 ctx fills ~24GB and partially spills. Within
   the 3600s per-task timeout but adds 31 minutes to the compare run.
