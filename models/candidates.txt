@@ -1758,3 +1758,19 @@ qwen3.8-27b-gsqrco-iq3xxs-2gpu  Qwen3.8-27B-GSQ-RCO-IQ3_XXS.gguf  ngl=999,no_mma
 # qwen3.8:27b history, where 2-way and 3-way genuinely differ) — closes the investigation.
 quest:35b-3gpu  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/QUEST-35B-RL-MXFP4_MOE-GGUF
 noctrex-qwen3.6:35b-3gpu  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128  hf:noctrex/Qwen3.6-35B-A3B-MTP-MXFP4_MOE-GGUF
+
+# swift-1.5-flash-next: UkisAI's reasoning-efficient fine-tune of Qwen3.8-Flash-Next ("63.4% fewer
+# thinking tokens, 1.8x faster, <1% accuracy loss vs base on xhigh"; RL + OPD post-training aimed at
+# coding/agentic work). Same qwen4exp architecture -> same recipe as qwen3.8-flash-next (3x24GB --fit,
+# never with -ngl/--tensor-split). Q4_K_M = 3 parts, 119.5 GB. GATED repo (license accepted on the
+# kjelloe HF account, 2026-10-09). Found via scout 2026-10-09 (141K downloads). Download needs
+# HF_HUB_DISABLE_XET=0 (44.9 GB parts).
+swift-1.5-flash-next  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
+
+# MoE-cache variants (2026-10-09) for llama.cpp master >= c811cb8f0 (multi-GPU MoE cache, #30112) —
+# run with LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server; the pinned 67a17c17c
+# binary has no --moe-cache-mib. --fit does not reserve VRAM for the cache (common/fit.cpp never
+# reads moe_cache_size), so fit_target is raised by the cache's per-GPU share (cache / 3 GPUs).
+qwen3.8-flash-next-moecache6g   UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+qwen3.8-flash-next-moecache12g  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=4608,moe_cache_mib=12288,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+swift-1.5-flash-next-moecache6g  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
