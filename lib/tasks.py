@@ -1114,6 +1114,69 @@ CS_TICK_INTERP = Task(
     test_weights={"CapturedRun": 3.0, "BurstyServer": 2.0, "Rate_IsMeasured": 2.0},
 )
 
+CS_WS_ABORT_RECONNECT = Task(
+    id="cs_ws_abort_reconnect",
+    difficulty=4,
+    description=(
+        "Bug report from a Unity client's network layer: simulating a network drop by calling Abort() on the "
+        "socket (as a phone suspend or Wi-Fi loss does) never produces a reconnect - the connection just goes "
+        "silent. Fix ConnectionLoop in src/GameClient/ConnectionLoop.cs (the socket abstraction is the "
+        "read-only src/GameClient/IMessageSocket.cs; read its documentation). Required behavior of RunAsync: "
+        "(1) connect, then deliver every received message to onMessage in order; "
+        "(2) ANY loss of the connection - the server closing cleanly (ReceiveAsync returns null, reason "
+        "\"closed by server\"), a socket error (reason = the exception's Message), a failed connect, or the "
+        "socket being aborted - calls onClosed exactly once with the reason and then requestReconnect "
+        "exactly once; "
+        "(3) a client shutdown - the CancellationToken passed to RunAsync is cancelled - ends RunAsync quietly "
+        "without calling onClosed or requestReconnect, whatever exception the socket throws while shutting "
+        "down." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_ws_abort_reconnect",
+    editable_files=["src/GameClient/ConnectionLoop.cs"],
+    context_files=[
+        "src/GameClient/IMessageSocket.cs",
+        "tests/GameClientTests/ConnectionLoopTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"AbortedSocket": 3.0, "ShutdownWhileTheSocketFails": 2.0},
+)
+
+CS_RECONNECT_POLICY = Task(
+    id="cs_reconnect_policy",
+    difficulty=3,
+    description=(
+        "Implement the reconnect policy and seat URL handling of a Unity game client in "
+        "src/GameClient/Reconnect.cs, matching the browser clients. ReconnectPolicy: NextDelay() returns "
+        "the seconds to wait before the next attempt - 1 the first time, then each delay is the previous "
+        "one times 1.7 rounded to 3 decimals, capped at 5 (1, 1.7, 2.89, 4.913, 5, 5, ...); OnConnected() "
+        "resets it so the next delay is 1 again; TryBeginConnect() returns false while a connect is already "
+        "in progress (until EndConnect()), so attempts never overlap. SeatUrl.WithToken(url, token): the seat "
+        "token rides the socket URL as the query parameter token, escaped so any token text round-trips "
+        "exactly; keep scheme, host, port, path and every other query parameter, replace an existing token "
+        "parameter, and return url unchanged when token is null or empty. SeatUrl.ForLog(url): the URL with "
+        "its query and fragment removed - the token must never reach a log." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_reconnect_policy",
+    editable_files=["src/GameClient/Reconnect.cs"],
+    context_files=[
+        "tests/GameClientTests/ReconnectTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"EscapesTheToken": 2.0, "ForLog": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1456,6 +1519,8 @@ BUILTIN_TASKS: list[Task] = [
     CS_PORT_HEIGHTMAP,
     CS_PORT_WEBAUDIO,
     CS_TICK_INTERP,
+    CS_WS_ABORT_RECONNECT,
+    CS_RECONNECT_POLICY,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1523,7 +1588,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
