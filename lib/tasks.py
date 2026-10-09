@@ -1479,7 +1479,8 @@ CROSSPLAY_WS_ROUNDTRIP = Task(
         "from the last welcome on the URL (SeatUrl.WithToken) so the server gives back the same seat; a close "
         "with code 4000 means another device took the seat: set Superseded and never reconnect; Dispose stops "
         "everything within a few seconds and never reconnects. Connected is true only after a welcome on the "
-        "current socket." + UNITY_CONSTRAINTS
+        "current socket. For JSON use Newtonsoft.Json (referenced, as Unity's package); System.Text.Json is not "
+        "available, as in Unity." + UNITY_CONSTRAINTS
     ),
     subdir="crossplay_ws_roundtrip",
     editable_files=["src/GameClient/SeatClient.cs"],

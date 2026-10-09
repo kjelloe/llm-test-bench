@@ -9,5 +9,7 @@
   <ItemGroup>
     <Compile Remove="**/*.reference.cs" />
     <ProjectReference Include="../../shim/UnityShim/UnityShim.csproj" />
+    <!-- Unity ships this as the com.unity.nuget.newtonsoft-json package. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>
