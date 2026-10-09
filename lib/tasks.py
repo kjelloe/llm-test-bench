@@ -1241,6 +1241,82 @@ CS_PRIMITIVE_COMPOSE = Task(
     test_weights={"mantaDelta": 2.0, "turretRail": 2.0, "carrierBow": 2.0},
 )
 
+CS_INPUT_LAST_PRESSED = Task(
+    id="cs_input_last_pressed",
+    difficulty=2,
+    description=(
+        "The Unity client's keyboard handling in src/GameClient/DirectionInput.cs (old Input Manager: "
+        "Input.GetKey/GetKeyDown/GetKeyUp, polled in Update() once per frame) must behave like the browser "
+        "client's js/input.js (real code), and it does not. Make it match: the direction keys (WASD and "
+        "arrows) follow last-pressed-wins, releasing a key falls back to the most recently pressed key "
+        "that is still held, onDir is called only when the direction changes, Space or E calls onBomb and "
+        "R calls onTrigger once per press, and losing window focus (OnApplicationFocus(false), like the "
+        "browser's blur) releases every held key and stops. Keys that were down when focus was lost do "
+        "not count as held again until they are pressed again." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_input_last_pressed",
+    editable_files=["src/GameClient/DirectionInput.cs"],
+    context_files=["js/input.js", "tests/GameClientTests/DirectionInputTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"LastPressedWins": 2.0, "FallsBack": 2.0, "LosingFocus_ReleasesEverything": 2.0},
+)
+
+CS_MESH_WINDING = Task(
+    id="cs_mesh_winding",
+    difficulty=3,
+    description=(
+        "Implement the procedural meshes in src/GameClient/Meshes.cs for a Unity client that avoids "
+        "built-in primitives: Box, Sphere(segments, rings), Icosahedron, Cylinder(radiusTop, radiusBottom, "
+        "height, segments) (radiusTop 0 is a cone) and Torus, at the sizes the comments give. Unity draws "
+        "only the front of a triangle, the side from which its three vertices run clockwise; every "
+        "triangle must face outward. Each surface must be closed (no holes, no degenerate triangles) and "
+        "flat-shaded: every vertex normal equals the normal of its triangle, so triangles do not share "
+        "vertices across a crease." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_mesh_winding",
+    editable_files=["src/GameClient/Meshes.cs"],
+    context_files=["tests/GameClientTests/MeshesTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=32768,
+    min_predict=12000,
+    test_weights={"FacesOutward": 2.0, "Surface_IsClosed": 2.0},
+)
+
+CS_LIGHT_PORT = Task(
+    id="cs_light_port",
+    difficulty=4,
+    description=(
+        "Bug report from the Unity (URP, Linear colour space) ports of two browser games: compared with "
+        "the browser, every scene is far too bright, the ambient tint is off, and the sun lights the "
+        "ships from the wrong side. Fix src/GameClient/LightPort.cs so the Unity lighting matches the "
+        "three.js r162 setups in js/lights.js (real code; colour management on, the r162 default). "
+        "Intensity(i) is Light.intensity for a three.js DirectionalLight of intensity i; AmbientFlat is "
+        "RenderSettings.ambientLight for an AmbientLight; AmbientTrilight is the sky/equator/ground "
+        "colours of AmbientMode.Trilight for a HemisphereLight; DirectionalRotation is the light's "
+        "Transform.rotation (a Unity directional light shines along its forward axis), with three.js "
+        "world (x, y, z) mapped to Unity (x, y, -z). Unity's API takes colours in sRGB and linearises "
+        "them itself in a Linear project." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_light_port",
+    editable_files=["src/GameClient/LightPort.cs"],
+    context_files=["js/lights.js", "tests/GameClientTests/LightPortTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"FlatAmbient": 2.0, "Equator": 2.0, "DirectionalIntensity": 2.0, "ShimSanity": 0.5},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1587,6 +1663,9 @@ BUILTIN_TASKS: list[Task] = [
     CS_RECONNECT_POLICY,
     CS_WS_CLIENT,
     CS_PRIMITIVE_COMPOSE,
+    CS_INPUT_LAST_PRESSED,
+    CS_MESH_WINDING,
+    CS_LIGHT_PORT,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1654,7 +1733,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
