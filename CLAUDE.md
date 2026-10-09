@@ -1572,7 +1572,23 @@ in the current tasks it would close.
 8. **Rotation-convention canary**: keep or split out the Three.js→Unity quaternion mirror (0/27) as a
    named canary like `python_hashmap`, so a model that finally gets it right is visible.
 
-*Suggested model runs:*
+*Run plan for the second wave (2026-10-09, proposed, none started).* Each phase gated on the load check
+and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are rough.
+- **A. Breadth, cheap — `gamedev_diag` on all 27 models** (15 one-letter answers each; thinking models
+  still reason, ~1-3 min per model on one GPU, longer on the 3×24 GB ones). Gives a first Unity-knowledge
+  ranking without the cost of code tasks, and shows whether the MC set discriminates at all (if most
+  models score 13-15/15, harden or drop the easy items).
+- **B. Depth on the four best single-GPU models** — equinox:31b, qwen3.6:27b, gemma4:31b-qat,
+  gemma4:26b-qat on `--task-group gamedev` (all 23, which re-runs the softened `node_seat_reconnect`
+  and gives first results for the 14 new tasks). ~1-2 h per model except gemma4:26b-qat.
+- **C. The two 3×24 GB leaders** — gpt-oss:120b on all 23; qwen3.8-flash-next only on the 14 new tasks
+  (its ~4-5 tok/s here makes a full group ~6 h+), after the queued Swift-1.5 re-run.
+- **D. Triage**, as for the first wave: read every failure, fix any weak test the models expose (the
+  first wave found two), then re-level with the user using both waves' pass rates.
+- **E. Only then** widen B to the rest of the 27, and run the cross-GPU check below on whichever
+  single-GPU models lead.
+
+*Other suggested model runs:*
 1. Cross-GPU sensitivity on the top single-GPU models (equinox:31b, qwen3.6:27b, gemma4:31b-qat) at
    2×24 GB `tensor_split=1|1` — split arity has flipped close calls before.
 2. The vLLM box: `qwen3.8-27b:nvfp4-next` (tp=2, 2× RTX 5060 Ti) — needs .NET 9 SDK and Node there.
