@@ -1586,7 +1586,7 @@ NODE_SEAT_RECONNECT = Task(
     description=(
         "Implement createSeats in src/seats.js: seat ownership across disconnects for a Node.js match server. "
         "Sockets are opaque ids; now() and newToken() are injected; side effects are returned as events. "
-        "Each team in options.teams is a seat in one of four states: free, live (bound to a socket), held "
+        "Each team in options.teams (team numbers, given in any order) is a seat in one of four states: free, live (bound to a socket), held "
         "(owner disconnected, waiting out the grace window) or ai (grace expired, AI playing it). Methods: "
         "join(socketId, name): alreadySeated if this socket owns a live seat; badName unless name is a "
         "string of 1..16 characters after trimming (store it trimmed); take the lowest-numbered free team, "

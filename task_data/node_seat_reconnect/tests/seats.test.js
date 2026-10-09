@@ -6,7 +6,7 @@ function setup(opts = {}) {
   let clock = 10000;
   let n = 0;
   const seats = createSeats({
-    teams: [2, 0, 1],
+    teams: [0, 1, 2],
     now: () => clock,
     newToken: () => `tok${++n}`,
     ...opts,
@@ -22,6 +22,14 @@ test('join assigns the lowest free team, issues a token, trims the name', () => 
   assert.deepEqual(seats.join('s2', 'Bob'), { ok: true, team: 1, token: 'tok2', events: [] });
   assert.deepEqual(state(seats, 0), { team: 0, state: 'live', name: 'Ada' });
   assert.deepEqual(seats.seats().map(s => s.team), [0, 1, 2], 'seats() is in team order');
+});
+
+test('teams given out of order: the lowest-numbered team is still first, seats() is ascending', () => {
+  const { seats } = setup({ teams: [7, 3, 5] });
+  assert.deepEqual(seats.seats().map(s => s.team), [3, 5, 7]);
+  assert.equal(seats.join('a', 'A').team, 3);
+  assert.equal(seats.join('b', 'B').team, 5);
+  assert.equal(seats.join('c', 'C').team, 7);
 });
 
 test('join validates names and refuses a socket that already has a seat', () => {

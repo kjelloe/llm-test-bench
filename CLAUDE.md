@@ -1339,7 +1339,7 @@ captured fixtures.
 | `cs_snapshot_interp` | 4 | boombrawl/Fireline interpolators | never resurrect, teleport snap, brads shortest arc, heading vs motion (Fireline's real bug), capped extrapolation |
 | `cs_predict_reconcile` | 5 | boombrawl `predict.js` + `movement.mjs` | ack `<=`, reset-then-replay order, speed before replay; must match a fixed-point server every tick over a laggy link |
 | `node_room_authority` | 4 | CarrierDominion `checkAuthority` + RetroMultiCiv token buckets | identity from connection only, check order, `constructor`/`toString` as message types, per-seat bucket across reconnects |
-| `node_seat_reconnect` | 4 | CarrierDominion `reconnect.js`, boombrawl reclaim | newest socket wins (4000), superseded socket's late close must not hold the seat, AI takeover/reclaim, token retirement |
+| `node_seat_reconnect` | 4 | CarrierDominion `reconnect.js`, boombrawl reclaim | newest socket wins (4000), superseded socket's late close must not hold the seat, AI takeover/reclaim, token retirement. **Softened 2026-10-09:** the shared fixture used `teams: [2, 0, 1]`, so missing "teams arrive unsorted" failed 10 of 13 tests; the fixture is now sorted and one dedicated test checks the order (14 tests), and the description says the order is arbitrary. Results before 2026-10-09 were scored on the old tests |
 | `crossplay_statehash_parity` | 5 | Fireline `canonical.js` (I32LE + FNV-1a 64) | C# `/` truncates, `int.MinValue / -1`, unit sort order, unpaired surrogates (.NET `Encoding.UTF8` substitutes U+FFFD) |
 
 Second wave, 2026-10-09, from the Unity builder's task list (`~/GIT/unityworks/specs/llm_evaluation_tasks.md`,
@@ -1585,8 +1585,8 @@ in the current tasks it would close.
    gemma4:26b-qat) on `--task-group gamedev gamedev_diag`, then decide the rest.
 5. qwen3.8-flash-next speed root cause: rebuild `67a17c17c` with `-DGGML_CUDA_GRAPHS=OFF` and re-run
    the `python_hashmap` control (finding 9).
-6. After any task change (re-levelling, softened `node_seat_reconnect`), re-run the top ~6 models only,
-   not all 27.
+6. After any task change (re-levelling, softened `node_seat_reconnect` — done 2026-10-09), re-run the
+   top ~6 models only, not all 27.
 
 #### What NOT to do
 
