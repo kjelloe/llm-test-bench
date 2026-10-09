@@ -1156,8 +1156,9 @@ When asked to implement features:
     each, PROVISIONAL:** `python_hashmap` master (no cache) **14.4 tok/s** vs the pin **5.2 tok/s**
     the same hour, identical output (530 tokens) — but the pin gave 10.6 on 2026-10-08, so the pin's
     own speed is unstable run to run on this rig right now. Cache variants and Swift-1.5 queued
-    (`next-runs.md`). Do NOT move the pin on this alone: repeat runs and the `node_paratrooper`
-    capability check (lost at `bed0a8566`) must come first.
+    (`next-runs.md`). **Repeat under the corrected load gate: pin 4.2, master 3.9 tok/s** — the 14.4
+    was an outlier. Both binaries sit at ~4-5 tok/s with large run-to-run variance; MoE cache 6/12 GB
+    was slower still (3.7/3.4). **No case for moving the pin.**
   - **DeepSeek-V4.1-Flash via the JigSawPT `dsv41-porte` llama.cpp fork** (552B total params,
     40 layers, 384 routed experts, 189 GiB engram tables; `~/GIT/deepseek-v41-flash-on-5090`
     technical report + `~/GIT/llama.cpp-dsv41` fork clone, tested 2026-10-06/07): a third,
