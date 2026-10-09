@@ -405,7 +405,7 @@ task_data/
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
-  gamedev_diag/           15 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
+  gamedev_diag/           17 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
                           tests/answer_key.json (salted sha256 of the letter), answers.reference.json (human key)
 Task groups (--task-group):
   coding    19 coding tasks (L1–L5)
@@ -419,7 +419,7 @@ Task groups (--task-group):
             multiplayer games (boombrawl, CarrierDominion, RetroMultiCiv, Fireline) and the Unity
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
-  gamedev_diag  15 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
+  gamedev_diag  17 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -509,7 +509,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (23) and gamedev_diag (15) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (23) and gamedev_diag (17) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1364,7 +1364,7 @@ builder IDs in brackets). Real code: the games' JS ships in each task's `js/`, t
 | `bash_timeout_kill` [I08] | 3 | builder incident | `timeout -k 5`, exit 124 for both 124 and 137 |
 | `bash_kill_by_port` [I09] | 2 | builder incident | kill by listening socket, never `pkill -f` (matches the caller); TERM before KILL; wait for the port |
 
-`gamedev_diag` (15 `diag_*` tasks, opt-in): multiple-choice versions of the builder's incident/"why?"
+`gamedev_diag` (17 `diag_*` tasks, opt-in): multiple-choice versions of the builder's incident/"why?"
 items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the
 model writes one letter. Options are written as "cause; fix" of similar length: the first draft had the
 correct option longest in 15/15 (and 14/15 after a rewrite), which a length heuristic would exploit;
@@ -1387,6 +1387,26 @@ The builder's agentic/process items (M, H02/B10, I01/I02) are out of scope for n
   and `bash_timeout_kill` checks only the direct child and the exit status, so it grades the same on GNU.
 - **The builder's meshes, `accept.sh` and `WebSocketConnection` pass their tasks unchanged**, and the
   `WithToken` difference (`Uri.ToString()` vs `AbsoluteUri`) does not matter for any token tested.
+
+**The Unity builder's review (2026-10-09, `~/GIT/unityworks/specs/llm_bench_review.md`):**
+- The odd-sided mirror finding is confirmed and fixed in their `Models.cs` (five parts get an innermost
+  180 degree turn); it is now incident **E11** in their task list. The uutils `timeout` note doesn't
+  affect them: their only `timeout` runs inside the player container (GNU 9.4).
+- All 15 multiple-choice keys confirmed. Applied: the `timeout_ignored` stem now says GNU timeout; added
+  `diag_wsl_mirrored_localhost` (J03, which they verified with `networkingMode=mirrored`; NAT mode is
+  unverified, so the stem names mirrored mode) and `diag_mirror_audit` (E11) → **17 questions**. Don't
+  make an IL2CPP variant of `linux_receive_stall`: under IL2CPP even blocking reads stalled, cause unknown.
+  The generator with the key is `task_data/gamedev_diag/make_diag.reference.py` (regenerates the
+  questions, stubs and hashed key byte for byte).
+- Relevance of the 23 tasks: 18 match work they actually did. `cs_coord_convert` only partly (they used
+  Euler angles, never quaternions from the wire; still the right trap). `bash_preflight` is generic
+  (warm-up only). `crossplay_statehash_parity` becomes real with citygrid (lockstep). `node_room_authority`
+  and `node_seat_reconnect` are the game servers' agent's job, not the Unity client's: keep them, but read
+  them as a server-agent profile. Their dispatcher drops on overflow with no per-frame cap; ours asks for both.
+- Their priorities for new tasks: a real Node server ↔ C# client WebSocket round trip (high: their worst
+  bugs were on that seam); one lifecycle task about fake null after `Destroy`, deferred `Destroy` and
+  Start/Update/LateUpdate order (NOT coroutines, which they never used); IL2CPP-safe code low priority
+  (both their builds use Mono).
 
 C# tasks build `src/` at **netstandard2.1 + LangVersion 9.0** (Unity's constraints: a
 file-scoped namespace, `init`, or `System.Runtime.CompilerServices.Unsafe` fails to compile, as in
@@ -1541,7 +1561,25 @@ will supply their team's specific Unity needs (pipeline, target platforms, which
 write); re-prioritise this list against that before building anything. Each test idea names the gap
 in the current tasks it would close.
 
-*Suggested tests:*
+*Third wave, proposed from the builder's review (2026-10-09), in priority order — NOT built yet:*
+1. **Node ↔ C# WebSocket round trip (L5)**: a real Node authority (stdlib only, its own minimal RFC 6455
+   upgrade) and a dotnet client in one test: drop the connection, check reconnect, seat reclaim with the
+   token and message order. Two runtimes per test command.
+2. **Fake null and lifecycle (L4)**: shim gains `Object.Destroy` (deferred to frame end), Unity's
+   overloaded `==` on destroyed objects, `?.`/`??` that bypass it, and a frame driver for
+   Start/Update/LateUpdate order (camera after positions, labels after camera). From their D10 incident.
+3. **QR port parity (B06, L4)**: byte mode, level M, versions 1-10, module-for-module against the JS
+   library (mask penalties; 16-bit length field from version 10).
+4. **Snapshot coalescing with event merging (C08/C11, L3)**: newest view per frame, every skipped view's
+   events delivered once and in order.
+5. **CSS alpha for linear blending (F11, L4)**: numeric, against their measured pixels.
+6. **Command layer port (G02, L2)**: guards, clamps, unchanged values not resent, `{type:'command'}` wrapper.
+7. **Mutation-killing tests (H02/H03, L4)**: the model WRITES tests for a given port; graded by how many
+   hidden mutants its tests kill (a new grading mode for the harness).
+8. **Flex-wrap / inline-block layout (F06/F13, L3)** and **pixel diagnosis (E05/L01)**, numeric or MC.
+Dropped on their advice: coroutines, IL2CPP/AOT (item 4 below).
+
+*Suggested tests (2026-10-08 list):*
 1. **DONE 2026-10-09** (`cs_port_movement`, `cs_port_heightmap`, `cs_port_webaudio`, `cs_tick_interp`).
    **Port a real engine module JS→C# with parity fixtures** (e.g. boombrawl `shared/movement.mjs`,
    Fireline `client/js/interpolator.js`, CarrierDominion `shared/fixed.js`): closest to the actual
@@ -1553,7 +1591,7 @@ in the current tasks it would close.
 3. **Allocation-free hot path**: an Update-style method whose test asserts zero managed allocations
    (`GC.GetAllocatedBytesForCurrentThread` before/after) — the GC-pressure point in the port-strategy
    doc. Gap: nothing measures performance hygiene.
-4. **IL2CPP/AOT-safe code**: banned-API scan (reflection, `dynamic`, `System.Reflection.Emit`,
+4. **DROPPED 2026-10-09 (builder: both their builds use Mono).** **IL2CPP/AOT-safe code**: banned-API scan (reflection, `dynamic`, `System.Reflection.Emit`,
    `Activator.CreateInstance` on open generics) plus compile — Unity's player builds strip/AOT-compile.
 5. **PARTLY DONE 2026-10-09**: the shim now has Transform/GameObject, Mesh, Color, Input/KeyCode and a
    MonoBehaviour base (used by `cs_primitive_compose`, `cs_mesh_winding`, `cs_light_port`,
@@ -1574,7 +1612,7 @@ in the current tasks it would close.
 
 *Run plan for the second wave (2026-10-09, proposed, none started).* Each phase gated on the load check
 and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are rough.
-- **A. Breadth, cheap — `gamedev_diag` on all 27 models** (15 one-letter answers each; thinking models
+- **A. Breadth, cheap — `gamedev_diag` on all 27 models** (17 one-letter answers each; thinking models
   still reason, ~1-3 min per model on one GPU, longer on the 3×24 GB ones). Gives a first Unity-knowledge
   ranking without the cost of code tasks, and shows whether the MC set discriminates at all (if most
   models score 13-15/15, harden or drop the easy items).
@@ -1596,7 +1634,7 @@ and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are r
    deleted 2026-10-08 to free disk, so this first needs the ~502 GB re-download — as a capability
    ceiling; expect ~1 h per task at its measured prefill/decode rates.
 4. A frontier coding agent via `--export-task` on all of them, for an upper bound to set levels against.
-7. **The second wave (14 gamedev tasks + 15 `diag_*`) has no model results yet**: run the top ~6 by
+7. **The second wave (14 gamedev tasks + 17 `diag_*`) has no model results yet**: run the top ~6 by
    gamedev partial credit (gpt-oss:120b, qwen3.8-flash-next, equinox:31b, qwen3.6:27b, gemma4:31b-qat,
    gemma4:26b-qat) on `--task-group gamedev gamedev_diag`, then decide the rest.
 5. qwen3.8-flash-next speed root cause: rebuild `67a17c17c` with `-DGGML_CUDA_GRAPHS=OFF` and re-run

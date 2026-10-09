@@ -13,5 +13,7 @@
  "linux_receive_stall": "d0a78030f54a37df56fa5754a2fd8f3d05104e77f55956fe676b2e6c323348c8",
  "float_rubberband": "9d70b347e14482b907dfe3367a0bfb45f5f808122c874a0bea8462f4d81aecf3",
  "wire_codes": "4bc4cf4e16901f98bf712d8e25979ec8817f74f0b6d3f2f70a492cc19f0a0003",
- "css_border_tint": "0dcc63b5104fe0db295f5eb5de973c81611ecf8d2736802ea1ac1354ed7f3e86"
+ "css_border_tint": "0dcc63b5104fe0db295f5eb5de973c81611ecf8d2736802ea1ac1354ed7f3e86",
+ "wsl_mirrored_localhost": "9f97aedf07ab6aaa35ae9df069e64fdae236c1be5a4ca8bd9685edc92afac527",
+ "mirror_audit": "ec710e0e91e5bb79c7121a2264c2d2118047faa90b7b5f42432cc5780d136fbd"
 }

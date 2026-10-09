@@ -1,6 +1,6 @@
 # timeout_ignored
 
-A headless Unity player started with `timeout 8 ./Player.x86_64 -batchmode` ran for 70 minutes. Why, and what is the fix?
+A headless Unity player started with GNU coreutils `timeout 8 ./Player.x86_64 -batchmode` ran for 70 minutes. Why, and what is the fix?
 
 A. timeout counts CPU time, and an idle headless player uses almost none; use a wall-clock watchdog that kills it by pid.
 B. timeout cannot signal a process that calls setsid; run the player with `setsid -w` under timeout.

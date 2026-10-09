@@ -1705,6 +1705,7 @@ _GAMEDEV_DIAG = [
     ("lambert_shader", 4), ("mirror_scene", 4), ("unity_licence", 2), ("signin_url", 2),
     ("timeout_ignored", 3), ("pkill_self", 2), ("headless_segfault", 4), ("linux_receive_stall", 5),
     ("float_rubberband", 1), ("wire_codes", 2), ("css_border_tint", 2),
+    ("wsl_mirrored_localhost", 2), ("mirror_audit", 4),
 ]
 
 

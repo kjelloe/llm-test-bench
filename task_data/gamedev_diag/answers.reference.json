@@ -58,5 +58,13 @@
  "css_border_tint": {
   "answer": "E",
   "source": "unityworks specs/llm_evaluation_tasks.md F03"
+ },
+ "wsl_mirrored_localhost": {
+  "answer": "B",
+  "source": "unityworks specs/llm_evaluation_tasks.md J03"
+ },
+ "mirror_audit": {
+  "answer": "D",
+  "source": "unityworks specs/llm_evaluation_tasks.md E11"
  }
 }
