@@ -1040,6 +1040,80 @@ CS_PORT_HEIGHTMAP = Task(
     test_weights={"CapturedIslands": 3.0, "SeedNearIntMax": 1.0},
 )
 
+CS_PORT_WEBAUDIO = Task(
+    id="cs_port_webaudio",
+    difficulty=4,
+    description=(
+        "Port boombrawl's browser sound effects (read-only js/sound.js, Web Audio) to an offline C# "
+        "renderer: implement src/GameClient/Synth.cs (types in the read-only src/GameClient/SynthTypes.cs). "
+        "(1) Effects: every effect in sound.js (tick, go, boom, death, shrink, win) as Layer arrays with the "
+        "same frequencies, durations, volumes, waveforms, slides and start offsets, using sound.js's defaults; "
+        "(2) ExponentialRamp(from, to, t, dur) must follow Web Audio's exponentialRampToValueAtTime exactly and "
+        "hold the end value after dur; "
+        "(3) Lowpass(cutoffHz, q, sampleRate) returns the a0-normalised biquad coefficients of Web Audio's "
+        "BiquadFilterNode type 'lowpass' exactly as the Web Audio specification defines them (note how that "
+        "node interprets Q); "
+        "(4) Render(layers, seed) mixes the layers into a 48 kHz buffer as the browser plays them: tones decay "
+        "from their volume to 0.001 over dur and stop 0.02 s later, pitch slides ramp exponentially to "
+        "max(20, slideTo); noise bursts last dur and pass through the lowpass (default Q) whose cutoff ramps "
+        "from 2*freq to max(40, freq/4); the buffer is as long as the latest layer; same seed, same output." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_port_webaudio",
+    editable_files=["src/GameClient/Synth.cs"],
+    context_files=[
+        "js/sound.js",
+        "src/GameClient/SynthTypes.cs",
+        "tests/GameClientTests/SynthPortTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"Lowpass_Coefficients": 2.0, "BoostsTheCutoff": 3.0, "Effects_MatchSoundJs": 2.0},
+)
+
+CS_TICK_INTERP = Task(
+    id="cs_tick_interp",
+    difficulty=4,
+    description=(
+        "Implement TickInterpolator in src/GameClient/TickInterpolator.cs (types in the read-only "
+        "src/GameClient/TickTypes.cs): Unity-side smoothing between CarrierDominion server views that "
+        "interpolates on the server's tick, not on arrival time, because at time compression the server sends "
+        "its ticks in bursts (x16: sixteen views every 50 ms). Required behavior: "
+        "(1) Push(view, arrivalSeconds) ignores a view whose tick is not greater than Latest's; keeps at most "
+        "Capacity views (dropping the oldest); then measures Rate: take the oldest buffered view that arrived "
+        "within 1 s of the newest arrival, and if that span is at least 0.2 s, Rate = tick difference / span; "
+        "(2) SetNominalRate sets Rate only while no rate has been set or measured yet; "
+        "(3) Advance(dt), once per frame, does nothing when empty; otherwise target = Latest.tick - Rate * "
+        "DelaySeconds, render = (previous RenderTick, or target on the first call) + Rate * dt, then render += "
+        "(target - render) * (1 - e^(-5 dt)), clamped to [oldest buffered tick, Latest.tick]; RenderTick is 0 "
+        "before the first Advance; "
+        "(4) Sample(tick) returns null when empty, the oldest view if tick is before it, Latest if tick is at or "
+        "after it, else the bracketing pair (older.tick <= tick < newer.tick) interpolated with t = (tick - "
+        "older.tick) / (newer.tick - older.tick): the result's View is the newer view and contains exactly its "
+        "carriers and units; positions lerp from the older view's pose, headings turn via ShortTurn; a mover "
+        "absent from the older view keeps its newer pose; "
+        "(5) ShortTurn(from, to) is the BAM difference (65536 per turn) the short way round, in -32768..32767." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_tick_interp",
+    editable_files=["src/GameClient/TickInterpolator.cs"],
+    context_files=[
+        "src/GameClient/TickTypes.cs",
+        "tests/GameClientTests/TickInterpolatorTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"CapturedRun": 3.0, "BurstyServer": 2.0, "Rate_IsMeasured": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1380,6 +1454,8 @@ BUILTIN_TASKS: list[Task] = [
     CS_COORD_BAM,
     CS_PORT_MOVEMENT,
     CS_PORT_HEIGHTMAP,
+    CS_PORT_WEBAUDIO,
+    CS_TICK_INTERP,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1447,7 +1523,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
