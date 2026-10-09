@@ -416,7 +416,7 @@ Task groups (--task-group):
   context   6 context retrieval tasks (8k–256k)
   multihop  5 multihop + distractor tasks (2-hop forward/reverse, 1 distractor, chain_5, cross_5)
   spot      10-task candidate spot check (standard evaluation subset)
-  gamedev   23 Unity-client C#, Node-authority and build-pipeline bash tasks (L2-L5), from the user's
+  gamedev   27 Unity-client C#, Node-authority and build-pipeline bash tasks (L2-L5), from the user's
             multiplayer games (boombrawl, CarrierDominion, RetroMultiCiv, Fireline) and the Unity
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
@@ -510,7 +510,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (23) and gamedev_diag (17) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (27) and gamedev_diag (17) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1365,6 +1365,16 @@ builder IDs in brackets). Real code: the games' JS ships in each task's `js/`, t
 | `bash_timeout_kill` [I08] | 3 | builder incident | `timeout -k 5`, exit 124 for both 124 and 137 |
 | `bash_kill_by_port` [I09] | 2 | builder incident | kill by listening socket, never `pkill -f` (matches the caller); TERM before KILL; wait for the port |
 
+Third wave, 2026-10-09 evening, chosen to SEPARATE the leaders (the top three were within 0.02 partial
+credit): each is graded on many independent cases, so partial credit spreads. All from real code.
+
+| Task | L | Source | Main traps |
+|---|---|---|---|
+| `cs_port_qr` [B06] | 4 | boombrawl `vendor/qrcode.mjs` (fixtures from the real library; the model gets a versions-1-10 excerpt, the full file is ~15k tokens), builder's `QrCode.cs` as reference | version choice at each capacity boundary, 16-bit length field from version 10, RS blocks, mask penalty, low byte of each UTF-16 unit (chars above U+00FF tested). Graded per version. A mask tie-break mutant survives (no penalty ties in the data) |
+| `cs_port_helm` [G02] | 3 | CarrierDominion `client/main.js` helm functions extracted verbatim into `js/helm.mjs`; 40 seeded sessions | piloting resends an unchanged throttle, -25 astern only for the ship, server helm adopted only when not piloting, a lost selection stops piloting, auto-select. Each mutant fails a subset of the 40 sessions |
+| `cs_snapshot_coalesce` [C08/C11] | 3 | CarrierDominion `EntityManager.cs` (builder) | newest view per frame, skipped views' events once and in order, no parse for `"events":[]`, welcome discards the pending view, prefix (not substring) routing |
+| `crossplay_ws_roundtrip` [5c] | 5 | real Node authority `tests/server.mjs` (stdlib, own RFC 6455) + builder's `WebSocketConnection` | queued commands once and in order across a drop, acked never resent, token reclaim of the same seat, no reconnect after 4000 or Dispose. Reference 5/5 stable, ~8 s per run |
+
 `gamedev_diag` (17 `diag_*` tasks, opt-in): multiple-choice versions of the builder's incident/"why?"
 items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the
 model writes one letter. Options are written as "cause; fix" of similar length: the first draft had the
@@ -1646,18 +1656,18 @@ write); re-prioritise this list against that before building anything. Each test
 in the current tasks it would close.
 
 *Third wave, proposed from the builder's review (2026-10-09), in priority order — NOT built yet:*
-1. **Node ↔ C# WebSocket round trip (L5)**: a real Node authority (stdlib only, its own minimal RFC 6455
+1. **DONE 2026-10-09 (`crossplay_ws_roundtrip`).** **Node ↔ C# WebSocket round trip (L5)**: a real Node authority (stdlib only, its own minimal RFC 6455
    upgrade) and a dotnet client in one test: drop the connection, check reconnect, seat reclaim with the
    token and message order. Two runtimes per test command.
 2. **Fake null and lifecycle (L4)**: shim gains `Object.Destroy` (deferred to frame end), Unity's
    overloaded `==` on destroyed objects, `?.`/`??` that bypass it, and a frame driver for
    Start/Update/LateUpdate order (camera after positions, labels after camera). From their D10 incident.
-3. **QR port parity (B06, L4)**: byte mode, level M, versions 1-10, module-for-module against the JS
+3. **DONE 2026-10-09 (`cs_port_qr`).** **QR port parity (B06, L4)**: byte mode, level M, versions 1-10, module-for-module against the JS
    library (mask penalties; 16-bit length field from version 10).
-4. **Snapshot coalescing with event merging (C08/C11, L3)**: newest view per frame, every skipped view's
+4. **DONE 2026-10-09 (`cs_snapshot_coalesce`).** **Snapshot coalescing with event merging (C08/C11, L3)**: newest view per frame, every skipped view's
    events delivered once and in order.
 5. **CSS alpha for linear blending (F11, L4)**: numeric, against their measured pixels.
-6. **Command layer port (G02, L2)**: guards, clamps, unchanged values not resent, `{type:'command'}` wrapper.
+6. **DONE 2026-10-09 (`cs_port_helm`).** **Command layer port (G02, L2)**: guards, clamps, unchanged values not resent, `{type:'command'}` wrapper.
 7. **Mutation-killing tests (H02/H03, L4)**: the model WRITES tests for a given port; graded by how many
    hidden mutants its tests kill (a new grading mode for the harness).
 8. **Flex-wrap / inline-block layout (F06/F13, L3)** and **pixel diagnosis (E05/L01)**, numeric or MC.

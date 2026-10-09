@@ -100,7 +100,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (79 total, difficulty L1–L6; 39 run by default; the 23 `gamedev` and 17 `gamedev_diag` tasks are opt-in):
+- Built-in tasks (83 total, difficulty L1–L6; 39 run by default; the 27 `gamedev` and 17 `gamedev_diag` tasks are opt-in):
 
   **Game-dev tasks (23, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),
@@ -112,7 +112,8 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   `crossplay_statehash_parity` (L5); second wave (2026-10-09): `cs_port_movement` (L3), `cs_port_heightmap`
   (L4), `cs_port_webaudio` (L4), `cs_tick_interp` (L4), `cs_ws_abort_reconnect` (L4), `cs_reconnect_policy`
   (L3), `cs_ws_client` (L4), `cs_primitive_compose` (L4), `cs_input_last_pressed` (L2), `cs_mesh_winding`
-  (L3), `cs_light_port` (L4), `bash_accept_matrix` (L2), `bash_timeout_kill` (L3), `bash_kill_by_port` (L2).
+  (L3), `cs_light_port` (L4), `bash_accept_matrix` (L2), `bash_timeout_kill` (L3), `bash_kill_by_port` (L2); third wave (2026-10-09, chosen to
+  separate models): `cs_port_qr` (L4), `cs_port_helm` (L3), `cs_snapshot_coalesce` (L3), `crossplay_ws_roundtrip` (L5).
 
   **Game-dev diagnosis (17, opt-in) — `--task-group gamedev_diag`:** one multiple-choice question per
   task (`diag_*`, L1–L5); the model writes the letter of the best answer to `answers/<id>.txt`, graded
