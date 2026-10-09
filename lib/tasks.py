@@ -1159,7 +1159,8 @@ CS_RECONNECT_POLICY = Task(
         "in progress (until EndConnect()), so attempts never overlap. SeatUrl.WithToken(url, token): the seat "
         "token rides the socket URL as the query parameter token, escaped so any token text round-trips "
         "exactly; keep scheme, host, port, path and every other query parameter, replace an existing token "
-        "parameter, and return url unchanged when token is null or empty. SeatUrl.ForLog(url): the URL with "
+        "parameter, and return url unchanged when token is null or empty (the server reads the query with Node's "
+        "URLSearchParams, so '+' means a space). SeatUrl.ForLog(url): the URL with "
         "its query and fragment removed - the token must never reach a log." + UNITY_CONSTRAINTS
     ),
     subdir="cs_reconnect_policy",

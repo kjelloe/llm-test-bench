@@ -8,12 +8,15 @@ namespace GameClientTests
 {
     public class ReconnectTests
     {
+        // Decoded the way the game server reads it (Node's URLSearchParams): '+' is a space.
+        static string Decode(string s) => Uri.UnescapeDataString(s.Replace('+', ' '));
+
         static Dictionary<string, string> Query(string url)
         {
             var q = new Uri(url).Query.TrimStart('?');
             return q.Split('&', StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => p.Split('=', 2))
-                .ToDictionary(kv => Uri.UnescapeDataString(kv[0]), kv => kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : "");
+                .ToDictionary(kv => Decode(kv[0]), kv => kv.Length > 1 ? Decode(kv[1]) : "");
         }
 
         [Fact]
