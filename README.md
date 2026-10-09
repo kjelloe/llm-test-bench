@@ -167,6 +167,12 @@ argument validation ×0.5. It shows as a "partial credit" line per model in the 
 the `partial` column of `./statistics.sh --detail`. Results written before 2026-10-08 are re-scored,
 unweighted, from the summary line they kept.
 
+A C# task that doesn't compile scores 0 however close it was, so failing records also carry
+`build_errors`: the number of distinct compiler errors, a count per error code, and which of them come
+from Unity's rules (C# newer than 9, or a namespace .NET Standard 2.1 lacks, such as `System.Text.Json`).
+They show as "did not compile" in the failure detail and as the `build_errors` / `unity_errors` columns
+of `./statistics.sh --detail`.
+
 ---
 
 ## Backends

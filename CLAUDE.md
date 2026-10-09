@@ -358,7 +358,8 @@ lib/
                           stuck Unity smoke test pegged a core for 70+ min; the teammate's Unity builder shares this rig)
   power_check.py          Pre-flight GPU power-limit safety check for 3+ GPU runs; evaluate() unit-tested in tests/test_power_check.py; called by run.sh (added 2026-08-29)
   history.py              Run history writer and header printer
-  test_results.py         Partial credit: per-test outcomes from runner output → weighted score (record test_score; added 2026-10-08)
+  test_results.py         Partial credit: per-test outcomes from runner output → weighted score (record test_score; added 2026-10-08);
+                          C# build errors with Unity-rule flags (record build_errors; added 2026-10-09)
 logs/
   run-NN.log          Per-run output (tee from run.sh); keeps last 10; run-latest.log symlink
   compare-NN.log      Per-compare output (tee from compare.sh); compare-latest.log symlink
@@ -1515,7 +1516,16 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    `statistics.sh --detail` (older records re-scored, unweighted, from their stored output's
    summary line). Pass/fail stays the headline and the basis of Skill; partial credit is a
    finer signal, not a replacement — a 0.97 that doesn't compile in Unity is still unusable.
-2. **"Doesn't compile under Unity" is worth its own metric — PLANNED, not built.** Today a compile
+2. **IMPLEMENTED 2026-10-09: `build_errors` on every failing record** (`lib/test_results.py`
+   `build_errors`/`record_build`, parsed from the full output; older records backfilled from the stored
+   output): `{errors: distinct C# errors, codes: {code: n}, unity: [errors caused by Unity's rules]}`. Unity's
+   rules = language newer than C# 9 (CS8773), types/namespaces missing from .NET Standard 2.1 (CS0518,
+   CS0234 on `System.*`). Shown in the failure report ("did not compile: task (n errors, k from Unity's
+   rules)") and as `build_errors`/`unity_errors` columns in `statistics.sh --detail`. First use: nobody
+   compiles `cs_port_qr`, but gemma4:31b-qat and equinox:31b are 2 errors away (one is `>>>`), the other
+   three 4; over all 27 tasks gemma4:31b-qat fails to compile 3 tasks with 8 distinct errors, the others
+   5-8 tasks with 20-44. Original proposal, for the record:
+   **"Doesn't compile under Unity" is worth its own metric.** Today a compile
    error is TESTS_STILL_FAIL with `test_score` null (= 0), the same as wrong logic. The Unity
    constraints already catch real model habits (`>>>` = C# 11, `System.Runtime.CompilerServices.
    Unsafe` absent on netstandard2.1). Proposal: when the post-edit test output has `error CS`
@@ -1730,7 +1740,7 @@ Dropped on their advice: coroutines, IL2CPP/AOT (item 4 below).
    **Cross-play integration (L6)**: a real WebSocket round trip between a Node authority and a C#
    client (`ClientWebSocket`), including reconnect — the design doc's actual acceptance test. Heavier:
    two runtimes in one test command.
-7. **"Doesn't compile under Unity" metric** (harness, not a task): record CS codes, flag
+7. **DONE 2026-10-09 (`build_errors`, see finding 2).** **"Doesn't compile under Unity" metric** (harness, not a task): record CS codes, flag
    language-version / missing-API ones separately (see "Findings along the way" item 2). Data so far:
    CS8773 (C# > 9) 7 times, missing-API CS0246/CS0117/CS0103 recurring.
 8. **Rotation-convention canary**: keep or split out the Three.js→Unity quaternion mirror (0/27) as a

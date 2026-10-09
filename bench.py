@@ -74,6 +74,7 @@ def run_one(
         "edit_policy_ok": False,
         "tests_pass": False,
         "test_score": None,     # partial credit: {passed, total, score, weighted}; see lib/test_results.py
+        "build_errors": None,   # C# compile errors: {errors, codes, unity}; see lib/test_results.py
         "response_truncated": False,
         "ctx_truncated": False,
         "finish_reason": "",
@@ -233,9 +234,10 @@ def run_one(
         record["edited_files"] = [e.path for e in edits]
 
         # --- post-edit tests ---
-        passed, out, score = run_tests_scored(task, workdir)
+        passed, out, score, build = run_tests_scored(task, workdir)
         record["tests_pass"] = passed
         record["test_score"] = score
+        record["build_errors"] = build
         if not passed:
             record["error_kind"] = "TESTS_STILL_FAIL"
             record["error_detail"] = out

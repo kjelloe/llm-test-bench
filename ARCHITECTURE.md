@@ -175,7 +175,7 @@ For each `(model, task)` pair:
 6. **Parse** — extract `BEGIN_FILE … END_FILE` blocks from raw response text (`parsing.parse_file_blocks`).
 7. **Validate** — check all edited paths are in `task.editable_files` (`parsing.validate_edits`).
 8. **Apply** — overwrite files in the workdir.
-9. **Test** — re-run `task.test_cmd`; record `tests_pass`, plus `test_score` (partial credit) parsed from the full runner output before it is truncated for `error_detail` (`run_tests_scored`, `lib/test_results.py`).
+9. **Test** — re-run `task.test_cmd`; record `tests_pass`, plus `test_score` (partial credit) and `build_errors` (C# compile errors) parsed from the full runner output before it is truncated for `error_detail` (`run_tests_scored`, `lib/test_results.py`).
 10. **Cleanup** — delete workdir (unless `--keep-workdirs`).
 
 ### System Components
@@ -396,6 +396,7 @@ Results are written as a JSON object `{"hardware": {...}, "results": [...]}`. Th
 | `edit_policy_ok` | bool | |
 | `tests_pass` | bool | |
 | `test_score` | object or null | partial credit from the post-edit test run: `{passed, total, score, weighted, failed}` (`failed` = failing test names, max 50, null when only summary counts were available); `score` is weighted by `Task.test_weights` (test-name substring → weight, default 1); `weighted: false` when only the runner's summary counts were available; null when no test reported (no code, compile error, timeout). `lib/test_results.record_score()` turns any record into 0..1 (1 for a pass), re-scoring older records from their stored output. Added 2026-10-08 |
+| `build_errors` | object or null | C# compile errors when the post-edit test run failed to build: `{errors, codes, unity}` — distinct errors (dotnet prints each twice), code → distinct count, and up to 10 errors caused by Unity's rules (`CS8773` language newer than C# 9; `CS0518`, `CS0234` on `System.*` namespaces missing from .NET Standard 2.1) as `"CSxxxx: message"`. Null when the build succeeded or no C# errors were printed. `lib/test_results.record_build()` backfills older records from their stored output. Added 2026-10-09 |
 | `edited_files` | list[string] | |
 | `error_kind` | string\|null | `NO_BLOCKS`, `CTX_TRUNCATED`, `EDITED_NONEDITABLE_FILE`, `TESTS_STILL_FAIL`, `BASELINE_PASSED_INVALID_TASK`, `TOOL_ERROR`, `SKIPPED_VRAM`, `SKIPPED_CTX` |
 | `error_detail` | string\|null | truncated, max ~500 chars |

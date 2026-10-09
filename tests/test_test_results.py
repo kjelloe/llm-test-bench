@@ -95,3 +95,34 @@ def test_record_score():
     assert record_score(old) == 0.75
     assert record_score({"tests_pass": False, "error_kind": "NO_BLOCKS", "error_detail": "ℹ pass 3\nℹ fail 1"}) == 0.0
     assert record_score({"tests_pass": False, "error_kind": "TESTS_STILL_FAIL", "error_detail": "error CS0103"}) == 0.0
+
+
+DOTNET_BUILD_FAIL = """
+  Restored /tmp/x/src/GameClient/GameClient.csproj (in 51 ms).
+/tmp/x/src/GameClient/QrCode.cs(40,23): error CS8773: Feature 'unsigned right shift' is not available in C# 9.0. Please use language version 11.0 or greater. [/tmp/x/src/GameClient/GameClient.csproj]
+/tmp/x/src/GameClient/QrCode.cs(51,9): error CS0136: A local or parameter named 'wanted' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter [/tmp/x/src/GameClient/GameClient.csproj]
+/tmp/x/src/GameClient/Seat.cs(3,18): error CS0234: The type or namespace name 'Json' does not exist in the namespace 'System.Text' (are you missing an assembly reference?) [/tmp/x/src/GameClient/GameClient.csproj]
+Build FAILED.
+/tmp/x/src/GameClient/QrCode.cs(40,23): error CS8773: Feature 'unsigned right shift' is not available in C# 9.0. Please use language version 11.0 or greater. [/tmp/x/src/GameClient/GameClient.csproj]
+/tmp/x/src/GameClient/QrCode.cs(51,9): error CS0136: A local or parameter named 'wanted' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter [/tmp/x/src/GameClient/GameClient.csproj]
+/tmp/x/src/GameClient/Seat.cs(3,18): error CS0234: The type or namespace name 'Json' does not exist in the namespace 'System.Text' (are you missing an assembly reference?) [/tmp/x/src/GameClient/GameClient.csproj]
+    3 Error(s)
+"""
+
+
+def test_build_errors_counts_distinct_errors_and_flags_unity_constraints():
+    from lib.test_results import build_errors
+
+    b = build_errors(DOTNET_BUILD_FAIL)
+    assert b["errors"] == 3  # each is printed twice by dotnet
+    assert b["codes"] == {"CS0136": 1, "CS0234": 1, "CS8773": 1}
+    assert [u.split(":")[0] for u in b["unity"]] == ["CS8773", "CS0234"]
+    assert build_errors("  Passed GameClientTests.X [1 ms]\nTotal tests: 1\n") is None
+
+
+def test_record_build_falls_back_to_the_stored_output():
+    from lib.test_results import record_build
+
+    assert record_build({"tests_pass": True, "error_detail": DOTNET_BUILD_FAIL}) is None
+    assert record_build({"tests_pass": False, "error_kind": "TESTS_STILL_FAIL", "error_detail": DOTNET_BUILD_FAIL})["errors"] == 3
+    assert record_build({"tests_pass": False, "build_errors": None, "error_detail": DOTNET_BUILD_FAIL}) is None

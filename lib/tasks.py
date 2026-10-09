@@ -4,7 +4,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from lib.test_results import score_output
+from lib.test_results import build_errors, score_output
 
 TASK_DATA_DIR = Path(__file__).parent.parent / "task_data"
 
@@ -163,11 +163,11 @@ def run_tests(task: Task, workdir: Path) -> tuple[bool, str]:
     return rc == 0, out
 
 
-def run_tests_scored(task: Task, workdir: Path) -> tuple[bool, str, dict | None]:
-    """run_tests plus partial credit, scored from the full output before truncation drops
-    the per-test lines (dotnet test output is often ~100 KB)."""
+def run_tests_scored(task: Task, workdir: Path) -> tuple[bool, str, dict | None, dict | None]:
+    """run_tests plus partial credit and build errors, both read from the full output before
+    truncation drops the per-test lines (dotnet test output is often ~100 KB)."""
     rc, out = _run_full(task.test_cmd, workdir, task.test_timeout)
-    return rc == 0, _truncate(out), score_output(out, task.test_weights)
+    return rc == 0, _truncate(out), score_output(out, task.test_weights), build_errors(out) if rc != 0 else None
 
 
 # ---------------------------------------------------------------------------

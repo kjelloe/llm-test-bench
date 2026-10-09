@@ -2,7 +2,7 @@ import json
 import shutil
 from collections import defaultdict
 from pathlib import Path
-from lib.test_results import record_score
+from lib.test_results import record_build, record_score
 
 
 def _backend_suffix(backend: str) -> str:
@@ -241,6 +241,12 @@ def print_summary(results: list[dict]) -> None:
         print(f"\nModel : {model}")
         avg = sum(record_score(r) for r in recs) / len(recs)
         print(f"  partial credit: {avg:.2f} avg over {len(recs)} tasks (pass = 1, no tests run = 0)")
+        built = [(r, record_build(r)) for r in failures]
+        broken = [(r, b) for r, b in built if b]
+        if broken:
+            print("  did not compile: " + ", ".join(
+                f"{r['task']} ({b['errors']} errors" + (f", {len(b['unity'])} from Unity's rules" if b["unity"] else "") + ")"
+                for r, b in broken))
         near = [r for r in failures if r.get("test_score")]
         if near:
             print("  tests passed on failing tasks: " + ", ".join(

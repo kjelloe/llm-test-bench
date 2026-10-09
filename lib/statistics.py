@@ -36,10 +36,13 @@ except Exception:
     DIFFICULTIES = {}
 
 try:
-    from lib.test_results import record_score
+    from lib.test_results import record_build, record_score
 except Exception:
     def record_score(r: dict) -> float:
         return 1.0 if r.get("tests_pass") else 0.0
+
+    def record_build(r: dict) -> dict | None:
+        return None
 
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
@@ -353,6 +356,8 @@ def detail_rows(path: Path, results: list[dict], hw: dict | None,
             "difficulty":         DIFFICULTIES.get(r["task"], ""),
             "pass":               r["tests_pass"],
             "partial":            record_score(r),
+            "build_errors":       (record_build(r) or {}).get("errors", ""),
+            "unity_errors":       len((record_build(r) or {}).get("unity", [])) if record_build(r) else "",
             "slow":               r.get("slow", False),
             "error_kind":         r.get("error_kind") or "",
             "tok_per_s":          r.get("tok_per_s", 0.0),

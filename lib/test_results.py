@@ -98,3 +98,52 @@ def record_score(record: dict) -> float:
         if counts and counts[1]:
             return round(counts[0] / counts[1], 4)
     return 0.0
+
+
+# C# compiler errors (dotnet prints each twice: during the build and in its summary).
+_CS_ERROR = re.compile(r"^(.*?)\berror (CS\d{4}): (.+?)(?: \[[^\]\n]*\])?\s*$", re.M)
+_LANGUAGE_VERSION = re.compile(r"is not available in C# 9\.0")
+_MISSING_FRAMEWORK = re.compile(r"does not exist in the namespace 'System[.']")
+
+
+def unity_reason(code: str, message: str) -> str | None:
+    """Why this error comes from Unity's constraints rather than a plain mistake, or None.
+    Unity compiles C# 9 against .NET Standard 2.1, so newer language features and newer
+    framework namespaces (System.Text.Json, ...) don't exist there."""
+    if code == "CS8773" or _LANGUAGE_VERSION.search(message):
+        return "language newer than C# 9"
+    if code == "CS0518":
+        return "type missing from .NET Standard 2.1"
+    if code == "CS0234" and _MISSING_FRAMEWORK.search(message):
+        return "namespace missing from .NET Standard 2.1"
+    return None
+
+
+def build_errors(output: str) -> dict | None:
+    """{errors, codes, unity} for a run whose build failed, or None if it reported no C# errors.
+    errors: distinct errors; codes: code -> distinct count; unity: the distinct Unity-constraint
+    errors as "CSxxxx: message" (at most 10)."""
+    seen: dict[str, tuple[str, str]] = {}
+    for where, code, message in _CS_ERROR.findall(output):
+        seen.setdefault(f"{where.strip()} {code} {message}", (code, message))
+    if not seen:
+        return None
+    codes: dict[str, int] = {}
+    unity: list[str] = []
+    for code, message in seen.values():
+        codes[code] = codes.get(code, 0) + 1
+        if unity_reason(code, message) and f"{code}: {message}" not in unity:
+            unity.append(f"{code}: {message}")
+    return {"errors": len(seen), "codes": dict(sorted(codes.items())), "unity": unity[:10]}
+
+
+def record_build(record: dict) -> dict | None:
+    """Build errors for one result record: the stored field, else parsed from the stored (possibly
+    truncated) error_detail of older records."""
+    if record.get("tests_pass"):
+        return None
+    if "build_errors" in record:
+        return record["build_errors"]
+    if record.get("error_kind") == "TESTS_STILL_FAIL":
+        return build_errors(str(record.get("error_detail") or ""))
+    return None
