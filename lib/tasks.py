@@ -1317,6 +1317,74 @@ CS_LIGHT_PORT = Task(
     test_weights={"FlatAmbient": 2.0, "Equator": 2.0, "DirectionalIntensity": 2.0, "ShimSanity": 0.5},
 )
 
+BASH_ACCEPT_MATRIX = Task(
+    id="bash_accept_matrix",
+    difficulty=2,
+    description=(
+        "scripts/accept.sh is the milestone acceptance run of a Unity build pipeline: scripts/test.sh, "
+        "then for each game (the arguments, or every games/*/ directory) and each target (linux64, then "
+        "win64): scripts/build.sh <game> <target>, scripts/smoke.sh <game> <target>, and, only where "
+        "games/<game>/smoke.env has a PLAY_ARGS= line, scripts/smoke.sh <game> <target> play. It stops "
+        "at the first failure and reports nothing useful. Fix it so it runs every game and target even "
+        "after failures and prints exactly one line per game and target to stdout: \"<game> <target>: "
+        "pass\", or \"<game> <target>: BUILD FAIL (games/<game>/Build/<target>.log)\" (smoke and play "
+        "are skipped), \"<game> <target>: SMOKE FAIL (games/<game>/Build/smoke-<target>-player.log)\" "
+        "(play is skipped), or \"<game> <target>: PLAY FAIL (games/<game>/Build/play-<target>-player.log)\". "
+        "The tools' own output must not reach stdout. Exit 0 only if everything passed. If scripts/test.sh "
+        "fails, print \"scripts/test.sh failed; run it for details\" to stderr and exit 1 before building."
+    ),
+    subdir="bash_accept_matrix",
+    editable_files=["scripts/accept.sh"],
+    context_files=["scripts/common.sh", "tests/test_accept.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=120,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"everything_else_still_runs": 2.0, "several_failures": 2.0},
+)
+
+BASH_TIMEOUT_KILL = Task(
+    id="bash_timeout_kill",
+    difficulty=3,
+    description=(
+        "Incident: a headless Unity player started by scripts/run_player.sh with an 8 second limit ran for "
+        "70 minutes. Fix scripts/run_player.sh <seconds> <command> [args...]: run the command with its "
+        "arguments intact; when the time is up send it SIGTERM, and if it is still running 5 seconds later "
+        "send SIGKILL. On any timeout print \"run_player: timed out after <seconds>s\" to stderr and exit "
+        "124; otherwise exit with the command's own status. The command's output goes through unchanged."
+    ),
+    subdir="bash_timeout_kill",
+    editable_files=["scripts/run_player.sh"],
+    context_files=["tests/test_run_player.py", "tests/players/stubborn.sh", "tests/players/graceful.sh"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"ignores_sigterm": 3.0, "gets_sigterm_first": 2.0},
+)
+
+BASH_KILL_BY_PORT = Task(
+    id="bash_kill_by_port",
+    difficulty=2,
+    description=(
+        "Incident: scripts/stop_server.sh, run by a coding agent between smoke tests, killed the agent's "
+        "own shell. Fix scripts/stop_server.sh <port>: stop the process(es) listening on TCP <port> (IPv4 "
+        "or IPv6) and nothing else - not itself, not the shell that ran it, not other processes whose "
+        "command line merely mentions the number. Send SIGTERM first so the server can save; if the port "
+        "is still in use after about 3 seconds, send SIGKILL. Return only once the port is free, print "
+        "\"stopped <pid>\" for each process stopped and exit 0. If nothing listens on the port, print "
+        "\"stop_server: nothing listening on port <port>\" to stderr and exit 1."
+    ),
+    subdir="bash_kill_by_port",
+    editable_files=["scripts/stop_server.sh"],
+    context_files=["tests/test_stop_server.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=120,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"nothing_else": 3.0, "ignores_sigterm": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1666,6 +1734,9 @@ BUILTIN_TASKS: list[Task] = [
     CS_INPUT_LAST_PRESSED,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
+    BASH_ACCEPT_MATRIX,
+    BASH_TIMEOUT_KILL,
+    BASH_KILL_BY_PORT,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1735,7 +1806,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     "gamedev": [
         "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
-        "crossplay_statehash_parity",
+        "crossplay_statehash_parity", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],
 }
 
