@@ -1589,6 +1589,11 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    prompt still 53 tok/s; answers past ~2,000 tokens ~10 tok/s). perf and gdb are installed since that
    evening (`perf` is the `linux-perf` binary on Ubuntu 26.04; gdb attach needs `ptrace_scope=0`). Full
    evidence, hypotheses and test plan: `docs/gpt-oss-120b-speed-debug-plan.md`.
+   **Run result (2026-10-10 01:30):** 3 hangs in 44 requests (`cs_mesh_winding`, `cs_light_port`,
+   `cs_predict_reconcile`, each TOOL_ERROR at 2,400 s, 0 tokens) — about one in nine of the long
+   gamedev answers, none of the 17 short diag answers. Gamedev 12/27 passed (first-ever pass of
+   `cs_coord_convert`; also `cs_tick_interp`, `cs_ws_client`), diag 15/17. The three hung tasks need a
+   re-run on a fixed config before they count. `ptrace_scope=0` set by the user 2026-10-10 for P1.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17

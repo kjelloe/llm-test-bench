@@ -38,6 +38,8 @@ the scheduler copying a split's input from one backend to the next. The thread w
 | 22:40–22:50 | working (`cs_light_port` starts) |
 | 22:50–(23:26) | idle again, near-zero PCIe traffic (`nvidia-smi dmon`), server spin-waiting |
 
+The finished run (01:30) hung 3 times in 44 requests: `cs_mesh_winding`, `cs_light_port`,
+`cs_predict_reconcile` — all long gamedev answers; none of the 17 short diag answers hung.
 Earlier gpt-oss:120b runs here hit one TOOL_ERROR in about 70 tasks (context_16k, 2026-08-11); this
 run hit two in 13. During this run the Unity builder was running a CarrierDominion Win64 build and a
 headless Chromium on the same machine.
