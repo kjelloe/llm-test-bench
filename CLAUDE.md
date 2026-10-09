@@ -1610,7 +1610,10 @@ Dropped on their advice: coroutines, IL2CPP/AOT (item 4 below).
 8. **Rotation-convention canary**: keep or split out the Three.js→Unity quaternion mirror (0/27) as a
    named canary like `python_hashmap`, so a model that finally gets it right is visible.
 
-*Run plan for the second wave (2026-10-09, proposed, none started).* Each phase gated on the load check
+*Run plan for the second wave (2026-10-09).* **Order changed by the user the same day: single-GPU
+runs first (B on the four leaders, then A on the other single-GPU models), then an evaluation with the
+user; the 2×24 GB diag runs and phase C (3×24 GB) wait for that evaluation.** Single-GPU phases are queued
+behind the Swift-1.5 re-run and the load check (scratchpad `runplan.sh`; outputs `output/gamedev2-*.json`). Each phase gated on the load check
 and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are rough.
 - **A. Breadth, cheap — `gamedev_diag` on all 27 models** (17 one-letter answers each; thinking models
   still reason, ~1-3 min per model on one GPU, longer on the 3×24 GB ones). Gives a first Unity-knowledge

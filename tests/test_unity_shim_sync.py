@@ -3,6 +3,7 @@
 canonical one. crossplay_statehash_parity's fixtures must be exactly what its JS spec produces."""
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -89,3 +90,13 @@ def test_context_fits_prompt_plus_thinking_budget():
     for tid in TASK_GROUPS["gamedev"]:
         task = TASK_MAP[tid]
         assert task.num_ctx and task.num_ctx >= task.min_predict + 9500, tid
+
+
+def test_diag_generator_reproduces_the_committed_files(tmp_path):
+    root = TASK_DATA_DIR / "gamedev_diag"
+    subprocess.run([sys.executable, str(root / "make_diag.reference.py"), str(tmp_path)],
+                   check=True, capture_output=True, timeout=60)
+    for rel in ["tests/answer_key.json", "answers.reference.json",
+                *[str(p.relative_to(root)) for p in sorted((root / "questions").glob("*.md"))],
+                *[str(p.relative_to(root)) for p in sorted((root / "answers").glob("*.txt"))]]:
+        assert (tmp_path / rel).read_bytes() == (root / rel).read_bytes(), f"{rel} differs from make_diag.reference.py output"
