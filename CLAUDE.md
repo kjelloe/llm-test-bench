@@ -1557,6 +1557,89 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    master `8a1a9b512` gave 14.4 on the same output — the pin's speed is itself unstable here, so treat
    every single flash-next speed number on this rig as provisional until repeated.
 
+**Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
+four single-GPU leaders (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17
+`diag_*` questions on all 19 single-GPU models. Same cell legend as the first-wave table; `ed` = edited a
+file it may not edit. `cs_reconnect_policy` is from the re-run after its test fix (below).
+
+| Task | equinox:31b | qwen3.6:27b | gemma4:31b-qat | gemma4:26b-qat | pass |
+|---|---|---|---|---|---|
+| `cs_coord_convert` | 0.74 | 0.74 | 0.74 | 0.74 | 0/4 |
+| `cs_coord_bam` | **P** | **P** | **P** | 0.47 | 3/4 |
+| `cs_port_movement` | **P** | **P** | **P** | **P** | 4/4 |
+| `cs_port_heightmap` | 0.83 | 0.83 | **P** | ed | 1/4 |
+| `cs_port_webaudio` | **P** | **P** | **P** | nb | 3/4 |
+| `cs_tick_interp` | 0.92 | cc | 0.92 | cc | 0/4 |
+| `cs_ws_abort_reconnect` | **P** | **P** | **P** | 0.83 | 3/4 |
+| `cs_ws_client` | 0.59 | cc | 0.97 | cc | 0/4 |
+| `cs_primitive_compose` | cc | 0.06 | ed | 0.06 | 0/4 |
+| `cs_input_last_pressed` | **P** | **P** | **P** | 0.92 | 3/4 |
+| `cs_mesh_winding` | nb | 0.57 | nb | nb | 0/4 |
+| `cs_light_port` | **P** | **P** | **P** | 0.66 | 3/4 |
+| `bash_accept_matrix` | **P** | **P** | **P** | **P** | 4/4 |
+| `bash_timeout_kill` | 0.67 | **P** | 0.67 | 0.00 | 1/4 |
+| `bash_kill_by_port` | **P** | **P** | **P** | **P** | 4/4 |
+| `cs_main_thread_dispatch` | nb | 0.77 | 0.77 | cc | 0/4 |
+| `cs_protocol_codec` | 0.90 | 0.97 | cc | 0.94 | 0/4 |
+| `cs_snapshot_interp` | cc | cc | cc | cc | 0/4 |
+| `cs_predict_reconcile` | **P** | **P** | **P** | **P** | 4/4 |
+| `node_room_authority` | 0.95 | 0.95 | **P** | 0.89 | 1/4 |
+| `node_seat_reconnect` | **P** | **P** | **P** | 0.94 | 3/4 |
+| `crossplay_statehash_parity` | 0.92 | 0.92 | 0.92 | 0.84 | 0/4 |
+| `cs_reconnect_policy` | **P** | **P** | **P** | 0.89 | 3/4 |
+| **pass / mean partial** | 11/23 / 0.76 | 12/23 / 0.77 | 13/23 / 0.78 | 4/23 / 0.53 | |
+
+**Diagnosis questions (17), single-GPU models:**
+
+| Model | diag | wrong (nb = no answer file: ornith:1.0-35b answered in prose, tiel-coder returned nothing) |
+|---|---|---|
+| noctrex-qwen3.6:35b | 17/17 | — |
+| gemma4:31b-qat | 16/17 | mirror_audit |
+| qwen3.6:27b | 16/17 | mirror_audit |
+| ornith:1.5-35b | 16/17 | timeout_ignored |
+| qwopus3.6:35b | 16/17 | linux_receive_stall |
+| qwen3.8:27b | 16/17 | mirror_audit |
+| equinox:31b | 15/17 | timeout_ignored, mirror_audit |
+| ornith:1.5-9b | 15/17 | timeout_ignored, wire_codes |
+| gemma4:26b-qat | 15/17 | unity_licence, mirror_audit |
+| tiel-coder:35b | 15/17 | gamma_project (nb), timeout_ignored |
+| qwen3-coder-rtpurbo:30b | 14/17 | ws_abort, signin_url, mirror_audit |
+| devstral-small-2 | 14/17 | ws_abort, signin_url, mirror_audit |
+| gpt-oss:20b | 13/17 | ws_abort, signin_url, timeout_ignored, mirror_audit |
+| ornith:1.0-35b | 13/17 | emission_keyword (nb), timeout_ignored, wire_codes (nb), mirror_audit (nb) |
+| qwen2.5-coder:32b-q4 | 13/17 | lambert_shader, signin_url, wsl_mirrored_localhost, mirror_audit |
+| qwen3.5:35b | 12/17 | emission_keyword, emission_hdr, timeout_ignored, wire_codes, wsl_mirrored_localhost |
+| quest:35b | 12/17 | emission_keyword, emission_hdr, timeout_ignored, wire_codes, wsl_mirrored_localhost |
+| qwen3-30b:2507 | 11/17 | emission_keyword, lambert_shader, signin_url, timeout_ignored, linux_receive_stall, mirror_audit |
+| glm4.7-flash | 8/17 | ws_abort, emission_keyword, lambert_shader, unity_licence, signin_url, timeout_ignored, linux_receive_stall, float_rubberband, wire_codes |
+
+Per question: everyone right on `css_border_tint`, `headless_segfault`, `mirror_scene`, `pkill_self`;
+hardest `mirror_audit` 8/19 and `timeout_ignored` 9/19 (7 models picked "timeout counts CPU time").
+
+**What the single-GPU evaluation says:**
+- **The MC set is easy for most models** (median 15/17). It separates the bottom (glm4.7-flash 8/17, the
+  qwen3-30b/3.5-35b/quest A3B group 11-12) but not the top. Four questions discriminate nothing; harden or
+  replace them before treating `gamedev_diag` as a ranking.
+- **Knowing is not doing:** all 19 answer `mirror_scene` (the z mirror's rotation rule) correctly as MC,
+  while every model in both waves gets the quaternion mirror wrong in code (`cs_coord_convert` 0.74 for all
+  four leaders again). A diag pass doesn't predict the coding result.
+- **Leaders:** gemma4:31b-qat 13/23 (0.78), qwen3.6:27b 12/23 (0.77), equinox:31b 11/23 (0.76) — close;
+  gemma4:26b-qat drops to 4/23 (0.53) on the new tasks (compile errors, in-code loops, extra files), so
+  the first wave's "best quality per second" call does not hold for this harder set.
+- **Hardest new tasks:** `cs_primitive_compose`, `cs_mesh_winding`, `cs_ws_client`, `cs_tick_interp` 0/4.
+  Causes: Euler angles passed in radians (`Quaternion.Euler` takes degrees), Unity APIs the shim lacks
+  (`MeshFilter`/`AddComponent`), in-code reasoning loops on the icosahedron's face table, half-turn tie
+  outside the stated range, compile errors. Easiest: `cs_port_movement`, `bash_accept_matrix`,
+  `bash_kill_by_port`, `cs_predict_reconcile` 4/4.
+- **One test defect found and fixed:** `cs_reconnect_policy` decoded the token with
+  `Uri.UnescapeDataString`, so gemma4:31b-qat's `with+space` failed although the CarrierDominion server reads
+  it with `URLSearchParams` (`+` = space). The test now decodes like the server; unescaped tokens still
+  fail. The four pairs were re-run; old records in `output/stale/`. Every other failure was checked and is
+  a model error (truncations are reasoning loops, not budget: the reference `Meshes.cs` is ~2,500 tokens).
+- **Shim growth shifts first-wave results:** the C# prompts include the shim, which grew today, and a few
+  first-nine cells moved (equinox `cs_main_thread_dispatch` P→nb loop, qwen3.6:27b P→0.77). Compare waves
+  per task with that in mind.
+
 **Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
 will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
 write); re-prioritise this list against that before building anything. Each test idea names the gap
