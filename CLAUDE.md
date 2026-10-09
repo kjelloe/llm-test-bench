@@ -1651,6 +1651,37 @@ hardest `mirror_audit` 8/19 and `timeout_ignored` 9/19 (7 models picked "timeout
   first-nine cells moved (equinox `cs_main_thread_dispatch` P→nb loop, qwen3.6:27b P→0.77). Compare waves
   per task with that in mind.
 
+**Third-wave results, single GPU (2026-10-09 night, `output/gamedev2-B-new4-*.json`, `gamedev2-B-rt-*.json`).**
+The four separating tasks on the five single-GPU leaders, and the combined score over all 27:
+
+| Task | gemma4:31b-qat | qwen3.6:27b | equinox:31b | qwen3.8:27b | gemma4:26b-qat |
+|---|---|---|---|---|---|
+| `cs_port_qr` | cc | cc | cc | cc | cc |
+| `cs_port_helm` | **P** | cc | cc | cc | cc |
+| `cs_snapshot_coalesce` | 0.89 | cc | 0.89 | **P** | 0.22 |
+| `crossplay_ws_roundtrip` | 0.64 | 0.36 | cc | cc | cc |
+
+| Model | 23 tasks: pass / partial | +4 new: pass / partial | all 27: pass / partial |
+|---|---|---|---|
+| gemma4:31b-qat | 13/23 / 0.78 | 1/4 / 0.63 | 14/27 / 0.76 |
+| qwen3.6:27b | 12/23 / 0.77 | 0/4 / 0.09 | 12/27 / 0.67 |
+| equinox:31b | 11/23 / 0.76 | 0/4 / 0.22 | 11/27 / 0.68 |
+| qwen3.8:27b | 10/23 / 0.68 | 1/4 / 0.25 | 11/27 / 0.61 |
+| gemma4:26b-qat | 4/23 / 0.53 | 0/4 / 0.06 | 4/27 / 0.46 |
+
+- **They separate.** Over the first 23 the top three were within 0.02; over 27, gemma4:31b-qat leads clearly
+  (0.76) ahead of equinox:31b (0.68), qwen3.6:27b (0.67) and qwen3.8:27b (0.61). Only gemma4:31b-qat passes
+  `cs_port_helm` and gets past half of `crossplay_ws_roundtrip`.
+- **Mostly through compiling under Unity's rules:** 13 of the 20 results don't compile — C# 11 `>>>` again
+  (two models on `cs_port_qr`), the JS's two `const wanted` in one function copied into C# (CS0136, three
+  models on `cs_port_helm`), missing usings, duplicate members. `cs_port_qr` compiles for nobody, so it
+  ranks no one yet; the compile-error metric (finding 2) would show where each model stands on it.
+- **One task fix:** `crossplay_ws_roundtrip` referenced no JSON library and didn't say so; three models used
+  `System.Text.Json`, which netstandard2.1 and Unity lack. It now references Newtonsoft (Unity's package,
+  what the builder's client uses) and the description says so; all five re-run, old records in
+  `output/stale/`. The other failures are genuine: a dropped connection never noticed (gemma4:31b-qat),
+  acks never read (qwen3.6:27b), a discarded view parsed anyway (`cs_snapshot_coalesce`, two models).
+
 **Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
 will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
 write); re-prioritise this list against that before building anything. Each test idea names the gap
