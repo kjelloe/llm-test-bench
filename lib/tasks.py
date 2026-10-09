@@ -1411,6 +1411,34 @@ CS_PORT_QR = Task(
     test_weights={"Matrix_MatchesTheBrowser": 2.0},
 )
 
+CS_SNAPSHOT_COALESCE = Task(
+    id="cs_snapshot_coalesce",
+    difficulty=3,
+    description=(
+        "Fix SnapshotCoalescer in src/GameClient/SnapshotCoalescer.cs, the Unity client's main-thread "
+        "message handling (pattern from CarrierDominion's Unity port; types in the read-only "
+        "src/GameClient/Views.cs). At x16 time compression the server sends 320 complete views a second in "
+        "bursts, so only the newest snapshot per frame may be parsed and applied, but the UI needs every "
+        "view's events. Required: a message is a snapshot only if it starts with {\"type\":\"snapshot\"; "
+        "Flush() (once per frame) parses only the newest pending snapshot, applies it, then shows its events "
+        "if it has any; a snapshot replaced before a Flush is never applied, but its events are shown (once, "
+        "in arrival order, before anything newer) - and it must not be parsed at all when its raw text "
+        "contains \"events\":[] (the server writes one events array per view); a welcome message starts "
+        "a new match and discards the pending snapshot and its events; every other message goes to `other` "
+        "immediately. The parse callback is expensive: no snapshot may be parsed more than once." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_snapshot_coalesce",
+    editable_files=["src/GameClient/SnapshotCoalescer.cs"],
+    context_files=["src/GameClient/Views.cs", "tests/GameClientTests/SnapshotCoalescerTests.cs", "src/GameClient/GameClient.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"SkippedViews_StillDeliver": 2.0, "SkippedViewsWithoutEvents": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1796,6 +1824,7 @@ BUILTIN_TASKS: list[Task] = [
     BASH_TIMEOUT_KILL,
     BASH_KILL_BY_PORT,
     CS_PORT_QR,
+    CS_SNAPSHOT_COALESCE,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1864,7 +1893,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],
