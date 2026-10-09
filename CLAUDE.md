@@ -395,12 +395,18 @@ task_data/
   distractor_notes/       L2 decoy-resistant retrieval
   multihop_chain_5/       L4 5-hop config inheritance (correct answer: 90; sibling distractor: 45; top-level distractor: 30)
   multihop_cross_5/       L4 5-doc cross-reference (correct: oncall-emea-w-high; criticality distractor: oncall-emea-w-crit)
-  _shared/UnityShim/      canonical minimal UnityEngine shim (Vector3, Quaternion, Mathf, Debug); copied into each
+  _shared/UnityShim/      canonical minimal UnityEngine shim (Vector2/3, Quaternion incl. LookRotation, Mathf incl.
+                          sRGB curves, Color/Color32, Mesh, GameObject/Transform, KeyCode/Input with test hooks,
+                          MonoBehaviour base, Debug); copied into each
                           C# gamedev task's shim/ (task dirs must stay self-contained); never a task itself
   cs_*/, crossplay_*/     gamedev C# tasks: GameClient.sln, src/ at netstandard2.1 + LangVersion 9.0 (Unity's
                           constraints), xunit tests at net9.0; reference solutions are *.reference.cs (excluded
                           from compile and from --export-task)
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
+  bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
+                          *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
+  gamedev_diag/           15 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
+                          tests/answer_key.json (salted sha256 of the letter), answers.reference.json (human key)
 Task groups (--task-group):
   coding    19 coding tasks (L1–L5)
   web       4 web tasks (Express/FastAPI)
@@ -409,9 +415,11 @@ Task groups (--task-group):
   context   6 context retrieval tasks (8k–256k)
   multihop  5 multihop + distractor tasks (2-hop forward/reverse, 1 distractor, chain_5, cross_5)
   spot      10-task candidate spot check (standard evaluation subset)
-  gamedev   9 Unity-client C# + Node-authority tasks (L2-L5), derived from the user's multiplayer games;
-            OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no --tasks/--task-group
-            (boombrawl, CarrierDominion, RetroMultiCiv, Fireline); see "Game-dev task group" below
+  gamedev   23 Unity-client C#, Node-authority and build-pipeline bash tasks (L2-L5), from the user's
+            multiplayer games (boombrawl, CarrierDominion, RetroMultiCiv, Fireline) and the Unity
+            builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
+            --tasks/--task-group; see "Game-dev task group" below
+  gamedev_diag  15 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -501,7 +509,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev's 9 are opt-in via --task-group gamedev)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (23) and gamedev_diag (15) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1318,7 +1326,9 @@ headless: the engine-agnostic client layers (which the design docs say to keep s
 GameObjects anyway) and the Node authority logic. Patterns come from the user's four multiplayer
 games (`~/GIT/boombrawl`, `~/GIT/CarrierDominion`, `~/GIT/RetroMultiCiv`, `~/GIT/Fireline`: all raw
 `ws` + JSON, server-authoritative, integer fixed-point 256 units per cell, no deltas, no wire
-version negotiation). Task code is re-implemented, not copied, so `--export-task` leaks nothing.
+version negotiation). The first nine re-implement patterns; since 2026-10-09 (with the user's go-ahead) tasks
+may also carry the games' real JS and the Unity builder's C# ports (as `*.reference.*`, never exported) and
+captured fixtures.
 
 | Task | L | Source pattern | Main traps |
 |---|---|---|---|
@@ -1331,6 +1341,52 @@ version negotiation). Task code is re-implemented, not copied, so `--export-task
 | `node_room_authority` | 4 | CarrierDominion `checkAuthority` + RetroMultiCiv token buckets | identity from connection only, check order, `constructor`/`toString` as message types, per-seat bucket across reconnects |
 | `node_seat_reconnect` | 4 | CarrierDominion `reconnect.js`, boombrawl reclaim | newest socket wins (4000), superseded socket's late close must not hold the seat, AI takeover/reclaim, token retirement |
 | `crossplay_statehash_parity` | 5 | Fireline `canonical.js` (I32LE + FNV-1a 64) | C# `/` truncates, `int.MinValue / -1`, unit sort order, unpaired surrogates (.NET `Encoding.UTF8` substitutes U+FFFD) |
+
+Second wave, 2026-10-09, from the Unity builder's task list (`~/GIT/unityworks/specs/llm_evaluation_tasks.md`,
+builder IDs in brackets). Real code: the games' JS ships in each task's `js/`, the builder's C# is the
+`*.reference.*` where one exists, and fixtures are generated by the real JS (guarded by
+`test_js_generated_fixtures_match_their_generator`). **No model has run any of these yet.**
+
+| Task | L | Source | Main traps |
+|---|---|---|---|
+| `cs_port_movement` [B04] | 3 | boombrawl `shared/movement.mjs` + fixed-point helpers, JS-generated fixtures (threshold rows + walks) | integer step must match exactly at every branch threshold |
+| `cs_port_heightmap` [B03] | 4 | CarrierDominion `engine/heightmap.js` + noise/prng/trig tables, 8 real islands + a high seed | int32 wrap, table lookups, 13,896 exact samples |
+| `cs_port_webaudio` [B08] | 4 | boombrawl `sound.js` | Web Audio lowpass Q is in dB, exponential ramps hold their end value |
+| `cs_tick_interp` [C10] | 4 | a captured CarrierDominion run (x16 time compression: 16 ticks per 50 ms burst) | interpolate on server tick at the MEASURED rate, never backwards, newer view decides existence |
+| `cs_ws_abort_reconnect` [C05] | 4 | builder incident | `Abort()` surfaces as OperationCanceledException; only the client's own token means shutdown |
+| `cs_reconnect_policy` [C04+C09] | 3 | builder's `NetClient`/`PlayerControl.WithToken` | 1 s x1.7 to 5 s rounded to ms, no overlapping connects, token escaped in the URL, `ForLog` strips query and fragment |
+| `cs_ws_client` [C06] | 4 | builder's `WebSocketConnection` (blocking RFC 6455), scripted loopback server | buffered header reader swallowing a frame sent with the 101, pings between fragments, limit across fragments, interleaved concurrent sends |
+| `cs_primitive_compose` [E07] | 4 | CarrierDominion `world.js` parts | geometry scale after rotation needs a holder; the z mirror negates x/y rotations and mirrors odd-sided primitives |
+| `cs_input_last_pressed` [D12] | 2 | boombrawl `input.js` vs the old Input Manager | last pressed wins, release falls back, blur releases and keys held through it don't count |
+| `cs_mesh_winding` [D06] | 3 | builder's `Meshes.cs` | clockwise fronts, closed surfaces, flat normals |
+| `cs_light_port` [E02+E08] | 4 | boombrawl/CarrierDominion light setups | r162 physical lights need /PI, ambient scaled in linear then back to sRGB, trilight equator is the LINEAR average, direction mirrored |
+| `bash_accept_matrix` [I05] | 2 | builder's `scripts/accept.sh` | run everything after failures, one line per game x target, aggregated exit |
+| `bash_timeout_kill` [I08] | 3 | builder incident | `timeout -k 5`, exit 124 for both 124 and 137 |
+| `bash_kill_by_port` [I09] | 2 | builder incident | kill by listening socket, never `pkill -f` (matches the caller); TERM before KILL; wait for the port |
+
+`gamedev_diag` (15 `diag_*` tasks, opt-in): multiple-choice versions of the builder's incident/"why?"
+items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the
+model writes one letter. Options are written as "cause; fix" of similar length: the first draft had the
+correct option longest in 15/15 (and 14/15 after a rewrite), which a length heuristic would exploit;
+now it is never the longest or shortest, but it is the median length in 11/15. Skipped: items that are
+too easy as MC, give themselves away, or whose answer could not be verified here (J03, WSL localhost).
+The builder's agentic/process items (M, H02/B10, I01/I02) are out of scope for now.
+
+**Findings while building the second wave:**
+- **The builder's `Models.cs` mirrors odd-sided primitives.** It builds three.js cones/cylinders with
+  the three.js vertex formula in Unity's (z-mirrored) axes without mirroring the primitive, so a
+  3-sided cone (the manta's delta wing) and 5-sided cylinders (turret rails) come out mirrored about
+  their own axis compared with the browser; even-sided ones and boxes are unaffected. Confirmed by
+  `cs_primitive_compose`'s mutant run (the builder's approach fails exactly `mantaDelta` and
+  `turretRail`). Fix: an extra 180 degree turn about the primitive's axis (or mirror the vertices).
+  Not yet reported to the builder.
+- **This rig's `timeout` is uutils coreutils 0.8.0, not GNU.** With a child that ignores SIGTERM,
+  `timeout -k 2 1` kills it after 3 s (exit 137) but leaves its grandchild running, and `-s KILL`
+  returns 124 where GNU returns 137; uutils also moves itself and the child into a new process group,
+  so `killpg` on the caller's group misses them. The bash tests clean up by session id for that reason,
+  and `bash_timeout_kill` checks only the direct child and the exit status, so it grades the same on GNU.
+- **The builder's meshes, `accept.sh` and `WebSocketConnection` pass their tasks unchanged**, and the
+  `WithToken` difference (`Uri.ToString()` vs `AbsoluteUri`) does not matter for any token tested.
 
 C# tasks build `src/` at **netstandard2.1 + LangVersion 9.0** (Unity's constraints: a
 file-scoped namespace, `init`, or `System.Runtime.CompilerServices.Unsafe` fails to compile, as in
@@ -1483,10 +1539,11 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
 **Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
 will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
 write); re-prioritise this list against that before building anything. Each test idea names the gap
-in the current nine it would close.
+in the current tasks it would close.
 
 *Suggested tests:*
-1. **Port a real engine module JS→C# with parity fixtures** (e.g. boombrawl `shared/movement.mjs`,
+1. **DONE 2026-10-09** (`cs_port_movement`, `cs_port_heightmap`, `cs_port_webaudio`, `cs_tick_interp`).
+   **Port a real engine module JS→C# with parity fixtures** (e.g. boombrawl `shared/movement.mjs`,
    Fireline `client/js/interpolator.js`, CarrierDominion `shared/fixed.js`): closest to the actual
    native-port work; reuses the `crossplay_statehash_parity` fixture pattern (JS generates, C# must
    match). Gap: today's ports are re-implementations of patterns, not of the user's own code.
@@ -1498,10 +1555,15 @@ in the current nine it would close.
    doc. Gap: nothing measures performance hygiene.
 4. **IL2CPP/AOT-safe code**: banned-API scan (reflection, `dynamic`, `System.Reflection.Emit`,
    `Activator.CreateInstance` on open generics) plus compile — Unity's player builds strip/AOT-compile.
-5. **Unity lifecycle knowledge**: extend the shim with a fake MonoBehaviour driver (Awake → OnEnable
+5. **PARTLY DONE 2026-10-09**: the shim now has Transform/GameObject, Mesh, Color, Input/KeyCode and a
+   MonoBehaviour base (used by `cs_primitive_compose`, `cs_mesh_winding`, `cs_light_port`,
+   `cs_input_last_pressed`); no lifecycle driver or coroutines yet.
+   **Unity lifecycle knowledge**: extend the shim with a fake MonoBehaviour driver (Awake → OnEnable
    → Start → FixedUpdate/Update/LateUpdate ordering, coroutines via `IEnumerator`/`yield`, `LayerMask`
    bitmasks). Gap: the nine tasks test C# for Unity, not Unity itself.
-6. **Cross-play integration (L6)**: a real WebSocket round trip between a Node authority and a C#
+6. **PARTLY DONE 2026-10-09**: `cs_ws_client` runs a real RFC 6455 client against a scripted loopback
+   server; a Node authority in the same test is still open.
+   **Cross-play integration (L6)**: a real WebSocket round trip between a Node authority and a C#
    client (`ClientWebSocket`), including reconnect — the design doc's actual acceptance test. Heavier:
    two runtimes in one test command.
 7. **"Doesn't compile under Unity" metric** (harness, not a task): record CS codes, flag
@@ -1517,7 +1579,10 @@ in the current nine it would close.
 3. DeepSeek-V4.1-Flash on one or two short gamedev tasks (e.g. `cs_coord_bam`) — its model files were
    deleted 2026-10-08 to free disk, so this first needs the ~502 GB re-download — as a capability
    ceiling; expect ~1 h per task at its measured prefill/decode rates.
-4. A frontier coding agent via `--export-task` on all nine, for an upper bound to set levels against.
+4. A frontier coding agent via `--export-task` on all of them, for an upper bound to set levels against.
+7. **The second wave (14 gamedev tasks + 15 `diag_*`) has no model results yet**: run the top ~6 by
+   gamedev partial credit (gpt-oss:120b, qwen3.8-flash-next, equinox:31b, qwen3.6:27b, gemma4:31b-qat,
+   gemma4:26b-qat) on `--task-group gamedev gamedev_diag`, then decide the rest.
 5. qwen3.8-flash-next speed root cause: rebuild `67a17c17c` with `-DGGML_CUDA_GRAPHS=OFF` and re-run
    the `python_hashmap` control (finding 9).
 6. After any task change (re-levelling, softened `node_seat_reconnect`), re-run the top ~6 models only,

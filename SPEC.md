@@ -100,15 +100,23 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (48 total, difficulty L1–L6; 39 run by default, the 9 `gamedev` tasks are opt-in):
+- Built-in tasks (77 total, difficulty L1–L6; 39 run by default; the 23 `gamedev` and 15 `gamedev_diag` tasks are opt-in):
 
-  **Game-dev tasks (9, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
-  netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`) and
-  Node.js authoritative-server logic (`node --test`), patterned on the user's multiplayer games. Not in a
+  **Game-dev tasks (23, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
+  netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),
+  Node.js authoritative-server logic (`node --test`) and build-pipeline bash scripts (driven by pytest),
+  from the user's multiplayer games and the Unity builder's task list. Not in a
   default all-tasks run, so they don't change the 39-task totals or Skill levels until validated. Tasks:
   `cs_coord_convert` (L2), `cs_coord_bam` (L3), `cs_main_thread_dispatch` (L3), `cs_protocol_codec` (L4), `cs_snapshot_interp`
   (L4), `node_room_authority` (L4), `node_seat_reconnect` (L4), `cs_predict_reconcile` (L5),
-  `crossplay_statehash_parity` (L5). Rules, sources and traps: CLAUDE.md "Game-dev task group".
+  `crossplay_statehash_parity` (L5); second wave (2026-10-09): `cs_port_movement` (L3), `cs_port_heightmap`
+  (L4), `cs_port_webaudio` (L4), `cs_tick_interp` (L4), `cs_ws_abort_reconnect` (L4), `cs_reconnect_policy`
+  (L3), `cs_ws_client` (L4), `cs_primitive_compose` (L4), `cs_input_last_pressed` (L2), `cs_mesh_winding`
+  (L3), `cs_light_port` (L4), `bash_accept_matrix` (L2), `bash_timeout_kill` (L3), `bash_kill_by_port` (L2).
+
+  **Game-dev diagnosis (15, opt-in) — `--task-group gamedev_diag`:** one multiple-choice question per
+  task (`diag_*`, L1–L5); the model writes the letter of the best answer to `answers/<id>.txt`, graded
+  against a salted hash. Rules, sources and traps for both groups: CLAUDE.md "Game-dev task group".
 
   **Web tasks (4) — select with `--task-group web`:**
   - `python_config_loader` (L2) — `load_config()` in `config.py` reads five environment variables with typed defaults; bugs: no whitespace-stripping on values (causing `int()` errors), and empty-string env values don't fall back to defaults. Fix so `APP_PORT='  9000  '` and `APP_NAME=''` behave correctly. `pytest`

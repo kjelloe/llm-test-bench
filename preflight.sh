@@ -184,6 +184,16 @@ else
   fail "java not found — https://adoptium.net (required for java_* tasks)"
 fi
 
+# ── 7b. Process tools (gamedev bash tasks, opt-in) ────────────────────────────
+section "Process tools (gamedev bash tasks)"
+for tool in ss timeout; do
+  if command -v "$tool" &>/dev/null; then
+    ok "$tool"
+  else
+    warn "$tool not found — needed by the opt-in gamedev bash tasks (bash_kill_by_port, bash_timeout_kill)"
+  fi
+done
+
 # ── 8. llama-server (optional — only needed for --backend llama-server) ───────
 section "llama-server (optional)"
 _ls_bin="${LLAMA_SERVER_BIN:-$(command -v llama-server 2>/dev/null || true)}"
