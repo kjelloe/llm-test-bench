@@ -335,6 +335,7 @@ vllm-plan.md        Copy-paste steps: Qwen3.5-9B AWQ on vLLM for agentic tool ca
                     ~/GIT/llm-service-provider/upgrade-dual-5060.md — tp=2 Qwen3.8-27B target,
                     capacity and DDR5 sizing, benchmark steps point back here)
 docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier
+docs/gpt-oss-120b-speed-debug-plan.md  Evidence + test plan for gpt-oss:120b's hangs and long-answer slowdown on 3×24 GB (2026-10-09)
 next-runs.md        Referenced throughout this file and models/*.txt, but NOT tracked in git
                     (absent on the RTX 5060 Ti box as of 2026-09-15). See Known Issues.
 hw-upgrade-july-2026.md    Hardware state/crash-incident log + VRAM-tier upgrade analysis for the
@@ -494,6 +495,9 @@ trusting as-is.
   common tools` finds nothing; the DEPRECATED warnings came earlier, with the `--load-mode` PR. Only `no_mmap` is translated; no
   model file uses `mlock` or `direct_io`. Still to do on a rebuild: `llm-service-provider`'s
   `presets/models.ini` passes `no-mmap = true` straight to the router (comment added there).
+- **gpt-oss:120b can hang on 3×24 GB (2026-10-09)**: a request stalls with the GPUs idle and the server
+  spin-waiting on a cross-GPU copy, until the client timeout. Treat its TOOL_ERRORs as suspect, not as
+  capability failures. Plan: `docs/gpt-oss-120b-speed-debug-plan.md`.
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
@@ -1576,6 +1580,15 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    **Update 2026-10-09:** a same-hour pin control gave 5.2 tok/s (vs 10.6 the day before) while
    master `8a1a9b512` gave 14.4 on the same output — the pin's speed is itself unstable here, so treat
    every single flash-next speed number on this rig as provisional until repeated.
+10. **gpt-oss:120b hangs intermittently on 3×24 GB, and its long answers run at ~10 tok/s — OPEN,
+   2026-10-09.** During the multi-GPU phase two of the first 13 gamedev tasks hung: the GPUs went idle
+   (~20 W, 0% on GPU1/2) while llama-server's main thread spin-waited in `cudaStreamSynchronize` inside
+   the scheduler's cross-GPU copy (`ggml_backend_sched_graph_compute_async` →
+   `ggml_backend_cuda_buffer_set_tensor`, perf with DWARF unwinding), until the 2,400 s client timeout
+   (TOOL_ERROR, 0 tokens). Separately, decode speed follows answer length, not prompt length (48k-token
+   prompt still 53 tok/s; answers past ~2,000 tokens ~10 tok/s). perf and gdb are installed since that
+   evening (`perf` is the `linux-perf` binary on Ubuntu 26.04; gdb attach needs `ptrace_scope=0`). Full
+   evidence, hypotheses and test plan: `docs/gpt-oss-120b-speed-debug-plan.md`.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17
