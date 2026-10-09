@@ -259,6 +259,10 @@ box; see [`how-to-vllm.md`](how-to-vllm.md) and
 power draw, and RAM, and aborts the benchmark (SIGINT → SIGTERM) if a critical threshold is breached
 — useful for unattended overnight runs where a fan failure could otherwise damage a card.
 
+Before launching, `run.sh` also warns about other work competing for the machine — any process above
+half a CPU core, or a GPU already holding more than 3 GB of VRAM (a stuck test, a leftover
+llama-server). The run continues; set `BENCH_ABORT_ON_BUSY=1` to abort instead (`lib/load_check.py`).
+
 ```bash
 ./run.sh --no-hwmonitor ...                                    # skip it for a quick single-task run
 ./hwmonitor/hwmonitor.py --warn-junction 88 --crit-junction 98 # run standalone with custom thresholds

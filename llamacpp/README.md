@@ -214,6 +214,19 @@ Models pre-configured for dual 24 GB GPUs (48 GB total): `llama3.3:70b`, `qwq:32
 
 ---
 
+## MoE expert cache (master >= 2026-10-08) and `--fit`
+
+Mainline gained a VRAM cache for MoE experts kept in host memory (`--moe-cache-mib N`; single GPU in
+#29887, multi-GPU in #30112, split across GPUs like the layers). It targets exactly the models this
+repo runs with `--fit` and spilled experts (qwen3.8-flash-next, Swift-1.5). **`--fit` does not reserve
+VRAM for it** — `common/fit.cpp` never reads the cache size — so raise `fit_target` by the cache's
+per-GPU share (e.g. a 6144 MiB cache over 3 GPUs → `fit_target` 512 + 2048 = 2560), or the cache
+allocation runs out of memory after `--fit` has filled the cards. The pinned `67a17c17c` binary does
+not have the flag. A separate master build for testing lives in the worktree `~/GIT/llama.cpp-master`
+(same CMake flags as the pin), used via `LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server`;
+the pinned build in `~/GIT/llama.cpp/build` stays the production binary. Evaluation in progress
+2026-10-09 (`next-runs.md`).
+
 ## Troubleshooting
 
 | Error | Fix |

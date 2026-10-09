@@ -25,7 +25,7 @@ Key design choice: use a **whole-file edit protocol** instead of diffs (more rob
 bench.py                  CLI runner — orchestrates model × task matrix
 requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it)
 install.sh                Interactive installer: checks and installs missing dependencies
-run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; in multi-GPU mode (3+ GPUs) runs a pre-flight power-limit check (lib/power_check.py) and aborts if unsafe (MAX_PSU_WATT/SKIP_POWER_CHECK env vars; added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md); auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip — but keep it enabled for sustained/heavy/multi-GPU/new-architecture testing)
+run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; in multi-GPU mode (3+ GPUs) runs a pre-flight power-limit check (lib/power_check.py) and aborts if unsafe (MAX_PSU_WATT/SKIP_POWER_CHECK env vars; added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md); before every run warns about competing work — processes above half a core, GPUs already holding >3 GB VRAM (lib/load_check.py; BENCH_ABORT_ON_BUSY=1 aborts instead; added 2026-10-09, the rig is shared with a Unity builder); auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip — but keep it enabled for sustained/heavy/multi-GPU/new-architecture testing)
 gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU mode; writes .gpu-mode (gitignored)
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
@@ -49,6 +49,7 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
+  load_check.py           Pre-flight competing-work check (CPU hogs, busy GPUs) for every run; evaluate() is pure and unit-tested (tests/test_load_check.py), main() reads ps + nvidia-smi and ignores its own process tree; added 2026-10-09
   power_check.py          Pre-flight GPU power-limit safety check for multi-GPU runs; evaluate() is the pure decision function (unit-tested in tests/test_power_check.py), main() wraps it with an nvidia-smi query for run.sh to call; added 2026-08-29
 hwmonitor/
   hwmonitor.py            Standalone hardware watchdog: polls GPU (nvidia-smi), CPU (/sys/class/thermal), RAM (/proc/meminfo) at configurable interval; WARN/CRIT on threshold breach; on CRIT sends SIGINT → SIGTERM to bench.py; run.sh starts this automatically in --quiet mode (WARN/CRIT to stderr, data to log only)
@@ -75,6 +76,7 @@ tests/
   test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split) plus the foreign-port-occupant startup guard and the LLAMA_SERVER_PORT env override (reloads the module with the env var set, not just a monkeypatched constant)
   test_llama_server_flags.py  Unit tests for _bool_flag — emits --load-mode none vs legacy --no-mmap depending on whether the target binary's --help lists --load-mode
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
+  test_load_check.py          Unit tests for lib/load_check.evaluate() — CPU-hog and busy-GPU flagging, own process tree ignored, ordering
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
   test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP)
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)

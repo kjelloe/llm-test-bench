@@ -1143,6 +1143,17 @@ When asked to implement features:
     revisited). **"Pin stands, root cause narrowed but not found."** The `fix/qwen4exp-moe-perf`
     branch (one commit, `78646146f`, the disproven accessor-inlining patch) is kept locally in
     `~/GIT/llama.cpp` for reference — not merged, not used, repo restored to the `67a17c17c` pin.
+    **RE-EVALUATION IN PROGRESS 2026-10-09 — master `8a1a9b512` + the new MoE expert cache.** The
+    branches that looked promising (`aman/qwen4-opt` = #29751 "fix qwen4exp", the asan fix, the mask
+    optimisation #29824) were already inside `bed0a8566`, which regressed; genuinely new since then:
+    #29825 (halve indexer memory) and the MoE expert cache (#29887 single-GPU, #30112 multi-GPU,
+    `--moe-cache-mib`). Built in a separate worktree `~/GIT/llama.cpp-master` (production pin
+    untouched; see `llamacpp/README.md` for the cache/`--fit` interaction). **First control, one run
+    each, PROVISIONAL:** `python_hashmap` master (no cache) **14.4 tok/s** vs the pin **5.2 tok/s**
+    the same hour, identical output (530 tokens) — but the pin gave 10.6 on 2026-10-08, so the pin's
+    own speed is unstable run to run on this rig right now. Cache variants and Swift-1.5 queued
+    (`next-runs.md`). Do NOT move the pin on this alone: repeat runs and the `node_paratrooper`
+    capability check (lost at `bed0a8566`) must come first.
   - **DeepSeek-V4.1-Flash via the JigSawPT `dsv41-porte` llama.cpp fork** (552B total params,
     40 layers, 384 routed experts, 189 GiB engram tables; `~/GIT/deepseek-v41-flash-on-5090`
     technical report + `~/GIT/llama.cpp-dsv41` fork clone, tested 2026-10-06/07): a third,
@@ -1460,6 +1471,9 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    rebuilt with `GGML_CUDA_GRAPHS=ON` (added to build-llama.sh 2026-09-04), while the 23 tok/s
    number predates that flag. Test: rebuild 67a17c17c with `-DGGML_CUDA_GRAPHS=OFF` (~25 min), re-run
    the control. Capability results are unaffected (byte-identical re-run).
+   **Update 2026-10-09:** a same-hour pin control gave 5.2 tok/s (vs 10.6 the day before) while
+   master `8a1a9b512` gave 14.4 on the same output — the pin's speed is itself unstable here, so treat
+   every single flash-next speed number on this rig as provisional until repeated.
 
 **Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
 will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
