@@ -1211,6 +1211,36 @@ CS_WS_CLIENT = Task(
     test_weights={"Handshake_": 2.0, "FirstFrame": 2.0, "JoinsFragments": 2.0, "ConcurrentSends": 2.0},
 )
 
+CS_PRIMITIVE_COMPOSE = Task(
+    id="cs_primitive_compose",
+    difficulty=4,
+    description=(
+        "Port ship parts built from three.js primitives (js/parts.js, real code from the browser client) "
+        "to Unity transforms in src/GameClient/PartPort.cs. Each method builds its part under the model's "
+        "root transform and returns the transform that carries the part's mesh: the Primitives mesh named "
+        "in the comment (src/GameClient/Primitives.cs, read-only), used unchanged. Add holder GameObjects "
+        "in between where one transform is not enough. Every vertex of the primitive must land exactly "
+        "where the browser draws it, mirrored into Unity's axes: a three.js model-space point (x, y, z) "
+        "is (x, y, -z) in Unity model space. Unity's Transform applies scale, then rotation, then "
+        "position; three.js geometry.rotateX/Y/Z and geometry.scale transform the vertices themselves, "
+        "in call order, before the mesh's own scale, rotation and position." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_primitive_compose",
+    editable_files=["src/GameClient/PartPort.cs"],
+    context_files=[
+        "js/parts.js",
+        "src/GameClient/Primitives.cs",
+        "tests/GameClientTests/PartPortTests.cs",
+    ] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=32768,
+    min_predict=12000,
+    test_weights={"mantaDelta": 2.0, "turretRail": 2.0, "carrierBow": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1556,6 +1586,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_WS_ABORT_RECONNECT,
     CS_RECONNECT_POLICY,
     CS_WS_CLIENT,
+    CS_PRIMITIVE_COMPOSE,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1623,7 +1654,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
