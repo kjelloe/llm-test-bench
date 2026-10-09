@@ -1462,6 +1462,43 @@ CS_PORT_HELM = Task(
     min_predict=12000,
 )
 
+CROSSPLAY_WS_ROUNDTRIP = Task(
+    id="crossplay_ws_roundtrip",
+    difficulty=5,
+    description=(
+        "Implement SeatClient in src/GameClient/SeatClient.cs: the Unity client's connection to a Node.js "
+        "match server, tested against a real one (tests/server.mjs, Node stdlib). Use the read-only "
+        "WebSocketConnection (blocking RFC 6455 client: read on your own background thread; SendText may be "
+        "called from other threads) and ReconnectPolicy/SeatUrl from Reconnect.cs. Wire: the server sends "
+        "{\"type\":\"welcome\",\"team\":N,\"token\":\"...\",\"reclaimed\":bool} on every connect and "
+        "{\"type\":\"ack\",\"seq\":N} for each command; the client sends "
+        "{\"type\":\"command\",\"seq\":N,\"cmd\":<the command JSON>}. Required: seq numbers run 1, 2, 3, "
+        "... for the life of the client; commands sent before a welcome or while disconnected are queued and "
+        "go out after the next welcome, in order, before anything newer; a command acked by the server is never "
+        "sent again; after a lost connection, reconnect with ReconnectPolicy's delays, putting the seat token "
+        "from the last welcome on the URL (SeatUrl.WithToken) so the server gives back the same seat; a close "
+        "with code 4000 means another device took the seat: set Superseded and never reconnect; Dispose stops "
+        "everything within a few seconds and never reconnects. Connected is true only after a welcome on the "
+        "current socket." + UNITY_CONSTRAINTS
+    ),
+    subdir="crossplay_ws_roundtrip",
+    editable_files=["src/GameClient/SeatClient.cs"],
+    context_files=[
+        "src/GameClient/WebSocketConnection.cs",
+        "src/GameClient/Reconnect.cs",
+        "tests/server.mjs",
+        "tests/GameClientTests/RoundTripTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=300,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=32768,
+    min_predict=16000,
+    test_weights={"ANetworkDrop": 2.0, "CommandsDuringADrop": 3.0, "ClosedWith4000": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1849,6 +1886,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_PORT_QR,
     CS_SNAPSHOT_COALESCE,
     CS_PORT_HELM,
+    CROSSPLAY_WS_ROUNDTRIP,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1919,7 +1957,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     "gamedev": [
         "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_port_helm", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
-        "crossplay_statehash_parity", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
+        "crossplay_statehash_parity", "crossplay_ws_roundtrip", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
 }
