@@ -1717,7 +1717,7 @@ and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are r
 - **B. Depth on the four best single-GPU models** — equinox:31b, qwen3.6:27b, gemma4:31b-qat,
   gemma4:26b-qat on `--task-group gamedev` (all 23, which re-runs the softened `node_seat_reconnect`
   and gives first results for the 14 new tasks). ~1-2 h per model except gemma4:26b-qat.
-- **C. The two 3×24 GB leaders** — gpt-oss:120b on all 23; qwen3.8-flash-next only on the 14 new tasks
+- **C. The two 3×24 GB leaders** — gpt-oss:120b on all 23; qwen3.8-flash-next only on the 18 second- and third-wave tasks (the 14 plus `cs_port_qr`, `cs_port_helm`, `cs_snapshot_coalesce`, `crossplay_ws_roundtrip`)
   (its ~4-5 tok/s here makes a full group ~6 h+), after the queued Swift-1.5 re-run.
 - **D. Triage**, as for the first wave: read every failure, fix any weak test the models expose (the
   first wave found two), then re-level with the user using both waves' pass rates.
