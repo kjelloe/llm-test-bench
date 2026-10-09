@@ -1177,6 +1177,40 @@ CS_RECONNECT_POLICY = Task(
     test_weights={"EscapesTheToken": 2.0, "ForLog": 2.0},
 )
 
+CS_WS_CLIENT = Task(
+    id="cs_ws_client",
+    difficulty=4,
+    description=(
+        "Implement WebSocketConnection in src/GameClient/WebSocketConnection.cs: a minimal RFC 6455 "
+        "WebSocket client for a Unity game, on a TcpClient with blocking reads (SslStream for wss://), "
+        "because the Unity Linux player's ClientWebSocket stalls reads while a write is in flight. One "
+        "thread calls ReadMessage while others call SendText. Required: the opening handshake (GET with "
+        "path and query, Host with the port when it is not the default, a fresh random 16-byte "
+        "Sec-WebSocket-Key per connection, version 13), checking the status is 101 and that "
+        "Sec-WebSocket-Accept is base64(SHA1(key + \"258EAFA5-E914-47DA-95CA-C5AB0DC85B11\")), else "
+        "IOException; client frames final, masked with a fresh random 4-byte key, using the 7-bit, 16-bit "
+        "and 64-bit length forms; frames from different threads must never interleave; ReadMessage "
+        "joins fragmented messages, answers a ping with a pong carrying the same payload (also between "
+        "fragments), ignores pongs, throws IOException when a message exceeds maxMessageBytes or the "
+        "connection drops, and on a close frame echoes the close and returns null with closeReason "
+        "\"<code> <reason>\" trimmed (\"1005\" without a code); Abort() drops the socket so a blocked "
+        "reader returns." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_ws_client",
+    editable_files=["src/GameClient/WebSocketConnection.cs"],
+    context_files=[
+        "tests/GameClientTests/WebSocketConnectionTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=240,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=32768,
+    min_predict=12000,
+    test_weights={"Handshake_": 2.0, "FirstFrame": 2.0, "JoinsFragments": 2.0, "ConcurrentSends": 2.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1521,6 +1555,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_TICK_INTERP,
     CS_WS_ABORT_RECONNECT,
     CS_RECONNECT_POLICY,
+    CS_WS_CLIENT,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1588,7 +1623,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_tick_interp", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
