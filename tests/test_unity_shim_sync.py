@@ -40,6 +40,7 @@ JS_FIXTURES = [
     ("crossplay_statehash_parity", "js/make-fixtures.js", "tests/GameClientTests/fixtures.json"),
     ("cs_port_movement", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
     ("cs_port_heightmap", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
+    ("cs_port_qr", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
 ]
 
 
