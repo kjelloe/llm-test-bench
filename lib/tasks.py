@@ -1439,6 +1439,29 @@ CS_SNAPSHOT_COALESCE = Task(
     test_weights={"SkippedViews_StillDeliver": 2.0, "SkippedViewsWithoutEvents": 2.0},
 )
 
+CS_PORT_HELM = Task(
+    id="cs_port_helm",
+    difficulty=3,
+    description=(
+        "Port CarrierDominion's helm and selection commands to the Unity client: implement Helm in "
+        "src/GameClient/Helm.cs from js/helm.mjs (verbatim from the browser's client/main.js; key w/s/x = "
+        "throttle up/down/stop). Types are in the read-only src/GameClient/HelmTypes.cs; a Command carries "
+        "the same fields as the JS message, the rest null. Keep every guard, clamp and state change exactly as "
+        "the JS has it, including the ones that look like oversights: the server must receive the same "
+        "messages in the same order. Tests replay 40 recorded sessions through both and compare every "
+        "message and the helm state after each step." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_port_helm",
+    editable_files=["src/GameClient/Helm.cs"],
+    context_files=["js/helm.mjs", "src/GameClient/HelmTypes.cs", "tests/GameClientTests/HelmTests.cs", "src/GameClient/GameClient.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1825,6 +1848,7 @@ BUILTIN_TASKS: list[Task] = [
     BASH_KILL_BY_PORT,
     CS_PORT_QR,
     CS_SNAPSHOT_COALESCE,
+    CS_PORT_HELM,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1893,7 +1917,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_port_helm", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],
