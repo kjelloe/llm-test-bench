@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Matches Unity's scripting constraints: .NET Standard 2.1 API surface, C# 9. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="**/*.reference.cs" />
+    <ProjectReference Include="../../shim/UnityShim/UnityShim.csproj" />
+  </ItemGroup>
+</Project>

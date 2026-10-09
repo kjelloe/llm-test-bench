@@ -34,11 +34,20 @@ def test_gamedev_tasks_have_reference_solution():
         assert reference.is_file(), f"{task.id}: missing {reference.name}"
 
 
+# (task dir, generator script, fixture path) — fixtures must be exactly what the real JS produces.
+JS_FIXTURES = [
+    ("crossplay_statehash_parity", "js/make-fixtures.js", "tests/GameClientTests/fixtures.json"),
+    ("cs_port_movement", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
+    ("cs_port_heightmap", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
+]
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_statehash_fixtures_match_js_spec():
-    task_dir = TASK_DATA_DIR / "crossplay_statehash_parity"
-    out = subprocess.run(["node", "js/make-fixtures.js"], cwd=task_dir, capture_output=True, text=True, timeout=30, check=True)
-    assert out.stdout == (task_dir / "tests" / "GameClientTests" / "fixtures.json").read_text(encoding="utf-8")
+@pytest.mark.parametrize("task_dir,script,fixture", JS_FIXTURES)
+def test_js_generated_fixtures_match_their_generator(task_dir, script, fixture):
+    root = TASK_DATA_DIR / task_dir
+    out = subprocess.run(["node", script], cwd=root, capture_output=True, text=True, timeout=60, check=True)
+    assert out.stdout == (root / fixture).read_text(encoding="utf-8")
 
 
 def test_gamedev_is_opt_in_for_default_runs():

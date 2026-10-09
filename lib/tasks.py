@@ -975,6 +975,71 @@ CS_COORD_BAM = Task(
     test_weights={"RotationTurnsUnityForward": 2.0, "MovingAlongForward": 2.0, "_Rejects": 0.5},
 )
 
+CS_PORT_MOVEMENT = Task(
+    id="cs_port_movement",
+    difficulty=3,
+    description=(
+        "Port boombrawl's movement integrator to C#: implement WorldToCell and StepEntity in "
+        "src/GameClient/Movement.cs as an exact port of the read-only js/movement.mjs, including the "
+        "constants and helpers it imports from js/const.mjs and js/fixedmath.mjs. The game server runs the "
+        "JavaScript every tick and the Unity client's prediction runs this port, so every result must be "
+        "identical to the JavaScript for every input: integer math only, the same clamps, and the same "
+        "floor division (JavaScript Math.floor, also for negative values). The tests replay thousands of "
+        "steps recorded from the JavaScript on a real captured arena." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_port_movement",
+    editable_files=["src/GameClient/Movement.cs"],
+    context_files=[
+        "js/movement.mjs",
+        "js/const.mjs",
+        "js/fixedmath.mjs",
+        "tests/GameClientTests/MovementPortTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"CornerAssistThreshold": 3.0, "RandomWalks": 2.0},
+)
+
+CS_PORT_HEIGHTMAP = Task(
+    id="cs_port_heightmap",
+    difficulty=4,
+    description=(
+        "Port CarrierDominion's island terrain to C#: implement SkirtRadius and IslandHeightAt in "
+        "src/GameClient/Heightmap.cs as an exact port of skirtRadius / islandHeightAt in the read-only "
+        "js/engine/heightmap.js, including everything they use from js/shared/noise.js (value noise, "
+        "fBm, the lattice hash), js/shared/fixed.js (floorDiv, mulDiv, isqrt) and js/shared/prng.js "
+        "(mul32). The server collides with this terrain and the Unity client builds meshes from it, so "
+        "every height must equal the JavaScript's exactly: integer math only (JavaScript numbers are exact "
+        "below 2^53 here, so C# long covers them), the same floor divisions, and the same 32-bit "
+        "behaviour of ^ and >>>. Island (read-only src/GameClient/Island.cs) has int fields, as on the "
+        "wire. The tests compare against ~14,000 heights sampled from the JavaScript on real captured "
+        "islands." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_port_heightmap",
+    editable_files=["src/GameClient/Heightmap.cs"],
+    context_files=[
+        "js/engine/heightmap.js",
+        "js/shared/noise.js",
+        "js/shared/fixed.js",
+        "js/shared/prng.js",
+        "src/GameClient/Island.cs",
+        "tests/GameClientTests/HeightmapPortTests.cs",
+        "src/GameClient/GameClient.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=32768,      # ~9k-token prompt (four real JS files) + 12k thinking budget
+    min_predict=12000,
+    test_weights={"CapturedIslands": 3.0, "SeedNearIntMax": 1.0},
+)
+
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
     difficulty=3,
@@ -1313,6 +1378,8 @@ BUILTIN_TASKS: list[Task] = [
     PYTHON_FASTAPI_ENDPOINT,
     CS_COORD_CONVERT,
     CS_COORD_BAM,
+    CS_PORT_MOVEMENT,
+    CS_PORT_HEIGHTMAP,
     CS_MAIN_THREAD_DISPATCH,
     CS_PROTOCOL_CODEC,
     CS_SNAPSHOT_INTERP,
@@ -1380,7 +1447,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity",
     ],
