@@ -54,8 +54,24 @@ def test_gamedev_is_opt_in_for_default_runs():
     from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS
 
     default_ids = {t.id for t in DEFAULT_TASKS}
-    assert not default_ids & set(TASK_GROUPS["gamedev"]), "gamedev must not change default totals or Skill levels"
-    assert len(DEFAULT_TASKS) == len(BUILTIN_TASKS) - len(TASK_GROUPS["gamedev"])
+    opt_in = set(TASK_GROUPS["gamedev"]) | set(TASK_GROUPS["gamedev_diag"])
+    assert not default_ids & opt_in, "gamedev groups must not change default totals or Skill levels"
+    assert len(DEFAULT_TASKS) == len(BUILTIN_TASKS) - len(opt_in)
+
+
+def test_diag_key_covers_every_question_and_matches_the_reference():
+    import hashlib
+    import json
+
+    root = TASK_DATA_DIR / "gamedev_diag"
+    key = json.loads((root / "tests" / "answer_key.json").read_text())
+    reference = json.loads((root / "answers.reference.json").read_text())
+    qids = {TASK_MAP[t].editable_files[0].split("/")[1][:-4] for t in TASK_GROUPS["gamedev_diag"]}
+    assert qids == set(key) == set(reference)
+    for qid in qids:
+        assert (root / "questions" / f"{qid}.md").is_file()
+        assert (root / "answers" / f"{qid}.txt").read_text().strip() == "?", f"{qid}: the stub must not answer"
+        assert hashlib.sha256(f"gamedev_diag:{qid}:{reference[qid]['answer']}".encode()).hexdigest() == key[qid]
 
 
 def test_every_test_weight_key_names_a_real_test():

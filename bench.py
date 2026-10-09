@@ -327,9 +327,10 @@ def main() -> None:
             for task_id in ids:
                 primary_group.setdefault(task_id, group)
         width = max(len(t.id) for t in BUILTIN_TASKS)
+        group_width = max(len(g) for g in primary_group.values())
         for t in sorted(BUILTIN_TASKS, key=lambda t: (t.difficulty, t.id)):
             desc = t.description if len(t.description) <= 70 else t.description[:67] + "..."
-            print(f"L{t.difficulty}  {t.id:<{width}}  [{primary_group.get(t.id, '?'):<9}]  {desc}")
+            print(f"L{t.difficulty}  {t.id:<{width}}  [{primary_group.get(t.id, '?'):<{group_width}}]  {desc}")
         return
 
     if args.export_task:

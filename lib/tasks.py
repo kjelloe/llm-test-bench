@@ -1697,6 +1697,37 @@ MULTIHOP_CROSS_5 = Task(
     min_predict=8192,
 )
 
+# Multiple-choice diagnosis questions from the Unity builder's incident list
+# (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
+# salted hash so an export does not carry the key. (question id, difficulty from that list)
+_GAMEDEV_DIAG = [
+    ("ws_abort", 4), ("emission_keyword", 4), ("emission_hdr", 4), ("gamma_project", 3),
+    ("lambert_shader", 4), ("mirror_scene", 4), ("unity_licence", 2), ("signin_url", 2),
+    ("timeout_ignored", 3), ("pkill_self", 2), ("headless_segfault", 4), ("linux_receive_stall", 5),
+    ("float_rubberband", 1), ("wire_codes", 2), ("css_border_tint", 2),
+]
+
+
+def _diag_task(qid: str, difficulty: int) -> Task:
+    return Task(
+        id=f"diag_{qid}",
+        difficulty=difficulty,
+        description=(
+            f"Answer the multiple-choice question in questions/{qid}.md about porting a browser game to "
+            f"Unity. Write only the letter (A-E) of the best answer to answers/{qid}.txt."
+        ),
+        subdir="gamedev_diag",
+        editable_files=[f"answers/{qid}.txt"],
+        context_files=[f"questions/{qid}.md"],
+        test_cmd=["python3", "-m", "pytest", "tests/", "-q", "-k", qid],
+        test_timeout=30,
+        num_ctx=16384,
+        min_predict=8000,
+    )
+
+
+GAMEDEV_DIAG_TASKS: list[Task] = [_diag_task(q, d) for q, d in _GAMEDEV_DIAG]
+
 BUILTIN_TASKS: list[Task] = [
     CSV_NORDIC_PROPERTY,
     NODE_SLUGIFY,
@@ -1760,6 +1791,7 @@ BUILTIN_TASKS: list[Task] = [
     MULTIHOP_CROSS_5,
     CONTEXT_128K,
     CONTEXT_256K,
+    *GAMEDEV_DIAG_TASKS,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -1808,10 +1840,11 @@ TASK_GROUPS: dict[str, list[str]] = {
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],
+    "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
 # totals and Skill levels) until their difficulty levels are validated across models.
-OPT_IN_GROUPS: tuple[str, ...] = ("gamedev",)
+OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag")
 _OPT_IN_IDS = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
 DEFAULT_TASKS: list[Task] = [t for t in BUILTIN_TASKS if t.id not in _OPT_IN_IDS]

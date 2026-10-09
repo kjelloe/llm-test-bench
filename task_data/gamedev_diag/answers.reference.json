@@ -1,0 +1,62 @@
+{
+ "ws_abort": {
+  "answer": "B",
+  "source": "unityworks specs/llm_evaluation_tasks.md C05"
+ },
+ "emission_keyword": {
+  "answer": "D",
+  "source": "unityworks specs/llm_evaluation_tasks.md D04"
+ },
+ "emission_hdr": {
+  "answer": "A",
+  "source": "unityworks specs/llm_evaluation_tasks.md D05"
+ },
+ "gamma_project": {
+  "answer": "E",
+  "source": "unityworks specs/llm_evaluation_tasks.md E01"
+ },
+ "lambert_shader": {
+  "answer": "C",
+  "source": "unityworks specs/llm_evaluation_tasks.md E03"
+ },
+ "mirror_scene": {
+  "answer": "B",
+  "source": "unityworks specs/llm_evaluation_tasks.md E04"
+ },
+ "unity_licence": {
+  "answer": "A",
+  "source": "unityworks specs/llm_evaluation_tasks.md I03"
+ },
+ "signin_url": {
+  "answer": "D",
+  "source": "unityworks specs/llm_evaluation_tasks.md I04"
+ },
+ "timeout_ignored": {
+  "answer": "C",
+  "source": "unityworks specs/llm_evaluation_tasks.md I08"
+ },
+ "pkill_self": {
+  "answer": "E",
+  "source": "unityworks specs/llm_evaluation_tasks.md I09"
+ },
+ "headless_segfault": {
+  "answer": "B",
+  "source": "unityworks specs/llm_evaluation_tasks.md J01"
+ },
+ "linux_receive_stall": {
+  "answer": "D",
+  "source": "unityworks specs/llm_evaluation_tasks.md J04"
+ },
+ "float_rubberband": {
+  "answer": "A",
+  "source": "unityworks specs/llm_evaluation_tasks.md B09"
+ },
+ "wire_codes": {
+  "answer": "C",
+  "source": "unityworks specs/llm_evaluation_tasks.md L05"
+ },
+ "css_border_tint": {
+  "answer": "E",
+  "source": "unityworks specs/llm_evaluation_tasks.md F03"
+ }
+}
