@@ -49,7 +49,7 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
-  load_check.py           Pre-flight competing-work check (CPU hogs, busy GPUs) for every run; evaluate() is pure and unit-tested (tests/test_load_check.py), main() reads ps + nvidia-smi and ignores its own process tree; added 2026-10-09
+  load_check.py           Pre-flight competing-work check (CPU hogs, busy GPUs) for every run; evaluate() is pure and unit-tested (tests/test_load_check.py), main() samples /proc CPU ticks over 2 s (ps %CPU is a lifetime average and misses fresh bursts) plus nvidia-smi, ignoring its own process tree; added 2026-10-09
   power_check.py          Pre-flight GPU power-limit safety check for multi-GPU runs; evaluate() is the pure decision function (unit-tested in tests/test_power_check.py), main() wraps it with an nvidia-smi query for run.sh to call; added 2026-08-29
 hwmonitor/
   hwmonitor.py            Standalone hardware watchdog: polls GPU (nvidia-smi), CPU (/sys/class/thermal), RAM (/proc/meminfo) at configurable interval; WARN/CRIT on threshold breach; on CRIT sends SIGINT → SIGTERM to bench.py; run.sh starts this automatically in --quiet mode (WARN/CRIT to stderr, data to log only)

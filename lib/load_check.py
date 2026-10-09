@@ -13,9 +13,11 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 
-CPU_THRESHOLD_PCT = 50.0      # of one core, averaged over the process lifetime (ps %CPU)
+CPU_THRESHOLD_PCT = 50.0      # of one core, measured over SAMPLE_WINDOW_S
 VRAM_THRESHOLD_MIB = 3000     # Windows/WSL keeps ~1.5 GB on the display GPU at idle
+SAMPLE_WINDOW_S = 2.0
 
 
 def evaluate(
@@ -37,13 +39,43 @@ def evaluate(
     return warnings
 
 
-def _processes() -> list[tuple[int, float, str]]:
-    out = subprocess.run(["ps", "-eo", "pid=,pcpu=,args="], capture_output=True, text=True, timeout=10).stdout
+def _cpu_ticks() -> dict[int, int]:
+    ticks = {}
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/stat") as f:
+                fields = f.read().rsplit(")", 1)[1].split()
+            ticks[int(entry)] = int(fields[11]) + int(fields[12])  # utime + stime
+        except (OSError, IndexError, ValueError):
+            continue
+    return ticks
+
+
+def _cmdline(pid: int) -> str:
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            return f.read().replace(b"\0", b" ").decode(errors="replace").strip()
+    except OSError:
+        return ""
+
+
+def _processes(window_s: float = SAMPLE_WINDOW_S) -> list[tuple[int, float, str]]:
+    """Current %CPU (of one core) per process over a short window. ps %CPU is a lifetime
+    average, which misses a process that just started a burst and over-counts old work."""
+    hz = os.sysconf("SC_CLK_TCK")
+    before = _cpu_ticks()
+    time.sleep(window_s)
+    after = _cpu_ticks()
     rows = []
-    for line in out.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) == 3:
-            rows.append((int(parts[0]), float(parts[1]), parts[2]))
+    for pid, t1 in after.items():
+        t0 = before.get(pid)
+        if t0 is None:
+            continue
+        pct = (t1 - t0) / hz / window_s * 100.0
+        if pct > 0:
+            rows.append((pid, pct, _cmdline(pid)))
     return rows
 
 
