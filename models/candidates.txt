@@ -1765,6 +1765,16 @@ noctrex-qwen3.6:35b-3gpu  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,te
 # never with -ngl/--tensor-split). Q4_K_M = 3 parts, 119.5 GB. GATED repo (license accepted on the
 # kjelloe HF account, 2026-10-09). Found via scout 2026-10-09 (141K downloads). Download needs
 # HF_HUB_DISABLE_XET=0 (44.9 GB parts).
+# RESULT 2026-10-09, pinned 67a17c17c, 3x24GB (output/swift-pin.json + swift-pin-rest.json; the 2 TOOL_ERRORs
+# of the first run were timeouts and were re-run at --model-timeout 2400):
+#   spot 9/10: PASS slugify, safe_div, node_csv_parser (base flash-next FAILS it, NO_BLOCKS), lru_cache,
+#   expr_eval, hashmap, tokenizer, csv_nordic, node_para_core (base FAILS it 6/6 on 3x24GB);
+#   FAIL node_paratrooper 21/40 (base PASSES it on this binary) — one run, not repeated.
+#   gamedev first nine: 6/9 (base 5/9) — FAIL coord_convert 11/13 (the universal quaternion trap),
+#   main_thread_dispatch 9/11, snapshot_interp (no test score: did not compile); seat on its old 13 tests.
+#   4.2-28.6 tok/s, 7.6-13 on the long tasks: not faster than base here despite the "1.8x" claim; output
+#   lengths (eval_count) were close to base's. Verdict: different trade-offs from base (gains csv_parser and
+#   para_core, loses paratrooper), not a clear upgrade; worth the full gamedev group in the 3x24GB phase.
 swift-1.5-flash-next  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
 
 # MoE-cache variants (2026-10-09) for llama.cpp master >= c811cb8f0 (multi-GPU MoE cache, #30112) —
