@@ -1784,3 +1784,8 @@ swift-1.5-flash-next  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.
 qwen3.8-flash-next-moecache6g   UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
 qwen3.8-flash-next-moecache12g  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=4608,moe_cache_mib=12288,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
 swift-1.5-flash-next-moecache6g  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
+
+# ── byteshape/Qwen3.8-27B-GGUF (scout 2026-10-10, 1.2M downloads) — NOT RUN ──────────────────────────────
+# Small Qwen3.8-27B quants for the 16/12 GB tiers, next to the GSQ-RCO ones above. qwen3.8:27b needs f16 KV
+# (python_hashmap canary), so test that first. Spot check on the RTX 5060 Ti box or one 4090.
+#qwen3.8:27b-byteshape-iq4xs  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:byteshape/Qwen3.8-27B-GGUF
