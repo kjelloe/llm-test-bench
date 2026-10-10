@@ -1717,6 +1717,28 @@ The four separating tasks on the five single-GPU leaders, and the combined score
   `output/stale/`. The other failures are genuine: a dropped connection never noticed (gemma4:31b-qat),
   acks never read (qwen3.6:27b), a discarded view parsed anyway (`cs_snapshot_coalesce`, two models).
 
+**Multi-GPU results (2026-10-09/10 night, `output/gamedev2-C-*.json`, `gamedev2-A-*.json`).** Hung tasks
+(TOOL_ERROR at 2,400 s, finding 10) are left out of the comparisons; they are not capability results.
+
+| Model | config | gamedev | non-hung pass / partial | hung | diag |
+|---|---|---|---|---|---|
+| gpt-oss:120b | 3×24 GB | all 27 | 12/24 / 0.71 | mesh_winding, light_port, predict_reconcile | 15/17 |
+| qwen3.8-flash-next | 3×24 GB | the 18 newer | 6/16 / 0.58 | port_helm, light_port | 17/17 |
+
+Same task sets, mean partial credit (pass count): on flash-next's 16 completed tasks — gemma4:31b-qat
+0.76 (8), gpt-oss:120b 0.73 (10), equinox:31b 0.68 (7), qwen3.6:27b 0.61 (8), qwen3.8:27b 0.58 (8),
+qwen3.8-flash-next 0.58 (6), gemma4:26b-qat 0.37 (3); on gpt-oss's 24 — gemma4:31b-qat 0.77 (12),
+gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
+- **The single-GPU gemma4:31b-qat matches the 3×24 GB gpt-oss:120b on the harder tasks** (gpt-oss passes
+  slightly more, gemma scores higher partial credit), while the first nine tasks had gpt-oss (0.94) and
+  flash-next (0.93) clearly on top. flash-next drops to qwen3.8:27b's level on the newer tasks.
+- gpt-oss:120b is the first model to pass `cs_coord_convert` (the quaternion mirror every other model gets
+  wrong), and passes `cs_tick_interp`, `cs_ws_client`, `cs_snapshot_coalesce`.
+- **Diag (17), all 27 models:** 17/17 laguna, qwen3.8-flash-next, noctrex-qwen3.6:35b, qwen3.6:35b-A3B;
+  16 for seven models incl. qwen3.5-122b:a10b, gemma4:31b-qat, qwen3.8:27b, qwen3.6:27b; down to glm4.7-flash
+  8. The 2×24 diag run: qwen3.6:35b-A3B 17, qwen3.5:27b 16, qwen3-coder:30b-1m 13, deepseek-r1:32b 11
+  (4 of its 6 misses are hangs). Still too easy at the top to rank the leaders.
+
 **Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
 will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
 write); re-prioritise this list against that before building anything. Each test idea names the gap
