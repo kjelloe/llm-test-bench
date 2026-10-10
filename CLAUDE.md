@@ -336,6 +336,7 @@ vllm-plan.md        Copy-paste steps: Qwen3.5-9B AWQ on vLLM for agentic tool ca
                     capacity and DDR5 sizing, benchmark steps point back here)
 docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier
 docs/gpt-oss-120b-speed-debug-plan.md  Evidence + test plan for gpt-oss:120b's hangs and long-answer slowdown on 3×24 GB (2026-10-09)
+docs/plan-2026-10-10.md    The ordered plan from 2026-10-10: hang control + A/B arms, re-runs, new gamedev tasks, model runs
 next-runs.md        Referenced throughout this file and models/*.txt, but NOT tracked in git
                     (absent on the RTX 5060 Ti box as of 2026-09-15). See Known Issues.
 hw-upgrade-july-2026.md    Hardware state/crash-incident log + VRAM-tier upgrade analysis for the
