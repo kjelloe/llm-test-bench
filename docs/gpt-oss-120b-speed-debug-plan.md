@@ -73,7 +73,9 @@ which gives the decisive control: same model, same questions, split vs not split
 **flash-next (03:10–07:12): 2 hangs, 0 captures.** qwen3.8-flash-next timed out on `cs_port_helm` and
 `cs_light_port` (GPUs idle 04:20–04:40 and 06:20–06:40), but the watcher's trigger — main thread >80% of a
 core — never fired, so this model's hang does not spin the main thread (its `--fit` placement differs).
-For the next capture, trigger on "all GPUs idle for 3 minutes while a request is open" alone.
+Done: the watcher is now `llamacpp/hangwatch.sh <run-log> [out-dir] [max-captures]` (tested in
+`tests/test_hangwatch.py`); it triggers on "the run log shows a task with no result yet AND every GPU
+≤5% for 3 minutes", independent of CPU use, and stops at the log's `Total runtime:` line.
 
 ## Hypotheses
 
@@ -100,7 +102,7 @@ past ~40k (24,576 here, hangs at 6–15k tokens), NUMA (single socket).
 
 ### P1 — capture a hang (≈ whenever one happens; no extra GPU time)
 1. `sudo sysctl kernel.yama.ptrace_scope=0` (the user runs this; back to 1 afterwards).
-2. When GPUs go idle with the server thread at 100%: `gdb -p <pid> -batch -ex "thread apply all bt" > hang-bt.txt`
+2. Start `llamacpp/hangwatch.sh logs/run-latest.log output/hangs` beside the run; it does steps 2-3 when a hang shows up. By hand: `gdb -p <pid> -batch -ex "thread apply all bt" > hang-bt.txt`
    (stops the process for a second; it is hung anyway).
 3. Also `perf record -g -t <tid> -- sleep 10` and `nvidia-smi dmon -s ut -c 10`.
 4. Read: which split/backend pair the copy is between (GPU0↔1, 1↔2, GPU↔CPU), and what the other threads

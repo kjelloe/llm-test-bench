@@ -370,6 +370,8 @@ llamacpp/
                       required for GGML_CUDA_GRAPH_OPT=1 to do anything — see qwen3.8-flash-next
                       notes below), optional install + systemd service prompts
   README.md           Setup checklist, architecture minimum-commit table, troubleshooting
+  hangwatch.sh        Captures gdb/perf/dmon evidence when a run's current task stalls with idle GPUs
+                      (multi-GPU hang, finding 10); needs ptrace_scope=0; tests/test_hangwatch.py
 tests/
   test_parsing.py             Parser unit tests  →  python3 -m pytest tests/
   test_model_config.py        Model config parser unit tests
@@ -381,7 +383,8 @@ tests/
   test_export_task.py         --export-task bundling unit tests; also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
-  test_hwmonitor.py           hwmonitor threshold state-machine unit tests
+  test_hwmonitor.py           hwmonitor threshold state-machine unit tests; exits when its --pid is gone
+  test_hangwatch.py           llamacpp/hangwatch.sh "task still in progress" detection
   test_reporting.py           lib/reporting skill-level scoring unit tests
   test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
