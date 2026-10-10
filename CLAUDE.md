@@ -495,8 +495,9 @@ trusting as-is.
   common tools` finds nothing; the DEPRECATED warnings came earlier, with the `--load-mode` PR. Only `no_mmap` is translated; no
   model file uses `mlock` or `direct_io`. Still to do on a rebuild: `llm-service-provider`'s
   `presets/models.ini` passes `no-mmap = true` straight to the router (comment added there).
-- **gpt-oss:120b can hang on 3×24 GB (2026-10-09)**: a request stalls with the GPUs idle and the server
-  spin-waiting on a cross-GPU copy, until the client timeout. Treat its TOOL_ERRORs as suspect, not as
+- **Models split across GPUs can hang (2026-10-09/10)**: a request stalls with the GPUs idle and the server
+  spin-waiting on a scheduler host→device copy, until the client timeout — seen on gpt-oss:120b (3×24 GB)
+  and deepseek-r1:32b (2×24 GB), both long-answer models. Treat multi-GPU TOOL_ERRORs as suspect, not as
   capability failures. Plan: `docs/gpt-oss-120b-speed-debug-plan.md`.
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
@@ -1594,6 +1595,12 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    gamedev answers, none of the 17 short diag answers. Gamedev 12/27 passed (first-ever pass of
    `cs_coord_convert`; also `cs_tick_interp`, `cs_ws_client`), diag 15/17. The three hung tasks need a
    re-run on a fixed config before they count. `ptrace_scope=0` set by the user 2026-10-10 for P1.
+   **P1 captured (02:26–03:02): not gpt-oss-specific.** deepseek-r1:32b (2×24 GB, `tensor_split 1,1`) hung
+   on 4 of 17 diag answers; all three gdb dumps show the same stack — a scheduler host→device copy
+   (`ggml_backend_cuda_buffer_set_tensor` → `cudaStreamSynchronize`) spinning in the WSL `libcuda.so` with
+   every other thread asleep and the GPUs idle. Models that answer briefly never hung on the same split
+   configs. A lost copy completion in the WSL GPU path, hitting any split model with long answers.
+   Next: deepseek-r1:32b split vs single-GPU control (plan P2b), driver 610.88 noted.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17

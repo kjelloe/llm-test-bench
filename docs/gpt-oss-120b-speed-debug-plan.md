@@ -44,6 +44,32 @@ Earlier gpt-oss:120b runs here hit one TOOL_ERROR in about 70 tasks (context_16k
 run hit two in 13. During this run the Unity builder was running a CarrierDominion Win64 build and a
 headless Chromium on the same machine.
 
+## P1 result: three hang captures (2026-10-10 02:26–03:02) — NOT gpt-oss-specific
+
+The watcher (`hangwatch.sh`: main thread >80% of a core while every GPU is ≤5% for 3 minutes → gdb
+`thread apply all bt`, perf DWARF, `nvidia-smi dmon`) fired three times during the 2×24 GB diag run, all on
+**deepseek-r1:32b** (dense 32B, `--tensor-split 1,1`, q8_0 KV, flash-attn, `-b 512 -ub 128`), which hung on
+4 of its 17 diag answers. The other five models in the 2×24/3×24 diag runs (qwen3.5:27b, qwen3-coder:30b-1m,
+qwen3.6:35b-A3B, laguna, qwen3.5-122b:a10b) never hung — they answer briefly; deepseek-r1 and gpt-oss write
+long reasoning.
+
+- Main thread, all three captures: `llama_decode` → `llama_context::process_ubatch` → `graph_compute` →
+  `ggml_backend_sched_graph_compute_async` → `ggml_backend_cuda_buffer_set_tensor` → `cudaStreamSynchronize`
+  → spinning inside `/usr/lib/wsl/drivers/.../libcuda.so.1.1`.
+- Every other thread (25 llama-server workers, 3 `cuda-EvtHandlr`) is asleep in a syscall.
+- `nvidia-smi dmon`: GPU0 2% SM, GPU1/GPU2 0%; PCIe a constant trickle (GPU0 rx ~50–70 MB/s, GPU1 rx 8 / tx 3).
+- Rig: driver 610.88 (Windows), WSL kernel 6.18.33.1, PCIe 4.0 x8/x8/x4, no NVLink.
+
+Reading: a host→device copy of a split input, issued by the scheduler, never completes although the GPU is
+idle — the completion is lost somewhere in the WSL GPU paravirtualisation path (or in how the CUDA backend
+uses it). It hits any model split across GPUs that generates long answers, not gpt-oss specifically. This
+moves H2/H5 up and makes H3 (flash-attn kernel) and H7 (q8_0 KV) less likely as the hang's cause; it says
+nothing yet about the slowdown.
+
+**Better reproducer:** deepseek-r1:32b on the diag questions hangs ~1 in 4 (gpt-oss ~1 in 9 long answers),
+loads on 2 GPUs, and also fits a single 24 GB card (Q4_K_M ~20 GB, `models/32gb.txt` has a no-split entry),
+which gives the decisive control: same model, same questions, split vs not split.
+
 ## Hypotheses
 
 | | Hypothesis | Explains | Test |
@@ -84,6 +110,13 @@ straight to a running llama-server with `n_predict` = 250, 500, 1000, 2000, 4000
 - Rising marginal cost → H1/H7; repeat with `llama-bench -m <gguf> -p 6000 -n 4000 -ts 1/1/1 -fa 1 -ctk q8_0 -ctv q8_0`
   (no server): if llama-bench stays fast, the cost is in the server loop, otherwise in the compute graph.
 
+### P2b — the decisive control (≈ 1 h, run first)
+deepseek-r1:32b on `--task-group gamedev_diag` three times each: (a) 2×24 GB as in `models/2x24gb.txt`
+(expect ~4 hangs in 17), (b) single RTX 4090 with no `tensor_split` (`./gpu-mode.sh single 0`, a 24gb entry
+with the same flags). Zero hangs in (b) across 51 answers while (a) keeps hanging = the split path is the
+cause; use a 900 s `--model-timeout` so each hang costs 15 minutes. Then run the P3 arms on deepseek-r1:32b
+(2×24 GB) instead of gpt-oss:120b: four times faster to load, four times the hang rate.
+
 ### P3 — configuration A/B (≈ 3–4 h)
 Arms, each one change against the baseline:
 
@@ -95,6 +128,8 @@ Arms, each one change against the baseline:
 | D | `LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server` | H6 |
 | E | `cache_type_k=f16,cache_type_v=f16` | H7 |
 | F | baseline with the Unity builder deliberately active | H5 |
+| G | Windows NVIDIA driver updated past 610.88 (user, Windows side) | H2 (driver) |
+| H | `GGML_CUDA_NO_PEER_COPY` build, or forcing host-staged copies through pinned buffers | H2 |
 
 Per arm: the P2 speed curve (n_predict 500 and 4000 only), then `cs_mesh_winding` (the task that hung)
 4× through `./run.sh --tasks cs_mesh_winding --model-timeout 900` so a hang costs 15 minutes. Tonight's
