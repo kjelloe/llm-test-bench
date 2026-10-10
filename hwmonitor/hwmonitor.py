@@ -195,6 +195,16 @@ def find_bench_pid() -> int | None:
         return None
 
 
+def pid_gone(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    return False
+
+
 def abort_bench(pid: int, abort_timeout: float, emit) -> None:
     """SIGINT → wait abort_timeout → SIGTERM if still alive."""
     try:
@@ -416,6 +426,11 @@ def main() -> None:
 
     try:
         while True:
+            # Started for one bench.py (--pid): stop with it, even if the run.sh that would have
+            # stopped us was killed first (that left one hwmonitor logging for two days).
+            if args.pid and pid_gone(args.pid):
+                emit(f"\nhwmonitor stopped: watched PID {args.pid} has exited  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                break
             ram_used, ram_total = collect_ram()
             s = Sample(
                 ts=datetime.now(),

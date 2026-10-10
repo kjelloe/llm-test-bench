@@ -178,3 +178,23 @@ def test_probe_hotspot_returns_true_when_supported():
 def test_probe_hotspot_returns_false_on_exception():
     with patch("subprocess.run", side_effect=FileNotFoundError("nvidia-smi not found")):
         assert probe_hotspot() is False
+
+
+def test_pid_gone_tells_a_live_process_from_an_exited_one():
+    p = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        assert _MOD.pid_gone(p.pid) is False
+    finally:
+        p.kill()
+        p.wait()
+    assert _MOD.pid_gone(p.pid) is True
+
+
+def test_monitor_exits_when_the_watched_pid_is_gone(tmp_path):
+    p = subprocess.Popen([sys.executable, "-c", "pass"])
+    p.wait()
+    out = subprocess.run([sys.executable, str(Path(__file__).parent.parent / "hwmonitor" / "hwmonitor.py"),
+                          "--pid", str(p.pid), "--quiet", "--interval", "0.2", "--log", str(tmp_path / "hw.log")],
+                         capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0
+    assert "has exited" in (tmp_path / "hw.log").read_text()

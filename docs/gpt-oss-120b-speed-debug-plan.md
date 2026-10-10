@@ -70,6 +70,11 @@ nothing yet about the slowdown.
 loads on 2 GPUs, and also fits a single 24 GB card (Q4_K_M ~20 GB, `models/32gb.txt` has a no-split entry),
 which gives the decisive control: same model, same questions, split vs not split.
 
+**flash-next (03:10–07:12): 2 hangs, 0 captures.** qwen3.8-flash-next timed out on `cs_port_helm` and
+`cs_light_port` (GPUs idle 04:20–04:40 and 06:20–06:40), but the watcher's trigger — main thread >80% of a
+core — never fired, so this model's hang does not spin the main thread (its `--fit` placement differs).
+For the next capture, trigger on "all GPUs idle for 3 minutes while a request is open" alone.
+
 ## Hypotheses
 
 | | Hypothesis | Explains | Test |

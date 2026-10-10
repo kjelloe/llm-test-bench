@@ -74,7 +74,7 @@ All overridable via CLI flags.
 ```
 --interval S          Poll interval in seconds (default: 2)
 --log FILE            Log file path (default: output/hwmonitor.log)
---pid PID             bench.py PID to abort on CRIT (auto-detected if omitted)
+--pid PID             bench.py PID to abort on CRIT (auto-detected if omitted); hwmonitor exits when it is gone
 --abort-timeout S     Seconds between SIGINT and SIGTERM (default: 3)
 --warn-gpu-temp C     GPU core warn threshold (default: 85)
 --crit-gpu-temp C     GPU core crit threshold (default: 95)
@@ -105,7 +105,7 @@ All overridable via CLI flags.
 
 ## Integration with run.sh
 
-`run.sh` backgrounds `bench.py`, captures its PID, then starts `hwmonitor.py --pid <PID> --quiet --log output/hwmonitor-<ts>.log` in a second background process. It waits for bench.py to complete (preserving its exit code), then kills/waits hwmonitor and prints total elapsed runtime (`HH:MM:SS`). Pass `--no-hwmonitor` to skip the watchdog entirely.
+`run.sh` backgrounds `bench.py`, captures its PID, then starts `hwmonitor.py --pid <PID> --quiet --log output/hwmonitor-<ts>.log` in a second background process. It waits for bench.py to complete (preserving its exit code), then kills/waits hwmonitor and prints total elapsed runtime (`HH:MM:SS`). Pass `--no-hwmonitor` to skip the watchdog entirely. hwmonitor also stops by itself once the `--pid` process has exited, so a killed `run.sh` can no longer leave it logging (one did, for two days, until 2026-10-10).
 
 ## Known limitations
 
