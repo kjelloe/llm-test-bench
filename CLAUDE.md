@@ -546,6 +546,12 @@ trusting as-is.
   and `cs_mesh_winding` gave the same 6,642 tokens before and after the clock lock. Untested: unlocking the clocks
   (`nvidia-smi -rgc`) and re-running one task. Until explained, treat a single multi-GPU pass/fail on a long answer
   as provisional, the same class as the cross-GPU sensitivity below.
+  **R4 (2026-10-12, clocks locked, all 28 gamedev + 21 diag):** gpt-oss:120b 13/28 (partial 0.80), diag 18/21, 0 hangs,
+  77.6 tok/s, 32 min for all 49 (was hours); 8 gamedev flips against its pre-reboot runs, both ways.
+  qwen3.8-flash-next 12/28 (partial 0.65 without the hung one), diag 19/21, 28.3 tok/s, **no flip at all** against
+  its earlier runs — so the answer change is gpt-oss-specific (its explicit `tensor_split=1|1|1` layer split vs
+  flash-next's `--fit` placement is the obvious difference), not a machine-wide change. One flash-next hang
+  (`diag_mirror_scene`, the same question that hung deepseek-r1:32b split on 2026-10-10): reproducer queued.
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
