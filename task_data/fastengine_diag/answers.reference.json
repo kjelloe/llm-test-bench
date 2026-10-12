@@ -1,0 +1,42 @@
+{
+ "libraylib_publish": {
+  "answer": "C",
+  "source": "fastengine specs/llm_evaluation_tasks.md A03"
+ },
+ "fill_culling": {
+  "answer": "A",
+  "source": "fastengine specs/llm_evaluation_tasks.md A05"
+ },
+ "mirror_target": {
+  "answer": "E",
+  "source": "fastengine specs/llm_evaluation_tasks.md B09"
+ },
+ "rt_premultiplied": {
+  "answer": "D",
+  "source": "fastengine specs/llm_evaluation_tasks.md B14"
+ },
+ "port_browser": {
+  "answer": "B",
+  "source": "fastengine specs/llm_evaluation_tasks.md C04"
+ },
+ "font_fallback": {
+  "answer": "E",
+  "source": "fastengine specs/llm_evaluation_tasks.md C09"
+ },
+ "smart_app_control": {
+  "answer": "C",
+  "source": "fastengine specs/llm_evaluation_tasks.md F05"
+ },
+ "corrections_noise": {
+  "answer": "A",
+  "source": "fastengine specs/llm_evaluation_tasks.md G09"
+ },
+ "force_push_clones": {
+  "answer": "B",
+  "source": "fastengine specs/llm_evaluation_tasks.md H04"
+ },
+ "systemd_expand": {
+  "answer": "D",
+  "source": "fastengine specs/llm_evaluation_tasks.md H08"
+ }
+}

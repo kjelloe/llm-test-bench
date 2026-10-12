@@ -61,27 +61,31 @@ def test_js_generated_fixtures_match_their_generator(task_dir, script, fixture):
 
 
 def test_gamedev_is_opt_in_for_default_runs():
-    from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS
+    from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS, OPT_IN_GROUPS
 
     default_ids = {t.id for t in DEFAULT_TASKS}
-    opt_in = set(TASK_GROUPS["gamedev"]) | set(TASK_GROUPS["gamedev_diag"])
+    opt_in = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
     assert not default_ids & opt_in, "gamedev groups must not change default totals or Skill levels"
     assert len(DEFAULT_TASKS) == len(BUILTIN_TASKS) - len(opt_in)
 
 
-def test_diag_key_covers_every_question_and_matches_the_reference():
+DIAG_GROUPS = ["gamedev_diag", "fastengine_diag"]
+
+
+@pytest.mark.parametrize("group", DIAG_GROUPS)
+def test_diag_key_covers_every_question_and_matches_the_reference(group):
     import hashlib
     import json
 
-    root = TASK_DATA_DIR / "gamedev_diag"
+    root = TASK_DATA_DIR / group
     key = json.loads((root / "tests" / "answer_key.json").read_text())
     reference = json.loads((root / "answers.reference.json").read_text())
-    qids = {TASK_MAP[t].editable_files[0].split("/")[1][:-4] for t in TASK_GROUPS["gamedev_diag"]}
+    qids = {TASK_MAP[t].editable_files[0].split("/")[1][:-4] for t in TASK_GROUPS[group]}
     assert qids == set(key) == set(reference)
     for qid in qids:
         assert (root / "questions" / f"{qid}.md").is_file()
         assert (root / "answers" / f"{qid}.txt").read_text().strip() == "?", f"{qid}: the stub must not answer"
-        assert hashlib.sha256(f"gamedev_diag:{qid}:{reference[qid]['answer']}".encode()).hexdigest() == key[qid]
+        assert hashlib.sha256(f"{group}:{qid}:{reference[qid]['answer']}".encode()).hexdigest() == key[qid]
 
 
 def test_every_test_weight_key_names_a_real_test():
@@ -101,8 +105,9 @@ def test_context_fits_prompt_plus_thinking_budget():
         assert task.num_ctx and task.num_ctx >= task.min_predict + 9500, tid
 
 
-def test_diag_generator_reproduces_the_committed_files(tmp_path):
-    root = TASK_DATA_DIR / "gamedev_diag"
+@pytest.mark.parametrize("group", DIAG_GROUPS)
+def test_diag_generator_reproduces_the_committed_files(tmp_path, group):
+    root = TASK_DATA_DIR / group
     subprocess.run([sys.executable, str(root / "make_diag.reference.py"), str(tmp_path)],
                    check=True, capture_output=True, timeout=60)
     for rel in ["tests/answer_key.json", "answers.reference.json",

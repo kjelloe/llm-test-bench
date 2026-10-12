@@ -1854,15 +1854,16 @@ _GAMEDEV_DIAG = [
 ]
 
 
-def _diag_task(qid: str, difficulty: int) -> Task:
+def _diag_task(qid: str, difficulty: int, subdir: str = "gamedev_diag", prefix: str = "diag",
+               topic: str = "porting a browser game to Unity") -> Task:
     return Task(
-        id=f"diag_{qid}",
+        id=f"{prefix}_{qid}",
         difficulty=difficulty,
         description=(
-            f"Answer the multiple-choice question in questions/{qid}.md about porting a browser game to "
-            f"Unity. Write only the letter (A-E) of the best answer to answers/{qid}.txt."
+            f"Answer the multiple-choice question in questions/{qid}.md about {topic}. "
+            f"Write only the letter (A-E) of the best answer to answers/{qid}.txt."
         ),
-        subdir="gamedev_diag",
+        subdir=subdir,
         editable_files=[f"answers/{qid}.txt"],
         context_files=[f"questions/{qid}.md"],
         test_cmd=["python3", "-m", "pytest", "tests/", "-q", "-k", qid],
@@ -1873,6 +1874,18 @@ def _diag_task(qid: str, difficulty: int) -> Task:
 
 
 GAMEDEV_DIAG_TASKS: list[Task] = [_diag_task(q, d) for q, d in _GAMEDEV_DIAG]
+
+# The same format for fastengine, the second build engine (C# .NET 9 on Raylib-cs with a three.js-shaped scene
+# graph), from its specs/llm_evaluation_tasks.md (2026-10-12): task_data/fastengine_diag.
+_FASTENGINE_DIAG = [
+    ("libraylib_publish", 2), ("fill_culling", 3), ("mirror_target", 5), ("rt_premultiplied", 3),
+    ("port_browser", 3), ("font_fallback", 3), ("smart_app_control", 3), ("corrections_noise", 4),
+    ("force_push_clones", 4), ("systemd_expand", 4),
+]
+FASTENGINE_DIAG_TASKS: list[Task] = [
+    _diag_task(q, d, "fastengine_diag", "fdiag", "porting a browser game to a C# engine on Raylib-cs (fastengine)")
+    for q, d in _FASTENGINE_DIAG
+]
 
 BUILTIN_TASKS: list[Task] = [
     CSV_NORDIC_PROPERTY,
@@ -1943,6 +1956,7 @@ BUILTIN_TASKS: list[Task] = [
     CONTEXT_128K,
     CONTEXT_256K,
     *GAMEDEV_DIAG_TASKS,
+    *FASTENGINE_DIAG_TASKS,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -1992,10 +2006,11 @@ TASK_GROUPS: dict[str, list[str]] = {
         "crossplay_statehash_parity", "crossplay_ws_roundtrip", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
+    "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
 # totals and Skill levels) until their difficulty levels are validated across models.
-OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag")
+OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine_diag")
 _OPT_IN_IDS = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
 DEFAULT_TASKS: list[Task] = [t for t in BUILTIN_TASKS if t.id not in _OPT_IN_IDS]
