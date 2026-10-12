@@ -1902,8 +1902,8 @@ FE_SOLO_SERVER = Task(
     difficulty=4,
     description=(
         "Implement src/Fastengine/SoloServer.cs, single player for a native game client: it runs the game's own "
-        "Node server, unchanged, as described in solo/solo.json (the guard solo/guard.cjs and a stand-in server "
-        "in solo/game/ are provided), and must follow the class comment exactly: a free port the client picks, "
+        "Node server, unchanged, as described in solo/solo.json (its entry is relative to solo/game, the server's "
+        "working directory; the guard solo/guard.cjs and a stand-in server in solo/game/ are provided), and must follow the class comment exactly: a free port the client picks, "
         "the env with {state} replaced, Ready once with the socket URL when the server prints its ready line, the "
         "server's stdout and stderr in the log, events only from Pump() on the caller's thread, and a Dispose that "
         "lets the server save before anything is killed but never leaves it running." + FASTENGINE_CONSTRAINTS

@@ -3,9 +3,10 @@ using System.Collections.Generic;
 
 namespace Fastengine
 {
-    // Single player: the game's own Node server, unchanged, run from the solo folder (solo/solo.json says
-    // which file to start, which env to give it with {state} replaced by the state folder, the regex of the
-    // line it prints once it accepts connections, and the WebSocket path). It must listen on 127.0.0.1 on a
+    // Single player: the game's own Node server, unchanged, run from the solo folder. solo/solo.json says which
+    // file to start ("entry", relative to solo/game, which is also the server's working directory), which env to
+    // give it with {state} replaced by the state folder, the regex of the line it prints once it accepts
+    // connections, and the WebSocket path. It must listen on 127.0.0.1 on a
     // free port the client picks, keep its saves in the state folder, never outlive the client (solo/guard.cjs,
     // preloaded with `node -r`, exits the server when its stdin closes, raising SIGTERM first so it can save),
     // and be stopped on Dispose so that it saves. Its output goes to the log as "[Server] ...".
