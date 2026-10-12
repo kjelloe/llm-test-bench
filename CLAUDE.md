@@ -555,7 +555,8 @@ trusting as-is.
   flash-next's `--fit` placement is the obvious difference), not a machine-wide change. One flash-next hang
   (`diag_mirror_scene`, the same question that hung deepseek-r1:32b split on 2026-10-10). **Not a reproducer:** the
   same question alone ×3 (plus `diag_emission_keyword`) on a fresh server passed in 1-17 s; the hang came 34 requests
-  into a long run, so it looks tied to server/driver state over time, not to a prompt.
+  into a long run, so it looks tied to server/driver state over time, not to a prompt. Step 3 (same model, all 49
+  requests again, memory locked too, gdb armed): no hang. About one hang in ~150 split-model requests today.
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
@@ -1684,7 +1685,8 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    **Locking the memory clock too** (`nvidia-smi -i 0 -lmc 10501,10501; nvidia-smi -i 1,2 -lmc 9751,9751`, 2026-10-12):
    **96.6 tok/s** on 4,000-token answers (+39%), flat from 250 tokens; prefill unchanged. Cost: the cards then idle in
    P0 at ~49 W (4090) and ~115-122 W (3090s), ~290 W of idle heat, so lock memory for benchmark sessions only and
-   undo with `nvidia-smi -rmc` afterwards (the core lock costs little at idle).
+   undo with `nvidia-smi -rmc` afterwards (the core lock costs little at idle). qwen3.8-flash-next (`--fit`, 3 GPUs) gains
+   less: 28.3 → 33.1 tok/s over all of gamedev + diag (45 min instead of 93), identical answers (step 3).
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17
