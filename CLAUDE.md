@@ -1681,6 +1681,10 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    numbers on this rig are affected. Detail: `docs/gpt-oss-120b-speed-debug-plan.md`.
    **FIXED by locking the core clock** (`nvidia-smi -lgc 1500,2500`, admin Windows shell, lost on reboot):
    gpt-oss:120b 3×24 GB on 4,000-token answers 9.8 → 69.5 tok/s (flat ~69 from 500 tokens), prefill 630 → 847.
+   **Locking the memory clock too** (`nvidia-smi -i 0 -lmc 10501,10501; nvidia-smi -i 1,2 -lmc 9751,9751`, 2026-10-12):
+   **96.6 tok/s** on 4,000-token answers (+39%), flat from 250 tokens; prefill unchanged. Cost: the cards then idle in
+   P0 at ~49 W (4090) and ~115-122 W (3090s), ~290 W of idle heat, so lock memory for benchmark sessions only and
+   undo with `nvidia-smi -rmc` afterwards (the core lock costs little at idle).
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17

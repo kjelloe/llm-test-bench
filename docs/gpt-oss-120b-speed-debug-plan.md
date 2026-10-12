@@ -113,6 +113,9 @@ clock floor 1500 MHz, all three GPUs; resets on reboot or `nvidia-smi -rgc`). Th
 10k prompt: 250 tokens 74 tok/s, 500 76, 1000 72, 2000 70.5, **4000 69.5 (was 9.8)**; marginal flat ~69 tok/s;
 prefill 630 → 847 tok/s. Memory clock is not locked (P3 = 5001 MHz, not the 9751/10501 maximum); `-lmc` might
 add more. To keep: re-apply after every reboot (or make it a Windows startup task).
+**Memory clock locked too (2026-10-12, step 2):** 4090 at 10,501 MHz and 3090s at 9,751 MHz (`-lmc`): 250 tokens
+99.1, 1,000 98.3, 4,000 **96.6 tok/s** (marginal flat ~96-99), prefill ~845. Idle power then 49/115/122 W (P0), so
+lock memory only while benchmarking and reset with `nvidia-smi -rmc`.
 
 ## Hypotheses
 
