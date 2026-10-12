@@ -24,3 +24,15 @@ def test_llama_server_label_kept_for_results_without_server_name():
 
 def test_no_engine_label_without_a_version():
     assert "llama-server" not in hw_summary(_hw())
+
+
+def test_gpu_info_records_memory_clock_and_pstate(monkeypatch):
+    import subprocess
+    from lib import hw_snapshot
+
+    class R:
+        returncode = 0
+        stdout = "NVIDIA GeForce RTX 3090, 24576, 24000, 610.88, 40, 30.1, 240.00, 350.00, 1500, 2100, 8.6, 9751, P0\n"
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: R())
+    g = hw_snapshot._gpu_info()[0]
+    assert g["clock_mhz"] == 1500 and g["mem_clock_mhz"] == 9751 and g["pstate"] == "P0" and g["compute_cap"] == 8.6

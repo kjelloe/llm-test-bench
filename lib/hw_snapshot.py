@@ -66,13 +66,13 @@ def _gpu_info() -> list[dict]:
         (
             "name,memory.total,memory.free,driver_version,"
             "temperature.gpu,power.draw,power.limit,power.max_limit,"
-            "clocks.gr,clocks.max.gr,compute_cap",
+            "clocks.gr,clocks.max.gr,compute_cap,clocks.mem,pstate",
             True,
         ),
         (
             "name,memory.total,memory.free,driver_version,"
             "temperature.gpu,power.draw,power.limit,power.max_limit,"
-            "clocks.gr,clocks.max.gr",
+            "clocks.gr,clocks.max.gr,clocks.mem,pstate",
             False,
         ),
     ):
@@ -115,6 +115,12 @@ def _gpu_info() -> list[dict]:
                 }
                 if has_cap and len(p) >= 11:
                     entry["compute_cap"] = _float(p[10])
+                # Clocks at the start of the run: an idle 1500 MHz core means `nvidia-smi -lgc` is set, a max memory
+                # clock at idle means `-lmc` is; multi-GPU speeds depend on both (2026-10-12).
+                extra = p[11:] if has_cap else p[10:]
+                if len(extra) >= 2:
+                    entry["mem_clock_mhz"] = _int(extra[0])
+                    entry["pstate"] = extra[1]
                 gpus.append(entry)
             return gpus
         except Exception:
