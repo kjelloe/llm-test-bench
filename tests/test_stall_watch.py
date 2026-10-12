@@ -28,3 +28,30 @@ def test_statistics_leaves_stalled_records_out(tmp_path):
                                          {"task": "b", "tests_pass": True}]}))
     results, _ = load_file(f)
     assert [r["task"] for r in results] == ["b"]
+
+
+def test_watch_calls_on_stall_once_when_gpus_stay_idle(monkeypatch):
+    import threading
+    import lib.gpu_monitor as gm
+    monkeypatch.setattr(gm, "_available", True)
+    monkeypatch.setattr(gm, "get_gpu_snapshot", lambda: {"vram_used_mb": 1, "gpu_util": 0, "mem_bandwidth_util": 0})
+    calls = []
+    stop = threading.Event()
+    t, fired = gm.launch_stall_watch(stop, 0.2, lambda: calls.append(1), poll_interval=0.05)
+    t.join(timeout=3)
+    stop.set()
+    assert calls == [1] and fired == [0.2]
+
+
+def test_watch_stays_quiet_while_a_gpu_works(monkeypatch):
+    import threading
+    import lib.gpu_monitor as gm
+    monkeypatch.setattr(gm, "_available", True)
+    monkeypatch.setattr(gm, "get_gpu_snapshot", lambda: {"vram_used_mb": 1, "gpu_util": 40, "mem_bandwidth_util": 9})
+    calls = []
+    stop = threading.Event()
+    t, fired = gm.launch_stall_watch(stop, 0.2, lambda: calls.append(1), poll_interval=0.05)
+    threading.Event().wait(0.5)
+    stop.set()
+    t.join(timeout=3)
+    assert calls == [] and fired == []
