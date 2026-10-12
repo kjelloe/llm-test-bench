@@ -1872,6 +1872,29 @@ FE_THREE_GEOMETRY = Task(
     min_predict=16000,
 )
 
+FE_TTF_METRICS = Task(
+    id="fe_ttf_metrics",
+    difficulty=3,
+    description=(
+        "Implement src/Fastengine/TtfMetrics.cs: read a TrueType font's head, hhea, hmtx and cmap tables "
+        "directly (no font library) so the HUD can lay out text the way a browser does. CSS font sizes are em "
+        "sizes, so a text's width is the sum of its glyphs' advance widths over unitsPerEm times the CSS px "
+        "size. Support cmap format 12 (all of Unicode) and format 4 (the BMP), whichever the font has; "
+        "glyphs past hhea's numberOfHMetrics; code points outside the BMP; unmapped code points (glyph 0). "
+        "The fonts in fonts/ are the ones the HUD ships." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_ttf_metrics",
+    editable_files=["src/Fastengine/TtfMetrics.cs"],
+    context_files=["tests/FastengineTests/TtfMetricsTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"CmapGlyphIds": 2.0, "CssTextWidths": 2.0},
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -1990,6 +2013,7 @@ BUILTIN_TASKS: list[Task] = [
     *GAMEDEV_DIAG_TASKS,
     *FASTENGINE_DIAG_TASKS,
     FE_THREE_GEOMETRY,
+    FE_TTF_METRICS,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2040,7 +2064,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
