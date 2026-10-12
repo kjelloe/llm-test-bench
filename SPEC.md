@@ -100,9 +100,17 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (88 total, difficulty L1–L6; 39 run by default; the 28 `gamedev` and 21 `gamedev_diag` tasks are opt-in):
+- Built-in tasks (102 total, difficulty L1–L6; 39 run by default; the 28 `gamedev`, 21 `gamedev_diag`, 4 `fastengine` and 10 `fastengine_diag` tasks are opt-in):
 
-  **Game-dev tasks (23, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
+  **fastengine tasks (4, opt-in, 2026-10-12) — `--task-group fastengine`:** C# for the second build engine
+  (fastengine: plain .NET 9 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD), from its
+  `specs/llm_evaluation_tasks.md`; net9.0 with the latest C#, no Unity shim. `fe_three_geometry` (L3, three's
+  geometries vertex for vertex, fixtures from three 0.165 itself), `fe_ttf_metrics` (L3, TTF tables read
+  directly), `fe_solo_server` (L4, the bundled Node server's lifecycle), `fe_css_color` (L2, CSS Color 4).
+  **fastengine diagnosis (10, opt-in) — `--task-group fastengine_diag`:** `fdiag_*`, same format as
+  `gamedev_diag`. Details: CLAUDE.md "fastengine task group".
+
+  **Game-dev tasks (28, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),
   Node.js authoritative-server logic (`node --test`) and build-pipeline bash scripts (driven by pytest),
   from the user's multiplayer games and the Unity builder's task list. Not in a
@@ -113,7 +121,8 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   (L4), `cs_port_webaudio` (L4), `cs_tick_interp` (L4), `cs_ws_abort_reconnect` (L4), `cs_reconnect_policy`
   (L3), `cs_ws_client` (L4), `cs_primitive_compose` (L4), `cs_input_last_pressed` (L2), `cs_mesh_winding`
   (L3), `cs_light_port` (L4), `bash_accept_matrix` (L2), `bash_timeout_kill` (L3), `bash_kill_by_port` (L2); third wave (2026-10-09, chosen to
-  separate models): `cs_port_qr` (L4), `cs_port_helm` (L3), `cs_snapshot_coalesce` (L3), `crossplay_ws_roundtrip` (L5).
+  separate models): `cs_port_qr` (L4), `cs_port_helm` (L3), `cs_snapshot_coalesce` (L3), `crossplay_ws_roundtrip` (L5);
+  2026-10-12: `cs_fake_null` (L4, Unity object lifetime, with its own extended shim).
 
   **Game-dev diagnosis (21, opt-in; 4 harder ones added 2026-10-12) — `--task-group gamedev_diag`:** one multiple-choice question per
   task (`diag_*`, L1–L5); the model writes the letter of the best answer to `answers/<id>.txt`, graded

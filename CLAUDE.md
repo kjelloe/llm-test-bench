@@ -413,6 +413,10 @@ task_data/
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
+  fe_*/                   fastengine C# tasks: Fastengine.sln, src/Fastengine at net9.0 (latest C#, no Unity shim),
+                          xunit tests; fixtures from three itself (fe_three_geometry) or an independent Python
+                          reader (fe_ttf_metrics); *.reference.cs adapted from fastengine's own code
+  fastengine_diag/        10 multiple-choice questions, same layout and generator pattern as gamedev_diag
   gamedev_diag/           21 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
                           tests/answer_key.json (salted sha256 of the letter), answers.reference.json (human key)
 Task groups (--task-group):
@@ -428,6 +432,8 @@ Task groups (--task-group):
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
+  fastengine    4 C# tasks for the second build engine (.NET 9 on Raylib-cs), OPT-IN; see "fastengine task group"
+  fastengine_diag  10 multiple-choice questions (fdiag_*), OPT-IN
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -539,7 +545,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (28) and gamedev_diag (21) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (28), gamedev_diag (21), fastengine (4) and fastengine_diag (10) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1873,6 +1879,32 @@ and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are r
    the `python_hashmap` control (finding 9).
 6. After any task change (re-levelling, softened `node_seat_reconnect` — done 2026-10-09), re-run the
    top ~6 models only, not all 27.
+
+#### fastengine task group (`--task-group fastengine`, `fastengine_diag`, added 2026-10-12)
+
+fastengine is the second build engine for the user's browser games: C# .NET 9 on Raylib-cs (raylib 6, GL 3.3),
+a small three.js-shaped scene graph with GLSL, a canvas-2D/CSS HUD, `ClientWebSocket` against the unchanged
+Node servers, bash jobs on WSL (`~/GIT/fastengine`, task list `specs/llm_evaluation_tasks.md`, first version
+2026-10-12). Its game-side items repeat unityworks' list (already in `gamedev`); these groups take the
+fastengine-specific items that are testable headless (no GL context, no Windows). Plan and review:
+`docs/plan-2026-10-10.md` "fastengine tasks". Same validation as gamedev (stub fails, reference passes,
+single-bug mutants caught, `--export-task` leaves references out); C# at **net9.0, latest C#** (not Unity).
+
+| Task | L | Spec | Source / grading | Validation |
+|---|---|---|---|---|
+| `fe_three_geometry` | 3 | B01 | three 0.165's own Box/Cylinder/Cone/Sphere/Torus sources in `js/three` (MIT); fixtures from them under Node, byte-identical to the real package; 13 cases graded per case | stub 0/13, ref 13/13, 11/11 mutants. three 0.165 keeps the cone tip's degenerate triangles (later versions drop them) |
+| `fe_ttf_metrics` | 3 | D02/D03 | cmap format 12/4, hmtx past numberOfHMetrics, hhea, head on the HUD's bundled DejaVu/Liberation TTFs (licences shipped); fixtures from an independent Python reader, which agrees with the C# reference adapted from fastengine's `Fonts.cs`; a synthetic font covers idRangeOffset+idDelta | stub 0/13, ref 13/13, 7/7 |
+| `fe_solo_server` | 4 | E07/E08 | fastengine's real `guard.cjs` + a stand-in server (saves in 400 ms on SIGTERM; CRASH, STUBBORN); Ready once via Pump, logs, `{state}` env, Dispose lets it save then kills | stub 0/7, ref 7/7 ×2, 11/11; tests kill any server they started |
+| `fe_css_color` | 2 | D05 | stub is fastengine's real `Painter.Css`; CSS Color 4 values from the spec's formulas; parse-once cache | stub 0/14, ref 14/14, 6/8 (two equivalent survivors) |
+
+`fastengine_diag` (10 `fdiag_*`): A03 libraylib publish, A05 rlgl culling of 2D fills, B09 mirror target
+linear/untoned, B14 premultiplied target in the HUD, C04 port the browser not the other port, C09 Chromium
+font fallback on the reference box, F05 Smart App Control, G09 corrections bug or noise, H04 force-push and
+`--shared` clones, H08 systemd-run expansion. Wrong options use the incident's known tempting answer where it
+names one; lengths balanced (correct never longest or shortest).
+
+Not built (need a GL context, Windows, or more time): A02/A05 as code, B02 `Object3D` (next: fixtures from
+three), B03-B16 rendering, C01 pixel comparison, the Windows-interop items. No model results yet.
 
 #### What NOT to do
 
