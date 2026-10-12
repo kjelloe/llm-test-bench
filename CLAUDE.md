@@ -544,7 +544,9 @@ trusting as-is.
   `cs_port_webaudio` and `cs_port_qr` give different answers too. Within the boot it is deterministic (`cs_tick_interp`
   alone ×2, after another task, after `cs_port_webaudio` as on 10-09, and with `--fit off`: identical 4,331 tokens),
   and `cs_mesh_winding` gave the same 6,642 tokens before and after the clock lock. Untested: unlocking the clocks
-  (`nvidia-smi -rgc`) and re-running one task. Until explained, treat a single multi-GPU pass/fail on a long answer
+  (`nvidia-smi -rgc`) and re-running one task — **DONE 2026-10-12: unlocked, both tasks give byte-identical answers
+  (4,331 and 6,437 tokens), so the clock state does not change the arithmetic; the change came with the reboot.**
+  Until explained, treat a single multi-GPU pass/fail on a long answer
   as provisional, the same class as the cross-GPU sensitivity below.
   **R4 (2026-10-12, clocks locked, all 28 gamedev + 21 diag):** gpt-oss:120b 13/28 (partial 0.80), diag 18/21, 0 hangs,
   77.6 tok/s, 32 min for all 49 (was hours); 8 gamedev flips against its pre-reboot runs, both ways.
