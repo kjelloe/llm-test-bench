@@ -513,7 +513,15 @@ trusting as-is.
   and deepseek-r1:32b (2×24 GB), both long-answer models. Treat multi-GPU TOOL_ERRORs as suspect, not as
   capability failures. Plan: `docs/gpt-oss-120b-speed-debug-plan.md`. Since the 2026-10-12 reboot: 0 hangs in 34 split
   answers plus the five previously hung tasks; all nine captured hangs happened while the clocks were dropping, so
-  the clock lock may cure this too (not yet confirmed).
+  the clock lock may cure this too. **R1 (2026-10-12, clocks locked): 0 hangs** in 63 deepseek-r1:32b split answers
+  and gpt-oss:120b's five longest gamedev answers (68-74 tok/s). Not seen since the lock; keep hangwatch on anyway.
+- **gpt-oss:120b gamedev answers changed across the 2026-10-12 reboot (OPEN).** Same binary, driver, prompt
+  (5,051 tokens) and context, yet `cs_ws_client` and `cs_tick_interp` (PASS on 2026-10-09) now FAIL 0.94/0.92,
+  `cs_port_webaudio` and `cs_port_qr` give different answers too. Within the boot it is deterministic (`cs_tick_interp`
+  alone ×2, after another task, after `cs_port_webaudio` as on 10-09, and with `--fit off`: identical 4,331 tokens),
+  and `cs_mesh_winding` gave the same 6,642 tokens before and after the clock lock. Untested: unlocking the clocks
+  (`nvidia-smi -rgc`) and re-running one task. Until explained, treat a single multi-GPU pass/fail on a long answer
+  as provisional, the same class as the cross-GPU sensitivity below.
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
