@@ -551,7 +551,9 @@ trusting as-is.
   qwen3.8-flash-next 12/28 (partial 0.65 without the hung one), diag 19/21, 28.3 tok/s, **no flip at all** against
   its earlier runs — so the answer change is gpt-oss-specific (its explicit `tensor_split=1|1|1` layer split vs
   flash-next's `--fit` placement is the obvious difference), not a machine-wide change. One flash-next hang
-  (`diag_mirror_scene`, the same question that hung deepseek-r1:32b split on 2026-10-10): reproducer queued.
+  (`diag_mirror_scene`, the same question that hung deepseek-r1:32b split on 2026-10-10). **Not a reproducer:** the
+  same question alone ×3 (plus `diag_emission_keyword`) on a fresh server passed in 1-17 s; the hang came 34 requests
+  into a long run, so it looks tied to server/driver state over time, not to a prompt.
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
