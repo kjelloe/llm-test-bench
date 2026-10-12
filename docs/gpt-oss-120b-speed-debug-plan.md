@@ -77,6 +77,36 @@ Done: the watcher is now `llamacpp/hangwatch.sh <run-log> [out-dir] [max-capture
 `tests/test_hangwatch.py`); it triggers on "the run log shows a task with no result yet AND every GPU
 ≤5% for 3 minutes", independent of CPU use, and stops at the log's `Total runtime:` line.
 
+## P2 result (2026-10-12): the slowdown is GPU power management, not llama.cpp
+Speed curve, gpt-oss:120b on 3×24 GB, fixed 10k-token prompt, `ignore_eos`: 64 tok/s at 250 tokens, 61 at 500,
+29 at 1000, 11.5 at 2000, 9.8 at 4000; the server's own 3-second rate fell 77 → 7 tok/s within one 1,000-token
+answer. The same with an 11-token prompt (marginal 4.7 tok/s past 1,000 tokens at <2k context), so it is not
+attention or KV. perf: ~95% of server CPU spins in libcuda waiting on the GPUs in both phases. Arms that did
+NOT change it: CUDA graphs off (2.5× worse), f16 KV, llama.cpp master `8a1a9b512`, pipeline parallelism off
+(empty `-ot`). Discriminating runs (11-token prompt, tokens 300→2000):
+
+| model, GPUs | first 300 tok/s | marginal tok/s |
+|---|---|---|
+| gpt-oss:20b, one 4090 | 236 | 197 (flat) |
+| gpt-oss:20b, GPU2 alone (x4 link) | 161 | 166 (flat) |
+| gpt-oss:20b, GPU0+1 / GPU0+2 | 194 / 185 | 138 / 131 |
+| gpt-oss:20b, 3-way | 159 | 20 |
+| qwen3-30b:2507, 3-way | 128 | 18 |
+| deepseek-r1:32b (dense), 2-way / single, 10k prompt | 22 / 34 | 22 / 34 (flat) |
+
+**Cause:** clocks sampled during a 3-way decode: after the prefill burst the GPUs drop to **P8, 210 MHz core,
+405 MHz memory** (P5 on GPU2) while 35–45% busy; `nvidia-smi -q -d PERFORMANCE` gives "Idle" as the clock
+reason, no thermal or power slowdown. In a layer split each GPU idles while the others compute, so the driver
+reads decode as idle and downclocks; every token then takes longer, which looks even more idle. Prefill
+pushes the clocks back up, hence the fast start of every request. The more GPUs, the larger each one's idle
+share: 2-way mild, 3-way severe; a dense 32B with longer per-GPU bursts stays up. This also fits
+qwen3.8-flash-next's ~4.5 tok/s on 3 GPUs vs the documented 23 (finding 9).
+**Fix to test (Windows side, user):** NVIDIA Control Panel → Manage 3D settings → Power management mode
+"Prefer maximum performance" (globally, or for the WSL host process), or from an admin PowerShell
+`nvidia-smi -lgc <min>,<max>` to lock the core clock (and `-lmc` for memory), then re-run the curve.
+Whether the hangs (P1) are the same mechanism (a copy waiting on a GPU stuck changing P-state) is open; the
+hang captures happened during decode, when the clocks are low.
+
 ## Hypotheses
 
 | | Hypothesis | Explains | Test |
