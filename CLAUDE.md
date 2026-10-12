@@ -528,7 +528,12 @@ trusting as-is.
   capability failures. Plan: `docs/gpt-oss-120b-speed-debug-plan.md`. Since the 2026-10-12 reboot: 0 hangs in 34 split
   answers plus the five previously hung tasks; all nine captured hangs happened while the clocks were dropping, so
   the clock lock may cure this too. **R1 (2026-10-12, clocks locked): 0 hangs** in 63 deepseek-r1:32b split answers
-  and gpt-oss:120b's five longest gamedev answers (68-74 tok/s). Not seen since the lock; keep hangwatch on anyway.
+  and gpt-oss:120b's five longest gamedev answers (68-74 tok/s), and gpt-oss:120b's whole gamedev + diag set (49
+  requests). **But the lock does NOT cure it:** qwen3.8-flash-next hung at 13:18 on `diag_mirror_scene` (R4, clocks
+  locked, all GPUs 0% in P5 at 1,500 MHz); perf shows the same signature as the 2026-10-10 captures (the server
+  spinning in libcuda + `clock_gettime`, waiting on a completion that never comes). gdb was refused (ptrace_scope is
+  back to 1 after the reboot). Capture in `output/debug-2026-10-12/hangs-r4/`. So two separate problems: the
+  downclock (fixed) and a rare lost GPU completion in the WSL path (open; seen on 3 models, split configs only).
 - **gpt-oss:120b gamedev answers changed across the 2026-10-12 reboot (OPEN).** Same binary, driver, prompt
   (5,051 tokens) and context, yet `cs_ws_client` and `cs_tick_interp` (PASS on 2026-10-09) now FAIL 0.94/0.92,
   `cs_port_webaudio` and `cs_port_qr` give different answers too. Within the boot it is deterministic (`cs_tick_interp`
