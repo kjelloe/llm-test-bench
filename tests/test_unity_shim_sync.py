@@ -35,7 +35,7 @@ def test_shim_copies_match_canonical():
 
 
 def test_gamedev_tasks_have_reference_solution():
-    for tid in TASK_GROUPS["gamedev"]:
+    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"]:
         task = TASK_MAP[tid]
         editable = Path(task.editable_files[0])
         reference = TASK_DATA_DIR / task.subdir / editable.with_name(editable.stem + ".reference" + editable.suffix)
@@ -49,6 +49,7 @@ JS_FIXTURES = [
     ("cs_port_heightmap", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
     ("cs_port_qr", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
     ("cs_port_helm", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
+    ("fe_three_geometry", "js/make-fixtures.mjs", "tests/FastengineTests/fixtures.json"),
 ]
 
 
@@ -89,7 +90,7 @@ def test_diag_key_covers_every_question_and_matches_the_reference(group):
 
 
 def test_every_test_weight_key_names_a_real_test():
-    for tid in TASK_GROUPS["gamedev"]:
+    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"]:
         task = TASK_MAP[tid]
         test_files = [f for f in task.context_files if "test" in Path(f).name.lower()]
         text = "".join((TASK_DATA_DIR / task.subdir / f).read_text(encoding="utf-8") for f in test_files)
@@ -100,7 +101,7 @@ def test_every_test_weight_key_names_a_real_test():
 def test_context_fits_prompt_plus_thinking_budget():
     # Longest measured gamedev prompt: ~9.3k tokens (cs_predict_reconcile, 2026-10-08). The node
     # tasks once ran at the 8192 default and cut thinking models off mid-file.
-    for tid in TASK_GROUPS["gamedev"]:
+    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"]:
         task = TASK_MAP[tid]
         assert task.num_ctx and task.num_ctx >= task.min_predict + 9500, tid
 

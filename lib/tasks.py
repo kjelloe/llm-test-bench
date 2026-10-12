@@ -1840,6 +1840,38 @@ MULTIHOP_CROSS_5 = Task(
     min_predict=8192,
 )
 
+# fastengine: the second build engine (C# .NET 9 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD),
+# from its specs/llm_evaluation_tasks.md (2026-10-12). Plain .NET, so no Unity constraints and no shim.
+FASTENGINE_CONSTRAINTS = (
+    " The project is plain .NET 9 (fastengine runs on Raylib-cs, not Unity): any C# up to the latest version "
+    "and the whole base class library are available, but no NuGet packages beyond the ones the .csproj lists."
+)
+
+FE_THREE_GEOMETRY = Task(
+    id="fe_three_geometry",
+    difficulty=3,
+    description=(
+        "Port three.js's BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry and TorusGeometry "
+        "(three's own sources, three 0.165.0, are in js/three/) to src/Fastengine/Geometries.cs, so that for "
+        "the same parameters every position, normal, uv and index matches what three builds: same vertex "
+        "order, same triangle order and winding, degenerate triangles included where three emits them. "
+        "Parameters and defaults are three's." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_three_geometry",
+    editable_files=["src/Fastengine/Geometries.cs"],
+    context_files=[
+        "js/three/BoxGeometry.js", "js/three/CylinderGeometry.js", "js/three/ConeGeometry.js",
+        "js/three/SphereGeometry.js", "js/three/TorusGeometry.js",
+        "tests/FastengineTests/GeometryTests.cs", "src/Fastengine/Fastengine.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=32768,
+    min_predict=16000,
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -1957,6 +1989,7 @@ BUILTIN_TASKS: list[Task] = [
     CONTEXT_256K,
     *GAMEDEV_DIAG_TASKS,
     *FASTENGINE_DIAG_TASKS,
+    FE_THREE_GEOMETRY,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2007,10 +2040,11 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
+    "fastengine": ["fe_three_geometry"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
 # totals and Skill levels) until their difficulty levels are validated across models.
-OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine_diag")
+OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine", "fastengine_diag")
 _OPT_IN_IDS = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
 DEFAULT_TASKS: list[Task] = [t for t in BUILTIN_TASKS if t.id not in _OPT_IN_IDS]
