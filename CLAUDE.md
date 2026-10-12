@@ -1610,7 +1610,9 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    (`cs_light_port` and `cs_predict_reconcile` PASS, `cs_mesh_winding` FAIL; gamedev now 14/27,
    `output/gamedev2-rerun-gptoss.json`). The split alone does not reproduce the hang on a fresh, quiet
    machine; the lead is concurrent GPU work (the Unity builder's Windows players) or driver state after long
-   uptime. Until that is settled, run multi-GPU benchmarks only on a quiet machine.
+   uptime. qwen3.8-flash-next's two re-ran clean too (`cs_port_helm` PASS 41/41 — second model ever; `cs_light_port`
+   NO_BLOCKS, stopped at 756 tokens without END_FILE, its known format habit; `gamedev2-rerun-flashnext.json`).
+   Until that is settled, run multi-GPU benchmarks only on a quiet machine.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17
