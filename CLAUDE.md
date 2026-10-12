@@ -1613,6 +1613,13 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    uptime. qwen3.8-flash-next's two re-ran clean too (`cs_port_helm` PASS 41/41 — second model ever; `cs_light_port`
    NO_BLOCKS, stopped at 756 tokens without END_FILE, its known format habit; `gamedev2-rerun-flashnext.json`).
    Until that is settled, run multi-GPU benchmarks only on a quiet machine.
+   **Speed cause found (P2, 2026-10-12): GPU power management.** During a multi-GPU layer-split decode each GPU
+   idles while the others compute, and the driver drops it to P8 (210 MHz core, 405 MHz memory) mid-answer
+   ("Idle" clock reason, no thermal/power slowdown), so decode decays within an answer: gpt-oss:20b 3-way 159 →
+   20 tok/s vs flat 197 on one GPU; qwen3-30b 3-way 128 → 18; 2-way mild; dense deepseek-r1:32b flat. Not
+   llama.cpp (graphs, KV type, master, pipeline parallelism all ruled out). Fix to test: "Prefer maximum
+   performance" in the NVIDIA Control Panel or `nvidia-smi -lgc` from an admin Windows shell. Multi-GPU speed
+   numbers on this rig are affected. Detail: `docs/gpt-oss-120b-speed-debug-plan.md`.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17
