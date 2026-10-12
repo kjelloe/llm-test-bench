@@ -1796,7 +1796,7 @@ swift-1.5-flash-next-moecache6g  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-0000
 # flags in benchmarks). Author: 50 tok/s at 256K on a 24 GB GPU (likely Blackwell; NVFP4 has no native compute on
 # the 4090/3090, so speed here is unknown). The pin 67a17c17c already has GGML_TYPE_NVFP4 (since 0d0bfcd4f,
 # 2026-08-13). qwen3.8:27b needs f16 KV for python_hashmap — check the canary first. Spot on one 4090.
-#qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:cdiamond/Qwen3.8-27B-iMatrix-NVFP4-MTP-GGUF
+qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:cdiamond/Qwen3.8-27B-iMatrix-NVFP4-MTP-GGUF
 
 # ── prism-ml/Ternary-Bonsai-2-27B-gguf (scout 2026-10-11, 4.5M downloads) — NOT RUN ─────────────────────────
 # Ternary (1.72-2.13 bpw) Qwen3.8-27B with a Hadamard rotation folded into the weights: PTQ1_0 5.95 GB,
