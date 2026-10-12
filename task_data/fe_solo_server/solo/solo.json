@@ -1,0 +1,6 @@
+{
+  "entry": "server/server.js",
+  "env": { "SAVE": "{state}/autosave.json", "MODE": "solo" },
+  "ready": "serving on http://localhost:[0-9]+",
+  "ws": "/ws"
+}

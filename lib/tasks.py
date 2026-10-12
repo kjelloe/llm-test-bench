@@ -1895,6 +1895,33 @@ FE_TTF_METRICS = Task(
     test_weights={"CmapGlyphIds": 2.0, "CssTextWidths": 2.0},
 )
 
+FE_SOLO_SERVER = Task(
+    id="fe_solo_server",
+    difficulty=4,
+    description=(
+        "Implement src/Fastengine/SoloServer.cs, single player for a native game client: it runs the game's own "
+        "Node server, unchanged, as described in solo/solo.json (the guard solo/guard.cjs and a stand-in server "
+        "in solo/game/ are provided), and must follow the class comment exactly: a free port the client picks, "
+        "the env with {state} replaced, Ready once with the socket URL when the server prints its ready line, the "
+        "server's stdout and stderr in the log, events only from Pump() on the caller's thread, and a Dispose that "
+        "lets the server save before anything is killed but never leaves it running." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_solo_server",
+    editable_files=["src/Fastengine/SoloServer.cs"],
+    context_files=[
+        "solo/solo.json", "solo/guard.cjs", "solo/game/server/server.js", "src/Fastengine/Log.cs",
+        "tests/FastengineTests/SoloServerTests.cs", "src/Fastengine/Fastengine.csproj",
+    ],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=240,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"Dispose_LetsTheServerSave": 2.0, "Dispose_KillsAServerThatWillNotStop": 2.0,
+                  "Ready_GivesTheSocketUrl": 2.0},
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2014,6 +2041,7 @@ BUILTIN_TASKS: list[Task] = [
     *FASTENGINE_DIAG_TASKS,
     FE_THREE_GEOMETRY,
     FE_TTF_METRICS,
+    FE_SOLO_SERVER,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2064,7 +2092,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
