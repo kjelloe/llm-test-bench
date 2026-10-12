@@ -1912,7 +1912,29 @@ font fallback on the reference box, F05 Smart App Control, G09 corrections bug o
 names one; lengths balanced (correct never longest or shortest).
 
 Not built (need a GL context, Windows, or more time): A02/A05 as code, B02 `Object3D` (next: fixtures from
-three), B03-B16 rendering, C01 pixel comparison, the Windows-interop items. No model results yet.
+three), B03-B16 rendering, C01 pixel comparison, the Windows-interop items.
+
+**Results, top six (2026-10-12, `output/fe-*.json`, `fesolo-*.json`; cc = does not compile, nb = no usable file):**
+
+| Model | geometry | ttf | solo | css | pass | partial | diag |
+|---|---|---|---|---|---|---|---|
+| gemma4:31b-qat | **P** | 0 (stack overflow) | 0.80 | cc | 1/4 | 0.45 | 9/10 |
+| qwen3.6:27b | **P** | cc | cc | cc | 1/4 | 0.25 | 9/10 |
+| qwen3.8-flash-next | cc | nb | nb | **P** | 1/4 | 0.25 | 10/10 |
+| gpt-oss:120b | cc | cc | 0.80 | cc | 0/4 | 0.20 | 9/10 |
+| equinox:31b | cc | 0.47 | cc | cc | 0/4 | 0.12 | 8/10 |
+| qwen3.8:27b | cc | 0.47 | cc | cc | 0/4 | 0.12 | 10/10 |
+
+- **Compile errors dominate even without Unity's limits** (15 of 24 code results): `List<>` without a using
+  (the csproj has implicit usings off), ambiguous `Math.Floor` (gpt-oss, flash-next), `MathF.Clamp` (does not
+  exist), a three-argument `Rgba` (the record needs four), `readonly` fields assigned, CS0136 scoping. The
+  compile-and-test loop point from the Unity tasks holds for plain .NET too.
+- `fe_solo_server`'s best answers (gemma4:31b-qat, gpt-oss:120b) fail exactly the lifecycle trap: Dispose kills
+  the server before it saves. flash-next lost two tasks to its missing-END_FILE habit.
+- **Task defect found and fixed:** the class comment did not say solo.json's entry is relative to `solo/game`; all
+  six started `solo/<entry>` and timed out waiting for Ready. Comment and description fixed, all six re-run, old
+  records in `output/stale/`.
+- Diag: 8-10/10, too easy at the top again; `smart_app_control` (3 of 6 wrong) and `font_fallback` discriminate.
 
 #### What NOT to do
 
