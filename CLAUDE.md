@@ -1620,6 +1620,8 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    llama.cpp (graphs, KV type, master, pipeline parallelism all ruled out). Fix to test: "Prefer maximum
    performance" in the NVIDIA Control Panel or `nvidia-smi -lgc` from an admin Windows shell. Multi-GPU speed
    numbers on this rig are affected. Detail: `docs/gpt-oss-120b-speed-debug-plan.md`.
+   **FIXED by locking the core clock** (`nvidia-smi -lgc 1500,2500`, admin Windows shell, lost on reboot):
+   gpt-oss:120b 3×24 GB on 4,000-token answers 9.8 → 69.5 tok/s (flat ~69 from 500 tokens), prefill 630 → 847.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17

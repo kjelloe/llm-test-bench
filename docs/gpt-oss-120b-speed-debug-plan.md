@@ -107,6 +107,13 @@ qwen3.8-flash-next's ~4.5 tok/s on 3 GPUs vs the documented 23 (finding 9).
 Whether the hangs (P1) are the same mechanism (a copy waiting on a GPU stuck changing P-state) is open; the
 hang captures happened during decode, when the clocks are low.
 
+**Fix CONFIRMED (2026-10-12 07:2x):** the user ran `nvidia-smi -lgc 1500,2500` in an admin Windows shell (core
+clock floor 1500 MHz, all three GPUs; resets on reboot or `nvidia-smi -rgc`). The GPUs then sit at P3 (memory
+5001 MHz) during decode instead of P8. gpt-oss:20b 3-way, tokens 300→2000: 20 → 111 tok/s. gpt-oss:120b, same
+10k prompt: 250 tokens 74 tok/s, 500 76, 1000 72, 2000 70.5, **4000 69.5 (was 9.8)**; marginal flat ~69 tok/s;
+prefill 630 → 847 tok/s. Memory clock is not locked (P3 = 5001 MHz, not the 9751/10501 maximum); `-lmc` might
+add more. To keep: re-apply after every reboot (or make it a Windows startup task).
+
 ## Hypotheses
 
 | | Hypothesis | Explains | Test |
