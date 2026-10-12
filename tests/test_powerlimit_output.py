@@ -45,3 +45,4 @@ def test_per_gpu_powershell_command_has_no_embedded_quote_bug():
     assert "powershell.exe -Command" in out
     assert "'-Command \"" not in out  # the exact bug pattern
     assert "'-NoExit','-Command','" in out  # array-based fix: no embedded quotes
+    assert "nvidia-smi -lgc 1500,2500" in out.split("powershell.exe -Command", 1)[1]  # clock lock in the one-liner

@@ -12,6 +12,10 @@ set -euo pipefail
 #   ./powerlimit.sh --per-gpu    per-model limits: RTX 4090→260W, RTX 3090→240W
 #   ./powerlimit.sh --per-gpu --reset  restore each GPU to its hardware maximum
 #
+# --per-gpu also locks the GPU core clock to 1500-2500 MHz (--reset unlocks it). Without the lock the
+# Windows driver drops each GPU of a multi-GPU layer split to P8 (210 MHz) mid-answer and long answers
+# decode ~7x slower (2026-10-12, docs/gpt-oss-120b-speed-debug-plan.md). Both reset on reboot.
+#
 # Config default:
 #   Export POWER_LIMIT=<watts> in your environment or .bashrc to change the
 #   default used by this script and by compare.sh.
@@ -29,6 +33,7 @@ set -euo pipefail
 
 LIMIT_4090=260   # W; hardware max is 450W
 LIMIT_3090=240   # W; hardware max is 350W
+CLOCK_LOCK="1500,2500"   # MHz core clock floor,ceiling for nvidia-smi -lgc
 
 # ── Parse args ────────────────────────────────────────────────────────────────
 QUERY_ONLY=false
@@ -113,17 +118,19 @@ if $PER_GPU; then
         echo "WSL2 detected — nvidia-smi power management is blocked inside WSL."
         echo "Run these commands in an elevated Windows terminal (Win+X → Terminal (Admin)):"
         echo ""
+        clock_cmd=$($PER_GPU_RESET && echo "nvidia-smi -rgc" || echo "nvidia-smi -lgc $CLOCK_LOCK")
         while IFS=':' read -r idx watts; do
             printf '  nvidia-smi -i %s -pl %s\n' "$idx" "$watts"
         done < <(_per_gpu_pairs)
+        printf '  %s\n' "$clock_cmd"
         echo ""
         echo "Or paste this single PowerShell command:"
         cmds=$(while IFS=':' read -r idx watts; do
             printf 'nvidia-smi -i %s -pl %s; ' "$idx" "$watts"
-        done < <(_per_gpu_pairs))
+        done < <(_per_gpu_pairs); printf '%s; ' "$clock_cmd")
         printf "  powershell.exe -Command \"Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-Command','%s'\"\n" "${cmds%; }"
         echo ""
-        echo "Note: power limits reset on reboot."
+        echo "Note: power limits and the clock lock reset on reboot."
         exit 0
     fi
 
@@ -133,6 +140,7 @@ if $PER_GPU; then
         echo "  GPU $idx: $name → ${watts}W"
         sudo nvidia-smi -i "$idx" -pl "$watts"
     done < <(_per_gpu_pairs)
+    if $PER_GPU_RESET; then sudo nvidia-smi -rgc; else sudo nvidia-smi -lgc "$CLOCK_LOCK"; fi
 
     echo ""
     _show_current
