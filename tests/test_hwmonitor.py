@@ -20,6 +20,7 @@ Sample = _MOD.Sample
 GpuSample = _MOD.GpuSample
 Thresholds = _MOD.Thresholds
 check_thresholds = _MOD.check_thresholds
+format_line = _MOD.format_line
 _eval = _MOD._eval
 probe_hotspot = _MOD.probe_hotspot
 
@@ -198,3 +199,11 @@ def test_monitor_exits_when_the_watched_pid_is_gone(tmp_path):
                          capture_output=True, text=True, timeout=30)
     assert out.returncode == 0
     assert "has exited" in (tmp_path / "hw.log").read_text()
+
+
+def test_format_line_shows_pstate_and_core_clock_when_known():
+    g = _gpu()
+    assert "MHz" not in format_line(_sample(gpus=[g]))
+    g.pstate, g.sm_mhz = "P8", 210
+    line = format_line(_sample(gpus=[g]))
+    assert line.split("GPU0[")[1].split("CPU")[0].rstrip().endswith("80% P8 210MHz")

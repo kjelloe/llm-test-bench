@@ -56,6 +56,8 @@ class GpuSample:
     vram_used_mb: int | None
     vram_total_mb: int | None
     util_pct: int | None
+    pstate: str | None = None    # e.g. "P3"; a split model's GPUs falling to P8 mid-decode is the 2026-10-12 slowdown
+    sm_mhz: int | None = None
 
 @dataclass
 class Sample:
@@ -92,8 +94,8 @@ def probe_hotspot() -> bool:
 
 
 def collect_gpu(hotspot: bool) -> list[GpuSample]:
-    base = "index,name,temperature.gpu,power.draw,power.limit,memory.used,memory.total,utilization.gpu"
-    hot  = "index,name,temperature.gpu,temperature.gpu.hotspot,power.draw,power.limit,memory.used,memory.total,utilization.gpu"
+    base = "index,name,temperature.gpu,power.draw,power.limit,memory.used,memory.total,utilization.gpu,pstate,clocks.sm"
+    hot  = "index,name,temperature.gpu,temperature.gpu.hotspot,power.draw,power.limit,memory.used,memory.total,utilization.gpu,pstate,clocks.sm"
     fields = hot if hotspot else base
     try:
         r = subprocess.run(
@@ -115,22 +117,22 @@ def collect_gpu(hotspot: bool) -> list[GpuSample]:
                 except (ValueError, TypeError): return None
 
             if hotspot:
-                if len(p) < 9: continue
+                if len(p) < 11: continue
                 gpus.append(GpuSample(
                     index=_i(p[0]) or 0, name=p[1],
                     temp_c=_f(p[2]), junction_c=_f(p[3]),
                     power_draw_w=_f(p[4]), power_limit_w=_f(p[5]),
                     vram_used_mb=_i(p[6]), vram_total_mb=_i(p[7]),
-                    util_pct=_i(p[8]),
+                    util_pct=_i(p[8]), pstate=p[9] or None, sm_mhz=_i(p[10]),
                 ))
             else:
-                if len(p) < 8: continue
+                if len(p) < 10: continue
                 gpus.append(GpuSample(
                     index=_i(p[0]) or 0, name=p[1],
                     temp_c=_f(p[2]), junction_c=None,
                     power_draw_w=_f(p[3]), power_limit_w=_f(p[4]),
                     vram_used_mb=_i(p[5]), vram_total_mb=_i(p[6]),
-                    util_pct=_i(p[7]),
+                    util_pct=_i(p[7]), pstate=p[8] or None, sm_mhz=_i(p[9]),
                 ))
         return gpus
     except Exception:
@@ -254,7 +256,8 @@ def format_line(s: Sample) -> str:
         vram = (f"{g.vram_used_mb/1024:.1f}/{g.vram_total_mb/1024:.1f}GB"
                 if g.vram_used_mb is not None and g.vram_total_mb else "?GB")
         util = f"{g.util_pct}%" if g.util_pct is not None else "?%"
-        parts.append(f"GPU{g.index}[{_short(g.name)}] {temp}{jct} {pwr} {vram} {util}")
+        clk  = f" {g.pstate or '?'} {g.sm_mhz}MHz" if g.sm_mhz is not None else ""
+        parts.append(f"GPU{g.index}[{_short(g.name)}] {temp}{jct} {pwr} {vram} {util}{clk}")
 
     cpu = f"{s.cpu_temp_c:.0f}°C" if s.cpu_temp_c is not None else "N/A"
     parts.append(f"CPU {cpu}")

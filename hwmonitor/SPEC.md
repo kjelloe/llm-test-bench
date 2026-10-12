@@ -32,8 +32,11 @@ To run standalone in a second terminal with custom thresholds:
 
 ## Output format
 
+Each GPU's power state and core clock end its block (added 2026-10-12): a split model's GPUs showing P8 /
+~210 MHz while busy is the multi-GPU downclock (lock clocks with `./powerlimit.sh --per-gpu`).
+
 ```
-14:32:01   GPU0[4090] 64°C 320W/450W 22.1/24.0GB 98%  GPU1[3090] 91°C 310W/350W 18.4/24.0GB 95%  CPU N/A  RAM 42.1/86.0GB
+14:32:01   GPU0[4090] 64°C 320W/450W 22.1/24.0GB 98% P2 2520MHz  GPU1[3090] 91°C 310W/350W 18.4/24.0GB 95% P2 1695MHz  CPU N/A  RAM 42.1/86.0GB
 WARN       14:32:03  GPU1[3090] junction temp °C 93 ≥ 90
 CRIT       14:32:05  GPU1[3090] junction temp °C 101 ≥ 100 — aborting bench.py PID 12345
            → SIGINT → PID 12345
