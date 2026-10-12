@@ -273,6 +273,8 @@ llama-server). The run continues; set `BENCH_ABORT_ON_BUSY=1` to abort instead (
 In multi-GPU mode it also warns when the GPU core clocks are not locked: under Windows/WSL the driver
 drops each GPU of a layer split to its idle clock mid-answer, and long answers then decode ~7× slower.
 Lock them once per boot from an admin Windows shell with `nvidia-smi -lgc 1500,2500` (undo: `-rgc`).
+During a run, bench stops a server whose GPUs have all been idle for 5 minutes with a request open (a hung
+split model; `BENCH_STALL_ABORT_S`, 0 = off) and records that task as `stalled`, which `statistics.sh` leaves out.
 
 ```bash
 ./run.sh --no-hwmonitor ...                                    # skip it for a quick single-task run
