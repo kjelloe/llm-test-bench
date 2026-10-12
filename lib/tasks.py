@@ -1267,6 +1267,34 @@ CS_INPUT_LAST_PRESSED = Task(
     test_weights={"LastPressedWins": 2.0, "FallsBack": 2.0, "LosingFocus_ReleasesEverything": 2.0},
 )
 
+CS_FAKE_NULL = Task(
+    id="cs_fake_null",
+    difficulty=4,
+    description=(
+        "The HUD in src/GameClient/Hud.cs draws a name label over every unit of a Unity client (the game's own "
+        "scripts are in src/GameClient/World.cs; do not edit them). It has three bugs the team hit in the real "
+        "port: after GameRoot.NewGame() every HUD element is gone; labels trail their units by a frame while the "
+        "camera follows a moving unit; and once a unit is destroyed its label is never removed and errors are "
+        "logged every frame. Fix Hud.cs so that each label sits at CameraRig.WorldToScreen of its unit's position "
+        "after both the units and the camera have moved this frame, the canvas survives a new game (new units "
+        "still get labels), and a destroyed unit's label is destroyed and dropped without any exception. This "
+        "project's shim models Unity's object lifetime: Object.Destroy takes effect at the end of the frame, a "
+        "destroyed object equals null only through UnityEngine.Object's == and bool conversion, and the engine "
+        "calls Start, Update and LateUpdate (honouring DefaultExecutionOrder) as PlayerLoop shows."
+        + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_fake_null",
+    editable_files=["src/GameClient/Hud.cs"],
+    context_files=["src/GameClient/World.cs", "tests/GameClientTests/HudTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"ThisFramesUnitAndCameraPositions": 2.0, "SurvivesANewGame": 2.0, "LosesItsLabel": 2.0},
+)
+
 CS_MESH_WINDING = Task(
     id="cs_mesh_winding",
     difficulty=3,
@@ -1881,6 +1909,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_WS_CLIENT,
     CS_PRIMITIVE_COMPOSE,
     CS_INPUT_LAST_PRESSED,
+    CS_FAKE_NULL,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -1958,7 +1987,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "python_fastapi_endpoint",
     ],
     "gamedev": [
-        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_port_helm", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
+        "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_port_helm", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_fake_null", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity", "crossplay_ws_roundtrip", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
     ],

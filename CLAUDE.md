@@ -423,7 +423,7 @@ Task groups (--task-group):
   context   6 context retrieval tasks (8k–256k)
   multihop  5 multihop + distractor tasks (2-hop forward/reverse, 1 distractor, chain_5, cross_5)
   spot      10-task candidate spot check (standard evaluation subset)
-  gamedev   27 Unity-client C#, Node-authority and build-pipeline bash tasks (L2-L5), from the user's
+  gamedev   28 Unity-client C#, Node-authority and build-pipeline bash tasks (L2-L5), from the user's
             multiplayer games (boombrawl, CarrierDominion, RetroMultiCiv, Fireline) and the Unity
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
@@ -539,7 +539,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (27) and gamedev_diag (21) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (28) and gamedev_diag (21) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1403,6 +1403,7 @@ credit): each is graded on many independent cases, so partial credit spreads. Al
 | `cs_port_helm` [G02] | 3 | CarrierDominion `client/main.js` helm functions extracted verbatim into `js/helm.mjs`; 40 seeded sessions | piloting resends an unchanged throttle, -25 astern only for the ship, server helm adopted only when not piloting, a lost selection stops piloting, auto-select. Each mutant fails a subset of the 40 sessions |
 | `cs_snapshot_coalesce` [C08/C11] | 3 | CarrierDominion `EntityManager.cs` (builder) | newest view per frame, skipped views' events once and in order, no parse for `"events":[]`, welcome discards the pending view, prefix (not substring) routing |
 | `crossplay_ws_roundtrip` [5c] | 5 | real Node authority `tests/server.mjs` (stdlib, own RFC 6455) + builder's `WebSocketConnection` | queued commands once and in order across a drop, acked never resent, token reclaim of the same seat, no reconnect after 4000 or Dispose. Reference 5/5 stable, ~8 s per run |
+| `cs_fake_null` [D10] (2026-10-12) | 4 | builder's HUD incident; its own shim adds Unity's object lifetime (`Object` ==/bool, `Destroy` at frame end, `MissingReferenceException`, `AddComponent`, `DefaultExecutionOrder`, a `PlayerLoop` test driver) and is exempt from the shim-copy guard so the other prompts don't change | canvas under the game root dies with `NewGame`; labels must run after `CameraRig` (order 100) in LateUpdate; `is null`/`?.` miss a destroyed unit; `Object` clashes with `System.Object`. Stub 1/6, reference 6/6, 7 of 8 mutants caught: removing from the Dictionary inside its foreach survives, because .NET 9 allows it while Unity's Mono throws. No model results yet |
 
 `gamedev_diag` (21 `diag_*` tasks, opt-in; 17 until 2026-10-12): multiple-choice versions of the builder's incident/"why?"
 items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the
@@ -1793,7 +1794,7 @@ in the current tasks it would close.
 1. **DONE 2026-10-09 (`crossplay_ws_roundtrip`).** **Node ↔ C# WebSocket round trip (L5)**: a real Node authority (stdlib only, its own minimal RFC 6455
    upgrade) and a dotnet client in one test: drop the connection, check reconnect, seat reclaim with the
    token and message order. Two runtimes per test command.
-2. **Fake null and lifecycle (L4)**: shim gains `Object.Destroy` (deferred to frame end), Unity's
+2. **DONE 2026-10-12 (`cs_fake_null`).** **Fake null and lifecycle (L4)**: shim gains `Object.Destroy` (deferred to frame end), Unity's
    overloaded `==` on destroyed objects, `?.`/`??` that bypass it, and a frame driver for
    Start/Update/LateUpdate order (camera after positions, labels after camera). From their D10 incident.
 3. **DONE 2026-10-09 (`cs_port_qr`).** **QR port parity (B06, L4)**: byte mode, level M, versions 1-10, module-for-module against the JS

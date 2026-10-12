@@ -18,11 +18,18 @@ def _cs_gamedev_tasks():
     return [TASK_MAP[t] for t in TASK_GROUPS["gamedev"] if (TASK_DATA_DIR / TASK_MAP[t].subdir / "shim").is_dir()]
 
 
+# Tasks whose UnityEngine.cs deliberately extends the canonical shim (kept out of the shared copy so the
+# other tasks' prompts do not change): cs_fake_null adds Unity's object lifetime (Object, Destroy, PlayerLoop).
+EXTENDED_SHIM = {"cs_fake_null"}
+
+
 def test_shim_copies_match_canonical():
     tasks = _cs_gamedev_tasks()
     assert tasks
     for task in tasks:
         for name in SHIM_FILES:
+            if task.id in EXTENDED_SHIM and name == "UnityEngine.cs":
+                continue
             copy = TASK_DATA_DIR / task.subdir / "shim" / "UnityShim" / name
             assert copy.read_bytes() == (CANONICAL / name).read_bytes(), f"{task.id}: {name} differs from _shared"
 
@@ -102,3 +109,13 @@ def test_diag_generator_reproduces_the_committed_files(tmp_path):
                 *[str(p.relative_to(root)) for p in sorted((root / "questions").glob("*.md"))],
                 *[str(p.relative_to(root)) for p in sorted((root / "answers").glob("*.txt"))]]:
         assert (tmp_path / rel).read_bytes() == (root / rel).read_bytes(), f"{rel} differs from make_diag.reference.py output"
+
+
+def test_extended_shims_keep_every_canonical_type():
+    canonical = (CANONICAL / "UnityEngine.cs").read_text()
+    import re
+    types = set(re.findall(r"public (?:static |sealed |readonly )*(?:class|struct|enum) (\w+)", canonical))
+    for tid in EXTENDED_SHIM:
+        text = (TASK_DATA_DIR / TASK_MAP[tid].subdir / "shim" / "UnityShim" / "UnityEngine.cs").read_text()
+        missing = types - set(re.findall(r"public (?:static |sealed |readonly )*(?:class|struct|enum) (\w+)", text))
+        assert not missing, f"{tid}: extended shim lost {sorted(missing)}"

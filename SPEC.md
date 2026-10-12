@@ -100,7 +100,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (87 total, difficulty L1–L6; 39 run by default; the 27 `gamedev` and 21 `gamedev_diag` tasks are opt-in):
+- Built-in tasks (88 total, difficulty L1–L6; 39 run by default; the 28 `gamedev` and 21 `gamedev_diag` tasks are opt-in):
 
   **Game-dev tasks (23, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),
