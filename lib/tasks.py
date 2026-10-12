@@ -1821,6 +1821,8 @@ _GAMEDEV_DIAG = [
     ("timeout_ignored", 3), ("pkill_self", 2), ("headless_segfault", 4), ("linux_receive_stall", 5),
     ("float_rubberband", 1), ("wire_codes", 2), ("css_border_tint", 2),
     ("wsl_mirrored_localhost", 2), ("mirror_audit", 4),
+    # added 2026-10-12, harder (the first 17 were too easy at the top: four models scored 17/17)
+    ("winding_not_lighting", 5), ("shader_linear_output", 5), ("css_alpha_linear", 4), ("white_flash_shot", 3),
 ]
 
 

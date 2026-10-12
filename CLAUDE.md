@@ -413,7 +413,7 @@ task_data/
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
-  gamedev_diag/           17 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
+  gamedev_diag/           21 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
                           tests/answer_key.json (salted sha256 of the letter), answers.reference.json (human key)
 Task groups (--task-group):
   coding    19 coding tasks (L1–L5)
@@ -427,7 +427,7 @@ Task groups (--task-group):
             multiplayer games (boombrawl, CarrierDominion, RetroMultiCiv, Fireline) and the Unity
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
-  gamedev_diag  17 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
+  gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -531,7 +531,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (27) and gamedev_diag (17) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (27) and gamedev_diag (21) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1396,7 +1396,7 @@ credit): each is graded on many independent cases, so partial credit spreads. Al
 | `cs_snapshot_coalesce` [C08/C11] | 3 | CarrierDominion `EntityManager.cs` (builder) | newest view per frame, skipped views' events once and in order, no parse for `"events":[]`, welcome discards the pending view, prefix (not substring) routing |
 | `crossplay_ws_roundtrip` [5c] | 5 | real Node authority `tests/server.mjs` (stdlib, own RFC 6455) + builder's `WebSocketConnection` | queued commands once and in order across a drop, acked never resent, token reclaim of the same seat, no reconnect after 4000 or Dispose. Reference 5/5 stable, ~8 s per run |
 
-`gamedev_diag` (17 `diag_*` tasks, opt-in): multiple-choice versions of the builder's incident/"why?"
+`gamedev_diag` (21 `diag_*` tasks, opt-in; 17 until 2026-10-12): multiple-choice versions of the builder's incident/"why?"
 items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the
 model writes one letter. Options are written as "cause; fix" of similar length: the first draft had the
 correct option longest in 15/15 (and 14/15 after a rewrite), which a length heuristic would exploit;
@@ -1426,7 +1426,7 @@ The builder's agentic/process items (M, H02/B10, I01/I02) are out of scope for n
   affect them: their only `timeout` runs inside the player container (GNU 9.4).
 - All 15 multiple-choice keys confirmed. Applied: the `timeout_ignored` stem now says GNU timeout; added
   `diag_wsl_mirrored_localhost` (J03, which they verified with `networkingMode=mirrored`; NAT mode is
-  unverified, so the stem names mirrored mode) and `diag_mirror_audit` (E11) → **17 questions**. Don't
+  unverified, so the stem names mirrored mode) and `diag_mirror_audit` (E11) → **17 questions**. **2026-10-12: +4 harder ones** (the 17 were too easy at the top: four models scored 17/17): `diag_winding_not_lighting` (E05), `diag_shader_linear_output` (E06), `diag_css_alpha_linear` (F11), `diag_white_flash_shot` (L03); the four that everyone answers were kept, so older 17-question scores stay comparable on those 17. No model results on the new four yet. Don't
   make an IL2CPP variant of `linux_receive_stall`: under IL2CPP even blocking reads stalled, cause unknown.
   The generator with the key is `task_data/gamedev_diag/make_diag.reference.py` (regenerates the
   questions, stubs and hashed key byte for byte).

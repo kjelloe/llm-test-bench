@@ -66,5 +66,21 @@
  "mirror_audit": {
   "answer": "D",
   "source": "unityworks specs/llm_evaluation_tasks.md E11"
+ },
+ "winding_not_lighting": {
+  "answer": "C",
+  "source": "unityworks specs/llm_evaluation_tasks.md E05"
+ },
+ "shader_linear_output": {
+  "answer": "E",
+  "source": "unityworks specs/llm_evaluation_tasks.md E06"
+ },
+ "css_alpha_linear": {
+  "answer": "B",
+  "source": "unityworks specs/llm_evaluation_tasks.md F11"
+ },
+ "white_flash_shot": {
+  "answer": "D",
+  "source": "unityworks specs/llm_evaluation_tasks.md L03"
  }
 }

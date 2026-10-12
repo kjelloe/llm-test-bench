@@ -15,5 +15,9 @@
  "wire_codes": "4bc4cf4e16901f98bf712d8e25979ec8817f74f0b6d3f2f70a492cc19f0a0003",
  "css_border_tint": "0dcc63b5104fe0db295f5eb5de973c81611ecf8d2736802ea1ac1354ed7f3e86",
  "wsl_mirrored_localhost": "9f97aedf07ab6aaa35ae9df069e64fdae236c1be5a4ca8bd9685edc92afac527",
- "mirror_audit": "ec710e0e91e5bb79c7121a2264c2d2118047faa90b7b5f42432cc5780d136fbd"
+ "mirror_audit": "ec710e0e91e5bb79c7121a2264c2d2118047faa90b7b5f42432cc5780d136fbd",
+ "winding_not_lighting": "629834332d430c64cbfb8f12a64798e933d8f87d1594db6b9c9385c9c7a255a5",
+ "shader_linear_output": "d8d8273497437b05252cdb949c6b4094ba8932942d31e1b3ad5f65ebb37da595",
+ "css_alpha_linear": "a2025779873f4cfb9f35ff0cf7a59448bfae5112cb2fd24e54090ad96805fec6",
+ "white_flash_shot": "cae948e6cce2f2381d4ca07ebf1bf5aeb3ddf8ac4e101a1be963a25d529b9358"
 }
