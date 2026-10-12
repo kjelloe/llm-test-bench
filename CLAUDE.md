@@ -514,6 +514,14 @@ trusting as-is.
   low**, including the gamedev wall times of gpt-oss:120b and qwen3.8-flash-next and the 2026-10-09 pin-vs-master
   comparison; pass/fail results are unaffected (clocks don't change the arithmetic). Single-GPU runs are not
   affected (the GPU never idles long enough).
+  **Re-measured with the lock (R3, 2026-10-12, `output/r3-*.json`):** spot set gpt-oss:120b **10/10 at 80.4 tok/s**
+  (documented 56.1; includes the first-ever gpt-oss `node_paratrooper` PASS, 40/40 in 87 s, repeats queued),
+  qwen3.5-122b:a10b 9/10 at 40.8 (37.4), laguna-s-2.1:118b-iq4 9/10 at 64.3 (54.3); qwen3.8-flash-next 3-task
+  control on the pin 27.2/27.6/31.2 and on master `8a1a9b512` 28.4/28.7/29.8 tok/s (no gap); Swift-1.5 27.4/29.7/
+  33.4 (no faster than its base, as recorded). **So the "speed regression after the pin" (bisected to
+  `c61b98b875` on 2026-10-03) does not reproduce with locked clocks: those bisect steps measured a downclocking
+  rig, so treat that root cause as unconfirmed.** The `node_paratrooper` capability loss at `bed0a8566` is a
+  separate (numerics) question and still stands.
 - **Models split across GPUs can hang (2026-10-09/10)**: a request stalls with the GPUs idle and the server
   spin-waiting on a scheduler host→device copy, until the client timeout — seen on gpt-oss:120b (3×24 GB)
   and deepseek-r1:32b (2×24 GB), both long-answer models. Treat multi-GPU TOOL_ERRORs as suspect, not as
