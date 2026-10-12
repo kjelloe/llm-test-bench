@@ -119,10 +119,11 @@ def unity_reason(code: str, message: str) -> str | None:
     return None
 
 
-def build_errors(output: str) -> dict | None:
+def build_errors(output: str, unity_rules: bool = True) -> dict | None:
     """{errors, codes, unity} for a run whose build failed, or None if it reported no C# errors.
     errors: distinct errors; codes: code -> distinct count; unity: the distinct Unity-constraint
-    errors as "CSxxxx: message" (at most 10)."""
+    errors as "CSxxxx: message" (at most 10), always empty when unity_rules is False (a project
+    that is plain .NET, like the fastengine tasks, has no Unity constraints to break)."""
     seen: dict[str, tuple[str, str]] = {}
     for where, code, message in _CS_ERROR.findall(output):
         seen.setdefault(f"{where.strip()} {code} {message}", (code, message))
@@ -132,7 +133,7 @@ def build_errors(output: str) -> dict | None:
     unity: list[str] = []
     for code, message in seen.values():
         codes[code] = codes.get(code, 0) + 1
-        if unity_reason(code, message) and f"{code}: {message}" not in unity:
+        if unity_rules and unity_reason(code, message) and f"{code}: {message}" not in unity:
             unity.append(f"{code}: {message}")
     return {"errors": len(seen), "codes": dict(sorted(codes.items())), "unity": unity[:10]}
 

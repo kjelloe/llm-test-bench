@@ -167,7 +167,9 @@ def run_tests_scored(task: Task, workdir: Path) -> tuple[bool, str, dict | None,
     """run_tests plus partial credit and build errors, both read from the full output before
     truncation drops the per-test lines (dotnet test output is often ~100 KB)."""
     rc, out = _run_full(task.test_cmd, workdir, task.test_timeout)
-    return rc == 0, _truncate(out), score_output(out, task.test_weights), build_errors(out) if rc != 0 else None
+    # fastengine tasks (fe_*) are plain .NET 9, so a missing namespace there is a mistake, not a Unity rule
+    unity_rules = not task.id.startswith("fe_")
+    return rc == 0, _truncate(out), score_output(out, task.test_weights), build_errors(out, unity_rules) if rc != 0 else None
 
 
 # ---------------------------------------------------------------------------

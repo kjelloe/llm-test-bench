@@ -1,5 +1,5 @@
 """lib/test_results.py: per-test outcome parsing and weighted partial credit."""
-from lib.test_results import parse_counts, parse_outcomes, record_score, score_output, weight_of
+from lib.test_results import build_errors, parse_counts, parse_outcomes, record_score, score_output, weight_of
 
 XUNIT = """\
   Restored /tmp/x/src/GameClient/GameClient.csproj (in 47 ms).
@@ -126,3 +126,11 @@ def test_record_build_falls_back_to_the_stored_output():
     assert record_build({"tests_pass": True, "error_detail": DOTNET_BUILD_FAIL}) is None
     assert record_build({"tests_pass": False, "error_kind": "TESTS_STILL_FAIL", "error_detail": DOTNET_BUILD_FAIL})["errors"] == 3
     assert record_build({"tests_pass": False, "build_errors": None, "error_detail": DOTNET_BUILD_FAIL}) is None
+
+
+def test_build_errors_without_unity_rules_still_counts_but_flags_nothing():
+    out = ("Foo.cs(3,7): error CS0234: The type or namespace name 'Json' does not exist in the namespace "
+           "'System.Text' (are you missing an assembly reference?) [x.csproj]\n")
+    assert build_errors(out)["unity"]
+    plain = build_errors(out, unity_rules=False)
+    assert plain["errors"] == 1 and plain["codes"] == {"CS0234": 1} and plain["unity"] == []
