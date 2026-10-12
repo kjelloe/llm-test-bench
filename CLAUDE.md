@@ -356,7 +356,8 @@ lib/
   hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
   gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
   load_check.py           Pre-flight warning (run.sh, every run) for competing work: processes >50% of a core, GPUs
-                          already holding >3 GB VRAM; BENCH_ABORT_ON_BUSY=1 aborts instead (added 2026-10-09 after a
+                          already holding >3 GB VRAM, and (multi-GPU mode, --multi-gpu) GPU core clocks not locked
+                          (2026-10-12, see Known Issues); BENCH_ABORT_ON_BUSY=1 aborts instead (added 2026-10-09 after a
                           stuck Unity smoke test pegged a core for 70+ min; the teammate's Unity builder shares this rig)
   power_check.py          Pre-flight GPU power-limit safety check for 3+ GPU runs; evaluate() unit-tested in tests/test_power_check.py; called by run.sh (added 2026-08-29)
   history.py              Run history writer and header printer
@@ -380,7 +381,7 @@ tests/
   test_llama_server_flags.py  _bool_flag unit tests (--load-mode none vs legacy --no-mmap, by binary --help support)
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
-  test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored)
+  test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored) + clock_warnings()
   test_export_task.py         --export-task bundling unit tests; also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
@@ -499,10 +500,20 @@ trusting as-is.
   common tools` finds nothing; the DEPRECATED warnings came earlier, with the `--load-mode` PR. Only `no_mmap` is translated; no
   model file uses `mlock` or `direct_io`. Still to do on a rebuild: `llm-service-provider`'s
   `presets/models.ini` passes `no-mmap = true` straight to the router (comment added there).
+- **Multi-GPU decode needs the GPU core clocks locked (2026-10-12).** Under Windows/WSL the driver drops each GPU of
+  a layer split to P8 (210 MHz core, 405 MHz memory) mid-answer, because each one idles while the others compute;
+  long answers then decode ~7× slower (gpt-oss:120b 3×24 GB, 4,000 tokens: 9.8 vs 69.5 tok/s; qwen3.8-flash-next
+  4-10 vs 27). Run `nvidia-smi -lgc 1500,2500` from an admin Windows shell once per boot (undo `-rgc`); `run.sh`
+  warns in multi-GPU mode when it isn't set. **Every multi-GPU speed number on this rig recorded without it is
+  low**, including the gamedev wall times of gpt-oss:120b and qwen3.8-flash-next and the 2026-10-09 pin-vs-master
+  comparison; pass/fail results are unaffected (clocks don't change the arithmetic). Single-GPU runs are not
+  affected (the GPU never idles long enough).
 - **Models split across GPUs can hang (2026-10-09/10)**: a request stalls with the GPUs idle and the server
   spin-waiting on a scheduler host→device copy, until the client timeout — seen on gpt-oss:120b (3×24 GB)
   and deepseek-r1:32b (2×24 GB), both long-answer models. Treat multi-GPU TOOL_ERRORs as suspect, not as
-  capability failures. Plan: `docs/gpt-oss-120b-speed-debug-plan.md`.
+  capability failures. Plan: `docs/gpt-oss-120b-speed-debug-plan.md`. Since the 2026-10-12 reboot: 0 hangs in 34 split
+  answers plus the five previously hung tasks; all nine captured hangs happened while the clocks were dropping, so
+  the clock lock may cure this too (not yet confirmed).
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
@@ -1551,7 +1562,7 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    Unity Editor on Linux (~10 GB), a Personal licence activated once, and `Unity -batchmode
    -runTests` with the Unity Test Framework against a project template that copies these sources
    in. Worth it only if gamedev results start driving real Unity decisions.
-5. **gpt-oss:120b decodes at ~9-12 tok/s on gamedev tasks** (3×24 GB, all on GPU) vs ~70 on
+5. **SOLVED 2026-10-12 (GPU clocks dropping to P8 mid-decode, see Known Issues).** **gpt-oss:120b decodes at ~9-12 tok/s on gamedev tasks** (3×24 GB, all on GPU) vs ~70 on
    short-prompt coding tasks. The harness's tok/s is decode-only (llama-server's
    `predicted_per_second`), so this is not prompt processing. It matches this model's historical
    ~10 tok/s on `csv_nordic_property` (also a ~6k-token prompt), so it is a reproducible long-prompt
@@ -1748,8 +1759,8 @@ The four separating tasks on the five single-GPU leaders, and the combined score
 
 | Model | config | gamedev | non-hung pass / partial | hung | diag |
 |---|---|---|---|---|---|
-| gpt-oss:120b | 3×24 GB | all 27 | 12/24 / 0.71 | mesh_winding, light_port, predict_reconcile | 15/17 |
-| qwen3.8-flash-next | 3×24 GB | the 18 newer | 6/16 / 0.58 | port_helm, light_port | 17/17 |
+| gpt-oss:120b | 3×24 GB | all 27 | 12/24 / 0.71; with the 2026-10-12 re-runs 14/27 (light_port, predict_reconcile PASS; mesh_winding FAIL) | (all three re-ran clean) | 15/17 |
+| qwen3.8-flash-next | 3×24 GB | the 18 newer | 6/16 / 0.58; with the 2026-10-12 re-runs 7/18 (port_helm PASS 41/41; light_port NO_BLOCKS) | (both re-ran clean) | 17/17 |
 
 Same task sets, mean partial credit (pass count): on flash-next's 16 completed tasks — gemma4:31b-qat
 0.76 (8), gpt-oss:120b 0.73 (10), equinox:31b 0.68 (7), qwen3.6:27b 0.61 (8), qwen3.8:27b 0.58 (8),

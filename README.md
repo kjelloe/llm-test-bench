@@ -269,6 +269,9 @@ power draw, and RAM, and aborts the benchmark (SIGINT → SIGTERM) if a critical
 Before launching, `run.sh` also warns about other work competing for the machine — any process above
 half a CPU core, or a GPU already holding more than 3 GB of VRAM (a stuck test, a leftover
 llama-server). The run continues; set `BENCH_ABORT_ON_BUSY=1` to abort instead (`lib/load_check.py`).
+In multi-GPU mode it also warns when the GPU core clocks are not locked: under Windows/WSL the driver
+drops each GPU of a layer split to its idle clock mid-answer, and long answers then decode ~7× slower.
+Lock them once per boot from an admin Windows shell with `nvidia-smi -lgc 1500,2500` (undo: `-rgc`).
 
 ```bash
 ./run.sh --no-hwmonitor ...                                    # skip it for a quick single-task run

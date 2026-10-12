@@ -237,4 +237,5 @@ the pinned build in `~/GIT/llama.cpp/build` stays the production binary. Evaluat
 | `LLAMA_MODELS_DIR not set` | `export LLAMA_MODELS_DIR=/path/to/gguf` |
 | `GGUF file not found` | Run `./fetch-hf.sh` for live repos; copy manually for GONE repos (see table above) |
 | OpenSSL warning during cmake | Harmless — HTTPS is disabled but local serving is unaffected |
+| Multi-GPU decode starts fast, then decays within an answer (gpt-oss:120b 3×24 GB: ~70 → ~8 tok/s); GPUs at P8/210 MHz while 30-45% busy | The Windows driver downclocks each GPU of a layer split as idle. Lock the core clock once per boot from an admin Windows shell: `nvidia-smi -lgc 1500,2500` (undo `-rgc`). `run.sh` warns when it isn't set. Not a llama.cpp issue (graphs, KV type, master, pipeline parallelism ruled out, 2026-10-12) |
 | `llama-server exited unexpectedly` with wrong model running | `_kill_port_occupant` fix is in `lib/llama_server_client.py` — stale server on the harness port (8099 since 2026-10-08, was 8080) is evicted automatically since 2026-06-07 |

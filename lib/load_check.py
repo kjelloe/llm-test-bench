@@ -7,6 +7,11 @@ leftover llama-server or vLLM holding VRAM skews or breaks GPU runs.
 
 `run.sh` calls this before launching bench.py. It prints warnings and exits 0, or exits 1 when
 BENCH_ABORT_ON_BUSY=1 and something was found.
+
+With --multi-gpu it also checks that the GPU core clocks are locked (2026-10-12): in a layer split each
+GPU idles while the others compute, so the Windows driver drops it to P8 (210 MHz) mid-answer and decode
+decays ~7x (gpt-oss:120b 3x24 GB: 69.5 -> 9.8 tok/s on 4,000-token answers). The fix is
+`nvidia-smi -lgc 1500,2500` from an admin Windows shell, which resets on every reboot.
 """
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ import time
 
 CPU_THRESHOLD_PCT = 50.0      # of one core, measured over SAMPLE_WINDOW_S
 VRAM_THRESHOLD_MIB = 3000     # Windows/WSL keeps ~1.5 GB on the display GPU at idle
+CLOCK_FLOOR_MHZ = 1000        # idle core clock: ~210 MHz unlocked, 1500 with `nvidia-smi -lgc 1500,2500`
 SAMPLE_WINDOW_S = 2.0
 
 
@@ -37,6 +43,15 @@ def evaluate(
         if used >= vram_threshold:
             warnings.append(f"GPU{index}: {used} MiB VRAM already in use before the run")
     return warnings
+
+
+def clock_warnings(clocks: list[tuple[int, int]], floor: int = CLOCK_FLOOR_MHZ) -> list[str]:
+    """clocks: (index, current core MHz). Low clocks before a multi-GPU run mean they are not locked."""
+    low = [f"GPU{i} {mhz} MHz" for i, mhz in clocks if mhz < floor]
+    if not low:
+        return []
+    return [f"GPU clocks not locked ({', '.join(low)}): multi-GPU decode will downclock mid-answer; "
+            f"run `nvidia-smi -lgc 1500,2500` in an admin Windows shell (lost on reboot)"]
 
 
 def _cpu_ticks() -> dict[int, int]:
@@ -79,18 +94,19 @@ def _processes(window_s: float = SAMPLE_WINDOW_S) -> list[tuple[int, float, str]
     return rows
 
 
-def _gpus() -> list[tuple[int, int]]:
+def _gpus() -> list[tuple[int, int, int]]:
+    """(index, MiB used, current core MHz) per GPU."""
     try:
         out = subprocess.run(
-            ["nvidia-smi", "--query-gpu=index,memory.used", "--format=csv,noheader,nounits"],
+            ["nvidia-smi", "--query-gpu=index,memory.used,clocks.sm", "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=15,
         ).stdout
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return []
     gpus = []
     for line in out.splitlines():
-        idx, used = (x.strip() for x in line.split(","))
-        gpus.append((int(idx), int(used)))
+        idx, used, mhz = (x.strip() for x in line.split(","))
+        gpus.append((int(idx), int(used), int(mhz)))
     return gpus
 
 
@@ -107,7 +123,10 @@ def _ancestors(pid: int) -> set[int]:
 
 
 def main() -> int:
-    warnings = evaluate(_processes(), _gpus(), _ancestors(os.getpid()))
+    gpus = _gpus()
+    warnings = evaluate(_processes(), [(i, used) for i, used, _ in gpus], _ancestors(os.getpid()))
+    if "--multi-gpu" in sys.argv[1:]:
+        warnings += clock_warnings([(i, mhz) for i, _, mhz in gpus])
     if not warnings:
         return 0
     print("[load-check] other work is running and may skew or break this benchmark:", file=sys.stderr)

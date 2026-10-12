@@ -375,7 +375,7 @@ Confirmed scores from `models/24gb.txt` (single RTX 4090) and `models/2x24gb.txt
 | Coding-perfect, 48 GB | `qwen2.5-coder:32b-q4` | llama-server | \*36.5 | 19/19 PERFECT; context silently capped 32k |
 | Best 48 GB all-round | `qwen3.6:27b` | llama-server | \*40.2 | 32/33 Skill L5; 256k at 26 tok/s |
 | Speed + quality, 48 GB | `noctrex-qwen3.6:35b` | llama-server | \*121 | 32/33; 256k at 75 tok/s |
-| Large review (3×24 GB) | `gpt-oss:120b` | llama-server | ~90 est. | GPU-resident at 72 GB; was 17 tok/s RAM-bound |
+| Large review (3×24 GB) | `gpt-oss:120b` | llama-server | ~70 (measured 2026-10-12, 10k prompt, up to 4k-token answers) | GPU-resident at 72 GB; was 17 tok/s RAM-bound. Under WSL lock the GPU core clocks first (`nvidia-smi -lgc 1500,2500`, admin Windows shell), or long answers fall to ~10 tok/s |
 | vLLM AWQ, single GPU | `cpatonn/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit` | vLLM tp=1 | \*28.5 | 18/19; python_hashmap FAIL (base gap); 4× slower than llama-server |
 | vLLM GGUF (patched, pre-plugin, 2026-07), single GPU | Q4_K_M via `--quantization gguf` (patched vLLM) | vLLM tp=1 | \*31.2 | 15/16 eligible; ctx≤8192 on single 24 GB; ~10% faster than AWQ |
 

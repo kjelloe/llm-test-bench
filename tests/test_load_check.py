@@ -1,5 +1,5 @@
 """lib/load_check.evaluate(): which competing work gets flagged before a benchmark run."""
-from lib.load_check import evaluate
+from lib.load_check import clock_warnings, evaluate
 
 
 def test_flags_cpu_hogs_and_busy_gpus_only():
@@ -25,3 +25,11 @@ def test_sorted_by_cpu_descending():
     procs = [(1, 60.0, "a"), (2, 250.0, "b")]
     w = evaluate(procs, [], ignore_pids=set())
     assert [line.split()[2] for line in w] == ["2", "1"]
+
+
+def test_clock_warning_when_any_gpu_is_not_locked():
+    assert clock_warnings([(0, 1500), (1, 1500), (2, 1500)]) == []
+    w = clock_warnings([(0, 1500), (1, 210), (2, 405)])
+    assert len(w) == 1
+    assert "GPU1 210 MHz" in w[0] and "GPU2 405 MHz" in w[0] and "GPU0" not in w[0]
+    assert "nvidia-smi -lgc" in w[0]

@@ -49,7 +49,7 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
-  load_check.py           Pre-flight competing-work check (CPU hogs, busy GPUs) for every run; evaluate() is pure and unit-tested (tests/test_load_check.py), main() samples /proc CPU ticks over 2 s (ps %CPU is a lifetime average and misses fresh bursts) plus nvidia-smi, ignoring its own process tree; added 2026-10-09
+  load_check.py           Pre-flight competing-work check (CPU hogs, busy GPUs; with --multi-gpu also unlocked GPU core clocks, 2026-10-12) for every run; evaluate() is pure and unit-tested (tests/test_load_check.py), main() samples /proc CPU ticks over 2 s (ps %CPU is a lifetime average and misses fresh bursts) plus nvidia-smi, ignoring its own process tree; added 2026-10-09
   power_check.py          Pre-flight GPU power-limit safety check for multi-GPU runs; evaluate() is the pure decision function (unit-tested in tests/test_power_check.py), main() wraps it with an nvidia-smi query for run.sh to call; added 2026-08-29
 hwmonitor/
   hwmonitor.py            Standalone hardware watchdog: polls GPU (nvidia-smi), CPU (/sys/class/thermal), RAM (/proc/meminfo) at configurable interval; WARN/CRIT on threshold breach; on CRIT sends SIGINT → SIGTERM to bench.py; run.sh starts this automatically in --quiet mode (WARN/CRIT to stderr, data to log only)
@@ -76,7 +76,7 @@ tests/
   test_llama_server_client.py Unit tests for llama_server_client._parse_body (reasoning_content fallback, timings, content/thinking split) plus the foreign-port-occupant startup guard and the LLAMA_SERVER_PORT env override (reloads the module with the env var set, not just a monkeypatched constant)
   test_llama_server_flags.py  Unit tests for _bool_flag — emits --load-mode none vs legacy --no-mmap depending on whether the target binary's --help lists --load-mode
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
-  test_load_check.py          Unit tests for lib/load_check.evaluate() — CPU-hog and busy-GPU flagging, own process tree ignored, ordering
+  test_load_check.py          Unit tests for lib/load_check.evaluate() — CPU-hog and busy-GPU flagging, own process tree ignored, ordering; clock_warnings() for unlocked GPU clocks
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
   test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP)
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)
