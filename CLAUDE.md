@@ -1585,6 +1585,11 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    **Update 2026-10-09:** a same-hour pin control gave 5.2 tok/s (vs 10.6 the day before) while
    master `8a1a9b512` gave 14.4 on the same output — the pin's speed is itself unstable here, so treat
    every single flash-next speed number on this rig as provisional until repeated.
+   **SOLVED 2026-10-12: the same GPU power-state drop as finding 10.** With the core clock locked
+   (`nvidia-smi -lgc 1500,2500`) the pinned `67a17c17c` gives python_hashmap 27.2, python_expr_eval 27.6,
+   python_safe_div 31.2 tok/s (all PASS, `output/flashnext-clocklock.json`), above the documented 23. The
+   GGML_CUDA_GRAPHS hypothesis is moot, and the 2026-10-09 "pin vs master" speed comparison was measured
+   with the GPUs downclocking, so it says nothing about the binaries.
 10. **gpt-oss:120b hangs intermittently on 3×24 GB, and its long answers run at ~10 tok/s — OPEN,
    2026-10-09.** During the multi-GPU phase two of the first 13 gamedev tasks hung: the GPUs went idle
    (~20 W, 0% on GPU1/2) while llama-server's main thread spin-waited in `cudaStreamSynchronize` inside
