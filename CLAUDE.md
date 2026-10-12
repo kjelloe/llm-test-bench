@@ -354,7 +354,9 @@ lib/
   parsing.py              BEGIN_FILE/END_FILE parser + allow-list validator
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   hw_snapshot.py          GPU/CPU/RAM snapshot (nvidia-smi, /proc/cpuinfo, /proc/meminfo)
-  gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util)
+  gpu_monitor.py          pynvml GPU telemetry; multi-GPU aware (sums VRAM across all handles, takes max of util);
+                          stall watchdog (2026-10-12): every GPU idle 300 s with a request open → bench stops the
+                          server, records "stalled" (statistics leave it out); BENCH_STALL_ABORT_S=0 disables
   load_check.py           Pre-flight warning (run.sh, every run) for competing work: processes >50% of a core, GPUs
                           already holding >3 GB VRAM, and (multi-GPU mode, --multi-gpu) GPU core clocks not locked
                           (2026-10-12, see Known Issues); BENCH_ABORT_ON_BUSY=1 aborts instead (added 2026-10-09 after a
@@ -534,6 +536,9 @@ trusting as-is.
   spinning in libcuda + `clock_gettime`, waiting on a completion that never comes). gdb was refused (ptrace_scope is
   back to 1 after the reboot). Capture in `output/debug-2026-10-12/hangs-r4/`. So two separate problems: the
   downclock (fixed) and a rare lost GPU completion in the WSL path (open; seen on 3 models, split configs only).
+  **Since 2026-10-12 a hang costs 5 minutes, not 40:** bench's stall watchdog stops the server when every GPU has been
+  idle for 300 s with a request open (`BENCH_STALL_ABORT_S`, 0 = off); the record gets `stalled: true` and
+  `statistics.sh` leaves it out. hangwatch (180 s) still captures first.
 - **gpt-oss:120b gamedev answers changed across the 2026-10-12 reboot (OPEN).** Same binary, driver, prompt
   (5,051 tokens) and context, yet `cs_ws_client` and `cs_tick_interp` (PASS on 2026-10-09) now FAIL 0.94/0.92,
   `cs_port_webaudio` and `cs_port_qr` give different answers too. Within the boot it is deterministic (`cs_tick_interp`

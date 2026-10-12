@@ -9,7 +9,7 @@ import threading
 import time
 from pathlib import Path
 
-from lib.gpu_monitor import get_gpu_snapshot, launch_peak_poller, wait_for_gpu_idle
+from lib.gpu_monitor import get_gpu_snapshot, launch_peak_poller, launch_stall_watch, wait_for_gpu_idle
 from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
@@ -63,6 +63,8 @@ def run_one(
     gpu_after: dict | None = None,
     backend: str = "ollama",
     is_thinking: bool = False,
+    on_stall=None,
+    stall_s: float = 0,
 ) -> dict:
     record: dict = {
         "model": model,
@@ -118,6 +120,7 @@ def run_one(
         vram_pre = get_gpu_snapshot()   # before prompt eval — weights loaded, no KV cache yet
         stop_poll = threading.Event()
         poll_thread, snap_holder = launch_peak_poller(stop_poll)
+        stall_thread, stalled = launch_stall_watch(stop_poll, stall_s, on_stall) if on_stall else (None, [])
         try:
             # Use "After your reasoning..." only when we're actually asking the model to think.
             # is_thinking=True with think=False (llama-server no --think) → thinking is disabled
@@ -157,6 +160,11 @@ def run_one(
             else:
                 record["error_kind"] = "TOOL_ERROR"
             record["error_detail"] = err_str[:500]
+            if stalled:
+                # the watchdog stopped the server: a hang, not a capability result (statistics leave it out)
+                record["stalled"] = True
+                record["error_detail"] = (f"STALLED: every GPU idle for {stalled[0]:.0f}s with the request open; "
+                                          f"server stopped by the watchdog. " + record["error_detail"])[:500]
             record["gpu_snapshots"] = {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None}
             return record
         vram_post = get_gpu_snapshot()  # after full inference — weights + KV cache (prompt + output)
@@ -706,6 +714,8 @@ def main() -> None:
                 gpu_after=gpu_after,
                 backend=args.backend,
                 is_thinking=_is_thinking,
+                on_stall=llama_manager.stop if llama_manager is not None else None,
+                stall_s=float(os.environ.get("BENCH_STALL_ABORT_S", "300")),
             )
             if llama_manager is not None:
                 cfg = model_configs.get(model)

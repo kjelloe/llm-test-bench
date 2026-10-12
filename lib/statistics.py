@@ -48,18 +48,19 @@ except Exception:
 # ── Loaders ───────────────────────────────────────────────────────────────────
 
 def load_file(path: Path) -> tuple[list[dict], dict | None]:
-    """Return (results, hardware) from a result JSON.  Raises on bad format."""
+    """Return (results, hardware) from a result JSON.  Raises on bad format. Records the stall watchdog
+    aborted (a hung server, not a model result) are left out."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(data, list):
         # old flat-list format; must contain result records
         if not data or "task" not in data[0]:
             raise ValueError("not a results file")
-        return data, None
+        return [r for r in data if not r.get("stalled")], None
     if isinstance(data, dict) and "results" in data:
         results = data["results"]
         if not results or "task" not in results[0]:
             raise ValueError("not a results file")
-        return results, data.get("hardware")
+        return [r for r in results if not r.get("stalled")], data.get("hardware")
     raise ValueError("unrecognised file format")
 
 

@@ -124,3 +124,46 @@ def launch_peak_poller(stop_event: threading.Event, poll_interval: float = 0.5) 
     t = threading.Thread(target=_worker, daemon=True)
     t.start()
     return t, holder
+
+
+class StallClock:
+    """Tracks how long every GPU has been idle. A request that is open while all GPUs sit at (near) zero
+    utilisation for stall_s seconds is a hang: on the split-model WSL hang (2026-10-09..12) the server spins
+    on a GPU completion that never comes, the GPUs read exactly 0%, and the request would otherwise wait for
+    its full client timeout (40 min). Models that page experts through the CPU still keep a GPU above zero."""
+
+    def __init__(self, stall_s: float, idle_util: int = 1):
+        self.stall_s = stall_s
+        self.idle_util = idle_util
+        self._idle_since: float | None = None
+
+    def update(self, now: float, max_util: int | None) -> bool:
+        """Feed one sample (the busiest GPU's utilisation, None when unreadable); True once stalled."""
+        if max_util is None or max_util > self.idle_util:
+            self._idle_since = None
+            return False
+        if self._idle_since is None:
+            self._idle_since = now
+        return now - self._idle_since >= self.stall_s
+
+
+def launch_stall_watch(stop_event: threading.Event, stall_s: float, on_stall,
+                       poll_interval: float = 5.0) -> tuple[threading.Thread, list]:
+    """Call on_stall() once if all GPUs stay idle for stall_s while stop_event is unset.
+    Returns (thread, fired) where fired[0] is the idle duration when it fired."""
+    fired: list = []
+
+    def _worker() -> None:
+        if not _available or stall_s <= 0:
+            return
+        clock = StallClock(stall_s)
+        while not stop_event.wait(timeout=poll_interval):
+            snap = get_gpu_snapshot()
+            if clock.update(time.monotonic(), snap["gpu_util"] if snap else None):
+                fired.append(stall_s)
+                on_stall()
+                return
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    return t, fired

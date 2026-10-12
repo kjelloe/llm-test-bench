@@ -49,6 +49,9 @@ lib/                      Python support modules (imported by bench.py and shell
   reporting.py            Comparison table (paginated), failure detail, JSON writer
   gpu_monitor.py          pynvml GPU telemetry: snapshots, peak poller, idle-wait with VRAM drain check
   hw_snapshot.py          Hardware snapshot: GPU list (nvidia-smi — name, VRAM, compute_cap, driver, thermal, power), CPU, RAM, platform, CUDA, Ollama/llama-server versions, storage type
+  gpu_monitor.py (stall)  StallClock + launch_stall_watch: during each request, if every GPU stays at ≤1% for 300 s
+                          (BENCH_STALL_ABORT_S) bench stops the server; the record is marked "stalled" and
+                          statistics.load_file drops it (tests/test_stall_watch.py; added 2026-10-12)
   load_check.py           Pre-flight competing-work check (CPU hogs, busy GPUs; with --multi-gpu also unlocked GPU core clocks, 2026-10-12) for every run; evaluate() is pure and unit-tested (tests/test_load_check.py), main() samples /proc CPU ticks over 2 s (ps %CPU is a lifetime average and misses fresh bursts) plus nvidia-smi, ignoring its own process tree; added 2026-10-09
   power_check.py          Pre-flight GPU power-limit safety check for multi-GPU runs; evaluate() is the pure decision function (unit-tested in tests/test_power_check.py), main() wraps it with an nvidia-smi query for run.sh to call; added 2026-08-29
 hwmonitor/
