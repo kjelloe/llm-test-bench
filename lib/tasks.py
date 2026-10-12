@@ -1922,6 +1922,30 @@ FE_SOLO_SERVER = Task(
                   "Ready_GivesTheSocketUrl": 2.0},
 )
 
+FE_CSS_COLOR = Task(
+    id="fe_css_color",
+    difficulty=2,
+    description=(
+        "src/Fastengine/CssColor.cs is the native client's first CSS colour parser (from fastengine's Painter). "
+        "The HUD now ports styles it cannot read. Make Parse accept what a browser accepts and return what a "
+        "browser computes (CSS Color 4): #rgb, #rgba, #rrggbb, #rrggbbaa; rgb()/rgba() in the comma syntax and "
+        "the space syntax with an optional '/ alpha', numbers or percentages, out-of-range values clamped; "
+        "hsl()/hsla() with deg, turn or rad hues; the named colours the tests use and 'transparent'; "
+        "case-insensitive. Channels and alpha×255 round to the nearest integer, halves up. Return null for "
+        "anything a browser rejects. The HUD calls Parse every frame, so each distinct string must be parsed "
+        "only once (ParseCount counts real parses)." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_css_color",
+    editable_files=["src/Fastengine/CssColor.cs"],
+    context_files=["tests/FastengineTests/CssColorTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2042,6 +2066,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_THREE_GEOMETRY,
     FE_TTF_METRICS,
     FE_SOLO_SERVER,
+    FE_CSS_COLOR,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2092,7 +2117,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
