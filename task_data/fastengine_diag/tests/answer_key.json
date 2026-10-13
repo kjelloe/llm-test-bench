@@ -12,5 +12,9 @@
  "winexe_lcid": "03bc8d360d69282ad981a852dc31323db19970f226f3c76fc51d6260d5550e82",
  "rid_lockfile_dirty": "bce20cc173b2dacb5c3123e2dba8802d086bcdd6cacc5a521436120089d3a9c2",
  "worktree_selflink": "1fd61195a901a4b304c5d5ea798575818ec43daa66642359a0fb2789f1bca76c",
- "height_queries": "84d1b19a6e7d53b4cffacb856ffbd2d2494dcb310fe315709975e5df76d358e8"
+ "height_queries": "84d1b19a6e7d53b4cffacb856ffbd2d2494dcb310fe315709975e5df76d358e8",
+ "aot_cross_publish": "b84b5ac309bef70ec4eb0a6e9eedc220ff50fad5ec35660a4b43c72c39b11d82",
+ "quality_tier": "88d4488f1e513c895d752ab38922d8d15dcbf293aad2a2019f85a0d19681db96",
+ "clean_windows_gap": "60f4e57c7952751fcc5f211037a466cc03379774948ff7a908b1d5b3bf0f6538",
+ "clone_unchecked": "4839b681faec2c5221aba520213fcbd13cc2db376a08d11ce879bb255803b8ca"
 }

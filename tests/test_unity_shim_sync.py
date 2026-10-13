@@ -50,6 +50,8 @@ JS_FIXTURES = [
     ("cs_port_qr", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
     ("cs_port_helm", "js/make-fixtures.mjs", "tests/GameClientTests/fixtures.json"),
     ("fe_three_geometry", "js/make-fixtures.mjs", "tests/FastengineTests/fixtures.json"),
+    ("fe_render_order", "js/make-fixtures.reference.mjs", "tests/FastengineTests/fixtures.json"),
+    ("fe_object3d", "js/make-fixtures.reference.mjs", "tests/FastengineTests/fixtures.json"),
 ]
 
 

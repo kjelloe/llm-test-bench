@@ -54,5 +54,21 @@
  "height_queries": {
   "answer": "A",
   "source": "fastengine specs/llm_evaluation_tasks.md D11"
+ },
+ "aot_cross_publish": {
+  "answer": "B",
+  "source": "fastengine specs/llm_evaluation_tasks.md A04"
+ },
+ "quality_tier": {
+  "answer": "E",
+  "source": "fastengine specs/llm_evaluation_tasks.md A07"
+ },
+ "clean_windows_gap": {
+  "answer": "A",
+  "source": "fastengine specs/llm_evaluation_tasks.md F04"
+ },
+ "clone_unchecked": {
+  "answer": "D",
+  "source": "fastengine specs/llm_evaluation_tasks.md H07"
  }
 }

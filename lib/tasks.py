@@ -2012,6 +2012,69 @@ FE_FLEX_WRAP = Task(
     min_predict=12000,
 )
 
+FE_RENDER_ORDER = Task(
+    id="fe_render_order",
+    difficulty=3,
+    description=(
+        "Implement RenderOrder.Build in src/Fastengine/RenderOrder.cs (fastengine spec B06) so that the native "
+        "renderer draws in exactly the order three r162's WebGLRenderer does: which list each visible mesh goes to, "
+        "and the order inside each list. The current code is a first port that sorts transparent meshes by distance "
+        "from the camera. three's own code is in js/three-r162-renderlist.js; matrices are column-major as three "
+        "stores them." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_render_order",
+    editable_files=["src/Fastengine/RenderOrder.cs"],
+    context_files=["js/three-r162-renderlist.js", "tests/FastengineTests/RenderOrderTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
+FE_OBJECT3D = Task(
+    id="fe_object3d",
+    difficulty=3,
+    description=(
+        "Finish src/Fastengine/Object3D.cs (fastengine spec B02): WorldMatrix must be three r162's matrixWorld (the "
+        "parent's world matrix composed with the local one) and LookAt must turn the object exactly as three's "
+        "Object3D.lookAt does, cameras included, inside rotated parents, and in the degenerate cases three handles. "
+        "Rotation stays an Euler XYZ. three's own code is in js/three-r162-object3d.js; the comments in the file say "
+        "how System.Numerics matrices map to three's." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_object3d",
+    editable_files=["src/Fastengine/Object3D.cs"],
+    context_files=["js/three-r162-object3d.js", "tests/FastengineTests/Object3DTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
+FE_ICO_WRITER = Task(
+    id="fe_ico_writer",
+    difficulty=2,
+    description=(
+        "Implement src/Fastengine/IconFile.cs (fastengine spec A14): the game's icon is drawn in code and must become "
+        "the exe's icon in a win-x64 build cross-built on Linux, with no image library. Png encodes RGBA pixels, Ico "
+        "packs PNGs into an .ico, FindPngs finds them again inside a built exe. The comments in the file are the "
+        "specification." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_ico_writer",
+    editable_files=["src/Fastengine/IconFile.cs"],
+    context_files=["tests/FastengineTests/IconFileTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"Ico_HeaderAndEntries": 2.0, "FindPngs_InsideAnExe": 2.0},
+)
+
 FE_BASH_PACKAGE = Task(
     id="fe_bash_package",
     difficulty=2,
@@ -2076,6 +2139,7 @@ _FASTENGINE_DIAG = [
     ("force_push_clones", 4), ("systemd_expand", 4),
     # added 2026-10-13 from the grown spec
     ("winexe_lcid", 2), ("rid_lockfile_dirty", 2), ("worktree_selflink", 1), ("height_queries", 2),
+    ("aot_cross_publish", 2), ("quality_tier", 2), ("clean_windows_gap", 3), ("clone_unchecked", 2),
 ]
 FASTENGINE_DIAG_TASKS: list[Task] = [
     _diag_task(q, d, "fastengine_diag", "fdiag", "porting a browser game to a C# engine on Raylib-cs (fastengine)")
@@ -2160,6 +2224,9 @@ BUILTIN_TASKS: list[Task] = [
     FE_SOCKET_URLS,
     FE_FLEX_WRAP,
     FE_BASH_PACKAGE,
+    FE_RENDER_ORDER,
+    FE_OBJECT3D,
+    FE_ICO_WRITER,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2210,7 +2277,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
