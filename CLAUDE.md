@@ -1843,6 +1843,11 @@ Same task sets, mean partial credit (pass count): on flash-next's 16 completed t
 0.76 (8), gpt-oss:120b 0.73 (10), equinox:31b 0.68 (7), qwen3.6:27b 0.61 (8), qwen3.8:27b 0.58 (8),
 qwen3.8-flash-next 0.58 (6), gemma4:26b-qat 0.37 (3); on gpt-oss's 24 — gemma4:31b-qat 0.77 (12),
 gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
+- **laguna-s-2.1:118b-iq4, the 19 newer tasks (3×24 GB, 2026-10-13, `output/t5-laguna-gamedev19.json`):** 6/19, partial
+  0.56 (on the same 19: gemma4:31b-qat 11/19 0.70, gpt-oss:120b 9/19 0.73, equinox:31b 0.63, qwen3.6:27b 0.59,
+  flash-next 0.57). With the first nine: **8/28, partial ~0.56, the weakest of the 3×24 GB models.** Passes `cs_ws_client`
+  (only gpt-oss also does) but fails `bash_kill_by_port` (everyone else passes) and does not compile five C# tasks. Not a
+  gamedev candidate; its config stays as is (the 256k recipe is in its table row).
 - **gemma4:31b-qat split across 2×24 GB (night 2026-10-13):** gamedev 16/28 (partial 0.74), diag 19/21, no stall;
   two tasks flip to PASS against single GPU (`cs_snapshot_coalesce`, `cs_main_thread_dispatch`) — the cross-GPU
   sensitivity, in the helping direction. The single-GPU leader holds when split.
