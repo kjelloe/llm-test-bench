@@ -1970,6 +1970,26 @@ FE_VIEW_MATH = Task(
     test_weights={"Transition_TurnedAroundMidway": 2.0, "Mouse_MapsBack": 2.0},
 )
 
+FE_SOCKET_URLS = Task(
+    id="fe_socket_urls",
+    difficulty=2,
+    description=(
+        "Implement src/Fastengine/SocketUrls.cs (fastengine spec E10): SocketUrl.With sets or removes one query "
+        "parameter of a socket URL, and UpdateNotice turns a server's 'protocol N required' refusal into the "
+        "download page on the same origin and the line shown to the player. The comments in the file are the "
+        "specification; Log is in src/Fastengine/Log.cs." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_socket_urls",
+    editable_files=["src/Fastengine/SocketUrls.cs"],
+    context_files=["src/Fastengine/Log.cs", "tests/FastengineTests/SocketUrlsTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2092,6 +2112,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_SOLO_SERVER,
     FE_CSS_COLOR,
     FE_VIEW_MATH,
+    FE_SOCKET_URLS,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2142,7 +2163,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
