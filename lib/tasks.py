@@ -1948,6 +1948,28 @@ FE_CSS_COLOR = Task(
     min_predict=12000,
 )
 
+FE_VIEW_MATH = Task(
+    id="fe_view_math",
+    difficulty=3,
+    description=(
+        "Implement src/Fastengine/ViewMath.cs for a native port of a browser game (fastengine spec A12 and D10): "
+        "fit the fixed-size render into a window of any size (letterboxed, centred), map a window point back to "
+        "the game's CSS pixels through the same rectangle and the UI scale, step through the browser's zoom levels "
+        "from whatever zoom is saved, CSS's 'ease' timing function exactly, and a CSS opacity transition that runs "
+        "and reverses like the browser's. The comments in the file are the specification." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_view_math",
+    editable_files=["src/Fastengine/ViewMath.cs"],
+    context_files=["tests/FastengineTests/ViewMathTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"Transition_TurnedAroundMidway": 2.0, "Mouse_MapsBack": 2.0},
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2069,6 +2091,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_TTF_METRICS,
     FE_SOLO_SERVER,
     FE_CSS_COLOR,
+    FE_VIEW_MATH,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2119,7 +2142,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
