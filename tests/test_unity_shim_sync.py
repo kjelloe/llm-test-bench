@@ -136,3 +136,16 @@ def test_python_generated_fixtures_match_their_generator(task_dir, script, fixtu
     root = TASK_DATA_DIR / task_dir
     out = subprocess.run([sys.executable, script], cwd=root, capture_output=True, text=True, timeout=60, check=True)
     assert out.stdout == (root / fixture).read_text(encoding="utf-8")
+
+
+# fe_flex_wrap's fixtures are Chromium's layout (Playwright); regenerate them where Playwright is installed.
+_PLAYWRIGHT = Path.home() / "GIT" / "boombrawl" / "node_modules" / "playwright-core"
+
+
+@pytest.mark.skipif(shutil.which("node") is None or not _PLAYWRIGHT.is_dir(), reason="node or Playwright not available")
+def test_flex_fixtures_match_chromium():
+    import os
+    root = TASK_DATA_DIR / "fe_flex_wrap"
+    out = subprocess.run(["node", "tools/make_fixtures.reference.mjs"], cwd=root, capture_output=True, text=True,
+                         timeout=180, check=True, env={**os.environ, "PLAYWRIGHT": str(_PLAYWRIGHT)})
+    assert out.stdout == (root / "tests" / "FastengineTests" / "fixtures.json").read_text(encoding="utf-8")

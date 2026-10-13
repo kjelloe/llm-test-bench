@@ -1990,6 +1990,28 @@ FE_SOCKET_URLS = Task(
     min_predict=12000,
 )
 
+FE_FLEX_WRAP = Task(
+    id="fe_flex_wrap",
+    difficulty=3,
+    description=(
+        "src/Fastengine/FlexLayout.cs ports a CSS flex row that wraps (display: flex; flex-wrap: wrap) for the "
+        "native HUD, and it is wrong (fastengine spec D10: the top bar's second line sat too high). Make WrapRow "
+        "lay items out exactly as a browser does for flex-direction: row, flex-wrap: wrap, row-gap, column-gap, "
+        "justify-content (flex-start, center, space-between, flex-end) and align-items (flex-start, center, "
+        "flex-end), with items that neither grow nor shrink. The tests compare with Chromium's own layout."
+        + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_flex_wrap",
+    editable_files=["src/Fastengine/FlexLayout.cs"],
+    context_files=["tests/FastengineTests/FlexLayoutTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2113,6 +2135,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_CSS_COLOR,
     FE_VIEW_MATH,
     FE_SOCKET_URLS,
+    FE_FLEX_WRAP,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2163,7 +2186,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
