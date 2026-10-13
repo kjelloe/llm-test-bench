@@ -42,7 +42,7 @@ fetch.sh                  Pulls models by set name, set file path, or bare model
 lib/                      Python support modules (imported by bench.py and shell wrappers)
   tasks.py                Task dataclass, built-in task definitions, prompt builder, subprocess helpers
   ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
-  llama_server_client.py  LlamaServerManager (spawn/restart/stop llama-server process) + chat() for OpenAI-compatible /v1/chat/completions; same interface as ollama_client
+  llama_server_client.py  LlamaServerManager (spawn/restart/stop llama-server process) + chat() for OpenAI-compatible /v1/chat/completions; same interface as ollama_client; a daemon thread drains the server's stderr (last 200 lines kept for crash messages) so a long session never blocks on a full pipe
   vllm_client.py          VLLMManager (spawn/restart/stop vllm serve process) + chat() for OpenAI-compatible /v1/chat/completions; mirrors LlamaServerManager interface exactly
   model_config.py         Parses models/*.txt 3-field format (ollama-name gguf-file params) into ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation

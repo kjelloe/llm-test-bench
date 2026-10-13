@@ -209,3 +209,18 @@ def test_bench_cache_prompt_0_sends_cache_prompt_false(monkeypatch):
     monkeypatch.setenv("BENCH_CACHE_PROMPT", "0")
     lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
     assert "cache_prompt" not in sent[0] and sent[1]["cache_prompt"] is False
+
+
+def test_stderr_is_drained_so_a_chatty_server_never_blocks():
+    """llama-server logs every request to stderr; an unread pipe (64 KB) froze one mid-request (2026-10-14)."""
+    import subprocess
+    import sys
+    import time
+    from lib.llama_server_client import _drain
+    script = "import sys\nfor i in range(20000): sys.stderr.write(f'line {i} ' + 'x' * 40 + '\\n')\nprint('done')"
+    proc = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    tail = _drain(proc.stderr)
+    out = proc.stdout.read()
+    assert proc.wait(timeout=20) == 0 and out.strip() == b"done"
+    time.sleep(0.2)
+    assert len(tail) == 200 and tail[-1].startswith("line 19999")

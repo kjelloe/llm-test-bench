@@ -130,9 +130,11 @@ class StallClock:
     """Tracks how long every GPU has been idle. A request that is open while all GPUs sit at (near) zero
     utilisation for stall_s seconds is a hang: on the split-model WSL hang (2026-10-09..12) the server spins
     on a GPU completion that never comes, the GPUs read exactly 0%, and the request would otherwise wait for
-    its full client timeout (40 min). Models that page experts through the CPU still keep a GPU above zero."""
+    its full client timeout (40 min). Models that page experts through the CPU still keep a GPU above zero.
+    idle_util is 5, not 1: under WSL the display GPU idles at 1-3% (Windows' compositor), which kept a 0-1 threshold
+    from ever firing on a blocked single-GPU server (2026-10-14)."""
 
-    def __init__(self, stall_s: float, idle_util: int = 1):
+    def __init__(self, stall_s: float, idle_util: int = 5):
         self.stall_s = stall_s
         self.idle_util = idle_util
         self._idle_since: float | None = None

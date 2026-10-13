@@ -12,6 +12,13 @@ def test_fires_only_after_continuous_idle():
     assert c.update(300, 0)
 
 
+def test_the_display_gpus_background_load_counts_as_idle():
+    c = StallClock(300)
+    assert not c.update(0, 2)          # WSL: the Windows compositor keeps the display GPU at 1-3%
+    assert c.update(300, 3)
+    assert not StallClock(300).update(0, 6) and not c.update(301, 6)
+
+
 def test_any_activity_or_unreadable_sample_resets():
     c = StallClock(300)
     c.update(0, 0)

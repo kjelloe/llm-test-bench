@@ -548,6 +548,15 @@ trusting as-is.
   `c61b98b875` on 2026-10-03) does not reproduce with locked clocks: those bisect steps measured a downclocking
   rig, so treat that root cause as unconfirmed.** The `node_paratrooper` capability loss at `bed0a8566` is a
   separate (numerics) question and still stands.
+- **FIXED 2026-10-14: a long llama-server session could freeze on its own stderr.** The harness captured llama-server's
+  stderr through a pipe nobody read; llama-server logs every request, so after a few dozen requests in one session the
+  64 KB pipe filled and the server blocked mid-request on the write (`anon_pipe_write` in its thread wchan, 0% CPU, GPUs
+  idle) until the client timeout. Seen 64 tasks into qwen3.8:27b-nvfp4-mix's 71-task gamedev+fastengine session, rescued
+  by draining the pipe from outside. Now a thread drains it and keeps the last 200 lines for crash messages
+  (`_drain`, `tests/test_llama_server_client.py`). The stall watchdog had not fired either: it counted a GPU as idle only
+  at ≤1%, and under WSL the display GPU idles at 1-3%, so its threshold is now 5%. This is NOT the multi-GPU hang below
+  (that one spins in libcuda at full CPU); a TOOL_ERROR timeout late in a long single-model session before 2026-10-14
+  may have been this one.
 - **Models split across GPUs can hang (2026-10-09/10)**: a request stalls with the GPUs idle and the server
   spin-waiting on a scheduler host→device copy, until the client timeout — seen on gpt-oss:120b (3×24 GB)
   and deepseek-r1:32b (2×24 GB), both long-answer models. Treat multi-GPU TOOL_ERRORs as suspect, not as

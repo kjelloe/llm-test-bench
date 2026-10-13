@@ -12,7 +12,9 @@ import json
 import os
 import socket
 import subprocess
+import threading
 import time
+from collections import deque
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -100,6 +102,7 @@ class LlamaServerManager:
         self._proc: subprocess.Popen | None = None
         self._current_model: str | None = None
         self._current_ctx: int = 0
+        self._stderr_tail: deque[str] = deque(maxlen=200)
 
     @property
     def base_url(self) -> str:
@@ -205,6 +208,8 @@ class LlamaServerManager:
         # debug=False: capture stderr so it can be shown on crash/timeout.
         stderr = None if self.debug else subprocess.PIPE
         self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr, env=env)
+        if stderr is not None:
+            self._stderr_tail = _drain(self._proc.stderr)
         self._current_model = cfg.ollama_name
         self._current_ctx = ctx_size
         try:
@@ -219,13 +224,11 @@ class LlamaServerManager:
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
                 msg = "llama-server exited unexpectedly during startup"
-                if not self.debug and self._proc.stderr:
-                    try:
-                        stderr_out = self._proc.stderr.read().decode(errors="replace").strip()
-                        if stderr_out:
-                            msg += f"\n--- stderr ---\n{stderr_out[-2000:]}"
-                    except Exception:
-                        pass
+                if not self.debug:
+                    time.sleep(0.2)  # let the drain thread take the last lines
+                    stderr_out = "".join(self._stderr_tail).strip()
+                    if stderr_out:
+                        msg += f"\n--- stderr ---\n{stderr_out[-2000:]}"
                 raise RuntimeError(msg)
             try:
                 with urllib.request.urlopen(_HEALTH_URL, timeout=2) as r:
@@ -237,6 +240,20 @@ class LlamaServerManager:
             time.sleep(1)
         self.stop()
         raise TimeoutError(f"llama-server did not become ready within {timeout}s")
+
+
+def _drain(pipe) -> deque[str]:
+    """Read the server's stderr for as long as it is open, keeping the last 200 lines for crash messages.
+    Without a reader the pipe fills (64 KB) after a few dozen requests' logging and llama-server blocks
+    mid-request on the write, idle, until the client times out (2026-10-14, 64 tasks into one session)."""
+    tail: deque[str] = deque(maxlen=200)
+
+    def _worker() -> None:
+        for line in iter(pipe.readline, b""):
+            tail.append(line.decode(errors="replace"))
+
+    threading.Thread(target=_worker, daemon=True, name="llama-server-stderr").start()
+    return tail
 
 
 def _parse_body(body: dict, elapsed_ns: int) -> OllamaResponse:
