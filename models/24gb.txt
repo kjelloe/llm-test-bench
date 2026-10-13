@@ -212,6 +212,10 @@ gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 #   architecture capability — treat "first model to pass node_paratrooper" as file-specific, not
 #   architecture-general. See next-runs.md for the full 3-way comparison table.
 qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-27B-GGUF
+# qwen3.8:27b-nvfp4-mix: cdiamond mixed NVFP4 (+Q5/Q6 sensitive tensors) build of the same model, 17.1 GB, MTP
+#   embedded (no spec flags). Full default set 2026-10-13: 36/39 at 43.9 tok/s (only node_paratrooper fails; 128k/256k
+#   skipped by max_ctx 65536). 1 GB smaller than the Q4_K_M at the same speed. f16 KV for python_hashmap.
+qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:cdiamond/Qwen3.8-27B-iMatrix-NVFP4-MTP-GGUF
 # UPDATE (2026-08-23, investigation CLOSED): extended tiebreaker to 6 independent builds × 3 GPU
 #   configs. THIS file remains the only one that passes on both single-GPU and 3-GPU — bartowski's
 #   Q5_K_M (qwen3.8:27b-q5km, candidates.txt) is the only other clean PASS anywhere but is
