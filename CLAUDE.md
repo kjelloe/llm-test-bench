@@ -557,6 +557,8 @@ trusting as-is.
   same question alone ×3 (plus `diag_emission_keyword`) on a fresh server passed in 1-17 s; the hang came 34 requests
   into a long run, so it looks tied to server/driver state over time, not to a prompt. Step 3 (same model, all 49
   requests again, memory locked too, gdb armed): no hang. About one hang in ~150 split-model requests today.
+  **Night 2026-10-13: 186 more split requests (deepseek-r1:32b 2-way + flash-next, both diag sets ×3) with no hang**,
+  plus ~250 more in the other night runs: the hang is rare now (1 in ~600 since the reboot).
 - **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
   ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
   was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
@@ -1232,6 +1234,9 @@ When asked to implement features:
     (`next-runs.md`). **Repeat under the corrected load gate: pin 4.2, master 3.9 tok/s** — the 14.4
     was an outlier. Both binaries sit at ~4-5 tok/s with large run-to-run variance; MoE cache 6/12 GB
     was slower still (3.7/3.4). **No case for moving the pin.**
+    **Night 2026-10-13, clocks locked, master `cbe28bb3cb`:** python_hashmap 29.7, expr_eval 28.9, safe_div 32.8 tok/s
+    (~10% faster than the pin) but **node_paratrooper FAILS 3/3, identically (39/40, 4,463 tokens)** while the pin PASSES
+    (40/40) the same night. The speed gap was the downclock; the capability loss is real. **Keep the pin.**
   - **DeepSeek-V4.1-Flash via the JigSawPT `dsv41-porte` llama.cpp fork** (552B total params,
     40 layers, 384 routed experts, 189 GiB engram tables; `~/GIT/deepseek-v41-flash-on-5090`
     technical report + `~/GIT/llama.cpp-dsv41` fork clone, tested 2026-10-06/07): a third,
@@ -1687,6 +1692,11 @@ from `cs_coord_convert` so both coordinate conventions stay covered.
    P0 at ~49 W (4090) and ~115-122 W (3090s), ~290 W of idle heat, so lock memory for benchmark sessions only and
    undo with `nvidia-smi -rmc` afterwards (the core lock costs little at idle). qwen3.8-flash-next (`--fit`, 3 GPUs) gains
    less: 28.3 → 33.1 tok/s over all of gamedev + diag (45 min instead of 93), identical answers (step 3).
+   **Full default profiles with the core lock (night 2026-10-13, `output/night-full-*.json`):** gpt-oss:120b 36/39 at
+   80.9 tok/s in 15 min (fails csv_nordic_property and — inside the full run — node_paratrooper, which passes 3/3 on its
+   own and in the spot set: request order matters for that one, via the server's prompt cache); qwen3.5-122b:a10b
+   36/39 at 43.5 (fails node_paratrooper, multihop_chain_5); laguna-s-2.1:118b-iq4 36/39 at 65.4 (fails
+   python_config_loader, node_paratrooper). context_256k is SKIPPED_CTX for all three.
 
 **Second-wave results, single GPU (2026-10-09, `output/gamedev2-*.json`).** All 23 gamedev tasks on the
 four single-GPU leaders, plus qwen3.8:27b run separately the same evening (`gamedev2-B-qwen38.json`) (single RTX 4090, `models/24gb.txt` / `default.txt` for qwen3.6:27b), plus the 17
@@ -1815,6 +1825,9 @@ Same task sets, mean partial credit (pass count): on flash-next's 16 completed t
 0.76 (8), gpt-oss:120b 0.73 (10), equinox:31b 0.68 (7), qwen3.6:27b 0.61 (8), qwen3.8:27b 0.58 (8),
 qwen3.8-flash-next 0.58 (6), gemma4:26b-qat 0.37 (3); on gpt-oss's 24 — gemma4:31b-qat 0.77 (12),
 gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
+- **gemma4:31b-qat split across 2×24 GB (night 2026-10-13):** gamedev 16/28 (partial 0.74), diag 19/21, no stall;
+  two tasks flip to PASS against single GPU (`cs_snapshot_coalesce`, `cs_main_thread_dispatch`) — the cross-GPU
+  sensitivity, in the helping direction. The single-GPU leader holds when split.
 - **The single-GPU gemma4:31b-qat matches the 3×24 GB gpt-oss:120b on the harder tasks** (gpt-oss passes
   slightly more, gemma scores higher partial credit), while the first nine tasks had gpt-oss (0.94) and
   flash-next (0.93) clearly on top. flash-next drops to qwen3.8:27b's level on the newer tasks.
@@ -1961,6 +1974,9 @@ three), B03-B16 rendering, C01 pixel comparison, the Windows-interop items.
   six started `solo/<entry>` and timed out waiting for Ready. Comment and description fixed, all six re-run, old
   records in `output/stale/`.
 - Diag: 8-10/10, too easy at the top again; `smart_app_control` (3 of 6 wrong) and `font_fallback` discriminate.
+- **The other 15 single-GPU models (night 2026-10-13, `output/night-fe-*.json`): no code task passed by any.** Best
+  partial: qwen3-coder-rtpurbo:30b 0.51 (geometry 0.85, css 0.71), gemma4:26b-qat 0.29, devstral-small-2 0.21; eleven
+  at ≤0.14, mostly compile errors. Diag 5-9/10. The top-six ranking stands (gemma4:31b-qat 0.45 best overall).
 
 #### What NOT to do
 
