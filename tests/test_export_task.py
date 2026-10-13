@@ -85,3 +85,19 @@ def test_every_opt_in_task_exports_its_files_and_no_reference(tmp_path, tid):
         assert (dest / rel).exists(), f"{tid}: missing {rel}"
     leaked = [str(p.relative_to(dest)) for p in dest.rglob("*.reference.*")]
     assert not leaked, f"{tid}: exported {leaked}"
+
+
+def test_workdir_leaves_out_local_test_caches(tmp_path, monkeypatch):
+    import shutil
+    from lib import tasks
+    task = TASK_MAP["fe_bash_package"]
+    cache = tasks.TASK_DATA_DIR / task.subdir / "tests" / "__pycache__"
+    cache.mkdir(exist_ok=True)
+    try:
+        work = tasks.prepare_workdir(task)
+        try:
+            assert not list(work.rglob("__pycache__")) and (work / "scripts" / "package.sh").exists()
+        finally:
+            shutil.rmtree(work)
+    finally:
+        shutil.rmtree(cache)

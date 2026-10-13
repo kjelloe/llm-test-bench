@@ -69,7 +69,8 @@ def build_prompt(task: Task, workdir: Path) -> str:
 def prepare_workdir(task: Task) -> Path:
     src = TASK_DATA_DIR / task.subdir
     tmp = Path(tempfile.mkdtemp(prefix=f"bench_{task.id}_"))
-    shutil.copytree(src, tmp, dirs_exist_ok=True)
+    # a cache left by a local test run would make tracebacks name task_data/ instead of the workdir
+    shutil.copytree(src, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
     return tmp
 
 
