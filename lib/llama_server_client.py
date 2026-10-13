@@ -316,6 +316,11 @@ def chat(
         "top_k": 1,
         "repeat_penalty": 1.0,
     }
+    # BENCH_CACHE_PROMPT=0: process every prompt from scratch. With the server's prompt cache a request reuses the
+    # KV of the previous prompt's common prefix, so the rest is batched differently and, on split models, a task's
+    # answer can depend on the task before it (gpt-oss:120b node_paratrooper, 2026-10-13).
+    if os.environ.get("BENCH_CACHE_PROMPT") == "0":
+        payload["cache_prompt"] = False
     # Always send enable_thinking explicitly so Qwen3 GGUFs (which default to thinking-enabled)
     # are deterministically controlled. think=False → disable; think=True → enable.
     # Other models ignore unknown template variables.

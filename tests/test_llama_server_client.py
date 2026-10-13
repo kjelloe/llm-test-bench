@@ -186,3 +186,26 @@ def test_missing_gguf_files_lists_only_absent_files(tmp_path):
             ModelConfig(ollama_name="b", gguf_file="gone.gguf"),
             ModelConfig(ollama_name="c", gguf_file="")]
     assert lsc.missing_gguf_files(cfgs, str(tmp_path)) == [str(tmp_path / "gone.gguf")]
+
+
+def test_bench_cache_prompt_0_sends_cache_prompt_false(monkeypatch):
+    import json as _json
+    import urllib.request
+    from lib import llama_server_client as lsc
+    sent = []
+
+    class Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return _json.dumps({"choices": [{"message": {"content": "x"}, "finish_reason": "stop"}],
+                                            "usage": {"prompt_tokens": 1, "completion_tokens": 1}}).encode()
+
+    def fake_urlopen(req, timeout=None):
+        sent.append(_json.loads(req.data))
+        return Resp()
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.delenv("BENCH_CACHE_PROMPT", raising=False)
+    lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
+    monkeypatch.setenv("BENCH_CACHE_PROMPT", "0")
+    lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
+    assert "cache_prompt" not in sent[0] and sent[1]["cache_prompt"] is False
