@@ -102,9 +102,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (117 total, difficulty L1–L6; 39 run by default; the 28 `gamedev`, 21 `gamedev_diag`, 11 `fastengine` and 18 `fastengine_diag` tasks are opt-in):
+- Built-in tasks (122 total, difficulty L1–L6; 39 run by default; the 28 `gamedev`, 21 `gamedev_diag`, 16 `fastengine` and 18 `fastengine_diag` tasks are opt-in):
 
-  **fastengine tasks (11, opt-in, 2026-10-12/14) — `--task-group fastengine`:** C# for the second build engine
+  **fastengine tasks (16, opt-in, 2026-10-12/14) — `--task-group fastengine`:** C# for the second build engine
   (fastengine: plain .NET 9 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD), from its
   `specs/llm_evaluation_tasks.md`; net9.0 with the latest C#, no Unity shim. `fe_three_geometry` (L3, three's
   geometries vertex for vertex, fixtures from three 0.165 itself), `fe_ttf_metrics` (L3, TTF tables read
@@ -113,7 +113,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   page), `fe_flex_wrap` (L3, CSS flex-wrap against Chromium's layout), `fe_bash_package` (L2, bash: pipefail inside
   `$(...)` and a comma target list), `fe_render_order` (L3, three r162's draw order: render lists and
   sort keys), `fe_object3d` (L3, three's world matrices and lookAt), `fe_ico_writer` (L2, PNG + ICO without an image
-  library, found again inside an exe).
+  library, found again inside an exe), `fe_i18n` (L2, the browser's i18n.js), `fe_session_rules` (L3, stop rules, seat tokens per
+  server, stall metric), `fe_output_color` (L4, three's tone mapping, sRGB and fog, graded against pixels three rendered in
+  Chromium), `fe_bash_stamp` (L2, build version with -dirty), `fe_bash_job` (L3, a build job's lane folder and unchecked steps).
   **fastengine diagnosis (18, opt-in) — `--task-group fastengine_diag`:** `fdiag_*`, same format as
   `gamedev_diag`. Details: CLAUDE.md "fastengine task group".
 

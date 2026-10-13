@@ -2096,6 +2096,104 @@ FE_BASH_PACKAGE = Task(
     test_weights={"never_built_fails_loudly": 2.0},
 )
 
+FE_I18N = Task(
+    id="fe_i18n",
+    difficulty=2,
+    description=(
+        "Fix src/Fastengine/I18n.cs (fastengine spec D08) so the native client's text matches the browser's: "
+        "CarrierDominion's own client/i18n.js is in js/i18n.js and is the reference, with the game's catalogues next "
+        "to it. Language choice, fallbacks, how placeholders are filled, the OS language on Linux, the catalogue URL "
+        "and logging a missing key once are all specified in the file's comments." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_i18n",
+    editable_files=["src/Fastengine/I18n.cs"],
+    context_files=["js/i18n.js", "tests/FastengineTests/I18nTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"T_MatchesTheBrowser": 2.0},
+)
+
+FE_SESSION_RULES = Task(
+    id="fe_session_rules",
+    difficulty=3,
+    description=(
+        "Implement the connection policy in src/Fastengine/Session.cs (fastengine spec E03, E04, E06): which "
+        "refusals, kicks and close codes end reconnecting and which retry, a seat token per server that spectators "
+        "never send, and a stall metric that a reconnect does not trip. The comment above the class is the "
+        "specification; the current code is a first draft that always reconnects." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_session_rules",
+    editable_files=["src/Fastengine/Session.cs"],
+    context_files=["tests/FastengineTests/SessionTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
+FE_OUTPUT_COLOR = Task(
+    id="fe_output_color",
+    difficulty=4,
+    description=(
+        "Fix src/Fastengine/OutputColor.cs (fastengine spec B08/B11): it must give, channel for channel, the colour "
+        "three r162 writes at the end of an unlit fragment: tone mapping (none, Linear, Reinhard, ACES Filmic, with "
+        "exposure), sRGB encoding, and Fog or FogExp2, each only where three applies it (screen or render target, the "
+        "material's toneMapped and fog flags). The tests compare with pixels three itself rendered. three's own GLSL "
+        "and the code that sets its defines and uniforms are in js/three-r162-output.glsl.txt." + FASTENGINE_CONSTRAINTS
+    ),
+    subdir="fe_output_color",
+    editable_files=["src/Fastengine/OutputColor.cs"],
+    context_files=["js/three-r162-output.glsl.txt", "tests/FastengineTests/OutputColorTests.cs", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
+FE_BASH_STAMP = Task(
+    id="fe_bash_stamp",
+    difficulty=2,
+    description=(
+        "scripts/version.sh prints the version a fastengine build is stamped with (fastengine spec F01), and it is "
+        "wrong: builds of edited game code are not marked -dirty, and a repo without commits breaks it. Fix it so "
+        "it does what its header says."
+    ),
+    subdir="fe_bash_stamp",
+    editable_files=["scripts/version.sh"],
+    context_files=["tests/test_version.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=120,
+    num_ctx=24576,
+    min_predict=12000,
+)
+
+FE_BASH_JOB = Task(
+    id="fe_bash_job",
+    difficulty=3,
+    description=(
+        "scripts/job.sh is the box's build job (fastengine spec H05/H07). Two incidents: its lane folder outlives "
+        "the run, so the second run's output held the first run's zips and log; and one night the clone failed, "
+        "yet the job went on and published a build of an old checkout. Rewrite it to keep the contract in its "
+        "header comment."
+    ),
+    subdir="fe_bash_job",
+    editable_files=["scripts/job.sh"],
+    context_files=["tests/test_job.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"second_run_in_the_same_lane": 2.0, "missing_commit_builds_nothing": 2.0},
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2227,6 +2325,11 @@ BUILTIN_TASKS: list[Task] = [
     FE_RENDER_ORDER,
     FE_OBJECT3D,
     FE_ICO_WRITER,
+    FE_I18N,
+    FE_SESSION_RULES,
+    FE_OUTPUT_COLOR,
+    FE_BASH_STAMP,
+    FE_BASH_JOB,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2277,7 +2380,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default

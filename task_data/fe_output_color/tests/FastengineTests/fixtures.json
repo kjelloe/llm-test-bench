@@ -1,0 +1,1178 @@
+[
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "aces_mid",
+  "color": [
+   0.5,
+   0.2,
+   0.05
+  ],
+  "rgb": [
+   200,
+   138,
+   66
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "aces_hdr",
+  "color": [
+   2.5,
+   1.2,
+   0.6
+  ],
+  "rgb": [
+   247,
+   233,
+   214
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1.8,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "aces_exposure",
+  "color": [
+   0.3,
+   0.3,
+   0.3
+  ],
+  "rgb": [
+   201,
+   201,
+   201
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "aces_dark_linear_segment",
+  "color": [
+   0.002,
+   0.0005,
+   0.01
+  ],
+  "rgb": [
+   0,
+   0,
+   7
+  ]
+ },
+ {
+  "toneMapping": "None",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "no_tone_mapping",
+  "color": [
+   0.5,
+   0.2,
+   0.05
+  ],
+  "rgb": [
+   188,
+   124,
+   63
+  ]
+ },
+ {
+  "toneMapping": "None",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "no_tone_mapping_clips",
+  "color": [
+   1.5,
+   0.9,
+   0.001
+  ],
+  "rgb": [
+   255,
+   243,
+   3
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 1.5,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "linear_exposure",
+  "color": [
+   0.4,
+   0.7,
+   0.1
+  ],
+  "rgb": [
+   203,
+   255,
+   108
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 0.8,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "reinhard",
+  "color": [
+   0.8,
+   2,
+   0.2
+  ],
+  "rgb": [
+   168,
+   206,
+   104
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "material_not_tone_mapped",
+  "color": [
+   0.5,
+   0.2,
+   0.05
+  ],
+  "rgb": [
+   188,
+   124,
+   63
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": false,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "render_target_linear_untoned",
+  "color": [
+   0.5,
+   0.2,
+   0.05
+  ],
+  "rgb": [
+   128,
+   51,
+   13
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": false,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 10,
+  "name": "render_target_clamps",
+  "color": [
+   2,
+   0.5,
+   0
+  ],
+  "rgb": [
+   255,
+   128,
+   0
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.06,
+  "depth": 12,
+  "name": "fog_exp2_after_encoding",
+  "color": [
+   0.1,
+   0.4,
+   0.2
+  ],
+  "rgb": [
+   141,
+   191,
+   172
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 5,
+  "fogFar": 25,
+  "fogDensity": 0.05,
+  "depth": 15,
+  "name": "fog_linear_mid",
+  "color": [
+   0.9,
+   0.1,
+   0.1
+  ],
+  "rgb": [
+   213,
+   154,
+   158
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 5,
+  "fogFar": 25,
+  "fogDensity": 0.05,
+  "depth": 3,
+  "name": "fog_linear_before_near",
+  "color": [
+   0.9,
+   0.1,
+   0.1
+  ],
+  "rgb": [
+   239,
+   105,
+   98
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 5,
+  "fogFar": 25,
+  "fogDensity": 0.05,
+  "depth": 40,
+  "name": "fog_linear_past_far",
+  "color": [
+   0.9,
+   0.1,
+   0.1
+  ],
+  "rgb": [
+   188,
+   203,
+   218
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": false,
+  "fog": "Exp2",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.05,
+  "depth": 12,
+  "name": "fog_off_for_material",
+  "color": [
+   0.1,
+   0.4,
+   0.2
+  ],
+  "rgb": [
+   109,
+   183,
+   140
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": false,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 1,
+  "fogFar": 50,
+  "fogDensity": 0.06,
+  "depth": 12,
+  "name": "fog_in_render_target",
+  "color": [
+   0.1,
+   0.4,
+   0.2
+  ],
+  "rgb": [
+   67,
+   123,
+   103
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.5,
+   0.6,
+   0.7
+  ],
+  "fogNear": 2,
+  "fogFar": 30,
+  "fogDensity": 0.05,
+  "depth": 9,
+  "name": "fog_with_untoned_material",
+  "color": [
+   1.4,
+   0.4,
+   0.2
+  ],
+  "rgb": [
+   255,
+   175,
+   138
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.614,
+   0.81,
+   0.345
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.1,
+  "depth": 15,
+  "name": "seeded_00",
+  "color": [
+   1.305,
+   0.458,
+   0.667
+  ],
+  "rgb": [
+   239,
+   197,
+   211
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 1.4,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.543,
+   0.527,
+   0.295
+  ],
+  "fogNear": 1,
+  "fogFar": 60,
+  "fogDensity": 0.05,
+  "depth": 2,
+  "name": "seeded_01",
+  "color": [
+   0.029,
+   1.138,
+   0.353
+  ],
+  "rgb": [
+   57,
+   205,
+   156
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 1,
+  "toScreen": false,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.275,
+   0.281,
+   0.055
+  ],
+  "fogNear": 1,
+  "fogFar": 20,
+  "fogDensity": 0.02,
+  "depth": 2,
+  "name": "seeded_02",
+  "color": [
+   0.035,
+   0.192,
+   0.692
+  ],
+  "rgb": [
+   9,
+   49,
+   176
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 1.4,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": false,
+  "fog": "none",
+  "fogColor": [
+   0.096,
+   0.118,
+   0.048
+  ],
+  "fogNear": 1,
+  "fogFar": 20,
+  "fogDensity": 0.1,
+  "depth": 8,
+  "name": "seeded_03",
+  "color": [
+   1.212,
+   0.387,
+   0.723
+  ],
+  "rgb": [
+   255,
+   194,
+   255
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.902,
+   0.318,
+   0.314
+  ],
+  "fogNear": 4,
+  "fogFar": 60,
+  "fogDensity": 0.02,
+  "depth": 30,
+  "name": "seeded_04",
+  "color": [
+   1.011,
+   0.751,
+   0.267
+  ],
+  "rgb": [
+   255,
+   225,
+   141
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": false,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.297,
+   0.659,
+   0.771
+  ],
+  "fogNear": 1,
+  "fogFar": 60,
+  "fogDensity": 0.1,
+  "depth": 2,
+  "name": "seeded_05",
+  "color": [
+   1.972,
+   0.882,
+   0.768
+  ],
+  "rgb": [
+   255,
+   225,
+   196
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.57,
+   0.452,
+   0.454
+  ],
+  "fogNear": 4,
+  "fogFar": 60,
+  "fogDensity": 0.02,
+  "depth": 15,
+  "name": "seeded_06",
+  "color": [
+   1.731,
+   1.177,
+   0.671
+  ],
+  "rgb": [
+   237,
+   227,
+   213
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.482,
+   0.244,
+   0.135
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.05,
+  "depth": 8,
+  "name": "seeded_07",
+  "color": [
+   1.136,
+   0.661,
+   0.216
+  ],
+  "rgb": [
+   171,
+   145,
+   95
+  ]
+ },
+ {
+  "toneMapping": "None",
+  "exposure": 1.4,
+  "toScreen": false,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.694,
+   0.345,
+   0.815
+  ],
+  "fogNear": 4,
+  "fogFar": 60,
+  "fogDensity": 0.02,
+  "depth": 2,
+  "name": "seeded_08",
+  "color": [
+   1.323,
+   0.556,
+   0.179
+  ],
+  "rgb": [
+   255,
+   142,
+   46
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.118,
+   0.406,
+   0.398
+  ],
+  "fogNear": 1,
+  "fogFar": 60,
+  "fogDensity": 0.1,
+  "depth": 15,
+  "name": "seeded_09",
+  "color": [
+   0.77,
+   1.048,
+   0.249
+  ],
+  "rgb": [
+   209,
+   248,
+   141
+  ]
+ },
+ {
+  "toneMapping": "None",
+  "exposure": 1.4,
+  "toScreen": false,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.453,
+   0.52,
+   0.285
+  ],
+  "fogNear": 4,
+  "fogFar": 60,
+  "fogDensity": 0.02,
+  "depth": 15,
+  "name": "seeded_10",
+  "color": [
+   1.341,
+   1.034,
+   0.565
+  ],
+  "rgb": [
+   255,
+   252,
+   138
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.832,
+   0.339,
+   0.961
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.05,
+  "depth": 30,
+  "name": "seeded_11",
+  "color": [
+   1.521,
+   0.082,
+   0.213
+  ],
+  "rgb": [
+   242,
+   74,
+   109
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": false,
+  "fog": "Exp2",
+  "fogColor": [
+   0.992,
+   0.285,
+   0.706
+  ],
+  "fogNear": 1,
+  "fogFar": 20,
+  "fogDensity": 0.05,
+  "depth": 8,
+  "name": "seeded_12",
+  "color": [
+   1.77,
+   0.708,
+   0.078
+  ],
+  "rgb": [
+   247,
+   216,
+   130
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.019,
+   0.364,
+   0.348
+  ],
+  "fogNear": 1,
+  "fogFar": 60,
+  "fogDensity": 0.05,
+  "depth": 2,
+  "name": "seeded_13",
+  "color": [
+   0.332,
+   0.617,
+   0.453
+  ],
+  "rgb": [
+   142,
+   178,
+   159
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1.4,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.058,
+   0.211,
+   0.807
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.1,
+  "depth": 2,
+  "name": "seeded_14",
+  "color": [
+   1.52,
+   0.425,
+   0.709
+  ],
+  "rgb": [
+   249,
+   212,
+   226
+  ]
+ },
+ {
+  "toneMapping": "ACESFilmic",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.619,
+   0.411,
+   0.88
+  ],
+  "fogNear": 4,
+  "fogFar": 60,
+  "fogDensity": 0.02,
+  "depth": 30,
+  "name": "seeded_15",
+  "color": [
+   1.959,
+   0.287,
+   0.316
+  ],
+  "rgb": [
+   255,
+   180,
+   176
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.374,
+   0.081,
+   0.086
+  ],
+  "fogNear": 1,
+  "fogFar": 20,
+  "fogDensity": 0.1,
+  "depth": 30,
+  "name": "seeded_16",
+  "color": [
+   1.838,
+   0.915,
+   0.108
+  ],
+  "rgb": [
+   165,
+   80,
+   83
+  ]
+ },
+ {
+  "toneMapping": "None",
+  "exposure": 1.4,
+  "toScreen": true,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.032,
+   0.158,
+   0.639
+  ],
+  "fogNear": 4,
+  "fogFar": 60,
+  "fogDensity": 0.02,
+  "depth": 15,
+  "name": "seeded_17",
+  "color": [
+   1.266,
+   0.787,
+   0.644
+  ],
+  "rgb": [
+   255,
+   218,
+   210
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.9,
+   0.478,
+   0.877
+  ],
+  "fogNear": 1,
+  "fogFar": 60,
+  "fogDensity": 0.1,
+  "depth": 30,
+  "name": "seeded_18",
+  "color": [
+   1.034,
+   0.504,
+   0.029
+  ],
+  "rgb": [
+   189,
+   157,
+   47
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Exp2",
+  "fogColor": [
+   0.854,
+   0.71,
+   0.509
+  ],
+  "fogNear": 1,
+  "fogFar": 60,
+  "fogDensity": 0.1,
+  "depth": 30,
+  "name": "seeded_19",
+  "color": [
+   1.664,
+   0.106,
+   0.442
+  ],
+  "rgb": [
+   238,
+   219,
+   189
+  ]
+ },
+ {
+  "toneMapping": "Reinhard",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "none",
+  "fogColor": [
+   0.937,
+   0.363,
+   0.443
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.02,
+  "depth": 2,
+  "name": "seeded_20",
+  "color": [
+   1.461,
+   0.334,
+   0.648
+  ],
+  "rgb": [
+   182,
+   114,
+   144
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.818,
+   0.978,
+   0.59
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.1,
+  "depth": 15,
+  "name": "seeded_21",
+  "color": [
+   1.786,
+   1.059,
+   0.726
+  ],
+  "rgb": [
+   238,
+   242,
+   196
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 1,
+  "toScreen": true,
+  "toneMapped": false,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.426,
+   0.043,
+   0.817
+  ],
+  "fogNear": 4,
+  "fogFar": 20,
+  "fogDensity": 0.05,
+  "depth": 30,
+  "name": "seeded_22",
+  "color": [
+   1.487,
+   0.335,
+   0.009
+  ],
+  "rgb": [
+   175,
+   58,
+   233
+  ]
+ },
+ {
+  "toneMapping": "Linear",
+  "exposure": 0.6,
+  "toScreen": true,
+  "toneMapped": true,
+  "materialFog": true,
+  "fog": "Linear",
+  "fogColor": [
+   0.9,
+   0.224,
+   0.569
+  ],
+  "fogNear": 1,
+  "fogFar": 20,
+  "fogDensity": 0.02,
+  "depth": 2,
+  "name": "seeded_23",
+  "color": [
+   0.64,
+   0.851,
+   0.324
+  ],
+  "rgb": [
+   167,
+   189,
+   123
+  ]
+ }
+]

@@ -52,6 +52,7 @@ JS_FIXTURES = [
     ("fe_three_geometry", "js/make-fixtures.mjs", "tests/FastengineTests/fixtures.json"),
     ("fe_render_order", "js/make-fixtures.reference.mjs", "tests/FastengineTests/fixtures.json"),
     ("fe_object3d", "js/make-fixtures.reference.mjs", "tests/FastengineTests/fixtures.json"),
+    ("fe_i18n", "js/make-fixtures.mjs", "tests/FastengineTests/fixtures.json"),
 ]
 
 
@@ -150,4 +151,14 @@ def test_flex_fixtures_match_chromium():
     root = TASK_DATA_DIR / "fe_flex_wrap"
     out = subprocess.run(["node", "tools/make_fixtures.reference.mjs"], cwd=root, capture_output=True, text=True,
                          timeout=180, check=True, env={**os.environ, "PLAYWRIGHT": str(_PLAYWRIGHT)})
+    assert out.stdout == (root / "tests" / "FastengineTests" / "fixtures.json").read_text(encoding="utf-8")
+
+
+# fe_output_color's fixtures are pixels three r162 rendered in Chromium (Playwright, SwiftShader WebGL).
+@pytest.mark.skipif(shutil.which("node") is None or not _PLAYWRIGHT.is_dir(), reason="node or Playwright not available")
+def test_output_color_fixtures_match_three_in_chromium():
+    import os
+    root = TASK_DATA_DIR / "fe_output_color"
+    out = subprocess.run(["node", "tools/make_fixtures.reference.mjs"], cwd=root, capture_output=True, text=True,
+                         timeout=300, check=True, env={**os.environ, "PLAYWRIGHT": str(_PLAYWRIGHT)})
     assert out.stdout == (root / "tests" / "FastengineTests" / "fixtures.json").read_text(encoding="utf-8")

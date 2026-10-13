@@ -419,7 +419,7 @@ task_data/
   fe_*/                   fastengine C# tasks: Fastengine.sln, src/Fastengine at net9.0 (latest C#, no Unity shim),
                           xunit tests; fixtures from three itself (fe_three_geometry) or an independent Python
                           reader (fe_ttf_metrics); *.reference.cs adapted from fastengine's own code
-  fe_bash_package/        fastengine bash task (scripts/package.sh, pytest drives it, package.reference.sh)
+  fe_bash_package/, fe_bash_stamp/, fe_bash_job/   fastengine bash tasks (pytest drives the script, *.reference.sh)
   fastengine_diag/        18 multiple-choice questions, same layout and generator pattern as gamedev_diag
   gamedev_diag/           21 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
                           tests/answer_key.json (salted sha256 of the letter), answers.reference.json (human key)
@@ -436,7 +436,7 @@ Task groups (--task-group):
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
-  fastengine    11 tasks (10 C#, 1 bash) for the second build engine (.NET 9 on Raylib-cs), OPT-IN; see "fastengine task group"
+  fastengine    16 tasks (13 C#, 3 bash) for the second build engine (.NET 9 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
 ```
 
@@ -594,7 +594,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (28), gamedev_diag (21), fastengine (11) and fastengine_diag (18) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (28), gamedev_diag (21), fastengine (16) and fastengine_diag (18) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -1995,6 +1995,11 @@ single-bug mutants caught, `--export-task` leaves references out); C# at **net9.
 | `fe_render_order` | 3 | B06 | three r162's `WebGLRenderer.projectObject` + `WebGLRenderList` (verbatim excerpt in `js/`): list by transmission/transparent, `painterSortStable` (groupOrder, renderOrder, material id, NDC z, id) and the reverse for transparent; z of the bounding-sphere centre; only a Group sets groupOrder. 24 scenes from three itself (sort functions taken from three's source text). Stub is fastengine's own `Renderer` ordering (distance from the camera) | stub 1/24, ref 24/24, 8/9 (no perspective divide survives: same order) |
 | `fe_object3d` | 3 | B02 | fastengine's `Object3D` (System.Numerics, row vectors); WorldMatrix and three's `lookAt` (camera -Z, rotated parents, straight-down and same-position cases), Rotation kept Euler XYZ. 19 scenes, 44 lookAt calls, from three r162 | stub 0/19, ref 19/19, 9/9 |
 | `fe_ico_writer` | 2 | A14 | fastengine's `AppIcon.Ico` widened: PNG encoder (CRC, zlib scanlines), ICO directory (0 means 256), finding the PNGs inside an exe; graded by an independent PNG reader in the test | stub 0/8, ref 8/8, 11/11 |
+| `fe_i18n` | 2 | D08 | CarrierDominion's own `client/i18n.js` + real catalogues; fixtures from it under Node. pickLang (nb/nn → no), fallback to English then the key, `{var}` filled with JS `String()` (true, null, 1e+21), OS language from LC_ALL/LC_MESSAGES/LANG, catalogue URL on the server's origin, missing key logged once. Stub is fastengine's `I18n` | stub 3/16, ref 16/16, 10/11 (default port: .NET drops it anyway) |
+| `fe_session_rules` | 3 | E03/E04/E06 | A connection policy distilled from fastengine's `NetClient` + the game's message handling: refused before welcome / kicked / final close codes stop for good, halted ignored, a resync reconnects at once; seat token per server origin, never sent or saved by spectators; maxGap per connection | stub 1/9, ref 9/9, 10/12 (2 equivalent) |
+| `fe_output_color` | 4 | B08/B11 | three r162's tone mapping (None/Linear/Reinhard/ACES with exposure), sRGB encode and Fog/FogExp2 on the CPU; **fixtures are pixels three itself rendered in headless Chromium** (Playwright, SwiftShader WebGL2); excerpt of three's GLSL chunks + `getParameters` + `refreshFogUniforms` | stub (fastengine's approach) 19/42, ref 42/42 within ±1, 11/11 |
+| `fe_bash_stamp` | 2 | F01 | fastengine's `build_version`: both short commits, `-dirty` for edited/staged/untracked in either tree, `uncommitted` without a commit | stub 3/9, ref 9/9, 5/5 |
+| `fe_bash_job` | 3 | H05/H07 | fastengine's worker `build.sh` reduced: clear the lane's output, work outside the tree and remove it, check every step (exit 1 build, 4 environment), manifest of zips | stub 0/7, ref 7/7, 5/9 (4 equivalent: the clear and fresh work dir make them unobservable) |
 
 `fastengine_diag` (18 `fdiag_*`): A03 libraylib publish, A05 rlgl culling of 2D fills, B09 mirror target
 linear/untoned, B14 premultiplied target in the HUD, C04 port the browser not the other port, C09 Chromium
@@ -2010,6 +2015,14 @@ transparent meshes by squared distance from the camera position and opaque ones 
 groupOrder, renderOrder, (opaque) material id, then the NDC depth of each mesh's bounding-sphere centre. Off-axis
 transparent objects therefore blend in a different order than in the browser (the task's `off_axis_depth_not_distance`
 case). Not reported to fastengine's maintainers yet.
+**Finding 2 (2026-10-14, `fe_output_color`): fastengine's fog colour is mixed in linear.** Its shader mixes `uFogColor`
+(the linear colour) into the already sRGB-encoded fragment; three r162 converts the fog colour to the output colour space
+first (`refreshFogUniforms` → `getUnlitUniformColorSpace`: sRGB on screen, linear into a render target). Distant objects
+therefore fade towards a darker colour than in the browser. Spec B11's "the fog colour is linear" is the source of the
+mistake. **Finding 3 (`fe_i18n`):** fastengine's `I18n.T` formats values with `Convert.ToString` (`True`, an empty string
+for null, `1E+21`) where the browser's `String()` gives `true`, `null`, `1e+21`, and it never logs a missing key.
+**Finding 4 (`fe_bash_job`):** the worker's `build.sh` hashes `build.log` into `manifest.json` while its `tee` is still
+writing (and prints "== done" after), so the manifest's entry for build.log can disagree with the file. None reported yet.
 
 Not built (need a GL context, Windows, or more time): A02/A05 as code, B02 `Object3D` (next: fixtures from
 three), B03-B16 rendering, C01 pixel comparison, the Windows-interop items.

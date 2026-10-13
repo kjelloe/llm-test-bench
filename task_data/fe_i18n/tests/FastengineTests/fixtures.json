@@ -1,0 +1,1478 @@
+{
+ "removedFromNo": [
+  "seat.team",
+  "status.rejected",
+  "hud.locked",
+  "speed.vote"
+ ],
+ "picks": [
+  {
+   "requested": null,
+   "navigator": null,
+   "lang": "en"
+  },
+  {
+   "requested": null,
+   "navigator": "en-US",
+   "lang": "en"
+  },
+  {
+   "requested": null,
+   "navigator": "nb-NO",
+   "lang": "no"
+  },
+  {
+   "requested": null,
+   "navigator": "nn",
+   "lang": "no"
+  },
+  {
+   "requested": null,
+   "navigator": "no",
+   "lang": "no"
+  },
+  {
+   "requested": null,
+   "navigator": "NB-no",
+   "lang": "no"
+  },
+  {
+   "requested": null,
+   "navigator": "de-DE",
+   "lang": "en"
+  },
+  {
+   "requested": null,
+   "navigator": "n",
+   "lang": "en"
+  },
+  {
+   "requested": null,
+   "navigator": "",
+   "lang": "en"
+  },
+  {
+   "requested": null,
+   "navigator": "sv",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": null,
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "en-US",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "nb-NO",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "nn",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "no",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "NB-no",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "de-DE",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "n",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "",
+   "lang": "en"
+  },
+  {
+   "requested": "en",
+   "navigator": "sv",
+   "lang": "en"
+  },
+  {
+   "requested": "no",
+   "navigator": null,
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "en-US",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "nb-NO",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "nn",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "no",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "NB-no",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "de-DE",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "n",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "",
+   "lang": "no"
+  },
+  {
+   "requested": "no",
+   "navigator": "sv",
+   "lang": "no"
+  },
+  {
+   "requested": "nb",
+   "navigator": null,
+   "lang": "en"
+  },
+  {
+   "requested": "nb",
+   "navigator": "en-US",
+   "lang": "en"
+  },
+  {
+   "requested": "nb",
+   "navigator": "nb-NO",
+   "lang": "no"
+  },
+  {
+   "requested": "nb",
+   "navigator": "nn",
+   "lang": "no"
+  },
+  {
+   "requested": "nb",
+   "navigator": "no",
+   "lang": "no"
+  },
+  {
+   "requested": "nb",
+   "navigator": "NB-no",
+   "lang": "no"
+  },
+  {
+   "requested": "nb",
+   "navigator": "de-DE",
+   "lang": "en"
+  },
+  {
+   "requested": "nb",
+   "navigator": "n",
+   "lang": "en"
+  },
+  {
+   "requested": "nb",
+   "navigator": "",
+   "lang": "en"
+  },
+  {
+   "requested": "nb",
+   "navigator": "sv",
+   "lang": "en"
+  },
+  {
+   "requested": "de",
+   "navigator": null,
+   "lang": "en"
+  },
+  {
+   "requested": "de",
+   "navigator": "en-US",
+   "lang": "en"
+  },
+  {
+   "requested": "de",
+   "navigator": "nb-NO",
+   "lang": "no"
+  },
+  {
+   "requested": "de",
+   "navigator": "nn",
+   "lang": "no"
+  },
+  {
+   "requested": "de",
+   "navigator": "no",
+   "lang": "no"
+  },
+  {
+   "requested": "de",
+   "navigator": "NB-no",
+   "lang": "no"
+  },
+  {
+   "requested": "de",
+   "navigator": "de-DE",
+   "lang": "en"
+  },
+  {
+   "requested": "de",
+   "navigator": "n",
+   "lang": "en"
+  },
+  {
+   "requested": "de",
+   "navigator": "",
+   "lang": "en"
+  },
+  {
+   "requested": "de",
+   "navigator": "sv",
+   "lang": "en"
+  },
+  {
+   "requested": "EN",
+   "navigator": null,
+   "lang": "en"
+  },
+  {
+   "requested": "EN",
+   "navigator": "en-US",
+   "lang": "en"
+  },
+  {
+   "requested": "EN",
+   "navigator": "nb-NO",
+   "lang": "no"
+  },
+  {
+   "requested": "EN",
+   "navigator": "nn",
+   "lang": "no"
+  },
+  {
+   "requested": "EN",
+   "navigator": "no",
+   "lang": "no"
+  },
+  {
+   "requested": "EN",
+   "navigator": "NB-no",
+   "lang": "no"
+  },
+  {
+   "requested": "EN",
+   "navigator": "de-DE",
+   "lang": "en"
+  },
+  {
+   "requested": "EN",
+   "navigator": "n",
+   "lang": "en"
+  },
+  {
+   "requested": "EN",
+   "navigator": "",
+   "lang": "en"
+  },
+  {
+   "requested": "EN",
+   "navigator": "sv",
+   "lang": "en"
+  },
+  {
+   "requested": "",
+   "navigator": null,
+   "lang": "en"
+  },
+  {
+   "requested": "",
+   "navigator": "en-US",
+   "lang": "en"
+  },
+  {
+   "requested": "",
+   "navigator": "nb-NO",
+   "lang": "no"
+  },
+  {
+   "requested": "",
+   "navigator": "nn",
+   "lang": "no"
+  },
+  {
+   "requested": "",
+   "navigator": "no",
+   "lang": "no"
+  },
+  {
+   "requested": "",
+   "navigator": "NB-no",
+   "lang": "no"
+  },
+  {
+   "requested": "",
+   "navigator": "de-DE",
+   "lang": "en"
+  },
+  {
+   "requested": "",
+   "navigator": "n",
+   "lang": "en"
+  },
+  {
+   "requested": "",
+   "navigator": "",
+   "lang": "en"
+  },
+  {
+   "requested": "",
+   "navigator": "sv",
+   "lang": "en"
+  }
+ ],
+ "translations": [
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": null,
+   "text": "team {team}"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": 3
+   },
+   "text": "team 3"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": 1.5
+   },
+   "text": "team 1.5"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": 0.30000000000000004
+   },
+   "text": "team 0.30000000000000004"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": -7
+   },
+   "text": "team -7"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": 1e+21
+   },
+   "text": "team 1e+21"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": 2.5e-7
+   },
+   "text": "team 2.5e-7"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": true
+   },
+   "text": "team true"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": false
+   },
+   "text": "team false"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": null
+   },
+   "text": "team null"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": "carrier {team}"
+   },
+   "text": "team carrier {team}"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": "æøå"
+   },
+   "text": "team æøå"
+  },
+  {
+   "lang": "en",
+   "key": "seat.team",
+   "vars": {
+    "team": ""
+   },
+   "text": "team "
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": null,
+   "text": "rejected: {reason}"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 3
+   },
+   "text": "rejected: 3"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 1.5
+   },
+   "text": "rejected: 1.5"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 0.30000000000000004
+   },
+   "text": "rejected: 0.30000000000000004"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": -7
+   },
+   "text": "rejected: -7"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 1e+21
+   },
+   "text": "rejected: 1e+21"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 2.5e-7
+   },
+   "text": "rejected: 2.5e-7"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": true
+   },
+   "text": "rejected: true"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": false
+   },
+   "text": "rejected: false"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": null
+   },
+   "text": "rejected: null"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": "carrier {team}"
+   },
+   "text": "rejected: carrier {team}"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": "æøå"
+   },
+   "text": "rejected: æøå"
+  },
+  {
+   "lang": "en",
+   "key": "status.rejected",
+   "vars": {
+    "reason": ""
+   },
+   "text": "rejected: "
+  },
+  {
+   "lang": "en",
+   "key": "hud.locked",
+   "vars": null,
+   "text": "locked"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": null,
+   "text": "vote {speed}: {agreed}/{players}"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 3,
+    "agreed": 1.5,
+    "players": 0.30000000000000004
+   },
+   "text": "vote 3: 1.5/0.30000000000000004"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 1.5,
+    "agreed": 0.30000000000000004,
+    "players": -7
+   },
+   "text": "vote 1.5: 0.30000000000000004/-7"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 0.30000000000000004,
+    "agreed": -7,
+    "players": 1e+21
+   },
+   "text": "vote 0.30000000000000004: -7/1e+21"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": -7,
+    "agreed": 1e+21,
+    "players": 2.5e-7
+   },
+   "text": "vote -7: 1e+21/2.5e-7"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 1e+21,
+    "agreed": 2.5e-7,
+    "players": true
+   },
+   "text": "vote 1e+21: 2.5e-7/true"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 2.5e-7,
+    "agreed": true,
+    "players": false
+   },
+   "text": "vote 2.5e-7: true/false"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": true,
+    "agreed": false,
+    "players": null
+   },
+   "text": "vote true: false/null"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": false,
+    "agreed": null,
+    "players": "carrier {team}"
+   },
+   "text": "vote false: null/carrier {team}"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": null,
+    "agreed": "carrier {team}",
+    "players": "æøå"
+   },
+   "text": "vote null: carrier {team}/æøå"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": "carrier {team}",
+    "agreed": "æøå",
+    "players": ""
+   },
+   "text": "vote carrier {team}: æøå/"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": "æøå",
+    "agreed": "",
+    "players": 3
+   },
+   "text": "vote æøå: /3"
+  },
+  {
+   "lang": "en",
+   "key": "speed.vote",
+   "vars": {
+    "speed": "",
+    "agreed": 3,
+    "players": 1.5
+   },
+   "text": "vote : 3/1.5"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": null,
+   "text": "{metres} m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 3
+   },
+   "text": "3 m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 1.5
+   },
+   "text": "1.5 m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 0.30000000000000004
+   },
+   "text": "0.30000000000000004 m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": -7
+   },
+   "text": "-7 m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 1e+21
+   },
+   "text": "1e+21 m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 2.5e-7
+   },
+   "text": "2.5e-7 m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": true
+   },
+   "text": "true m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": false
+   },
+   "text": "false m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": null
+   },
+   "text": "null m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": "carrier {team}"
+   },
+   "text": "carrier {team} m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": "æøå"
+   },
+   "text": "æøå m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": ""
+   },
+   "text": " m from the nearest command node"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": null,
+   "text": "{mantas} Manta / {walruses} Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 3,
+    "walruses": 1.5
+   },
+   "text": "3 Manta / 1.5 Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 1.5,
+    "walruses": 0.30000000000000004
+   },
+   "text": "1.5 Manta / 0.30000000000000004 Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 0.30000000000000004,
+    "walruses": -7
+   },
+   "text": "0.30000000000000004 Manta / -7 Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": -7,
+    "walruses": 1e+21
+   },
+   "text": "-7 Manta / 1e+21 Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 1e+21,
+    "walruses": 2.5e-7
+   },
+   "text": "1e+21 Manta / 2.5e-7 Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 2.5e-7,
+    "walruses": true
+   },
+   "text": "2.5e-7 Manta / true Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": true,
+    "walruses": false
+   },
+   "text": "true Manta / false Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": false,
+    "walruses": null
+   },
+   "text": "false Manta / null Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": null,
+    "walruses": "carrier {team}"
+   },
+   "text": "null Manta / carrier {team} Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": "carrier {team}",
+    "walruses": "æøå"
+   },
+   "text": "carrier {team} Manta / æøå Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": "æøå",
+    "walruses": ""
+   },
+   "text": "æøå Manta /  Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": "",
+    "walruses": 3
+   },
+   "text": " Manta / 3 Walrus"
+  },
+  {
+   "lang": "en",
+   "key": "no.such.key",
+   "vars": null,
+   "text": "no.such.key"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": null,
+   "text": "team {team}"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": 3
+   },
+   "text": "team 3"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": 1.5
+   },
+   "text": "team 1.5"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": 0.30000000000000004
+   },
+   "text": "team 0.30000000000000004"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": -7
+   },
+   "text": "team -7"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": 1e+21
+   },
+   "text": "team 1e+21"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": 2.5e-7
+   },
+   "text": "team 2.5e-7"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": true
+   },
+   "text": "team true"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": false
+   },
+   "text": "team false"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": null
+   },
+   "text": "team null"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": "carrier {team}"
+   },
+   "text": "team carrier {team}"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": "æøå"
+   },
+   "text": "team æøå"
+  },
+  {
+   "lang": "no",
+   "key": "seat.team",
+   "vars": {
+    "team": ""
+   },
+   "text": "team "
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": null,
+   "text": "rejected: {reason}"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 3
+   },
+   "text": "rejected: 3"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 1.5
+   },
+   "text": "rejected: 1.5"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 0.30000000000000004
+   },
+   "text": "rejected: 0.30000000000000004"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": -7
+   },
+   "text": "rejected: -7"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 1e+21
+   },
+   "text": "rejected: 1e+21"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": 2.5e-7
+   },
+   "text": "rejected: 2.5e-7"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": true
+   },
+   "text": "rejected: true"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": false
+   },
+   "text": "rejected: false"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": null
+   },
+   "text": "rejected: null"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": "carrier {team}"
+   },
+   "text": "rejected: carrier {team}"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": "æøå"
+   },
+   "text": "rejected: æøå"
+  },
+  {
+   "lang": "no",
+   "key": "status.rejected",
+   "vars": {
+    "reason": ""
+   },
+   "text": "rejected: "
+  },
+  {
+   "lang": "no",
+   "key": "hud.locked",
+   "vars": null,
+   "text": "locked"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": null,
+   "text": "vote {speed}: {agreed}/{players}"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 3,
+    "agreed": 1.5,
+    "players": 0.30000000000000004
+   },
+   "text": "vote 3: 1.5/0.30000000000000004"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 1.5,
+    "agreed": 0.30000000000000004,
+    "players": -7
+   },
+   "text": "vote 1.5: 0.30000000000000004/-7"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 0.30000000000000004,
+    "agreed": -7,
+    "players": 1e+21
+   },
+   "text": "vote 0.30000000000000004: -7/1e+21"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": -7,
+    "agreed": 1e+21,
+    "players": 2.5e-7
+   },
+   "text": "vote -7: 1e+21/2.5e-7"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 1e+21,
+    "agreed": 2.5e-7,
+    "players": true
+   },
+   "text": "vote 1e+21: 2.5e-7/true"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": 2.5e-7,
+    "agreed": true,
+    "players": false
+   },
+   "text": "vote 2.5e-7: true/false"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": true,
+    "agreed": false,
+    "players": null
+   },
+   "text": "vote true: false/null"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": false,
+    "agreed": null,
+    "players": "carrier {team}"
+   },
+   "text": "vote false: null/carrier {team}"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": null,
+    "agreed": "carrier {team}",
+    "players": "æøå"
+   },
+   "text": "vote null: carrier {team}/æøå"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": "carrier {team}",
+    "agreed": "æøå",
+    "players": ""
+   },
+   "text": "vote carrier {team}: æøå/"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": "æøå",
+    "agreed": "",
+    "players": 3
+   },
+   "text": "vote æøå: /3"
+  },
+  {
+   "lang": "no",
+   "key": "speed.vote",
+   "vars": {
+    "speed": "",
+    "agreed": 3,
+    "players": 1.5
+   },
+   "text": "vote : 3/1.5"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": null,
+   "text": "{metres} m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 3
+   },
+   "text": "3 m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 1.5
+   },
+   "text": "1.5 m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 0.30000000000000004
+   },
+   "text": "0.30000000000000004 m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": -7
+   },
+   "text": "-7 m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 1e+21
+   },
+   "text": "1e+21 m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": 2.5e-7
+   },
+   "text": "2.5e-7 m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": true
+   },
+   "text": "true m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": false
+   },
+   "text": "false m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": null
+   },
+   "text": "null m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": "carrier {team}"
+   },
+   "text": "carrier {team} m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": "æøå"
+   },
+   "text": "æøå m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "status.tooFar",
+   "vars": {
+    "metres": ""
+   },
+   "text": " m fra nærmeste kommandonode"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": null,
+   "text": "{mantas} Manta / {walruses} Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 3,
+    "walruses": 1.5
+   },
+   "text": "3 Manta / 1.5 Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 1.5,
+    "walruses": 0.30000000000000004
+   },
+   "text": "1.5 Manta / 0.30000000000000004 Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 0.30000000000000004,
+    "walruses": -7
+   },
+   "text": "0.30000000000000004 Manta / -7 Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": -7,
+    "walruses": 1e+21
+   },
+   "text": "-7 Manta / 1e+21 Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 1e+21,
+    "walruses": 2.5e-7
+   },
+   "text": "1e+21 Manta / 2.5e-7 Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": 2.5e-7,
+    "walruses": true
+   },
+   "text": "2.5e-7 Manta / true Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": true,
+    "walruses": false
+   },
+   "text": "true Manta / false Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": false,
+    "walruses": null
+   },
+   "text": "false Manta / null Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": null,
+    "walruses": "carrier {team}"
+   },
+   "text": "null Manta / carrier {team} Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": "carrier {team}",
+    "walruses": "æøå"
+   },
+   "text": "carrier {team} Manta / æøå Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": "æøå",
+    "walruses": ""
+   },
+   "text": "æøå Manta /  Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "hangar.tally",
+   "vars": {
+    "mantas": "",
+    "walruses": 3
+   },
+   "text": " Manta / 3 Walrus"
+  },
+  {
+   "lang": "no",
+   "key": "no.such.key",
+   "vars": null,
+   "text": "no.such.key"
+  }
+ ]
+}
