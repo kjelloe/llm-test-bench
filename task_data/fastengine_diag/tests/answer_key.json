@@ -8,5 +8,9 @@
  "smart_app_control": "f8eee3e7565f5b0b40fd0105b6170a45fb370550cb323034dff01473d92a787e",
  "corrections_noise": "b9f234fabc845e58ddbfc1f6f135afb8dc6bba91196958adb95112fab4022f56",
  "force_push_clones": "ffbb2970a61acee4ab331094b17dcc55821299685f1a04790f40c6d533ede14f",
- "systemd_expand": "262be7f7f004764c85b9d004ee15b02ef8d802473dbf28ab30186d508fc32685"
+ "systemd_expand": "262be7f7f004764c85b9d004ee15b02ef8d802473dbf28ab30186d508fc32685",
+ "winexe_lcid": "03bc8d360d69282ad981a852dc31323db19970f226f3c76fc51d6260d5550e82",
+ "rid_lockfile_dirty": "bce20cc173b2dacb5c3123e2dba8802d086bcdd6cacc5a521436120089d3a9c2",
+ "worktree_selflink": "1fd61195a901a4b304c5d5ea798575818ec43daa66642359a0fb2789f1bca76c",
+ "height_queries": "84d1b19a6e7d53b4cffacb856ffbd2d2494dcb310fe315709975e5df76d358e8"
 }

@@ -2012,6 +2012,27 @@ FE_FLEX_WRAP = Task(
     min_predict=12000,
 )
 
+FE_BASH_PACKAGE = Task(
+    id="fe_bash_package",
+    difficulty=2,
+    description=(
+        "scripts/package.sh zips the last build of each target of a game for release (fastengine spec F10). "
+        "Asked for a target that was never built, it exits without a word under set -euo pipefail, and "
+        "'package.sh <game> linux64,win64' (the comma list build.sh takes) is treated as one target. Fix it: "
+        "targets come as separate arguments, a comma list, or both; a target with no build folder or no "
+        "stamped version must print the script's own 'no stamped <target> build of <game>; run "
+        "scripts/build.sh <game> <target>' to stderr and exit 1. Everything else stays as the comments say."
+    ),
+    subdir="fe_bash_package",
+    editable_files=["scripts/package.sh"],
+    context_files=["tests/test_package.py"],
+    test_cmd=["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+    test_timeout=120,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"never_built_fails_loudly": 2.0},
+)
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2053,6 +2074,8 @@ _FASTENGINE_DIAG = [
     ("libraylib_publish", 2), ("fill_culling", 3), ("mirror_target", 5), ("rt_premultiplied", 3),
     ("port_browser", 3), ("font_fallback", 3), ("smart_app_control", 3), ("corrections_noise", 4),
     ("force_push_clones", 4), ("systemd_expand", 4),
+    # added 2026-10-13 from the grown spec
+    ("winexe_lcid", 2), ("rid_lockfile_dirty", 2), ("worktree_selflink", 1), ("height_queries", 2),
 ]
 FASTENGINE_DIAG_TASKS: list[Task] = [
     _diag_task(q, d, "fastengine_diag", "fdiag", "porting a browser game to a C# engine on Raylib-cs (fastengine)")
@@ -2136,6 +2159,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_VIEW_MATH,
     FE_SOCKET_URLS,
     FE_FLEX_WRAP,
+    FE_BASH_PACKAGE,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2186,7 +2210,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default

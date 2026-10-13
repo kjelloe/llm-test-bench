@@ -38,5 +38,21 @@
  "systemd_expand": {
   "answer": "D",
   "source": "fastengine specs/llm_evaluation_tasks.md H08"
+ },
+ "winexe_lcid": {
+  "answer": "E",
+  "source": "fastengine specs/llm_evaluation_tasks.md A10"
+ },
+ "rid_lockfile_dirty": {
+  "answer": "C",
+  "source": "fastengine specs/llm_evaluation_tasks.md F09"
+ },
+ "worktree_selflink": {
+  "answer": "B",
+  "source": "fastengine specs/llm_evaluation_tasks.md G10"
+ },
+ "height_queries": {
+  "answer": "A",
+  "source": "fastengine specs/llm_evaluation_tasks.md D11"
  }
 }
