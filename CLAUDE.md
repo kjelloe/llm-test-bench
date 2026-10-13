@@ -1861,6 +1861,28 @@ gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
   8. The 2×24 diag run: qwen3.6:35b-A3B 17, qwen3.5:27b 16, qwen3-coder:30b-1m 13, deepseek-r1:32b 11
   (4 of its 6 misses are hangs). Still too easy at the top to rank the leaders.
 
+**Standings, all gamedev records to 2026-10-14** (latest valid record per model × task; stalled/TOOL_ERROR left out;
+partial = mean weighted partial credit over the tasks run; most models have only the first nine):
+
+| Model | gamedev pass | partial | diag | fastengine (4 older) |
+|---|---|---|---|---|
+| gpt-oss:120b (3×24) | 13/28 | 0.80 | 18/21 | 0/4, 0.20 |
+| gemma4:31b-qat (1 GPU; 2×24 run) | 16/28 | 0.74 | 19/21 | 1/4, 0.45 |
+| qwen3.6:27b | 12/28 | 0.67 | 20/21 | 1/4, 0.25 |
+| equinox:31b | 11/28 | 0.66 | 19/21 | 0/4, 0.12 |
+| qwen3.8-flash-next (3×24) | 12/28 | 0.65 | 20/21 | 1/4, 0.25 |
+| qwen3.8:27b | 11/28 | 0.61 | 19/21 | 0/4, 0.12 |
+| laguna-s-2.1:118b-iq4 (3×24) | 8/28 | 0.56 | 17/17 | — |
+| gemma4:26b-qat | 4/27 | 0.46 | 15/17 | 0/4, 0.29 |
+| swift-1.5-flash-next (3×24) | 6/9 | 0.83 | — | — |
+| qwen3.5-122b:a10b, qwen3.5:27b | 2-3/9 | 0.59 | 16/17 | — |
+| everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | ≤0.51 |
+
+Not run on gamedev yet: `qwen3.8:27b-nvfp4-mix` (24 GB, 36/39 on the default set), `qwen3-next:80b` (MXFP4 on 2×24,
+Q4_K_M on 3×24), and the 19 newer tasks for swift-1.5-flash-next and qwen3.5-122b:a10b; coder A3B entries
+(`qwen3-coder:30b*`, `qwen2.5-coder:14b`) skipped as a class that scores ≤0.44. GLM-5.3-Flash (GLM5-Next, master
+only, smallest GGUF 87 GB IQ1_S) would need flash-next-style paging on 72 GB; not downloaded.
+
 **Gamedev backlog (2026-10-08) — suggested next tests and model runs, NOT built/run yet.** The user
 will supply their team's specific Unity needs (pipeline, target platforms, which systems agents will
 write); re-prioritise this list against that before building anything. Each test idea names the gap
