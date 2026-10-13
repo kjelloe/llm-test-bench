@@ -1800,6 +1800,8 @@ swift-1.5-flash-next-moecache6g  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-0000
 # SPOT 2026-10-12 (one 4090, pin 67a17c17c, core clock locked): 9/10 at ~45 tok/s (= the original Q4_K_M's 44.9).
 #   PASS csv_nordic_property, python_hashmap (11/11, f16 KV), node_csv_parser, node_para_core; FAIL node_paratrooper
 #   37/40 (TESTS_STILL_FAIL, 85 s). NVFP4 runs on Ada without native FP4 at no speed cost here. output/night-nvfp4-spot.json
+# FULL 2026-10-13: 36/39 at 43.9 tok/s, 13 min (coding 19/19, web 4/4, L6-stepped 4/4, ctx 8k-64k, multihop 5/5;
+#   only node_paratrooper fails). Recommend for models/24gb.txt beside the Q4_K_M. output/t2-nvfp4-full.json
 qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:cdiamond/Qwen3.8-27B-iMatrix-NVFP4-MTP-GGUF
 
 # ── prism-ml/Ternary-Bonsai-2-27B-gguf (scout 2026-10-11, 4.5M downloads) — NOT RUN ─────────────────────────
