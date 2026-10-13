@@ -146,6 +146,33 @@ Diminishing returns on PCIe. 4-way PCIe dense 70B adds minimal tok/s vs 3-way.
 Main unlock: `qwen3-next:80b` context_256k (architecture still TBD — may cap at 131k).
 No new model class unlocks at 96 GB that 72 GB doesn't handle. Not a priority upgrade.
 
+#### 2.5 Apple Silicon reference (external numbers, not measured here)
+
+From a Reddit user (r/MacStudio, u/hive-technology, early October 2026): Mac Studio **M5 Ultra, 30-core CPU /
+64-core GPU, 256 GB unified memory** (~$9,500 list, $5,699 with education pricing). Medians of 3 runs, thinking
+tokens counted as generation; runtimes oMLX 0.7.0, and MTPLX 2.12.0 for Flash Next. Speed only, no task quality.
+
+| Model | Prefill tok/s (~4k / ~17k prompt) | Gen tok/s (short / ~4k / ~16k) | Resident |
+|---|---|---|---|
+| Qwen3.8 Flash Next | 2,000 / 2,200 | 58 / 53 / 51 | 99 GB |
+| Gemma 4 26B (4-bit) | 4,200 / 4,100 | 113 / 102 / 91 | 15 GB |
+| Qwen3.6 35B-A3B (vision build) | 6,800 / 6,700 | 114 / 115 / 107 | 20 GB |
+| DeepSeek V4 Flash (4-bit) | ~790 / 600 (first pass, uncached) | 31 / 28 / 27 | 128 GB |
+
+Their everyday set (Flash Next + Gemma + Qwen3.6 + a small decision model) is ~160 GB resident plus ~15 GB for
+macOS, leaving ~80 GB for KV cache; loads from disk take 8-32 s, so everything stays resident.
+
+Against this rig (llama.cpp, temperature 0, no speculative decoding):
+- **qwen3.8-flash-next**: 27-33 tok/s on 3×24 GB with the core clocks locked (`--fit`, pin `67a17c17c`), ~18 tok/s on
+  one 16 GB GPU with NVMe paging. The Mac's ~2× is plausible from unified memory (no PCIe split), but MTPLX's name
+  suggests MTP speculative decoding, which this harness deliberately leaves off — not like for like.
+- **gemma4:26b-qat**: ~129 tok/s on one RTX 4090 (short coding answers) vs 113 short / 91 at 16k on the Mac.
+- **Qwen3.6-35B-A3B**: ~140 tok/s on one 4090 (noctrex MXFP4), ~100 split over 2×24 GB, vs ~114 on the Mac.
+- **DeepSeek V4(.1) Flash**: here only via NVMe expert streaming on one 24 GB card at ~0.9 tok/s; the Mac holds it
+  in memory at ~30 tok/s. This is the one class where 256 GB unified memory changes what is practical.
+- Prefill is where the 4090 still leads for models that fit (thousands of tok/s on one card); for the >96 GB models
+  the Mac's 2,000 tok/s prefill is far beyond anything this rig reaches with experts off-GPU.
+
 ---
 
 ### 3. Recommended vLLM Runtime Defaults
