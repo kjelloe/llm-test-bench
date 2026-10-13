@@ -69,3 +69,19 @@ def test_task_md_contract_used_by_llm_service_provider(tmp_path, task_id):
     fence = check.index("```")
     assert check[fence + 1] == " ".join(task.test_cmd)
     assert ("**Setup:**" in md) == bool(task.setup_cmd)
+
+
+from lib.tasks import OPT_IN_GROUPS, TASK_GROUPS  # noqa: E402
+
+_OPT_IN = sorted({tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]})
+
+
+@pytest.mark.parametrize("tid", _OPT_IN)
+def test_every_opt_in_task_exports_its_files_and_no_reference(tmp_path, tid):
+    task = TASK_MAP[tid]
+    dest = tmp_path / "out"
+    export_task(task, dest)
+    for rel in task.editable_files + task.context_files:
+        assert (dest / rel).exists(), f"{tid}: missing {rel}"
+    leaked = [str(p.relative_to(dest)) for p in dest.rglob("*.reference.*")]
+    assert not leaked, f"{tid}: exported {leaked}"

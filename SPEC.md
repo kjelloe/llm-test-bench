@@ -115,7 +115,9 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   sort keys), `fe_object3d` (L3, three's world matrices and lookAt), `fe_ico_writer` (L2, PNG + ICO without an image
   library, found again inside an exe), `fe_i18n` (L2, the browser's i18n.js), `fe_session_rules` (L3, stop rules, seat tokens per
   server, stall metric), `fe_output_color` (L4, three's tone mapping, sRGB and fog, graded against pixels three rendered in
-  Chromium), `fe_bash_stamp` (L2, build version with -dirty), `fe_bash_job` (L3, a build job's lane folder and unchecked steps).
+  Chromium), `fe_bash_stamp` (L2, build version with -dirty), `fe_bash_job` (L3, a build job's lane folder and unchecked steps). Fixtures come from the real code
+  wherever possible (three r162 under Node or rendered in Chromium, the game's i18n.js). fastengine itself now targets
+  .NET 10; these tasks stay on net9.0 until their first results are in.
   **fastengine diagnosis (18, opt-in) — `--task-group fastengine_diag`:** `fdiag_*`, same format as
   `gamedev_diag`. Details: CLAUDE.md "fastengine task group".
 

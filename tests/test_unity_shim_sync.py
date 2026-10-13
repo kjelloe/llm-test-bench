@@ -162,3 +162,14 @@ def test_output_color_fixtures_match_three_in_chromium():
     out = subprocess.run(["node", "tools/make_fixtures.reference.mjs"], cwd=root, capture_output=True, text=True,
                          timeout=300, check=True, env={**os.environ, "PLAYWRIGHT": str(_PLAYWRIGHT)})
     assert out.stdout == (root / "tests" / "FastengineTests" / "fixtures.json").read_text(encoding="utf-8")
+
+
+def test_every_fixture_generator_is_guarded():
+    """A task whose fixtures come from a generator must have that generator in one of the guards above."""
+    guarded = {(t, s) for t, s, _ in JS_FIXTURES} | {(t, s) for t, s, _ in PY_FIXTURES}
+    guarded |= {("fe_flex_wrap", "tools/make_fixtures.reference.mjs"), ("fe_output_color", "tools/make_fixtures.reference.mjs")}
+    found = set()
+    for path in TASK_DATA_DIR.glob("*/**/make[-_]fixtures*"):
+        rel = path.relative_to(TASK_DATA_DIR)
+        found.add((rel.parts[0], "/".join(rel.parts[1:])))
+    assert found <= guarded, f"unguarded fixture generators: {sorted(found - guarded)}"

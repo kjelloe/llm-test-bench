@@ -385,11 +385,12 @@ tests/
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
   test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored) + clock_warnings()
-  test_export_task.py         --export-task bundling unit tests; also pins the TASK.md format that
+  test_export_task.py         --export-task bundling unit tests (every opt-in task: its files present, no *.reference.*); also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
   test_hwmonitor.py           hwmonitor threshold state-machine unit tests; exits when its --pid is gone
   test_hangwatch.py           llamacpp/hangwatch.sh "task still in progress" detection
+  test_stall_watch.py         bench's stall watchdog (all GPUs idle with a request open → stop, record stalled; statistics drop it)
   test_reporting.py           lib/reporting skill-level scoring unit tests
   test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
@@ -397,7 +398,9 @@ tests/
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)
   test_test_results.py        partial-credit parsing (xunit/node:test/pytest per-test lines + summary counts) and weighting
   test_unity_shim_sync.py     gamedev guards (incl. every test_weights key names a real test): per-task UnityEngine shim copies match task_data/_shared/UnityShim,
-                              every gamedev task has a *.reference.* solution, parity fixtures match the JS spec
+                              every gamedev task has a *.reference.* solution, parity fixtures match the JS spec;
+                              every fixture generator (JS under Node, Python, three/Chromium via Playwright) regenerates
+                              its fixtures byte for byte, and none is left unguarded
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=20000 num_ctx=32768 model_timeout=600
@@ -417,8 +420,11 @@ task_data/
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
   fe_*/                   fastengine C# tasks: Fastengine.sln, src/Fastengine at net9.0 (latest C#, no Unity shim),
-                          xunit tests; fixtures from three itself (fe_three_geometry) or an independent Python
-                          reader (fe_ttf_metrics); *.reference.cs adapted from fastengine's own code
+                          xunit tests; fixtures from the real thing wherever possible: three's own code under Node
+                          (fe_three_geometry, fe_render_order, fe_object3d; js/three.reference.mjs is three r162, not
+                          exported), three rendered in Chromium (fe_output_color), Chromium's layout (fe_flex_wrap),
+                          the game's i18n.js (fe_i18n), an independent Python reader (fe_ttf_metrics);
+                          *.reference.cs adapted from fastengine's own code
   fe_bash_package/, fe_bash_stamp/, fe_bash_job/   fastengine bash tasks (pytest drives the script, *.reference.sh)
   fastengine_diag/        18 multiple-choice questions, same layout and generator pattern as gamedev_diag
   gamedev_diag/           21 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
@@ -1958,13 +1964,14 @@ and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are r
 
 *Other suggested model runs:*
 1. Cross-GPU sensitivity on the top single-GPU models (equinox:31b, qwen3.6:27b, gemma4:31b-qat) at
-   2×24 GB `tensor_split=1|1` — split arity has flipped close calls before.
+   2×24 GB `tensor_split=1|1` — split arity has flipped close calls before. (gemma4:31b-qat done 2026-10-13: 16/28, two
+   tasks flip to PASS; equinox:31b and qwen3.6:27b not yet.)
 2. The vLLM box: `qwen3.8-27b:nvfp4-next` (tp=2, 2× RTX 5060 Ti) — needs .NET 9 SDK and Node there.
 3. DeepSeek-V4.1-Flash on one or two short gamedev tasks (e.g. `cs_coord_bam`) — its model files were
    deleted 2026-10-08 to free disk, so this first needs the ~502 GB re-download — as a capability
    ceiling; expect ~1 h per task at its measured prefill/decode rates.
 4. A frontier coding agent via `--export-task` on all of them, for an upper bound to set levels against.
-7. **The second wave (14 gamedev tasks + 17 `diag_*`) has no model results yet**: run the top ~6 by
+7. **DONE 2026-10-09/10 (see the second- and third-wave results).** The second wave had no model results: run the top ~6 by
    gamedev partial credit (gpt-oss:120b, qwen3.8-flash-next, equinox:31b, qwen3.6:27b, gemma4:31b-qat,
    gemma4:26b-qat) on `--task-group gamedev gamedev_diag`, then decide the rest.
 5. qwen3.8-flash-next speed root cause: rebuild `67a17c17c` with `-DGGML_CUDA_GRAPHS=OFF` and re-run
@@ -2024,10 +2031,14 @@ for null, `1E+21`) where the browser's `String()` gives `true`, `null`, `1e+21`,
 **Finding 4 (`fe_bash_job`):** the worker's `build.sh` hashes `build.log` into `manifest.json` while its `tee` is still
 writing (and prints "== done" after), so the manifest's entry for build.log can disagree with the file. None reported yet.
 
-Not built (need a GL context, Windows, or more time): A02/A05 as code, B02 `Object3D` (next: fixtures from
-three), B03-B16 rendering, C01 pixel comparison, the Windows-interop items.
+Not built (need a GL context or Windows, or are agentic/process items): A02/A05 as code, B03-B16 rendering on a GL
+context, C01 pixel comparison, the Windows-interop items, I01-I06; E04's "name saved once taken" (no such field to test).
+**Deviation:** fastengine moved to .NET 10 (`net10.0`, fastengine `6b31868`); these tasks still target net9.0 and say
+".NET 9" in their prompt. Both SDKs are on the rig; moving the tasks means re-running every fastengine result, so it waits
+until the queued runs are in.
 
-**Results, top six (2026-10-12, `output/fe-*.json`, `fesolo-*.json`; cc = does not compile, nb = no usable file):**
+**Results, top six on the first four tasks (2026-10-12, `output/fe-*.json`, `fesolo-*.json`; cc = does not compile, nb =
+no usable file). The twelve later tasks and eight later questions are queued (2026-10-14, `output/t6-*`, `t7-*`, `t8-*`):**
 
 | Model | geometry | ttf | solo | css | pass | partial | diag |
 |---|---|---|---|---|---|---|---|

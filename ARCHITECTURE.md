@@ -81,12 +81,15 @@ tests/
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
   test_load_check.py          Unit tests for lib/load_check.evaluate() — CPU-hog and busy-GPU flagging, own process tree ignored, ordering; clock_warnings() for unlocked GPU clocks
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
-  test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP)
+  test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP); every opt-in task exports its editable and context files and no *.reference.* file
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)
   test_reporting.py           Unit tests for lib/reporting._skill_level / _peak_skill_level (consecutive-tier vs peak-tier scoring logic)
   test_hw_snapshot.py         Unit tests for hw_summary — the results header attributes llama_server_ver to the right serving engine
   test_statistics_server_name.py  Unit tests for statistics._server_name — same engine-attribution logic, exercised from the aggregation side
   test_powerlimit_output.py   Regression test for powerlimit.sh's WSL2 elevated-PowerShell one-liner (invokes the real script; skipped off-WSL2 since the non-WSL path calls sudo nvidia-smi for real)
+  test_hangwatch.py           llamacpp/hangwatch.sh "task still in progress" detection
+  test_test_results.py        Partial-credit parsing (xunit, node:test, pytest per-test lines and summary counts), test_weights, and C# build-error classification (Unity rules)
+  test_unity_shim_sync.py     Opt-in task guards: UnityShim copies match the canonical one, every gamedev/fastengine task has a *.reference.* solution, every test_weights key names a real test, diag keys match their generator, every fixture generator (Node, Python, Chromium via Playwright) regenerates its fixtures byte for byte and none is unguarded
   test_run_sh_pip_bootstrap.py  Static regression guard for run.sh's venv/pip setup (ensurepip fallback present; requirements.txt installed via "$VENV/bin/python3" -m pip, never a bare pip — see the Debian externally-managed-environment finding in CLAUDE.md)
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
@@ -126,6 +129,11 @@ task_data/
   cs_coord_convert/ cs_coord_bam/ cs_main_thread_dispatch/ cs_protocol_codec/ cs_snapshot_interp/ cs_predict_reconcile/ crossplay_statehash_parity/
                           GameClient.sln; src/GameClient (netstandard2.1, LangVersion 9.0, the editable file + read-only types, *.reference.cs excluded from compile); tests/GameClientTests (net9.0 xunit); crossplay_* also has js/ (the JS spec + make-fixtures.js)  [gamedev, opt-in]
   node_room_authority/ node_seat_reconnect/   src/<module>.js stub + .reference.js, tests/*.test.js (node:test, no npm deps)  [gamedev, opt-in]
+  bash_accept_matrix/ bash_timeout_kill/ bash_kill_by_port/   scripts/<job>.sh stub + .reference.sh, tests/test_*.py (pytest drives the script)  [gamedev, opt-in]
+  gamedev_diag/ fastengine_diag/   questions/<id>.md, answers/<id>.txt ("?"), tests/answer_key.json (salted sha256), make_diag.reference.py (the key's source)  [opt-in]
+  fe_*/                   Fastengine.sln; src/Fastengine (net9.0, latest C#, the editable file, *.reference.cs excluded); tests/FastengineTests (xunit, fixtures.json);
+                          js/ or tools/ hold the real code the fixtures come from (three r162 as js/three.reference.mjs, not exported; the game's i18n.js) and
+                          the generator; fe_bash_* are bash tasks laid out like the gamedev ones  [fastengine, opt-in]
 
 # ── Reasoning benchmark (v2 — planned) ──────────────────────────────────────
 compare-reasoning.sh      (planned) Reasoning equivalent of compare.sh
