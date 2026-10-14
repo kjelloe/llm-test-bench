@@ -31,6 +31,9 @@ def get_hw_snapshot(
         # Key kept for older result files; server_name says which engine (llama-server or vllm) it is.
         snap["llama_server_version"] = _llama_server_version(llama_server_bin)
         snap["server_name"] = server_name
+        # one slot + no prompt cache (default since 2026-10-14); records without the key used the server's defaults
+        from lib.llama_server_client import cache_prompt, order_independent
+        snap["order_independent"] = order_independent() and not cache_prompt()
     return snap
 
 

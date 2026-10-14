@@ -11,6 +11,9 @@ namespace Fastengine
         public bool Visible = true;
         public double[] World;
         public double[] Center;
+        public double Radius = 1;
+        public bool FrustumCulled = true;
+        public int Layers = 1;
         public RenderMaterial Material;
         public List<RenderMaterial> Materials;
         public List<int> GroupMaterials;
@@ -31,22 +34,28 @@ namespace Fastengine
     {
         sealed record Item(int Id, int MaterialId, int GroupOrder, int RenderOrder, double Z, int Seq);
 
-        public static RenderLists Build(SceneNode scene, double[] viewProjection, double[] cameraPosition)
+        public static RenderLists Build(SceneNode scene, double[] viewProjection, double[] cameraPosition, int cameraLayers = 1)
         {
             var opaque = new List<Item>();
             var transmissive = new List<Item>();
             var transparent = new List<Item>();
-            Project(scene, viewProjection, 0, opaque, transmissive, transparent);
+            var planes = Frustum(viewProjection);
+            Project(scene, viewProjection, planes, cameraLayers, 0, opaque, transmissive, transparent);
             opaque.Sort(PainterSortStable);
             transmissive.Sort(ReversePainterSortStable);
             transparent.Sort(ReversePainterSortStable);
             return new RenderLists(opaque.ConvertAll(i => i.Id), transmissive.ConvertAll(i => i.Id), transparent.ConvertAll(i => i.Id));
         }
 
-        static void Project(SceneNode node, double[] proj, int groupOrder, List<Item> opaque, List<Item> transmissive, List<Item> transparent)
+        static void Project(SceneNode node, double[] proj, double[][] planes, int cameraLayers, int groupOrder,
+            List<Item> opaque, List<Item> transmissive, List<Item> transparent)
         {
             if (!node.Visible) return;
-            if (node.Kind == "group") groupOrder = node.RenderOrder;
+            if ((node.Layers & cameraLayers) == 0) { } // not drawn, but its children are still visited
+            else if (node.Kind == "group") groupOrder = node.RenderOrder;
+            else if (node.Kind == "sprite" && node.FrustumCulled && !InFrustum(planes, node.World, 0, 0, 0, 0.7071067811865476)) { }
+            else if (node.Kind is "mesh" or "line" or "points" && node.FrustumCulled
+                     && !InFrustum(planes, node.World, node.Center[0], node.Center[1], node.Center[2], node.Radius)) { }
             else if (node.Kind == "sprite")
             {
                 var (_, _, z) = Apply(proj, node.World[12], node.World[13], node.World[14]);
@@ -66,13 +75,45 @@ namespace Fastengine
                 }
                 else if (node.Material.Visible) Push(node, node.Material, groupOrder, z, opaque, transmissive, transparent);
             }
-            foreach (var child in node.Children) Project(child, proj, groupOrder, opaque, transmissive, transparent);
+            foreach (var child in node.Children) Project(child, proj, planes, cameraLayers, groupOrder, opaque, transmissive, transparent);
         }
 
         static void Push(SceneNode node, RenderMaterial m, int groupOrder, double z, List<Item> opaque, List<Item> transmissive, List<Item> transparent)
         {
             var item = new Item(node.Id, m.Id, groupOrder, node.RenderOrder, z, opaque.Count + transmissive.Count + transparent.Count);
             (m.Transmission > 0 ? transmissive : m.Transparent ? transparent : opaque).Add(item);
+        }
+
+        // Frustum.setFromProjectionMatrix (WebGL): six planes (a, b, c, d), normalised.
+        static double[][] Frustum(double[] me)
+        {
+            double[][] raw =
+            {
+                new[] { me[3] - me[0], me[7] - me[4], me[11] - me[8], me[15] - me[12] },
+                new[] { me[3] + me[0], me[7] + me[4], me[11] + me[8], me[15] + me[12] },
+                new[] { me[3] + me[1], me[7] + me[5], me[11] + me[9], me[15] + me[13] },
+                new[] { me[3] - me[1], me[7] - me[5], me[11] - me[9], me[15] - me[13] },
+                new[] { me[3] - me[2], me[7] - me[6], me[11] - me[10], me[15] - me[14] },
+                new[] { me[3] + me[2], me[7] + me[6], me[11] + me[10], me[15] + me[14] },
+            };
+            foreach (var p in raw)
+            {
+                var inv = 1 / Math.Sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
+                for (int i = 0; i < 4; i++) p[i] *= inv;
+            }
+            return raw;
+        }
+
+        // Frustum.intersectsSphere of the local sphere moved by the world matrix (Sphere.applyMatrix4: the radius scales by
+        // the largest axis scale).
+        static bool InFrustum(double[][] planes, double[] w, double cx, double cy, double cz, double radius)
+        {
+            var (x, y, z) = Apply(w, cx, cy, cz);
+            double sx = w[0] * w[0] + w[1] * w[1] + w[2] * w[2], sy = w[4] * w[4] + w[5] * w[5] + w[6] * w[6], sz = w[8] * w[8] + w[9] * w[9] + w[10] * w[10];
+            var r = radius * Math.Sqrt(Math.Max(sx, Math.Max(sy, sz)));
+            foreach (var p in planes)
+                if (p[0] * x + p[1] * y + p[2] * z + p[3] < -r) return false;
+            return true;
         }
 
         // three's Vector3.applyMatrix4: column-major, divided by w

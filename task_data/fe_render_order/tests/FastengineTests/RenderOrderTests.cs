@@ -39,6 +39,9 @@ namespace FastengineTests
                 World = Numbers(e.GetProperty("world")),
             };
             if (e.TryGetProperty("center", out var c)) n.Center = Numbers(c);
+            if (e.TryGetProperty("radius", out var r)) n.Radius = r.GetDouble();
+            n.FrustumCulled = e.GetProperty("frustumCulled").GetBoolean();
+            n.Layers = e.GetProperty("layers").GetInt32();
             if (e.TryGetProperty("material", out var m)) n.Material = Material(m);
             if (e.TryGetProperty("materials", out var ms))
             {
@@ -62,7 +65,7 @@ namespace FastengineTests
         {
             var c = Cases.Single(x => x.GetProperty("name").GetString() == name);
             var lists = RenderOrder.Build(Node(c.GetProperty("scene")), Numbers(c.GetProperty("viewProjection")),
-                Numbers(c.GetProperty("cameraPosition")));
+                Numbers(c.GetProperty("cameraPosition")), c.GetProperty("cameraLayers").GetInt32());
             Same("opaque", c.GetProperty("opaque"), lists.Opaque, name);
             Same("transmissive", c.GetProperty("transmissive"), lists.Transmissive, name);
             Same("transparent", c.GetProperty("transparent"), lists.Transparent, name);

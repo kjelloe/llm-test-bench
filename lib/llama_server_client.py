@@ -184,6 +184,7 @@ class LlamaServerManager:
         ]
         if num_threads and num_threads > 0:
             cmd.extend(["--threads", str(num_threads)])
+        cmd.extend(order_args(cfg.params))
         for key, val in cfg.params.items():
             if self.single_gpu_index >= 0 and key == "tensor_split":
                 # tensor_split is meaningless (and would error) when only one GPU is visible
@@ -240,6 +241,27 @@ class LlamaServerManager:
             time.sleep(1)
         self.stop()
         raise TimeoutError(f"llama-server did not become ready within {timeout}s")
+
+
+def order_independent() -> bool:
+    """Since 2026-10-14 the default (BENCH_ORDER_INDEPENDENT=0 restores the old behaviour): one server slot and no prompt
+    cache. With llama-server's defaults (4 slots on one unified KV cache, prompts cached) a request's cell layout and
+    batching depend on the requests before it, and with them the floating-point reduction order, so a close-call task can
+    flip with the task order (gpt-oss:120b node_paratrooper, 2026-10-13). Single requests are no slower this way."""
+    return os.environ.get("BENCH_ORDER_INDEPENDENT", "1") != "0"
+
+
+def order_args(params: dict) -> list[str]:
+    """--parallel 1 unless order independence is off or the model file sets parallel itself."""
+    return ["--parallel", "1"] if order_independent() and "parallel" not in params else []
+
+
+def cache_prompt() -> bool:
+    """BENCH_CACHE_PROMPT=1/0 overrides; otherwise the prompt cache is on only when order independence is off."""
+    explicit = os.environ.get("BENCH_CACHE_PROMPT")
+    if explicit in ("0", "1"):
+        return explicit == "1"
+    return not order_independent()
 
 
 def _drain(pipe) -> deque[str]:
@@ -333,10 +355,7 @@ def chat(
         "top_k": 1,
         "repeat_penalty": 1.0,
     }
-    # BENCH_CACHE_PROMPT=0: process every prompt from scratch. With the server's prompt cache a request reuses the
-    # KV of the previous prompt's common prefix, so the rest is batched differently and, on split models, a task's
-    # answer can depend on the task before it (gpt-oss:120b node_paratrooper, 2026-10-13).
-    if os.environ.get("BENCH_CACHE_PROMPT") == "0":
+    if not cache_prompt():
         payload["cache_prompt"] = False
     # Always send enable_thinking explicitly so Qwen3 GGUFs (which default to thinking-enabled)
     # are deterministically controlled. think=False → disable; think=True → enable.

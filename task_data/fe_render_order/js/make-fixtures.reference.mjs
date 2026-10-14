@@ -22,17 +22,23 @@ function project( scene, camera ) {
 	const proj = new THREE.Matrix4().multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse );
 	const lists = { opaque: [], transmissive: [], transparent: [] };
 	const v = new THREE.Vector3();
+	const frustum = new THREE.Frustum().setFromProjectionMatrix( proj );   // three's own culling code
 	const push = ( object, m, groupOrder, z ) => {
 		const item = { id: object.id, material: m, groupOrder, renderOrder: object.renderOrder, z };
 		( m.transmission > 0 ? lists.transmissive : m.transparent === true ? lists.transparent : lists.opaque ).push( item );
 	};
 	( function projectObject( object, groupOrder ) {
 		if ( object.visible === false ) return;
-		if ( object.isGroup ) groupOrder = object.renderOrder;
+		if ( ! object.layers.test( camera.layers ) ) { /* not drawn, but its children are still visited */ }
+		else if ( object.isGroup ) groupOrder = object.renderOrder;
 		else if ( object.isLight ) { /* lights are collected, not drawn */ }
 		else if ( object.isSprite ) {
-			v.setFromMatrixPosition( object.matrixWorld ).applyMatrix4( proj );
-			if ( object.material.visible ) push( object, object.material, groupOrder, v.z );
+			if ( object.frustumCulled && ! frustum.intersectsSprite( object ) ) { /* culled */ } else {
+				v.setFromMatrixPosition( object.matrixWorld ).applyMatrix4( proj );
+				if ( object.material.visible ) push( object, object.material, groupOrder, v.z );
+			}
+		} else if ( ( object.isMesh || object.isLine || object.isPoints ) && object.frustumCulled && ! frustum.intersectsObject( object ) ) {
+			/* culled */
 		} else if ( object.isMesh || object.isLine || object.isPoints ) {
 			v.copy( object.geometry.boundingSphere.center ).applyMatrix4( object.matrixWorld ).applyMatrix4( proj );
 			const material = object.material;
@@ -54,10 +60,11 @@ function project( scene, camera ) {
 function node( o ) {
 	const kind = o.isGroup ? 'group' : o.isLight ? 'light' : o.isSprite ? 'sprite' : o.isMesh ? 'mesh' : o.isLine ? 'line'
 		: o.isPoints ? 'points' : 'object';
-	const n = { id: o.id, kind, renderOrder: o.renderOrder, visible: o.visible, world: Array.from( o.matrixWorld.elements ) };
+	const n = { id: o.id, kind, renderOrder: o.renderOrder, visible: o.visible, world: Array.from( o.matrixWorld.elements ),
+		frustumCulled: o.frustumCulled, layers: o.layers.mask };
 	const mat = ( m ) => ( { id: m.id, transparent: m.transparent, transmission: m.transmission ?? 0, visible: m.visible } );
 	if ( o.isMesh || o.isLine || o.isPoints || o.isSprite ) {
-		if ( ! o.isSprite ) n.center = o.geometry.boundingSphere.center.toArray();
+		if ( ! o.isSprite ) { n.center = o.geometry.boundingSphere.center.toArray(); n.radius = o.geometry.boundingSphere.radius; }
 		if ( Array.isArray( o.material ) ) {
 			n.materials = o.material.map( mat );
 			n.groupMaterials = o.geometry.groups.map( ( g ) => g.materialIndex );
@@ -76,12 +83,12 @@ function material( kind ) {
 
 function mesh( materials, opts ) {
 	const g = new THREE.BufferGeometry();
-	g.boundingSphere = new THREE.Sphere( new THREE.Vector3( ...( opts.center ?? [ 0, 0, 0 ] ) ), 1 );
+	g.boundingSphere = new THREE.Sphere( new THREE.Vector3( ...( opts.center ?? [ 0, 0, 0 ] ) ), opts.radius ?? 1 );
 	const o = new THREE.Mesh( g, opts.material ?? pick( materials ) );
 	o.position.set( ...( opts.position ?? [ r3( range( -8, 8 ) ), r3( range( -3, 3 ) ), r3( range( -30, -2 ) ) ] ) );
 	o.rotation.set( r3( range( -1, 1 ) ), r3( range( -3, 3 ) ), 0 );
 	o.renderOrder = opts.renderOrder ?? pick( [ 0, 0, 0, 0, 1, -1 ] );
-	o.frustumCulled = false;
+	o.frustumCulled = opts.culled ?? false;
 	return o;
 }
 
@@ -96,7 +103,8 @@ const cases = [];
 function add( name, scene, cam ) {
 	const { proj, lists } = project( scene, cam );
 	scene.updateMatrixWorld();
-	cases.push( { name, viewProjection: Array.from( proj.elements ), cameraPosition: cam.position.toArray(), scene: node( scene ),
+	cases.push( { name, viewProjection: Array.from( proj.elements ), cameraPosition: cam.position.toArray(), cameraLayers: cam.layers.mask,
+		scene: node( scene ),
 		opaque: lists.opaque.map( ( i ) => i.id ), transmissive: lists.transmissive.map( ( i ) => i.id ), transparent: lists.transparent.map( ( i ) => i.id ) } );
 }
 
@@ -200,6 +208,38 @@ function add( name, scene, cam ) {
 	add( 'nested_group_resets_order', s, c );
 }
 
+// Frustum culling and layers (WebGLRenderer.render builds the frustum from the same projection × view matrix).
+{	// Culled: behind the camera, beside the view, beyond far; kept: a big sphere reaching in from outside, a scaled
+	// object whose sphere only reaches in through its scale, and an object outside the view with frustumCulled off.
+	const s = new THREE.Scene(); const c = new THREE.PerspectiveCamera( 60, 16 / 9, 0.1, 100 );
+	const glass = material( 'transparent' ), wall = material( 'opaque' );
+	s.add( mesh( [ glass ], { position: [ 0, 0, 5 ], culled: true, renderOrder: 0 } ) );
+	s.add( mesh( [ glass ], { position: [ 40, 0, -10 ], culled: true, renderOrder: 0 } ) );
+	s.add( mesh( [ glass ], { position: [ 0, 0, -150 ], culled: true, renderOrder: 0 } ) );
+	s.add( mesh( [ wall ], { position: [ 22, 0, -10 ], radius: 10, culled: true, renderOrder: 0 } ) );
+	s.add( mesh( [ wall ], { position: [ 15, 0, -11 ], radius: 1, culled: true, renderOrder: 0 } ) );
+	const scaled = mesh( [ wall ], { position: [ 15, 0, -10 ], radius: 1, culled: true, renderOrder: 0 } ); scaled.scale.set( 1, 6, 1 ); s.add( scaled );
+	s.add( mesh( [ glass ], { position: [ -40, 0, -10 ], culled: false, renderOrder: 0 } ) );
+	const label = new THREE.SpriteMaterial(); const sp = new THREE.Sprite( label ); sp.position.set( 18, 0, -10 ); s.add( sp );
+	const sp2 = new THREE.Sprite( label ); sp2.position.set( 0, 0, -10 ); sp2.scale.set( 3, 3, 1 ); s.add( sp2 );
+	const edge = new THREE.Sprite( label ); edge.position.set( 11.1, 0, -10 ); s.add( edge );   // 0.58 outside: kept by the 0.7071 radius
+	const edge2 = new THREE.Sprite( label ); edge2.position.set( 11.45, 0, -10 ); s.add( edge2 ); // 0.83 outside: culled
+	add( 'frustum_culling', s, c );
+}
+{	// Layers: an object on another layer is not drawn, but its children on the camera's layer are; enabling a layer on the
+	// camera brings it in.
+	const s = new THREE.Scene(); const c = new THREE.PerspectiveCamera( 60, 16 / 9, 0.1, 500 );
+	const glass = material( 'transparent' );
+	const hud = mesh( [ glass ], { position: [ 0, 0, -10 ], renderOrder: 0 } ); hud.layers.set( 2 ); s.add( hud );
+	hud.add( mesh( [ glass ], { position: [ 0, 0, -5 ], renderOrder: 0 } ) );
+	const both = mesh( [ glass ], { position: [ 1, 0, -12 ], renderOrder: 0 } ); both.layers.enable( 3 ); s.add( both );
+	const grp = new THREE.Group(); grp.renderOrder = 5; grp.layers.set( 4 ); s.add( grp );
+	grp.add( mesh( [ glass ], { position: [ 0, 1, -8 ], renderOrder: 0 } ) );
+	add( 'layers_default_camera', s, c );
+	const c2 = new THREE.PerspectiveCamera( 60, 16 / 9, 0.1, 500 ); c2.layers.enable( 2 );
+	add( 'layers_camera_sees_two', s, c2 );
+}
+
 // Random scenes: nested groups and objects, shared materials, mixed render orders.
 for ( let k = 0; k < 18; k ++ ) {
 	const s = new THREE.Scene();
@@ -220,9 +260,17 @@ for ( let k = 0; k < 18; k ++ ) {
 			for ( const k of [ 0, 1, 2, 1 ] ) m.geometry.addGroup( 0, 3, k );
 			parent.add( m );
 		}
-		else { const m = mesh( materials, { center: rnd() < 0.3 ? [ r3( range( -2, 2 ) ), 0, r3( range( -3, 3 ) ) ] : [ 0, 0, 0 ] } ); m.visible = rnd() > 0.08; parent.add( m ); }
+		else {
+			const m = mesh( materials, { center: rnd() < 0.3 ? [ r3( range( -2, 2 ) ), 0, r3( range( -3, 3 ) ) ] : [ 0, 0, 0 ],
+				radius: pick( [ 0.5, 1, 2, 4 ] ), culled: rnd() < 0.7,
+				position: [ r3( range( -22, 22 ) ), r3( range( -6, 6 ) ), r3( range( -40, 3 ) ) ] } );
+			m.visible = rnd() > 0.08;
+			if ( rnd() < 0.12 ) m.layers.set( 2 );
+			parent.add( m );
+		}
 	}
-	add( `random_${String( k ).padStart( 2, '0' )}`, s, camera() );
+	const cam = camera(); if ( rnd() < 0.3 ) cam.layers.enable( 2 );
+	add( `random_${String( k ).padStart( 2, '0' )}`, s, cam );
 }
 
 process.stdout.write( JSON.stringify( cases, null, 1 ) + '\n' );

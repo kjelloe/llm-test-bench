@@ -2020,9 +2020,10 @@ FE_RENDER_ORDER = Task(
         "Implement RenderOrder.Build in src/Fastengine/RenderOrder.cs (fastengine spec B06) so that the native "
         "renderer draws in exactly the order three r162's WebGLRenderer does: which list each visible mesh goes to, "
         "and the order inside each list, for every kind of object three draws (meshes, lines, points, sprites, "
-        "multi-material meshes) and every case projectObject handles. The current code is a first port that sorts "
-        "transparent meshes by distance from the camera. three's own code is in js/three-r162-renderlist.js; matrices are column-major as three "
-        "stores them." + FASTENGINE_CONSTRAINTS
+        "multi-material meshes), including what it leaves out (frustum culling, layers, hidden objects and materials). "
+        "The current code is a first port that sorts transparent meshes by distance from the camera. "
+        "js/three-r162-renderlist.js is three's own render path, verbatim: not all of it applies to this port. "
+        "Matrices are column-major as three stores them." + FASTENGINE_CONSTRAINTS
     ),
     subdir="fe_render_order",
     editable_files=["src/Fastengine/RenderOrder.cs"],

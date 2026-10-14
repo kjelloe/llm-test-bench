@@ -16,6 +16,11 @@ namespace Fastengine
         public bool Visible = true;
         public double[] World;
         public double[] Center;
+        // Radius of that bounding sphere; FrustumCulled and Layers (a bit mask) as three's object.frustumCulled and
+        // object.layers.mask.
+        public double Radius = 1;
+        public bool FrustumCulled = true;
+        public int Layers = 1;
         public RenderMaterial Material;
         // A mesh, line or points with several materials (three's material array): Materials, and the material index of
         // each geometry group in group order (an index may point past the array). Material is then null.
@@ -36,11 +41,11 @@ namespace Fastengine
 
     // fastengine spec B06: draw in the order three r162's WebGLRenderer does (js/three-r162-renderlist.js), so
     // transparent surfaces blend in the same order as in the browser. Build returns the object id of each item of each
-    // list in draw order (an object with several materials can appear more than once). Frustum culling, layers and
-    // LOD are not ported: every visible object is drawn.
+    // list in draw order (an object with several materials can appear more than once). cameraLayers is the camera's
+    // layers mask. Frustum culling and layers work as in three; LOD is not ported.
     public static class RenderOrder
     {
-        public static RenderLists Build(SceneNode scene, double[] viewProjection, double[] cameraPosition)
+        public static RenderLists Build(SceneNode scene, double[] viewProjection, double[] cameraPosition, int cameraLayers = 1)
         {
             var opaque = new List<(SceneNode node, int index)>();
             var transparent = new List<(SceneNode node, int index, double distance)>();

@@ -205,10 +205,14 @@ def test_bench_cache_prompt_0_sends_cache_prompt_false(monkeypatch):
         return Resp()
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     monkeypatch.delenv("BENCH_CACHE_PROMPT", raising=False)
+    monkeypatch.setenv("BENCH_ORDER_INDEPENDENT", "0")      # the old default: the server's prompt cache
     lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
     monkeypatch.setenv("BENCH_CACHE_PROMPT", "0")
     lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
-    assert "cache_prompt" not in sent[0] and sent[1]["cache_prompt"] is False
+    monkeypatch.delenv("BENCH_CACHE_PROMPT")
+    monkeypatch.delenv("BENCH_ORDER_INDEPENDENT")           # the default since 2026-10-14
+    lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
+    assert "cache_prompt" not in sent[0] and sent[1]["cache_prompt"] is False and sent[2]["cache_prompt"] is False
 
 
 def test_stderr_is_drained_so_a_chatty_server_never_blocks():
@@ -224,3 +228,16 @@ def test_stderr_is_drained_so_a_chatty_server_never_blocks():
     assert proc.wait(timeout=20) == 0 and out.strip() == b"done"
     time.sleep(0.2)
     assert len(tail) == 200 and tail[-1].startswith("line 19999")
+
+
+def test_order_independent_by_default(monkeypatch):
+    from lib.llama_server_client import cache_prompt, order_args
+    monkeypatch.delenv("BENCH_ORDER_INDEPENDENT", raising=False)
+    monkeypatch.delenv("BENCH_CACHE_PROMPT", raising=False)
+    assert order_args({}) == ["--parallel", "1"] and cache_prompt() is False
+    assert order_args({"parallel": "4"}) == []          # a model file's own setting wins
+    monkeypatch.setenv("BENCH_CACHE_PROMPT", "1")
+    assert cache_prompt() is True                       # explicit override either way
+    monkeypatch.delenv("BENCH_CACHE_PROMPT")
+    monkeypatch.setenv("BENCH_ORDER_INDEPENDENT", "0")
+    assert order_args({}) == [] and cache_prompt() is True   # the old server defaults

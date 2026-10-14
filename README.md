@@ -279,6 +279,8 @@ elevation is declined (`--print` only prints it; `./gpuclock.sh status` shows th
 clocks are unlocked; by default it only prints the hint, `BENCH_LOCK_CLOCKS=off` skips the check. For a benchmark
 session add `--memory` (each card's maximum memory clock: another +17-39% on split models, but the cards then idle in
 P0, ~290 W here, so `./gpuclock.sh unlock --memory` afterwards). Single-GPU runs need neither.
+Since 2026-10-14 llama-server runs with one slot and no prompt cache, so each answer is independent of the tasks run
+before it (the server's own defaults let the task order change close calls); `BENCH_ORDER_INDEPENDENT=0` restores them.
 During a run, bench stops a server whose GPUs have all been idle for 5 minutes with a request open (a hung
 split model; `BENCH_STALL_ABORT_S`, 0 = off) and records that task as `stalled`, which `statistics.sh` leaves out.
 
