@@ -2056,6 +2056,34 @@ says ".NET 10"; all 13 C# references pass and all stubs fail as before, a test p
 warns without the .NET 10 SDK (the gamedev tests still need the .NET 9 runtime). The result table below was measured on
 net9.0; the re-run on net10.0 is queued (`t9`).
 
+**Current: all 16 tasks on net10.0, seven models (re-run 2026-10-14 07:33-10:18, `output/t9-fe16-*.json`, after the
+move to .NET 10 and the hardened 14-test fe_bash_stamp; default server settings; gpt-oss:120b and flash-next on 3×24 GB
+with the core clock locked; no stall):**
+
+| Model | geom | ttf | solo | css | view | urls | flex | pkg | order | obj3d | ico | i18n | session | color | stamp | job | pass | partial |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gpt-oss:120b | cc | cc | 0.80 | **P** | 0.95 | **P** | **P** | 0.50 | **P** | 0.11 | **P** | 0.78 | 0.89 | 0.81 | **P** | **P** | 7/16 | 0.74 |
+| gemma4:31b-qat | **P** | 0.16 | 0.80 | cc | 0.79 | **P** | **P** | 0.50 | **P** | 0.00 | **P** | 0.78 | 0.89 | 0.86 | **P** | **P** | 7/16 | 0.74 |
+| qwen3.8-flash-next | cc | **P** | 0.70 | **P** | cc | nb | **P** | 0.50 | **P** | 0.05 | 0.60 | 0.78 | **P** | **P** | **P** | 0.89 | 7/16 | 0.66 |
+| qwen3.8:27b-nvfp4-mix | cc | cc | 0.80 | nb | 0.89 | **P** | 0.57 | 0.50 | **P** | nb | **P** | 0.44 | **P** | **P** | **P** | 0.33 | 6/16 | 0.60 |
+| qwen3.6:27b | cc | 0.58 | cc | cc | 0.89 | 0.83 | **P** | 0.50 | **P** | cc | cc | 0.50 | 0.78 | 0.74 | 0.79 | 0.56 | 2/16 | 0.51 |
+| equinox:31b | cc | 0.00 | 0.00 | cc | cc | **P** | **P** | 0.50 | **P** | cc | cc | 0.78 | 0.89 | 0.69 | **P** | **P** | 5/16 | 0.49 |
+| qwen3.8:27b | cc | **P** | cc | cc | 0.42 | 0.67 | cc | 0.50 | **P** | cc | cc | 0.44 | 0.78 | 0.74 | **P** | **P** | 4/16 | 0.47 |
+
+Per task, pass / mean partial: geom 1 / 0.14, ttf 2 / 0.39, solo 0 / 0.44, css 2 / 0.29, view 0 / 0.56, urls 4 / 0.79,
+flex 5 / 0.80, pkg 0 / 0.50, order 7 / 1.00, obj3d 0 / 0.02, ico 3 / 0.51, i18n 0 / 0.64, session 2 / 0.89, color 2 /
+0.83, stamp 6 / 0.97, job 4 / 0.83; 23 of 112 do not compile (36 on net9.0).
+- **Run-to-run variance is large on single cells.** The same model and task flips between runs (the task order differs,
+  and the default server is order-dependent, Known Issues), e.g. gpt-oss:120b went 4 → 7 passes with 8 → 2 compile
+  failures, and its net9 compile errors were ordinary ones (missing usings, ambiguous `Math.Floor`, a syntax error), not
+  C# 14 features. Read the partial-credit averages (±0.1 between runs) and the shared misses, not single cells.
+- **Leaders:** gpt-oss:120b and gemma4:31b-qat tie (7/16, 0.74), flash-next 0.66. gemma4 is the steadiest across runs.
+- **Still missed by everyone:** `fe_bash_package` (pipefail), `fe_i18n` (JS `String()`), `fe_object3d`, `fe_solo_server`,
+  `fe_view_math` this time. **Now too easy:** `fe_render_order` 7/7 and `fe_bash_stamp` 6/7 even hardened (it now
+  catches qwen3.6:27b only).
+
+**Before the move (net9.0, first runs) — the same seven models:**
+
 **All 16 tasks and 18 questions, seven models (2026-10-12..14; `output/fe-*`, `fesolo-*`, `t6-*`, `t7-*`, `t8-*`; default
 server settings; gpt-oss:120b and flash-next on 3×24 GB with the core clock locked, the rest on one RTX 4090; cc = does not
 compile, nb = no usable file):**
