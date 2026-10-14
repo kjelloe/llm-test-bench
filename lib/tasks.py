@@ -1010,7 +1010,7 @@ CS_PORT_MOVEMENT = Task(
 
 CS_PORT_HEIGHTMAP = Task(
     id="cs_port_heightmap",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Port CarrierDominion's island terrain to C#: implement SkirtRadius and IslandHeightAt in "
         "src/GameClient/Heightmap.cs as an exact port of skirtRadius / islandHeightAt in the read-only "
@@ -1045,7 +1045,7 @@ CS_PORT_HEIGHTMAP = Task(
 
 CS_PORT_WEBAUDIO = Task(
     id="cs_port_webaudio",
-    difficulty=4,
+    difficulty=2,
     description=(
         "Port boombrawl's browser sound effects (read-only js/sound.js, Web Audio) to an offline C# "
         "renderer: implement src/GameClient/Synth.cs (types in the read-only src/GameClient/SynthTypes.cs). "
@@ -1080,7 +1080,7 @@ CS_PORT_WEBAUDIO = Task(
 
 CS_TICK_INTERP = Task(
     id="cs_tick_interp",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Implement TickInterpolator in src/GameClient/TickInterpolator.cs (types in the read-only "
         "src/GameClient/TickTypes.cs): Unity-side smoothing between CarrierDominion server views that "
@@ -1119,7 +1119,7 @@ CS_TICK_INTERP = Task(
 
 CS_WS_ABORT_RECONNECT = Task(
     id="cs_ws_abort_reconnect",
-    difficulty=4,
+    difficulty=2,
     description=(
         "Bug report from a Unity client's network layer: simulating a network drop by calling Abort() on the "
         "socket (as a phone suspend or Wi-Fi loss does) never produces a reconnect - the connection just goes "
@@ -1152,7 +1152,7 @@ CS_WS_ABORT_RECONNECT = Task(
 
 CS_RECONNECT_POLICY = Task(
     id="cs_reconnect_policy",
-    difficulty=3,
+    difficulty=2,
     description=(
         "Implement the reconnect policy and seat URL handling of a Unity game client in "
         "src/GameClient/Reconnect.cs, matching the browser clients. ReconnectPolicy: NextDelay() returns "
@@ -1217,7 +1217,7 @@ CS_WS_CLIENT = Task(
 
 CS_PRIMITIVE_COMPOSE = Task(
     id="cs_primitive_compose",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Port ship parts built from three.js primitives (js/parts.js, real code from the browser client) "
         "to Unity transforms in src/GameClient/PartPort.cs. Each method builds its part under the model's "
@@ -1272,7 +1272,7 @@ CS_INPUT_LAST_PRESSED = Task(
 
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
-    difficulty=4,
+    difficulty=5,
     description=(
         "The HUD in src/GameClient/Hud.cs draws a name label over every unit of a Unity client (the game's own "
         "scripts are in src/GameClient/World.cs; do not edit them). It has three bugs the team hit in the real "
@@ -1300,7 +1300,7 @@ CS_FAKE_NULL = Task(
 
 CS_MESH_WINDING = Task(
     id="cs_mesh_winding",
-    difficulty=3,
+    difficulty=5,
     description=(
         "Implement the procedural meshes in src/GameClient/Meshes.cs for a Unity client that avoids "
         "built-in primitives: Box, Sphere(segments, rings), Icosahedron, Cylinder(radiusTop, radiusBottom, "
@@ -1324,7 +1324,7 @@ CS_MESH_WINDING = Task(
 
 CS_LIGHT_PORT = Task(
     id="cs_light_port",
-    difficulty=4,
+    difficulty=2,
     description=(
         "Bug report from the Unity (URP, Linear colour space) ports of two browser games: compared with "
         "the browser, every scene is far too bright, the ambient tint is off, and the sun lights the "
@@ -1377,7 +1377,7 @@ BASH_ACCEPT_MATRIX = Task(
 
 BASH_TIMEOUT_KILL = Task(
     id="bash_timeout_kill",
-    difficulty=3,
+    difficulty=4,
     description=(
         "Incident: a headless Unity player started by scripts/run_player.sh with an 8 second limit ran for "
         "70 minutes. Fix scripts/run_player.sh <seconds> <command> [args...]: run the command with its "
@@ -1419,7 +1419,7 @@ BASH_KILL_BY_PORT = Task(
 
 CS_PORT_QR = Task(
     id="cs_port_qr",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Port the browser clients' QR encoder to C# for the Unity client's invite panel: implement QrCode in "
         "src/GameClient/QrCode.cs from js/qrcode-excerpt.mjs (the real library, Kazuhiko Arase, MIT; the "
@@ -1472,7 +1472,7 @@ CS_SNAPSHOT_COALESCE = Task(
 
 CS_PORT_HELM = Task(
     id="cs_port_helm",
-    difficulty=3,
+    difficulty=4,
     description=(
         "Port CarrierDominion's helm and selection commands to the Unity client: implement Helm in "
         "src/GameClient/Helm.cs from js/helm.mjs (verbatim from the browser's client/main.js; key w/s/x = "
@@ -1533,7 +1533,7 @@ CROSSPLAY_WS_ROUNDTRIP = Task(
 
 CS_MAIN_THREAD_DISPATCH = Task(
     id="cs_main_thread_dispatch",
-    difficulty=3,
+    difficulty=4,
     description=(
         "MainThreadDispatcher in src/GameClient/MainThreadDispatcher.cs lets network worker "
         "threads hand work to Unity's main thread, which calls Drain() once per frame. The current "
@@ -1609,7 +1609,7 @@ CS_PROTOCOL_CODEC = Task(
 
 CS_SNAPSHOT_INTERP = Task(
     id="cs_snapshot_interp",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Implement SnapshotInterpolator in src/GameClient/SnapshotInterpolator.cs (types in the read-only "
         "src/GameClient/Snapshots.cs). A Unity client renders remote entities DelayMs behind real time, "
@@ -1653,7 +1653,7 @@ CS_SNAPSHOT_INTERP = Task(
 
 CS_PREDICT_RECONCILE = Task(
     id="cs_predict_reconcile",
-    difficulty=5,
+    difficulty=2,
     description=(
         "Predictor in src/GameClient/Predictor.cs does client-side prediction and server reconciliation "
         "for the local player of a real-time game whose Node.js server is authoritative. It must run the "
@@ -1728,7 +1728,7 @@ NODE_ROOM_AUTHORITY = Task(
 
 NODE_SEAT_RECONNECT = Task(
     id="node_seat_reconnect",
-    difficulty=4,
+    difficulty=3,
     description=(
         "Implement createSeats in src/seats.js: seat ownership across disconnects for a Node.js match server. "
         "Sockets are opaque ids; now() and newToken() are injected; side effects are returned as events. "
@@ -1852,7 +1852,7 @@ FASTENGINE_CONSTRAINTS = (
 
 FE_THREE_GEOMETRY = Task(
     id="fe_three_geometry",
-    difficulty=3,
+    difficulty=5,
     description=(
         "Port three.js's BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry and TorusGeometry "
         "(three's own sources, three 0.165.0, are in js/three/) to src/Fastengine/Geometries.cs, so that for "
@@ -1877,7 +1877,7 @@ FE_THREE_GEOMETRY = Task(
 
 FE_TTF_METRICS = Task(
     id="fe_ttf_metrics",
-    difficulty=3,
+    difficulty=4,
     description=(
         "Implement src/Fastengine/TtfMetrics.cs: read a TrueType font's head, hhea, hmtx and cmap tables "
         "directly (no font library) so the HUD can lay out text the way a browser does. CSS font sizes are em "
@@ -1900,7 +1900,7 @@ FE_TTF_METRICS = Task(
 
 FE_SOLO_SERVER = Task(
     id="fe_solo_server",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Implement src/Fastengine/SoloServer.cs, single player for a native game client: it runs the game's own "
         "Node server, unchanged, as described in solo/solo.json (its entry is relative to solo/game, the server's "
@@ -1927,7 +1927,7 @@ FE_SOLO_SERVER = Task(
 
 FE_CSS_COLOR = Task(
     id="fe_css_color",
-    difficulty=2,
+    difficulty=4,
     description=(
         "src/Fastengine/CssColor.cs is the native client's first CSS colour parser (from fastengine's Painter). "
         "The HUD now ports styles it cannot read. Make Parse accept what a browser accepts and return what a "
@@ -1951,7 +1951,7 @@ FE_CSS_COLOR = Task(
 
 FE_VIEW_MATH = Task(
     id="fe_view_math",
-    difficulty=3,
+    difficulty=5,
     description=(
         "Implement src/Fastengine/ViewMath.cs for a native port of a browser game (fastengine spec A12 and D10): "
         "fit the fixed-size render into a window of any size (letterboxed, centred), map a window point back to "
@@ -1973,7 +1973,7 @@ FE_VIEW_MATH = Task(
 
 FE_SOCKET_URLS = Task(
     id="fe_socket_urls",
-    difficulty=2,
+    difficulty=3,
     description=(
         "Implement src/Fastengine/SocketUrls.cs (fastengine spec E10): SocketUrl.With sets or removes one query "
         "parameter of a socket URL, and UpdateNotice turns a server's 'protocol N required' refusal into the "
@@ -2015,7 +2015,7 @@ FE_FLEX_WRAP = Task(
 
 FE_RENDER_ORDER = Task(
     id="fe_render_order",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Implement RenderOrder.Build in src/Fastengine/RenderOrder.cs (fastengine spec B06) so that the native "
         "renderer draws in exactly the order three r162's WebGLRenderer does: which list each visible mesh goes to, "
@@ -2038,7 +2038,7 @@ FE_RENDER_ORDER = Task(
 
 FE_OBJECT3D = Task(
     id="fe_object3d",
-    difficulty=3,
+    difficulty=5,
     description=(
         "Finish src/Fastengine/Object3D.cs (fastengine spec B02): WorldMatrix must be three r162's matrixWorld (the "
         "parent's world matrix composed with the local one) and LookAt must turn the object exactly as three's "
@@ -2059,7 +2059,7 @@ FE_OBJECT3D = Task(
 
 FE_ICO_WRITER = Task(
     id="fe_ico_writer",
-    difficulty=2,
+    difficulty=4,
     description=(
         "Implement src/Fastengine/IconFile.cs (fastengine spec A14): the game's icon is drawn in code and must become "
         "the exe's icon in a win-x64 build cross-built on Linux, with no image library. Png encodes RGBA pixels, Ico "
@@ -2122,7 +2122,7 @@ FE_I18N = Task(
 
 FE_SESSION_RULES = Task(
     id="fe_session_rules",
-    difficulty=3,
+    difficulty=4,
     description=(
         "Implement the connection policy in src/Fastengine/Session.cs (fastengine spec E03, E04, E06): which "
         "refusals, kicks and close codes end reconnecting and which retry, a seat token per server that spectators "
@@ -2163,7 +2163,7 @@ FE_OUTPUT_COLOR = Task(
 
 FE_BASH_STAMP = Task(
     id="fe_bash_stamp",
-    difficulty=3,
+    difficulty=2,
     description=(
         "scripts/version.sh prints the version a fastengine build is stamped with (fastengine spec F01), and it is "
         "wrong: builds of edited game code are not marked -dirty, and a repo without commits breaks it. Fix it so "
