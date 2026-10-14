@@ -173,3 +173,10 @@ def test_every_fixture_generator_is_guarded():
         rel = path.relative_to(TASK_DATA_DIR)
         found.add((rel.parts[0], "/".join(rel.parts[1:])))
     assert found <= guarded, f"unguarded fixture generators: {sorted(found - guarded)}"
+
+
+def test_fastengine_tasks_target_what_fastengine_targets():
+    """fastengine moved to .NET 10 (net10.0) on 2026-10-14; its tasks follow it, the Unity ones stay netstandard2.1/net9.0."""
+    for tid in TASK_GROUPS["fastengine"]:
+        for proj in (TASK_DATA_DIR / TASK_MAP[tid].subdir).rglob("*.csproj"):
+            assert "<TargetFramework>net10.0</TargetFramework>" in proj.read_text(), f"{proj} is not net10.0"

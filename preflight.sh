@@ -166,6 +166,11 @@ if command -v dotnet &>/dev/null; then
   if [[ "$DOTNET_MAJOR" -lt 9 ]]; then
     warn ".NET $DOTNET_VER — .NET 9+ required by dotnet_sas and the gamedev C# tasks"
   fi
+  # The gamedev C# tests run on net9.0, the fastengine tasks on net10.0 (as fastengine itself, since 2026-10-14).
+  dotnet --list-runtimes 2>/dev/null | grep -q '^Microsoft.NETCore.App 9\.' \
+    || warn "no .NET 9 runtime — dotnet_sas and the gamedev C# tests run on net9.0"
+  dotnet --list-sdks 2>/dev/null | grep -q '^10\.' \
+    || warn "no .NET 10 SDK — the fastengine tasks (fe_*) target net10.0"
 else
   fail "dotnet not found — https://dotnet.microsoft.com/download"
 fi

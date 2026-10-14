@@ -419,7 +419,7 @@ task_data/
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
-  fe_*/                   fastengine C# tasks: Fastengine.sln, src/Fastengine at net9.0 (latest C#, no Unity shim),
+  fe_*/                   fastengine C# tasks: Fastengine.sln, src/Fastengine at net10.0 (latest C#, no Unity shim),
                           xunit tests; fixtures from the real thing wherever possible: three's own code under Node
                           (fe_three_geometry, fe_render_order, fe_object3d; js/three.reference.mjs is three r162, not
                           exported), three rendered in Chromium (fe_output_color), Chromium's layout (fe_flex_wrap),
@@ -442,7 +442,7 @@ Task groups (--task-group):
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
-  fastengine    16 tasks (13 C#, 3 bash) for the second build engine (.NET 9 on Raylib-cs), OPT-IN; see "fastengine task group"
+  fastengine    16 tasks (13 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
 ```
 
@@ -1993,13 +1993,13 @@ and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are r
 
 #### fastengine task group (`--task-group fastengine`, `fastengine_diag`, added 2026-10-12)
 
-fastengine is the second build engine for the user's browser games: C# .NET 9 on Raylib-cs (raylib 6, GL 3.3),
+fastengine is the second build engine for the user's browser games: C# .NET 10 on Raylib-cs (raylib 6, GL 3.3),
 a small three.js-shaped scene graph with GLSL, a canvas-2D/CSS HUD, `ClientWebSocket` against the unchanged
 Node servers, bash jobs on WSL (`~/GIT/fastengine`, task list `specs/llm_evaluation_tasks.md`, first version
 2026-10-12). Its game-side items repeat unityworks' list (already in `gamedev`); these groups take the
 fastengine-specific items that are testable headless (no GL context, no Windows). Plan and review:
 `docs/plan-2026-10-10.md` "fastengine tasks". Same validation as gamedev (stub fails, reference passes,
-single-bug mutants caught, `--export-task` leaves references out); C# at **net9.0, latest C#** (not Unity).
+single-bug mutants caught, `--export-task` leaves references out); C# at **net10.0, latest C#** (not Unity).
 
 | Task | L | Spec | Source / grading | Validation |
 |---|---|---|---|---|
@@ -2017,7 +2017,7 @@ single-bug mutants caught, `--export-task` leaves references out); C# at **net9.
 | `fe_i18n` | 2 | D08 | CarrierDominion's own `client/i18n.js` + real catalogues; fixtures from it under Node. pickLang (nb/nn → no), fallback to English then the key, `{var}` filled with JS `String()` (true, null, 1e+21), OS language from LC_ALL/LC_MESSAGES/LANG, catalogue URL on the server's origin, missing key logged once. Stub is fastengine's `I18n` | stub 3/16, ref 16/16, 10/11 (default port: .NET drops it anyway) |
 | `fe_session_rules` | 3 | E03/E04/E06 | A connection policy distilled from fastengine's `NetClient` + the game's message handling: refused before welcome / kicked / final close codes stop for good, halted ignored, a resync reconnects at once; seat token per server origin, never sent or saved by spectators; maxGap per connection | stub 1/9, ref 9/9, 10/12 (2 equivalent) |
 | `fe_output_color` | 4 | B08/B11 | three r162's tone mapping (None/Linear/Reinhard/ACES with exposure), sRGB encode and Fog/FogExp2 on the CPU; **fixtures are pixels three itself rendered in headless Chromium** (Playwright, SwiftShader WebGL2); excerpt of three's GLSL chunks + `getParameters` + `refreshFogUniforms` | stub (fastengine's approach) 19/42, ref 42/42 within ±1, 11/11 |
-| `fe_bash_stamp` | 2 | F01 | fastengine's `build_version`: both short commits, `-dirty` for edited/staged/untracked in either tree, `uncommitted` without a commit | stub 3/9, ref 9/9, 5/5 |
+| `fe_bash_stamp` | 3 | F01 | fastengine's `build_version`: both short commits, `-dirty` for edited/staged/deleted/untracked in either tree but not for ignored build output, `uncommitted` without a commit (and `-dirty` with only staged files), the game repo as a relative path with spaces or through a symlink. **Hardened 2026-10-14** after 7/7 models passed the first 9 tests | stub 8/14, ref 14/14, 5/5 first set + 5/5 hardening mutants (diff HEAD, counting ignored files, ls-files without --exclude-standard, unquoted path, describe) |
 | `fe_bash_job` | 3 | H05/H07 | fastengine's worker `build.sh` reduced: clear the lane's output, work outside the tree and remove it, check every step (exit 1 build, 4 environment), manifest of zips | stub 0/7, ref 7/7, 5/9 (4 equivalent: the clear and fresh work dir make them unobservable) |
 
 `fastengine_diag` (18 `fdiag_*`): A03 libraylib publish, A05 rlgl culling of 2D fills, B09 mirror target
@@ -2045,9 +2045,10 @@ writing (and prints "== done" after), so the manifest's entry for build.log can 
 
 Not built (need a GL context or Windows, or are agentic/process items): A02/A05 as code, B03-B16 rendering on a GL
 context, C01 pixel comparison, the Windows-interop items, I01-I06; E04's "name saved once taken" (no such field to test).
-**Deviation:** fastengine moved to .NET 10 (`net10.0`, fastengine `6b31868`); these tasks still target net9.0 and say
-".NET 9" in their prompt. Both SDKs are on the rig; moving the tasks means re-running every fastengine result (the table
-below is all net9.0) — a decision for the user.
+**Moved to .NET 10 on 2026-10-14** (as fastengine itself, `6b31868`): every fe_* project targets `net10.0` and the prompt
+says ".NET 10"; all 13 C# references pass and all stubs fail as before, a test pins the framework, and `preflight.sh`
+warns without the .NET 10 SDK (the gamedev tests still need the .NET 9 runtime). The result table below was measured on
+net9.0; the re-run on net10.0 is queued (`t9`).
 
 **All 16 tasks and 18 questions, seven models (2026-10-12..14; `output/fe-*`, `fesolo-*`, `t6-*`, `t7-*`, `t8-*`; default
 server settings; gpt-oss:120b and flash-next on 3×24 GB with the core clock locked, the rest on one RTX 4090; cc = does not
@@ -2063,7 +2064,7 @@ compile, nb = no usable file):**
 | qwen3.6:27b | **P** | cc | cc | cc | 0.89 | cc | 0.52 | 0.50 | **P** | cc | cc | 0.50 | 0.78 | 0.74 | **P** | 0.56 | 3/16 | 0.47 | 17/18 |
 | qwen3.8:27b | cc | 0.47 | cc | cc | 0.42 | cc | 0.83 | 0.50 | **P** | cc | cc | 0.44 | 0.89 | 0.74 | **P** | **P** | 3/16 | 0.46 | 18/18 |
 
-Per task, pass / mean partial over the seven: geom 2 / 0.29, ttf 0 / 0.14, solo 0 / 0.36, css 1 / 0.14, view 2 / 0.58,
+(`stamp` was the 9-test version; it now has 14.) Per task, pass / mean partial over the seven: geom 2 / 0.29, ttf 0 / 0.14, solo 0 / 0.36, css 1 / 0.14, view 2 / 0.58,
 urls 4 / 0.67, flex 2 / 0.66, pkg 0 / 0.50, order 5 / 0.86, obj3d 0 / 0.04, ico 1 / 0.24, i18n 0 / 0.67, session 0 / 0.73,
 color 2 / 0.84, stamp 7 / 1.00, job 4 / 0.83.
 - **gemma4:31b-qat leads on one GPU (0.68), as on gamedev.** gpt-oss:120b, the gamedev leader, drops to 0.47 here: 8 of its

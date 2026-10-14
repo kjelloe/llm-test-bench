@@ -81,3 +81,46 @@ def test_new_commit_changes_the_stamp(repos):
     git(game, "commit", "-qam", "two")
     after = stamp(fe, game)
     assert after != before and after == f"{today()}-{short(fe)}-{short(game)}"
+
+
+def test_ignored_build_output_is_not_dirty(repos):
+    fe, game = repos
+    for tree in (fe, game):
+        (tree / ".gitignore").write_text("Build/\ndist/\n*.log\n")
+        git(tree, "add", ".gitignore")
+        git(tree, "commit", "-q", "-m", "ignore")
+        (tree / "Build" / "linux64").mkdir(parents=True)
+        (tree / "Build" / "linux64" / "game").write_text("bin")
+        (tree / "dist").mkdir()
+        (tree / "build.log").write_text("log")
+    assert stamp(fe, game) == f"{today()}-{short(fe)}-{short(game)}"
+
+
+def test_a_deleted_file_is_dirty(repos):
+    fe, game = repos
+    (game / "README").unlink()
+    assert stamp(fe, game).endswith("-dirty")
+
+
+def test_game_path_relative_with_spaces(tmp_path):
+    fe = repo(tmp_path / "fastengine")
+    (tmp_path / "my games").mkdir()
+    game = repo(tmp_path / "my games" / "Carrier Dominion")
+    r = subprocess.run(["bash", str(SCRIPT), "../my games/Carrier Dominion"], cwd=fe, capture_output=True, text=True,
+                       timeout=30, env=ENV)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == f"{today()}-{short(fe)}-{short(game)}"
+
+
+def test_game_reached_through_a_symlink(tmp_path):
+    fe = repo(tmp_path / "fastengine")
+    game = repo(tmp_path / "CarrierDominion")
+    (tmp_path / "link").symlink_to(game)
+    assert stamp(fe, tmp_path / "link") == f"{today()}-{short(fe)}-{short(game)}"
+
+
+def test_staged_files_without_a_commit_are_uncommitted_and_dirty(tmp_path):
+    fe = repo(tmp_path / "fastengine")
+    game = repo(tmp_path / "game", commit=False)
+    git(game, "add", "README")
+    assert stamp(fe, game) == f"{today()}-{short(fe)}-uncommitted-dirty"

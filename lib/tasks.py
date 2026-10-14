@@ -168,7 +168,7 @@ def run_tests_scored(task: Task, workdir: Path) -> tuple[bool, str, dict | None,
     """run_tests plus partial credit and build errors, both read from the full output before
     truncation drops the per-test lines (dotnet test output is often ~100 KB)."""
     rc, out = _run_full(task.test_cmd, workdir, task.test_timeout)
-    # fastengine tasks (fe_*) are plain .NET 9, so a missing namespace there is a mistake, not a Unity rule
+    # fastengine tasks (fe_*) are plain .NET 10, so a missing namespace there is a mistake, not a Unity rule
     unity_rules = not task.id.startswith("fe_")
     return rc == 0, _truncate(out), score_output(out, task.test_weights), build_errors(out, unity_rules) if rc != 0 else None
 
@@ -1843,10 +1843,10 @@ MULTIHOP_CROSS_5 = Task(
     min_predict=8192,
 )
 
-# fastengine: the second build engine (C# .NET 9 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD),
+# fastengine: the second build engine (C# .NET 10 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD),
 # from its specs/llm_evaluation_tasks.md (2026-10-12). Plain .NET, so no Unity constraints and no shim.
 FASTENGINE_CONSTRAINTS = (
-    " The project is plain .NET 9 (fastengine runs on Raylib-cs, not Unity): any C# up to the latest version "
+    " The project is plain .NET 10 (fastengine runs on Raylib-cs, not Unity): any C# up to the latest version "
     "and the whole base class library are available, but no NuGet packages beyond the ones the .csproj lists."
 )
 
@@ -2161,11 +2161,11 @@ FE_OUTPUT_COLOR = Task(
 
 FE_BASH_STAMP = Task(
     id="fe_bash_stamp",
-    difficulty=2,
+    difficulty=3,
     description=(
         "scripts/version.sh prints the version a fastengine build is stamped with (fastengine spec F01), and it is "
         "wrong: builds of edited game code are not marked -dirty, and a repo without commits breaks it. Fix it so "
-        "it does what its header says."
+        "it does what its header says, for every kind of change and every way the game repo can be given."
     ),
     subdir="fe_bash_stamp",
     editable_files=["scripts/version.sh"],
@@ -2230,7 +2230,7 @@ def _diag_task(qid: str, difficulty: int, subdir: str = "gamedev_diag", prefix: 
 
 GAMEDEV_DIAG_TASKS: list[Task] = [_diag_task(q, d) for q, d in _GAMEDEV_DIAG]
 
-# The same format for fastengine, the second build engine (C# .NET 9 on Raylib-cs with a three.js-shaped scene
+# The same format for fastengine, the second build engine (C# .NET 10 on Raylib-cs with a three.js-shaped scene
 # graph), from its specs/llm_evaluation_tasks.md (2026-10-12): task_data/fastengine_diag.
 _FASTENGINE_DIAG = [
     ("libraylib_publish", 2), ("fill_culling", 3), ("mirror_target", 5), ("rt_premultiplied", 3),
