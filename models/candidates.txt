@@ -1570,6 +1570,7 @@ qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
 #   further. Full detail in next-runs.md.
 
 # ── Dirk-Qwen3.8-27B (peculiar-ragdoll, added 2026-09-24) ──────────────────────
+# ⚠ GONE per 2026-10-15 scout (repo removed; file not on disk).
 # Found via scout 2026-09-24. Same uploader as our promoted tiel-coder:35b (18/19 coding,
 # 4/4 web incl. fastapi, 6/6 context incl. 256k single-GPU — a genuine standout in this VRAM
 # tier). Unclear fine-tune/merge lineage from the name alone ("Dirk") — untested, spot-checking
@@ -1615,6 +1616,7 @@ qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
 # ═══════════════════════════════════════════════════════════════════════════
 
 # ── pfeifferj/Qwen3.8-Flash-Next-GSQ-RCO (2026-09-13 lead, still untested) ─────
+# ⚠ GONE per 2026-10-15 scout (repo removed; never downloaded here).
 # 3.5-bit GSQ-RCO quant of qwen3.8-flash-next, 44.6 GB compute weights — could meaningfully
 # ease the --fit/RAM-offload juggling the current 106 GB UD-Q4_K_XL quant needs. New uploader
 # (pfeifferj), not previously seen elsewhere. Same runtime pattern as qwen3.8-flash-next above
@@ -1811,3 +1813,7 @@ qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache
 # branch). Known issues: thinks long (-n 16384+, -c 65536), crash on load on AVX-512 CPUs (this rig's Zen 5).
 # A 12/16 GB-tier candidate; a separate LLAMA_SERVER_BIN, never the 67a17c17c pin.
 #bonsai2:27b-pq2  Ternary-Bonsai-2-27B-PQ2_0.gguf  ngl=999,no_mmap,flash_attn,thinking,max_ctx=65536  hf:prism-ml/Ternary-Bonsai-2-27B-gguf
+
+# LFM2.5-24B-A2B (Liquid AI, lfm2moe, ~2B active, 128k ctx; repo 2026-10-09). Official QAD-Q4_0 (quantization-aware
+# distillation, 12.6 GB). Scouted 2026-10-15 on user request; lfm2:8b (A1B) was 3/10 on the spot set.
+lfm2.5:24b-a2b  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
