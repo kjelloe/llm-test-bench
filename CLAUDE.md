@@ -1889,11 +1889,14 @@ partial = mean weighted partial credit over the tasks run; most models have only
 | qwen3.8:27b | 11/28 | 0.61 | 19/21 | 0/4, 0.12 |
 | laguna-s-2.1:118b-iq4 (3×24) | 8/28 | 0.56 | 17/17 | — |
 | gemma4:26b-qat | 4/27 | 0.46 | 15/17 | 0/4, 0.29 |
-| swift-1.5-flash-next (3×24) | 6/9 | 0.83 | — | — |
+| qwen3.8:27b-nvfp4-mix (2026-10-14) | 9/28 | 0.56 | 19/21 | 4/16, 0.51 |
+| swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | — |
 | qwen3.5-122b:a10b, qwen3.5:27b | 2-3/9 | 0.59 | 16/17 | — |
 | everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | ≤0.51 |
 
-Not run on gamedev yet: `qwen3.8:27b-nvfp4-mix` (24 GB, 36/39 on the default set), `qwen3-next:80b` (MXFP4 on 2×24,
+Run 2026-10-14: `qwen3.8:27b-nvfp4-mix` 9/28 (0.56, below its Q4_K_M sibling's 0.61); `swift-1.5-flash-next` on the
+19 newer tasks 10/19 (0.66), 16/28 overall (~0.71, ties gemma4:31b-qat on passes; 4 C# tasks do not compile), diag 20/21.
+Not run on gamedev yet: `qwen3-next:80b` (MXFP4 on 2×24,
 Q4_K_M on 3×24), and the 19 newer tasks for swift-1.5-flash-next and qwen3.5-122b:a10b; coder A3B entries
 (`qwen3-coder:30b*`, `qwen2.5-coder:14b`) skipped as a class that scores ≤0.44. GLM-5.3-Flash (GLM5-Next, master
 only, smallest GGUF 87 GB IQ1_S) would need flash-next-style paging on 72 GB; not downloaded.
@@ -2046,7 +2049,34 @@ context, C01 pixel comparison, the Windows-interop items, I01-I06; E04's "name s
 ".NET 9" in their prompt. Both SDKs are on the rig; moving the tasks means re-running every fastengine result, so it waits
 until the queued runs are in.
 
-**Results, top six on the first four tasks (2026-10-12, `output/fe-*.json`, `fesolo-*.json`; cc = does not compile, nb =
+**All 16 tasks and 18 questions, seven models (2026-10-12..14; `output/fe-*`, `fesolo-*`, `t6-*`, `t7-*`, `t8-*`; default
+server settings; gpt-oss:120b and flash-next on 3×24 GB with the core clock locked, the rest on one RTX 4090; cc = does not
+compile, nb = no usable file):**
+
+| Model | geom | ttf | solo | css | view | urls | flex | pkg | order | obj3d | ico | i18n | session | color | stamp | job | pass | partial | diag |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gemma4:31b-qat | **P** | 0.00 | 0.80 | cc | 0.37 | 0.67 | **P** | 0.50 | **P** | 0.05 | **P** | 0.78 | 0.89 | 0.86 | **P** | **P** | 6/16 | 0.68 | 17/18 |
+| qwen3.8-flash-next | cc | nb | nb | **P** | cc | **P** | **P** | 0.50 | **P** | 0.21 | cc | 0.78 | 0.89 | **P** | **P** | 0.89 | 6/16 | 0.58 | 18/18 |
+| equinox:31b | cc | 0.47 | cc | cc | 0.37 | **P** | 0.83 | 0.50 | **P** | cc | 0.70 | 0.72 | 0.78 | 0.69 | **P** | **P** | 4/16 | 0.57 | 16/18 |
+| qwen3.8:27b-nvfp4-mix | cc | cc | 0.90 | cc | **P** | **P** | 0.43 | 0.50 | 0.46 | cc | cc | 0.72 | 0.89 | **P** | **P** | 0.33 | 4/16 | 0.51 | 17/18 |
+| gpt-oss:120b | cc | cc | 0.80 | cc | **P** | **P** | cc | 0.50 | 0.58 | cc | cc | 0.78 | cc | 0.86 | **P** | **P** | 4/16 | 0.47 | 17/18 |
+| qwen3.6:27b | **P** | cc | cc | cc | 0.89 | cc | 0.52 | 0.50 | **P** | cc | cc | 0.50 | 0.78 | 0.74 | **P** | 0.56 | 3/16 | 0.47 | 17/18 |
+| qwen3.8:27b | cc | 0.47 | cc | cc | 0.42 | cc | 0.83 | 0.50 | **P** | cc | cc | 0.44 | 0.89 | 0.74 | **P** | **P** | 3/16 | 0.46 | 18/18 |
+
+Per task, pass / mean partial over the seven: geom 2 / 0.29, ttf 0 / 0.14, solo 0 / 0.36, css 1 / 0.14, view 2 / 0.58,
+urls 4 / 0.67, flex 2 / 0.66, pkg 0 / 0.50, order 5 / 0.86, obj3d 0 / 0.04, ico 1 / 0.24, i18n 0 / 0.67, session 0 / 0.73,
+color 2 / 0.84, stamp 7 / 1.00, job 4 / 0.83.
+- **gemma4:31b-qat leads on one GPU (0.68), as on gamedev.** gpt-oss:120b, the gamedev leader, drops to 0.47 here: 8 of its
+  16 answers do not compile, even without Unity's limits. Compile errors are 36 of the 112 results.
+- **Shared misses, every model:** `fe_bash_package` (all fix the comma list, none the silent `pipefail` exit inside
+  `$(...)`), `fe_i18n` (all keep .NET's `Convert.ToString`: `True`, empty for null, `1E+21` instead of the browser's
+  `String()`), `fe_session_rules` (a "rejected" on a reconnect before its own welcome must stop; all keep the first
+  connection's welcome). Each task was re-checked after these runs: the reference passes, the failures are genuine.
+- **Too easy:** `fe_bash_stamp` 7/7 and the 18 diag questions (16-18/18 for everyone) rank nobody; `fe_render_order` 5/7.
+  Hardest: `fe_object3d` (nobody compiles a correct lookAt; gemma4 composed world matrices in the wrong order for
+  System.Numerics), `fe_ttf_metrics`, `fe_css_color`.
+
+**Earlier, the first four tasks only (2026-10-12, `output/fe-*.json`, `fesolo-*.json`; cc = does not compile, nb =
 no usable file). The twelve later tasks and eight later questions are queued (2026-10-14, `output/t6-*`, `t7-*`, `t8-*`):**
 
 | Model | geometry | ttf | solo | css | pass | partial | diag |
