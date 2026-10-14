@@ -589,6 +589,12 @@ trusting as-is.
   and `cs_mesh_winding` gave the same 6,642 tokens before and after the clock lock. Untested: unlocking the clocks
   (`nvidia-smi -rgc`) and re-running one task — **DONE 2026-10-12: unlocked, both tasks give byte-identical answers
   (4,331 and 6,437 tokens), so the clock state does not change the arithmetic; the change came with the reboot.**
+  **Reboot test DONE 2026-10-14 (after a forced Windows Update reboot; core clocks locked, same `67a17c17c`, driver
+  610.88, default server settings via `BENCH_ORDER_INDEPENDENT=0`, alone on a fresh server):** `cs_tick_interp` gave a
+  THIRD answer, 4,584 tokens, PASS, byte-identical on a repeat (`output/reboot2-tick-interp*.json`). Three boots, three
+  answers: 4,970 PASS (to 2026-10-12), 4,331 FAIL (×7 in the 10-12 boot), 4,584 PASS (10-14). **gpt-oss:120b's split
+  answers are deterministic within a boot and change between boots**; cause open (something set at boot or driver
+  load, not the clocks, the binary or the prompt). So a repeat within one boot does not confirm a multi-GPU close call.
   Until explained, treat a single multi-GPU pass/fail on a long answer
   as provisional, the same class as the cross-GPU sensitivity below.
   **R4 (2026-10-12, clocks locked, all 28 gamedev + 21 diag):** gpt-oss:120b 13/28 (partial 0.80), diag 18/21, 0 hangs,
