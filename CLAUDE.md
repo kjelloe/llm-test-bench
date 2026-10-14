@@ -1907,13 +1907,17 @@ partial = mean weighted partial credit over the tasks run; most models have only
 | gemma4:26b-qat | 4/27 | 0.46 | 15/17 | 0/4, 0.29 |
 | qwen3.8:27b-nvfp4-mix (2026-10-14) | 9/28 | 0.56 | 19/21 | 4/16, 0.51 |
 | swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | — |
-| qwen3.5-122b:a10b, qwen3.5:27b | 2-3/9 | 0.59 | 16/17 | — |
+| qwen3.5-122b:a10b (3×24, 2026-10-14) | 8/28 | 0.48 | 19/21 | — |
+| qwen3-next:80b (3×24, 2026-10-14) | 1/28 | 0.33 | 15/21 | — |
+| qwen3.5:27b | 3/9 | 0.59 | 16/17 | — |
 | everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | ≤0.51 |
 
 Run 2026-10-14: `qwen3.8:27b-nvfp4-mix` 9/28 (0.56, below its Q4_K_M sibling's 0.61); `swift-1.5-flash-next` on the
 19 newer tasks 10/19 (0.66), 16/28 overall (~0.71, ties gemma4:31b-qat on passes; 4 C# tasks do not compile), diag 20/21.
-Not run on gamedev yet: `qwen3-next:80b` (MXFP4 on 2×24,
-Q4_K_M on 3×24), and the 19 newer tasks for swift-1.5-flash-next and qwen3.5-122b:a10b; coder A3B entries
+Also 2026-10-14 (3×24 GB, order-independent mode): `qwen3.5-122b:a10b` on the 19 newer tasks 6/19 (0.42; 5 do not compile,
+3 NO_BLOCKS), 8/28 overall (0.48), diag 19/21, 47 tok/s; `qwen3-next:80b` 1/28 (0.33; 8 do not compile, only
+`cs_port_movement` passes), diag 15/21 (the only model to miss `pkill_self`), 73 tok/s (`output/t11-gamedev*-*.json`). Neither
+is a gamedev candidate. Not run on gamedev yet: coder A3B entries
 (`qwen3-coder:30b*`, `qwen2.5-coder:14b`) skipped as a class that scores ≤0.44. GLM-5.3-Flash (GLM5-Next, master
 only, smallest GGUF 87 GB IQ1_S) would need flash-next-style paging on 72 GB; not downloaded.
 
