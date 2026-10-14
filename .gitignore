@@ -23,3 +23,7 @@ llama_models
 hf-token.txt
 .env
 .venv/
+
+# Local notes, not shared
+next-runs.md
+hw-upgrade-july-2026.md

@@ -343,10 +343,9 @@ vllm-plan.md        Copy-paste steps: Qwen3.5-9B AWQ on vLLM for agentic tool ca
 docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier; §2.5 holds external Mac Studio M5 Ultra numbers
 docs/gpt-oss-120b-speed-debug-plan.md  Evidence + test plan for gpt-oss:120b's hangs and long-answer slowdown on 3×24 GB (2026-10-09)
 docs/plan-2026-10-10.md    The ordered plan from 2026-10-10: hang control + A/B arms, re-runs, new gamedev tasks, model runs
-next-runs.md        Referenced throughout this file and models/*.txt, but NOT tracked in git
-                    (absent on the RTX 5060 Ti box as of 2026-09-15). See Known Issues.
+next-runs.md        Local run log on this rig, git-ignored on purpose (2026-10-14); references to it are local notes
 hw-upgrade-july-2026.md    Hardware state/crash-incident log + VRAM-tier upgrade analysis for the
-                    3-GPU rig; also NOT tracked in git. October 2026 addendum corrects the
+                    3-GPU rig; git-ignored on purpose (local). October 2026 addendum corrects the
                     "node_paratrooper never passes" premise and adds the vLLM-concurrency axis.
 hwmonitor/
   hwmonitor.py      Live hardware watchdog: GPU temp/power/VRAM, CPU temp, RAM; WARN/CRIT on threshold breach; aborts bench.py on CRIT (SIGINT → SIGTERM)
@@ -608,10 +607,8 @@ trusting as-is.
   requests again, memory locked too, gdb armed): no hang. About one hang in ~150 split-model requests today.
   **Night 2026-10-13: 186 more split requests (deepseek-r1:32b 2-way + flash-next, both diag sets ×3) with no hang**,
   plus ~250 more in the other night runs: the hang is rare now (1 in ~600 since the reboot).
-- **`next-runs.md` is not in git.** 28 references across 10 files (this file, models/*.txt,
-  ARCHITECTURE.md, SPEC.md, docs/HOME_LAB_GUIDE.md, llamacpp/README.md, ...) point at it, but it
-  was never committed, so a fresh clone (e.g. the RTX 5060 Ti box) doesn't have it. Commit it from
-  the machine that has it, or treat those references as dangling.
+- **`next-runs.md` and `hw-upgrade-july-2026.md` are local and git-ignored (user's decision, 2026-10-14).** References
+  to them (this file, models/*.txt, ARCHITECTURE.md, SPEC.md, ...) only resolve on this rig; a fresh clone lacks them.
 - **New box: run `./preflight.sh` before the first benchmark.** The RTX 5060 Ti box had only .NET
   SDK 8, so `dotnet_sas` failed as TOOL_ERROR in 0.9s: a false negative that looks like a model
   failure in the results table. Fixed by installing `dotnet-sdk-9.0`.
