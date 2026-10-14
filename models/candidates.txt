@@ -1817,3 +1817,8 @@ qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache
 # LFM2.5-24B-A2B (Liquid AI, lfm2moe, ~2B active, 128k ctx; repo 2026-10-09). Official QAD-Q4_0 (quantization-aware
 # distillation, 12.6 GB). Scouted 2026-10-15 on user request; lfm2:8b (A1B) was 3/10 on the spot set.
 lfm2.5:24b-a2b  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
+
+# byteshape Qwen3.8-27B ShapeLearn IQ4_XS-3.84bpw (13.1 GB; per-tensor learned datatypes, MTP head embedded, harmless
+# without spec flags). Scouted 2026-10-15 (1.5M downloads); 12 GB-class build that could fit a 16 GB card. Same params as
+# qwen3.8:27b (thinking, f16 KV for the hashmap canary). Qwen3.8-27B builds are file-sensitive here: test, don't assume.
+qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:byteshape/Qwen3.8-27B-GGUF
