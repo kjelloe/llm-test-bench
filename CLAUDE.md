@@ -2094,7 +2094,10 @@ flex 5 / 0.80, pkg 0 / 0.50, order 7 / 1.00, obj3d 0 / 0.02, ico 3 / 0.51, i18n 
   `fe_view_math` this time. **Was too easy:** `fe_render_order` 7/7 — hardened afterwards (27 scenes, L4; the column
   above is the 24-scene version; on the 27-scene version 4 of 5 models passed, qwen3.8:27b 24/27 on sprite depth; so it
   was hardened again: frustum culling and layers, with the whole render path verbatim instead of a trimmed excerpt, 30
-  scenes). `fe_bash_stamp` 6/7 even hardened is kept on purpose as the **floor task**: a model
+  scenes). **30-scene results (2026-10-14 afternoon, order-independent mode, `output/t11-order30-*.json`):** only
+  qwen3.8-flash-next passes (1.00); nvfp4-mix and qwen3.8:27b 0.93, gemma4:31b-qat and gpt-oss:120b 0.90, equinox:31b
+  0.53, qwen3.6:27b does not compile. The shared miss is layers: five models return from an object whose layer the camera
+  does not see instead of still visiting its children (three's children loop is outside the layer check). `fe_bash_stamp` 6/7 even hardened is kept on purpose as the **floor task**: a model
   that fails it lacks basic git/bash care (it catches qwen3.6:27b).
 
 **Before the move (net9.0, first runs) — the same seven models:**
