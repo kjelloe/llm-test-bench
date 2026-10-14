@@ -20,6 +20,14 @@ namespace FastengineTests
 
         static double[] Numbers(JsonElement e) => e.EnumerateArray().Select(x => x.GetDouble()).ToArray();
 
+        static RenderMaterial Material(JsonElement m) => new()
+        {
+            Id = m.GetProperty("id").GetInt32(),
+            Transparent = m.GetProperty("transparent").GetBoolean(),
+            Transmission = m.GetProperty("transmission").GetDouble(),
+            Visible = m.GetProperty("visible").GetBoolean(),
+        };
+
         static SceneNode Node(JsonElement e)
         {
             var n = new SceneNode
@@ -31,13 +39,12 @@ namespace FastengineTests
                 World = Numbers(e.GetProperty("world")),
             };
             if (e.TryGetProperty("center", out var c)) n.Center = Numbers(c);
-            if (e.TryGetProperty("material", out var m))
-                n.Material = new RenderMaterial
-                {
-                    Id = m.GetProperty("id").GetInt32(),
-                    Transparent = m.GetProperty("transparent").GetBoolean(),
-                    Transmission = m.GetProperty("transmission").GetDouble(),
-                };
+            if (e.TryGetProperty("material", out var m)) n.Material = Material(m);
+            if (e.TryGetProperty("materials", out var ms))
+            {
+                n.Materials = ms.EnumerateArray().Select(Material).ToList();
+                n.GroupMaterials = e.GetProperty("groupMaterials").EnumerateArray().Select(x => x.GetInt32()).ToList();
+            }
             foreach (var child in e.GetProperty("children").EnumerateArray()) n.Children.Add(Node(child));
             return n;
         }

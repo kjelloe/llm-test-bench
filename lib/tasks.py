@@ -2015,12 +2015,13 @@ FE_FLEX_WRAP = Task(
 
 FE_RENDER_ORDER = Task(
     id="fe_render_order",
-    difficulty=3,
+    difficulty=4,
     description=(
         "Implement RenderOrder.Build in src/Fastengine/RenderOrder.cs (fastengine spec B06) so that the native "
         "renderer draws in exactly the order three r162's WebGLRenderer does: which list each visible mesh goes to, "
-        "and the order inside each list. The current code is a first port that sorts transparent meshes by distance "
-        "from the camera. three's own code is in js/three-r162-renderlist.js; matrices are column-major as three "
+        "and the order inside each list, for every kind of object three draws (meshes, lines, points, sprites, "
+        "multi-material meshes) and every case projectObject handles. The current code is a first port that sorts "
+        "transparent meshes by distance from the camera. three's own code is in js/three-r162-renderlist.js; matrices are column-major as three "
         "stores them." + FASTENGINE_CONSTRAINTS
     ),
     subdir="fe_render_order",

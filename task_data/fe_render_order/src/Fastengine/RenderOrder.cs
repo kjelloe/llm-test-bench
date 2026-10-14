@@ -4,10 +4,10 @@ using System.Linq;
 
 namespace Fastengine
 {
-    // One node of the scene graph as the renderer sees it each frame. Kind is "group" (three's Group), "mesh"
-    // or "object" (a plain Object3D). World is the node's world matrix and ViewProjection the camera's
+    // One node of the scene graph as the renderer sees it each frame. Kind is "group" (three's Group), "object" (a plain
+    // Object3D), "light", "mesh", "line", "points" or "sprite". World is the node's world matrix and ViewProjection the camera's
     // projectionMatrix × matrixWorldInverse, both as three stores matrices: 16 numbers, column-major.
-    // Center is the centre of the mesh geometry's bounding sphere, in the mesh's local space.
+    // Center is the centre of the geometry's bounding sphere, in the node's local space (none for a sprite).
     public sealed class SceneNode
     {
         public int Id;
@@ -17,6 +17,10 @@ namespace Fastengine
         public double[] World;
         public double[] Center;
         public RenderMaterial Material;
+        // A mesh, line or points with several materials (three's material array): Materials, and the material index of
+        // each geometry group in group order (an index may point past the array). Material is then null.
+        public List<RenderMaterial> Materials;
+        public List<int> GroupMaterials;
         public List<SceneNode> Children = new();
     }
 
@@ -25,13 +29,15 @@ namespace Fastengine
         public int Id;
         public bool Transparent;
         public double Transmission;
+        public bool Visible = true;
     }
 
     public sealed record RenderLists(List<int> Opaque, List<int> Transmissive, List<int> Transparent);
 
     // fastengine spec B06: draw in the order three r162's WebGLRenderer does (js/three-r162-renderlist.js), so
-    // transparent surfaces blend in the same order as in the browser. Build returns the mesh ids of each list in
-    // draw order. Frustum culling and layers are not ported: every visible mesh is drawn.
+    // transparent surfaces blend in the same order as in the browser. Build returns the object id of each item of each
+    // list in draw order (an object with several materials can appear more than once). Frustum culling, layers and
+    // LOD are not ported: every visible object is drawn.
     public static class RenderOrder
     {
         public static RenderLists Build(SceneNode scene, double[] viewProjection, double[] cameraPosition)

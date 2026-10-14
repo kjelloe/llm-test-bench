@@ -111,8 +111,8 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   directly), `fe_solo_server` (L4, the bundled Node server's lifecycle), `fe_css_color` (L2, CSS Color 4), `fe_view_math` (L3,
   letterbox fit, mouse mapping, zoom steps, CSS easing), `fe_socket_urls` (L2, socket URL query and the protocol-refusal
   page), `fe_flex_wrap` (L3, CSS flex-wrap against Chromium's layout), `fe_bash_package` (L2, bash: pipefail inside
-  `$(...)` and a comma target list), `fe_render_order` (L3, three r162's draw order: render lists and
-  sort keys), `fe_object3d` (L3, three's world matrices and lookAt), `fe_ico_writer` (L2, PNG + ICO without an image
+  `$(...)` and a comma target list), `fe_render_order` (L4, three r162's draw order: render lists and
+  sort keys, sprites, lines, points, multi-material meshes), `fe_object3d` (L3, three's world matrices and lookAt), `fe_ico_writer` (L2, PNG + ICO without an image
   library, found again inside an exe), `fe_i18n` (L2, the browser's i18n.js), `fe_session_rules` (L3, stop rules, seat tokens per
   server, stall metric), `fe_output_color` (L4, three's tone mapping, sRGB and fog, graded against pixels three rendered in
   Chromium), `fe_bash_stamp` (L2, build version with -dirty), `fe_bash_job` (L3, a build job's lane folder and unchecked steps). Fixtures come from the real code

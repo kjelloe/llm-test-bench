@@ -12,6 +12,8 @@ namespace Fastengine
         public double[] World;
         public double[] Center;
         public RenderMaterial Material;
+        public List<RenderMaterial> Materials;
+        public List<int> GroupMaterials;
         public List<SceneNode> Children = new();
     }
 
@@ -20,13 +22,14 @@ namespace Fastengine
         public int Id;
         public bool Transparent;
         public double Transmission;
+        public bool Visible = true;
     }
 
     public sealed record RenderLists(List<int> Opaque, List<int> Transmissive, List<int> Transparent);
 
     public static class RenderOrder
     {
-        sealed record Item(int Id, int MaterialId, int GroupOrder, int RenderOrder, double Z);
+        sealed record Item(int Id, int MaterialId, int GroupOrder, int RenderOrder, double Z, int Seq);
 
         public static RenderLists Build(SceneNode scene, double[] viewProjection, double[] cameraPosition)
         {
@@ -44,15 +47,32 @@ namespace Fastengine
         {
             if (!node.Visible) return;
             if (node.Kind == "group") groupOrder = node.RenderOrder;
-            else if (node.Kind == "mesh")
+            else if (node.Kind == "sprite")
+            {
+                var (_, _, z) = Apply(proj, node.World[12], node.World[13], node.World[14]);
+                if (node.Material.Visible) Push(node, node.Material, groupOrder, z, opaque, transmissive, transparent);
+            }
+            else if (node.Kind is "mesh" or "line" or "points")
             {
                 var (x, y, z) = Apply(node.World, node.Center[0], node.Center[1], node.Center[2]);
                 (_, _, z) = Apply(proj, x, y, z);
-                var m = node.Material;
-                var item = new Item(node.Id, m.Id, groupOrder, node.RenderOrder, z);
-                (m.Transmission > 0 ? transmissive : m.Transparent ? transparent : opaque).Add(item);
+                if (node.Materials != null)
+                {
+                    foreach (var index in node.GroupMaterials)
+                    {
+                        var gm = index >= 0 && index < node.Materials.Count ? node.Materials[index] : null;
+                        if (gm != null && gm.Visible) Push(node, gm, groupOrder, z, opaque, transmissive, transparent);
+                    }
+                }
+                else if (node.Material.Visible) Push(node, node.Material, groupOrder, z, opaque, transmissive, transparent);
             }
             foreach (var child in node.Children) Project(child, proj, groupOrder, opaque, transmissive, transparent);
+        }
+
+        static void Push(SceneNode node, RenderMaterial m, int groupOrder, double z, List<Item> opaque, List<Item> transmissive, List<Item> transparent)
+        {
+            var item = new Item(node.Id, m.Id, groupOrder, node.RenderOrder, z, opaque.Count + transmissive.Count + transparent.Count);
+            (m.Transmission > 0 ? transmissive : m.Transparent ? transparent : opaque).Add(item);
         }
 
         // three's Vector3.applyMatrix4: column-major, divided by w
@@ -68,12 +88,14 @@ namespace Fastengine
             : a.RenderOrder != b.RenderOrder ? a.RenderOrder.CompareTo(b.RenderOrder)
             : a.MaterialId != b.MaterialId ? a.MaterialId.CompareTo(b.MaterialId)
             : a.Z != b.Z ? a.Z.CompareTo(b.Z)
-            : a.Id.CompareTo(b.Id);
+            : a.Id != b.Id ? a.Id.CompareTo(b.Id)
+            : a.Seq.CompareTo(b.Seq); // JS sort is stable
 
         static int ReversePainterSortStable(Item a, Item b) =>
             a.GroupOrder != b.GroupOrder ? a.GroupOrder.CompareTo(b.GroupOrder)
             : a.RenderOrder != b.RenderOrder ? a.RenderOrder.CompareTo(b.RenderOrder)
             : a.Z != b.Z ? b.Z.CompareTo(a.Z)
-            : a.Id.CompareTo(b.Id);
+            : a.Id != b.Id ? a.Id.CompareTo(b.Id)
+            : a.Seq.CompareTo(b.Seq);
     }
 }
