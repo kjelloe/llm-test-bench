@@ -2039,7 +2039,7 @@ names one; lengths balanced (correct never longest or shortest).
 transparent meshes by squared distance from the camera position and opaque ones by renderOrder only; three sorts by
 groupOrder, renderOrder, (opaque) material id, then the NDC depth of each mesh's bounding-sphere centre. Off-axis
 transparent objects therefore blend in a different order than in the browser (the task's `off_axis_depth_not_distance`
-case). Not reported to fastengine's maintainers yet.
+case). Reported and confirmed, see below.
 **Finding 2 (2026-10-14, `fe_output_color`): fastengine's fog colour is mixed in linear.** Its shader mixes `uFogColor`
 (the linear colour) into the already sRGB-encoded fragment; three r162 converts the fog colour to the output colour space
 first (`refreshFogUniforms` → `getUnlitUniformColorSpace`: sRGB on screen, linear into a render target). Distant objects
@@ -2047,7 +2047,15 @@ therefore fade towards a darker colour than in the browser. Spec B11's "the fog 
 mistake. **Finding 3 (`fe_i18n`):** fastengine's `I18n.T` formats values with `Convert.ToString` (`True`, an empty string
 for null, `1E+21`) where the browser's `String()` gives `true`, `null`, `1e+21`, and it never logs a missing key.
 **Finding 4 (`fe_bash_job`):** the worker's `build.sh` hashes `build.log` into `manifest.json` while its `tee` is still
-writing (and prints "== done" after), so the manifest's entry for build.log can disagree with the file. None reported yet.
+writing (and prints "== done" after), so the manifest's entry for build.log disagrees with the file. All four were reported 2026-10-14 and **confirmed by fastengine's coding ally as real** (its open items
+#44-#47): **#47** manifest/build.log is *guaranteed* stale, not occasional (the "done" line is written after the checksums;
+a host that verifies against the manifest would reject every build); **#45** fog colour, likely missed because
+CarrierDominion's fog is thin, fix in both shader paths then recheck CarrierDominion's colours; **#46** i18n formatting,
+real but nothing visible yet (no current string passes such values), plus the missing-key log; **#44** draw order, matters
+for the RetroMultiCiv and City Grid ports (translucent water and markers); fastengine core has no multi-material meshes
+and no transmission, so those parts of three's ordering do not apply there (the task still grades three's full rule).
+fastengine corrected spec wording B11 and D08 to match. Their planned order: #47, #45, #46, #44, then RetroMultiCiv M0
+("next, on your go").
 
 Not built (need a GL context or Windows, or are agentic/process items): A02/A05 as code, B03-B16 rendering on a GL
 context, C01 pixel comparison, the Windows-interop items, I01-I06; E04's "name saved once taken" (no such field to test).
@@ -2080,7 +2088,8 @@ flex 5 / 0.80, pkg 0 / 0.50, order 7 / 1.00, obj3d 0 / 0.02, ico 3 / 0.51, i18n 
 - **Leaders:** gpt-oss:120b and gemma4:31b-qat tie (7/16, 0.74), flash-next 0.66. gemma4 is the steadiest across runs.
 - **Still missed by everyone:** `fe_bash_package` (pipefail), `fe_i18n` (JS `String()`), `fe_object3d`, `fe_solo_server`,
   `fe_view_math` this time. **Was too easy:** `fe_render_order` 7/7 — hardened afterwards (27 scenes, L4; the column
-  above is the 24-scene version). `fe_bash_stamp` 6/7 even hardened is kept on purpose as the **floor task**: a model
+  above is the 24-scene version; on the 27-scene version 4 of 5 models run so far pass, qwen3.8:27b 24/27 on sprite
+  depth — still mostly a careful-translation test because the excerpt is verbatim). `fe_bash_stamp` 6/7 even hardened is kept on purpose as the **floor task**: a model
   that fails it lacks basic git/bash care (it catches qwen3.6:27b).
 
 **Before the move (net9.0, first runs) — the same seven models:**
