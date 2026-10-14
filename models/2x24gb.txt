@@ -6,6 +6,12 @@
 #   params     comma-separated llama-server flags
 #   hf:        HuggingFace repo for fetch-hf.sh download helper
 #
+# MULTI-GPU: lock the GPU core clocks first — ./gpuclock.sh lock (or ./run.sh --lock-clocks). Under Windows/WSL a layer
+# split otherwise downclocks mid-answer and long answers decode ~7x slower; the lock resets on reboot. A split can also
+# flip close-call results against one GPU (cross-GPU floating-point sensitivity, CLAUDE.md), in either direction.
+# Recommendations (2026-10-14): a model that fits one 24 GB card is faster on one card; split for context: ornith:1.0-35b
+# and qwen3.5:27b reach 256k (6/6), gemma4:26b-qat too; gemma4:31b-qat split keeps its gamedev lead (16/28).
+#
 # Confirmed on RTX 4090 (dev 0) + RTX 3090 (dev 1), PCIe, 2026-06-14.
 # NVLink vs PCIe between GPUs significantly affects 70B tensor-parallel throughput.
 # RTX 4090 + RTX 3090 have NO NVLink — both use PCIe for inter-GPU tensor transfer.

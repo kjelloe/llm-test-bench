@@ -5,6 +5,13 @@
 #   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
+#
+# Recommendations (2026-10-14, one RTX 4090; one GPU needs no clock lock):
+#   default coding set:  qwen3.8:27b-nvfp4-mix (36/39 @44 tok/s, 17 GB) or qwen3.8:27b; qwopus3.6:35b for speed (19/19 @162)
+#   Unity/C# gamedev and fastengine:  gemma4:31b-qat (gamedev 16/28, 0.74; fastengine 7/16, 0.74), then equinox:31b,
+#                                     qwen3.6:27b; A3B MoE coder fine-tunes score < 0.5 there
+#   repeatable answers (order-independent): add parallel=1 to the params and run with BENCH_CACHE_PROMPT=0
+#   (qwen3.8:27b that way: 38/38 eligible incl. node_paratrooper)
 
 # qwopus3.6:35b        # ~162 tok/s  GPU only (Coder MXFP4 MOE Q8_0-Imatrix ~19.8 GB, Ampere+); 19/19 coding PERFECT — fastest perfect-score model; Skill L4 (confirmed 2026-07-22)
 # quest:35b            # ~160 tok/s  GPU only (RL MXFP4 MOE, ~19 GB); 16/19 coding; Skill L6

@@ -1,5 +1,7 @@
 # 4× 24 GB VRAM model set — RTX 4090 + 3× RTX 3090 (96 GB total, PCIe)
 # All 4-GPU models use tensor_split=1|1|1|1 (equal layer distribution across all four cards).
+# MULTI-GPU under Windows/WSL: lock the GPU core clocks first (./gpuclock.sh lock, or ./run.sh --lock-clocks);
+# otherwise a layer split downclocks mid-answer and long answers decode ~7x slower. Resets on reboot.
 #
 # Format: <ollama-name>  [<gguf-file>  [<params>]]  [hf:<owner/repo>]
 #   gguf-file  GGUF filename relative to $LLAMA_MODELS_DIR (for --backend llama-server)

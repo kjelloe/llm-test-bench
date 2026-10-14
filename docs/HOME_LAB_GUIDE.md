@@ -101,6 +101,10 @@ MoE models (qwen3-30b:2507, glm4.7-flash) can reach 64k but at dramatically redu
 
 #### 2.2 Dual 24 GB (2× RTX 4090 / 4090+3090 — 48 GB total)
 
+> **Multi-GPU under Windows/WSL: lock the GPU core clocks before any split run** (`./gpuclock.sh lock`, or
+> `./run.sh --lock-clocks`). The driver otherwise drops each GPU of a layer split to its idle clock mid-answer and long
+> answers decode ~7× slower (gpt-oss:120b on 3×24 GB: 9.8 → 69.5 tok/s; 96.6 with `--memory`). Resets on reboot.
+
 Tensor parallel removes the KV ceiling for most 32B models. MoE models continue to run
 optimally on a single GPU; tensor_split for MoE is mainly useful for context tasks.
 

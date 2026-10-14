@@ -45,12 +45,15 @@ source "$VENV/bin/activate"
 
 "$VENV/bin/python3" -m pip install --quiet -r requirements.txt
 
-# ── Strip --no-hwmonitor before forwarding args to bench.py ─────────────────
+# ── Strip run.sh's own flags before forwarding args to bench.py ─────────────
+# --no-hwmonitor; --lock-clocks (= BENCH_LOCK_CLOCKS=auto, see the clock block below)
 _NO_HWMONITOR=0
 _PASSTHROUGH=()
 for _arg in "$@"; do
     if [[ "$_arg" == "--no-hwmonitor" ]]; then
         _NO_HWMONITOR=1
+    elif [[ "$_arg" == "--lock-clocks" ]]; then
+        BENCH_LOCK_CLOCKS=auto
     else
         _PASSTHROUGH+=("$_arg")
     fi
@@ -92,6 +95,20 @@ fi
 _LOAD_ARGS=()
 [[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" ]] && _LOAD_ARGS=(--multi-gpu)
 python3 "$_SCRIPT_DIR/lib/load_check.py" "${_LOAD_ARGS[@]+"${_LOAD_ARGS[@]}"}" || exit 1
+
+# ── GPU core clock lock for multi-GPU runs (2026-10-14) ─────────────────────
+# A layer split decodes ~7x slower on long answers when the driver downclocks idle GPUs (Known Issues in CLAUDE.md).
+# BENCH_LOCK_CLOCKS: prompt (default) prints how to lock; auto (or --lock-clocks) locks now through gpuclock.sh — under
+# WSL an elevated PowerShell, so a UAC prompt on the Windows desktop; off skips the check. Single-GPU runs skip it.
+if [[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${BENCH_LOCK_CLOCKS:-prompt}" != "off" ]] && command -v nvidia-smi >/dev/null \
+   && [[ $(nvidia-smi -L 2>/dev/null | wc -l) -gt 1 ]] && ! "$_SCRIPT_DIR/gpuclock.sh" status >/dev/null; then
+    if [[ "${BENCH_LOCK_CLOCKS:-prompt}" == "auto" ]]; then
+        "$_SCRIPT_DIR/gpuclock.sh" lock || echo "[clocks] not locked; continuing (multi-GPU decode will be slow)"
+    else
+        echo "[clocks] multi-GPU run with unlocked GPU core clocks. Lock them now with:  ./gpuclock.sh lock"
+        echo "         (or rerun with --lock-clocks / BENCH_LOCK_CLOCKS=auto; the command alone: ./gpuclock.sh lock --print)"
+    fi
+fi
 
 # ── Launch bench.py in background ────────────────────────────────────────────
 python3 bench.py "${_GPU_ARGS[@]+"${_GPU_ARGS[@]}"}" "$@" &

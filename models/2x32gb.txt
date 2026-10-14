@@ -1,5 +1,7 @@
 # Dual 32 GB VRAM model set — 2× RTX 6000 Ada / A6000 / RTX 5090 etc. (64 GB total)
 # All models use tensor_split=1|1 (equal layer distribution across both GPUs).
+# MULTI-GPU under Windows/WSL: lock the GPU core clocks first (./gpuclock.sh lock, or ./run.sh --lock-clocks);
+# otherwise a layer split downclocks mid-answer and long answers decode ~7x slower. Resets on reboot.
 #
 # Purpose: 70B+ models that cannot fit on a single GPU or on 2×24 GB.
 # 30B/35B models (qwen3-coder, qwen3.5:35b, noctrex) are NOT listed here — they already

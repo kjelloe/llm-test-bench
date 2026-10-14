@@ -272,10 +272,13 @@ half a CPU core, or a GPU already holding more than 3 GB of VRAM (a stuck test, 
 llama-server). The run continues; set `BENCH_ABORT_ON_BUSY=1` to abort instead (`lib/load_check.py`).
 In multi-GPU mode it also warns when the GPU core clocks are not locked: under Windows/WSL the driver
 drops each GPU of a layer split to its idle clock mid-answer, and long answers then decode ~7× slower.
-Lock them once per boot from an admin Windows shell with `nvidia-smi -lgc 1500,2500` (undo: `-rgc`). For a
-benchmark session also lock the memory clock to each card's maximum (`nvidia-smi -i 0 -lmc 10501,10501`,
-`nvidia-smi -i 1,2 -lmc 9751,9751` on this rig): another +17-39% on split models, but the cards then idle in P0
-(~290 W here), so undo it with `nvidia-smi -rmc` afterwards.
+Lock them once per boot with `./gpuclock.sh lock`: under WSL it starts an elevated PowerShell (accept the UAC prompt
+on the Windows desktop) that runs `nvidia-smi -lgc 1500,2500`, and prints that command for an admin PowerShell if
+elevation is declined (`--print` only prints it; `./gpuclock.sh status` shows the clocks; `unlock` undoes it). Or let
+`run.sh` do it: `./run.sh --lock-clocks ...` (or `BENCH_LOCK_CLOCKS=auto`) locks before a multi-GPU run when the
+clocks are unlocked; by default it only prints the hint, `BENCH_LOCK_CLOCKS=off` skips the check. For a benchmark
+session add `--memory` (each card's maximum memory clock: another +17-39% on split models, but the cards then idle in
+P0, ~290 W here, so `./gpuclock.sh unlock --memory` afterwards). Single-GPU runs need neither.
 During a run, bench stops a server whose GPUs have all been idle for 5 minutes with a request open (a hung
 split model; `BENCH_STALL_ABORT_S`, 0 = off) and records that task as `stalled`, which `statistics.sh` leaves out.
 

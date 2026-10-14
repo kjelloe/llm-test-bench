@@ -27,6 +27,7 @@ requirements.txt          pytest + nvidia-ml-py (optional; bench runs without it
 install.sh                Interactive installer: checks and installs missing dependencies
 run.sh                    Venv setup + bench.py entrypoint; sources .gpu-mode; in multi-GPU mode (3+ GPUs) runs a pre-flight power-limit check (lib/power_check.py) and aborts if unsafe (MAX_PSU_WATT/SKIP_POWER_CHECK env vars; added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md); before every run warns about competing work — processes above half a core, GPUs already holding >3 GB VRAM (lib/load_check.py; BENCH_ABORT_ON_BUSY=1 aborts instead; added 2026-10-09, the rig is shared with a Unity builder); auto-starts hwmonitor/hwmonitor.py in background (pass --no-hwmonitor to skip — but keep it enabled for sustained/heavy/multi-GPU/new-architecture testing)
 gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU mode; writes .gpu-mode (gitignored)
+gpuclock.sh               GPU clock lock: status | lock [--memory] | unlock [--memory] [--print]; under WSL runs nvidia-smi in an elevated PowerShell (UAC) or prints the admin command; run.sh calls it before multi-GPU runs when BENCH_LOCK_CLOCKS=auto (--lock-clocks), else prints a hint
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
 compare-results.sh        Merges two result JSONs and prints speed summary + full task table for backend comparison; thin wrapper for lib/compare_results.py
@@ -80,6 +81,7 @@ tests/
   test_llama_server_flags.py  Unit tests for _bool_flag — emits --load-mode none vs legacy --no-mmap depending on whether the target binary's --help lists --load-mode
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
   test_load_check.py          Unit tests for lib/load_check.evaluate() — CPU-hog and busy-GPU flagging, own process tree ignored, ordering; clock_warnings() for unlocked GPU clocks
+  test_gpuclock.py            gpuclock.sh against a stand-in nvidia-smi: printed lock/unlock commands, PowerShell quoting, status verdict
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
   test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP); every opt-in task exports its editable and context files and no *.reference.* file
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)

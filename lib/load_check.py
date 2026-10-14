@@ -51,7 +51,7 @@ def clock_warnings(clocks: list[tuple[int, int]], floor: int = CLOCK_FLOOR_MHZ) 
     if not low:
         return []
     return [f"GPU clocks not locked ({', '.join(low)}): multi-GPU decode will downclock mid-answer; "
-            f"run `nvidia-smi -lgc 1500,2500` in an admin Windows shell (lost on reboot)"]
+            f"run `./gpuclock.sh lock` (or `nvidia-smi -lgc 1500,2500` in an admin Windows shell; lost on reboot)"]
 
 
 def _cpu_ticks() -> dict[int, int]:

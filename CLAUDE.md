@@ -316,6 +316,9 @@ bench.py            CLI runner
 install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; bootstraps a missing venv pip via ensurepip before installing requirements.txt (Debian/Ubuntu boxes without python3-pip otherwise hit a confusing externally-managed-environment error, see the Debian pip finding below; added 2026-09-24, test_run_sh_pip_bootstrap.py); auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
+gpuclock.sh         GPU clock lock for multi-GPU runs: status | lock [--memory] | unlock [--memory] [--print]; under WSL an
+                    elevated PowerShell (UAC) or the printed admin command; run.sh --lock-clocks / BENCH_LOCK_CLOCKS=auto|prompt|off
+                    calls it before multi-GPU runs (added 2026-10-14, tests/test_gpuclock.py)
 powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
 compare.sh          Runs the canonical models/default.txt set (10 models as of 2026-09-15) (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
@@ -385,6 +388,7 @@ tests/
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
   test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored) + clock_warnings()
+  test_gpuclock.py            gpuclock.sh against a stand-in nvidia-smi: printed lock/unlock commands, PowerShell quoting, status verdict
   test_export_task.py         --export-task bundling unit tests (every opt-in task: its files present, no *.reference.*); also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
@@ -535,8 +539,10 @@ trusting as-is.
 - **Multi-GPU decode needs the GPU core clocks locked (2026-10-12).** Under Windows/WSL the driver drops each GPU of
   a layer split to P8 (210 MHz core, 405 MHz memory) mid-answer, because each one idles while the others compute;
   long answers then decode ~7× slower (gpt-oss:120b 3×24 GB, 4,000 tokens: 9.8 vs 69.5 tok/s; qwen3.8-flash-next
-  4-10 vs 27). Run `nvidia-smi -lgc 1500,2500` from an admin Windows shell once per boot (undo `-rgc`); `run.sh`
-  warns in multi-GPU mode when it isn't set. **Every multi-GPU speed number on this rig recorded without it is
+  4-10 vs 27). Lock once per boot: `./gpuclock.sh lock` (2026-10-14; under WSL an elevated PowerShell via UAC, else
+  it prints the admin-PowerShell command; `status`, `unlock`, `--memory`, `--print`), or `./run.sh --lock-clocks` /
+  `BENCH_LOCK_CLOCKS=auto` to lock automatically before a multi-GPU run (default `prompt` only prints the hint, `off`
+  skips). The raw command is `nvidia-smi -lgc 1500,2500` in an admin Windows shell (undo `-rgc`). **Every multi-GPU speed number on this rig recorded without it is
   low**, including the gamedev wall times of gpt-oss:120b and qwen3.8-flash-next and the 2026-10-09 pin-vs-master
   comparison; pass/fail results are unaffected (clocks don't change the arithmetic). Single-GPU runs are not
   affected (the GPU never idles long enough).
