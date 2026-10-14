@@ -1888,6 +1888,9 @@ gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
   16 for seven models incl. qwen3.5-122b:a10b, gemma4:31b-qat, qwen3.8:27b, qwen3.6:27b; down to glm4.7-flash
   8. The 2×24 diag run: qwen3.6:35b-A3B 17, qwen3.5:27b 16, qwen3-coder:30b-1m 13, deepseek-r1:32b 11
   (4 of its 6 misses are hangs). Still too easy at the top to rank the leaders.
+- **Diag sets are a floor check, not a ranking (user's decision 2026-10-14).** Over all records only five of the 39 questions
+  separate the top ten models (`diag_white_flash_shot`, `diag_mirror_audit`, `diag_timeout_ignored`, `fdiag_smart_app_control`,
+  `fdiag_fill_culling`); the 12 "harder" ones added since 10-12 did not help. They still catch weak models. Rank leaders on code.
 
 **Standings, all gamedev records to 2026-10-14** (latest valid record per model × task; stalled/TOOL_ERROR left out;
 partial = mean weighted partial credit over the tasks run; most models have only the first nine):
