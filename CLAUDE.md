@@ -2046,8 +2046,8 @@ writing (and prints "== done" after), so the manifest's entry for build.log can 
 Not built (need a GL context or Windows, or are agentic/process items): A02/A05 as code, B03-B16 rendering on a GL
 context, C01 pixel comparison, the Windows-interop items, I01-I06; E04's "name saved once taken" (no such field to test).
 **Deviation:** fastengine moved to .NET 10 (`net10.0`, fastengine `6b31868`); these tasks still target net9.0 and say
-".NET 9" in their prompt. Both SDKs are on the rig; moving the tasks means re-running every fastengine result, so it waits
-until the queued runs are in.
+".NET 9" in their prompt. Both SDKs are on the rig; moving the tasks means re-running every fastengine result (the table
+below is all net9.0) — a decision for the user.
 
 **All 16 tasks and 18 questions, seven models (2026-10-12..14; `output/fe-*`, `fesolo-*`, `t6-*`, `t7-*`, `t8-*`; default
 server settings; gpt-oss:120b and flash-next on 3×24 GB with the core clock locked, the rest on one RTX 4090; cc = does not
@@ -2071,13 +2071,13 @@ color 2 / 0.84, stamp 7 / 1.00, job 4 / 0.83.
 - **Shared misses, every model:** `fe_bash_package` (all fix the comma list, none the silent `pipefail` exit inside
   `$(...)`), `fe_i18n` (all keep .NET's `Convert.ToString`: `True`, empty for null, `1E+21` instead of the browser's
   `String()`), `fe_session_rules` (a "rejected" on a reconnect before its own welcome must stop; all keep the first
-  connection's welcome). Each task was re-checked after these runs: the reference passes, the failures are genuine.
+  connection's welcome). Checked after these runs: the references still pass, and the failures read are genuine model errors.
 - **Too easy:** `fe_bash_stamp` 7/7 and the 18 diag questions (16-18/18 for everyone) rank nobody; `fe_render_order` 5/7.
   Hardest: `fe_object3d` (nobody compiles a correct lookAt; gemma4 composed world matrices in the wrong order for
   System.Numerics), `fe_ttf_metrics`, `fe_css_color`.
 
 **Earlier, the first four tasks only (2026-10-12, `output/fe-*.json`, `fesolo-*.json`; cc = does not compile, nb =
-no usable file). The twelve later tasks and eight later questions are queued (2026-10-14, `output/t6-*`, `t7-*`, `t8-*`):**
+no usable file); kept for the per-model notes below:**
 
 | Model | geometry | ttf | solo | css | pass | partial | diag |
 |---|---|---|---|---|---|---|---|
