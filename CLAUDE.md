@@ -392,6 +392,7 @@ tests/
   test_power_check.py         lib/power_check.evaluate() unit tests
   test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored) + clock_warnings()
   test_gpuclock.py            gpuclock.sh against a stand-in nvidia-smi: printed lock/unlock commands, PowerShell quoting, status verdict
+  test_task_levels_doc.py     task levels in SPEC.md and CLAUDE.md's task tables match lib/tasks.py (added after the 2026-10-14 re-level left SPEC stale)
   test_export_task.py         --export-task bundling unit tests (every opt-in task: its files present, no *.reference.*); also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
@@ -611,6 +612,12 @@ trusting as-is.
   plus ~250 more in the other night runs: the hang is rare now (1 in ~600 since the reboot).
 - **`next-runs.md` and `hw-upgrade-july-2026.md` are local and git-ignored (user's decision, 2026-10-14).** References
   to them (this file, models/*.txt, ARCHITECTURE.md, SPEC.md, ...) only resolve on this rig; a fresh clone lacks them.
+- **After every reboot (a forced Windows Update reboot on 2026-10-14 cost a queue):** (1) reapply the power limits
+  (`./powerlimit.sh --per-gpu` in an admin Windows shell; `run.sh` refuses 3-GPU runs until then); (2) `./gpuclock.sh lock`
+  for multi-GPU runs; (3) set `BENCH_BACKEND=llama-server` — Ollama now starts with Windows and otherwise answers the
+  requests (TOOL_ERROR "model 'gpt-oss:120b' not found" in 4 s); (4) scratchpad queue scripts under `/tmp` are gone.
+  Windows Update auto-restart is blocked by policy since 2026-10-14 (`NoAutoRebootWithLoggedOnUsers=1`, `AUOptions=3`
+  under `HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU`; works only while signed in).
 - **New box: run `./preflight.sh` before the first benchmark.** The RTX 5060 Ti box had only .NET
   SDK 8, so `dotnet_sas` failed as TOOL_ERROR in 0.9s: a false negative that looks like a model
   failure in the results table. Fixed by installing `dotnet-sdk-9.0`.
@@ -1902,25 +1909,26 @@ gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
   separate the top ten models (`diag_white_flash_shot`, `diag_mirror_audit`, `diag_timeout_ignored`, `fdiag_smart_app_control`,
   `fdiag_fill_culling`); the 12 "harder" ones added since 10-12 did not help. They still catch weak models. Rank leaders on code.
 
-**Standings, all gamedev records to 2026-10-14** (latest valid record per model × task; stalled/TOOL_ERROR left out;
-partial = mean weighted partial credit over the tasks run; most models have only the first nine):
+**Standings, all gamedev records to 2026-10-15** (latest valid record per model × task; stalled/TOOL_ERROR left out;
+partial = mean weighted partial credit over the tasks run; most models have only the first nine; fastengine = all 16 tasks
+on net10.0, `t9-fe16-*`/`t13-fe-*`, diag out of 18):
 
-| Model | gamedev pass | partial | diag | fastengine (4 older) |
-|---|---|---|---|---|
-| gpt-oss:120b (3×24) | 13/28 | 0.80 | 18/21 | 0/4, 0.20 |
-| gemma4:31b-qat (1 GPU; 2×24 run) | 16/28 | 0.74 | 19/21 | 1/4, 0.45 |
-| qwen3.6:27b | 12/28 | 0.67 | 20/21 | 1/4, 0.25 |
-| equinox:31b | 11/28 | 0.66 | 19/21 | 0/4, 0.12 |
-| qwen3.8-flash-next (3×24) | 12/28 | 0.65 | 20/21 | 1/4, 0.25 |
-| qwen3.8:27b | 11/28 | 0.61 | 19/21 | 0/4, 0.12 |
-| laguna-s-2.1:118b-iq4 (3×24) | 8/28 | 0.56 | 17/17 | — |
-| gemma4:26b-qat | 4/27 | 0.46 | 15/17 | 0/4, 0.29 |
-| qwen3.8:27b-nvfp4-mix (2026-10-14) | 9/28 | 0.56 | 19/21 | 4/16, 0.51 |
-| swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | 7/16, 0.68 (16 tasks) |
-| qwen3.5-122b:a10b (3×24, 2026-10-14) | 8/28 | 0.48 | 19/21 | 4/16, 0.52 (16 tasks) |
-| qwen3-next:80b (3×24, 2026-10-14) | 1/28 | 0.33 | 15/21 | — |
-| qwen3.5:27b | 3/9 | 0.59 | 16/17 | — |
-| everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | ≤0.51 |
+| Model | gamedev pass | partial | diag | gamedev split 2×24 (2026-10-13/15) | fastengine 16 |
+|---|---|---|---|---|---|
+| gpt-oss:120b (3×24) | 13/28 | 0.80 | 18/21 | — | 7/16, 0.74 |
+| gemma4:31b-qat (1 GPU) | 16/28 | 0.74 | 19/21 | 16/28, 0.74 | 7/16, 0.74 |
+| swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | — | 7/16, 0.68 (diag 18/18) |
+| qwen3.6:27b | 12/28 | 0.67 | 20/21 | 14/28, 0.70 | 2/16, 0.51 |
+| equinox:31b | 11/28 | 0.66 | 19/21 | 13/28, 0.70 | 5/16, 0.49 |
+| qwen3.8-flash-next (3×24) | 12/28 | 0.65 | 20/21 | — | 7/16, 0.66 |
+| qwen3.8:27b | 11/28 | 0.61 | 19/21 | — | 4/16, 0.47 |
+| laguna-s-2.1:118b-iq4 (3×24) | 8/28 | 0.56 | 17/17 | — | — |
+| qwen3.8:27b-nvfp4-mix (2026-10-14) | 9/28 | 0.56 | 19/21 | — | 6/16, 0.60 |
+| qwen3.5-122b:a10b (3×24, 2026-10-14) | 8/28 | 0.48 | 19/21 | — | 4/16, 0.52 (diag 15/18) |
+| gemma4:26b-qat | 4/27 | 0.46 | 15/17 | — | first four only: 0/4, 0.29 |
+| qwen3-next:80b (3×24, 2026-10-14) | 1/28 | 0.33 | 15/21 | — | — |
+| qwen3.5:27b | 3/9 | 0.59 | 16/17 | — | — |
+| everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | — | first four only: ≤0.51 |
 
 Run 2026-10-14: `qwen3.8:27b-nvfp4-mix` 9/28 (0.56, below its Q4_K_M sibling's 0.61); `swift-1.5-flash-next` on the
 19 newer tasks 10/19 (0.66), 16/28 overall (~0.71, ties gemma4:31b-qat on passes; 4 C# tasks do not compile), diag 20/21.

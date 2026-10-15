@@ -82,6 +82,7 @@ tests/
   test_harness_e2e.py         End-to-end harness self-test: mock chat_fn exercises run_one() pipeline (PASS / NO_BLOCKS / TESTS_STILL_FAIL / EDITED_NONEDITABLE_FILE) + comparison table render + skill-level logic + llama-server vs Ollama system message; no Ollama or llama-server required
   test_load_check.py          Unit tests for lib/load_check.evaluate() — CPU-hog and busy-GPU flagging, own process tree ignored, ordering; clock_warnings() for unlocked GPU clocks
   test_gpuclock.py            gpuclock.sh against a stand-in nvidia-smi: printed lock/unlock commands, PowerShell quoting, status verdict
+  test_task_levels_doc.py     task levels in SPEC.md and CLAUDE.md's task tables match lib/tasks.py (added after the 2026-10-14 re-level left SPEC stale)
   test_power_check.py         Unit tests for lib/power_check.evaluate() — safe/unsafe budget math, uncapped-GPU detection, min_gpus threshold, remediation message contents
   test_export_task.py         Unit tests for --export-task (TASK.md/PROMPT.txt/starting-files bundling from lib/tasks.TASK_MAP); every opt-in task exports its editable and context files and no *.reference.* file
   test_hwmonitor.py           Unit tests for hwmonitor's WARN/CRIT threshold state machine and hotspot-probe fallback (mocked subprocess/nvidia-smi)

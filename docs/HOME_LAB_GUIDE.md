@@ -60,8 +60,9 @@ first token), while 8 slots remove the queue (7.5 s) at the cost of per-stream d
 #### 2.0b Dual 16 GB (2× RTX 5060 Ti — 32 GB total)
 
 **Planned, not yet measured** — the second card is not installed as of 2026-09-16. 32 GB puts the
-27B class in reach, which is the whole point: no 27B build fits one 16 GB card (every NVFP4 variant
-found is 17-23 GB of weights). Entries are written and annotated in `models/2x16gb.vllm`:
+27B class in reach, which is the whole point: no 27B NVFP4 build fits one 16 GB card (every NVFP4 variant
+found is 17-23 GB of weights). Exception found 2026-10-15: byteshape's ShapeLearn `Qwen3.8-27B-IQ4_XS-3.84bpw` GGUF is
+13.1 GB and scored 37/38 on one 4090 (`qwen3.8:27b-byteshape`); on a 16 GB card it is untested. Entries are written and annotated in `models/2x16gb.vllm`:
 `qwen3.8-27b:nvfp4` (`QUASAR-QAT/Qwen3.8-27B-QUASAR-NVFP4`, 20.6 GB) as the primary, with
 `qwen2.5-coder:32b-awq` as the fallback.
 
@@ -90,6 +91,7 @@ MoE models punch well above their weight here (only A3B ≈ 3B active weights ge
 | Coding-perfect | `equinox:31b` | ~16.4 GB | \*35.5 | 19/19 coding + 4/4 web | Only single-GPU model with both; dense; context ceiling 32k |
 | Fast/interactive | `glm4.7-flash` | ~16 GB | \*111 | 29/33 | Skill L4; passes stepped L5+L6; fails python_hashmap/dijkstra |
 | Reasoning | `deepseek-r1:32b` | ~20 GB | \*31 | 18/19 | Q4_K_M; good coding, not hashmap; context limited to 32k on single GPU |
+| Smallest strong 27B | `qwen3.8:27b-byteshape` | ~13 GB + KV | \*49 | 37/38 full set | ShapeLearn IQ4_XS; matches the Q4_K_M (2026-10-15); f16 KV |
 | Context-capable | `qwen3-30b:2507` | ~17 GB | \*163 | 32/37 | 64k context at 9.2 tok/s; 128k OOM; multihop 3/3 |
 
 **Context ceiling on single 24 GB:**
