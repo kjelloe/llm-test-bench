@@ -1817,7 +1817,8 @@ qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache
 # LFM2.5-24B-A2B (Liquid AI, lfm2moe, ~2B active, 128k ctx; repo 2026-10-09). Official QAD-Q4_0 (quantization-aware
 # distillation, 12.6 GB). Scouted 2026-10-15 on user request; lfm2:8b (A1B) was 3/10 on the spot set.
 # RESULT 2026-10-15: spot 7/10 @238 tok/s; full default set 30/38 eligible @236 (coding 18/19, web 2/4, L6 1/4, ctx to 64k,
-# multihop 5/5). Plain-text reasoning exhausts budgets on L6 tasks. Fast coder, not promoted yet.
+# multihop 5/5). L6 at 24k budget/32k ctx: core PASS, turret/entities/combat wrong logic (0.65-0.76), paratrooper out of
+# budget; the `thinking` variant below gives token-identical answers. Capability gap. Fast coder, not promoted.
 lfm2.5:24b-a2b  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
 
 # byteshape Qwen3.8-27B ShapeLearn IQ4_XS-3.84bpw (13.1 GB; per-tensor learned datatypes, MTP head embedded, harmless
