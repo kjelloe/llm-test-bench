@@ -408,7 +408,8 @@ tests/
   test_unity_shim_sync.py     gamedev guards (incl. every test_weights key names a real test): per-task UnityEngine shim copies match task_data/_shared/UnityShim,
                               every gamedev task has a *.reference.* solution, parity fixtures match the JS spec;
                               every fixture generator (JS under Node, Python, three/Chromium via Playwright) regenerates
-                              its fixtures byte for byte, and none is left unguarded
+                              its fixtures byte for byte, and none is left unguarded; weight keys may also name tests in a
+                              hidden grader the test command runs (cs_test_movement)
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
   csv_nordic_property/    L3 data task: implement solution.py against 5 000-row Nordic CSV; min_predict=20000 num_ctx=32768 model_timeout=600
@@ -425,6 +426,8 @@ task_data/
                           constraints), xunit tests at net9.0; reference solutions are *.reference.cs (excluded
                           from compile and from --export-task)
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
+  cs_test_movement/       the "write the tests" task: tests/…/MovementTests.cs is editable; grade.reference.d/ (a pytest
+                          grader plus 12 faulty Movement.cs versions) is the test command and is never exported or shown
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
   fe_*/                   fastengine C# tasks: Fastengine.sln, src/Fastengine at net10.0 (latest C#, no Unity shim),
@@ -1973,9 +1976,9 @@ in the current tasks it would close.
    library (mask penalties; 16-bit length field from version 10).
 4. **DONE 2026-10-09 (`cs_snapshot_coalesce`).** **Snapshot coalescing with event merging (C08/C11, L3)**: newest view per frame, every skipped view's
    events delivered once and in order.
-5. **CSS alpha for linear blending (F11, L4)**: numeric, against their measured pixels.
+5. **DONE 2026-10-16 (`cs_css_alpha_linear`; graded against Chromium's pixels instead of the builder's measurements).** **CSS alpha for linear blending (F11, L4)**: numeric, against their measured pixels.
 6. **DONE 2026-10-09 (`cs_port_helm`).** **Command layer port (G02, L2)**: guards, clamps, unchanged values not resent, `{type:'command'}` wrapper.
-7. **Mutation-killing tests (H02/H03, L4)**: the model WRITES tests for a given port; graded by how many
+7. **DONE 2026-10-16 (`cs_test_movement`).** **Mutation-killing tests (H02/H03, L4)**: the model WRITES tests for a given port; graded by how many
    hidden mutants its tests kill (a new grading mode for the harness).
 8. **Flex-wrap / inline-block layout (F06/F13, L3)** and **pixel diagnosis (E05/L01)**, numeric or MC.
 Dropped on their advice: coroutines, IL2CPP/AOT (item 4 below).
@@ -1986,10 +1989,10 @@ Dropped on their advice: coroutines, IL2CPP/AOT (item 4 below).
    Fireline `client/js/interpolator.js`, CarrierDominion `shared/fixed.js`): closest to the actual
    native-port work; reuses the `crossplay_statehash_parity` fixture pattern (JS generates, C# must
    match). Gap: today's ports are re-implementations of patterns, not of the user's own code.
-2. **Frame-rate-independent fixed timestep** (accumulator; the same simulation result at 30, 60 and
+2. **DONE 2026-10-16 (`cs_fixed_timestep`).** **Frame-rate-independent fixed timestep** (accumulator; the same simulation result at 30, 60 and
    144 fps render rates; the design doc's "display frame rate must not alter gameplay"). Gap: no task
    exercises the tick-vs-frame split.
-3. **Allocation-free hot path**: an Update-style method whose test asserts zero managed allocations
+3. **DONE 2026-10-16 (`cs_interp_alloc_free`).** **Allocation-free hot path**: an Update-style method whose test asserts zero managed allocations
    (`GC.GetAllocatedBytesForCurrentThread` before/after) — the GC-pressure point in the port-strategy
    doc. Gap: nothing measures performance hygiene.
 4. **DROPPED 2026-10-09 (builder: both their builds use Mono).** **IL2CPP/AOT-safe code**: banned-API scan (reflection, `dynamic`, `System.Reflection.Emit`,
