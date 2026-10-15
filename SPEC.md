@@ -102,7 +102,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (122 total, difficulty L1–L6; 39 run by default; the 28 `gamedev`, 21 `gamedev_diag`, 16 `fastengine` and 18 `fastengine_diag` tasks are opt-in):
+- Built-in tasks (126 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 16 `fastengine` and 18 `fastengine_diag` tasks are opt-in):
 
   **fastengine tasks (16, opt-in, 2026-10-12/14) — `--task-group fastengine`:** C# for the second build engine
   (fastengine: plain .NET 10 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD), from its
@@ -125,7 +125,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   20-49% L4, <20% L5); three canaries keep L2 although nobody passes them: `cs_coord_convert`, `fe_i18n`, `fe_bash_package`.
   `tests/test_task_levels_doc.py` keeps the levels written here and in CLAUDE.md's task tables equal to `lib/tasks.py`.
 
-  **Game-dev tasks (28, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
+  **Game-dev tasks (32, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),
   Node.js authoritative-server logic (`node --test`) and build-pipeline bash scripts (driven by pytest),
   from the user's multiplayer games and the Unity builder's task list. Not in a
@@ -137,7 +137,14 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   (L3), `cs_ws_client` (L4), `cs_primitive_compose` (L5), `cs_input_last_pressed` (L2), `cs_mesh_winding`
   (L3), `cs_light_port` (L2), `bash_accept_matrix` (L2), `bash_timeout_kill` (L4), `bash_kill_by_port` (L2); third wave (2026-10-09, chosen to
   separate models): `cs_port_qr` (L5), `cs_port_helm` (L4), `cs_snapshot_coalesce` (L3), `crossplay_ws_roundtrip` (L5);
-  2026-10-12: `cs_fake_null` (L5, Unity object lifetime, with its own extended shim).
+  2026-10-12: `cs_fake_null` (L5, Unity object lifetime, with its own extended shim); fourth wave (2026-10-16, levels
+  provisional until models have run them): `cs_fixed_timestep` (L3, a 20 Hz tick off Unity's frame loop: no drift, capped
+  hitches, pause), `cs_interp_alloc_free` (L3, zero-allocation port of boombrawl's interpolator, fixtures from the real JS,
+  allocation measured with `GC.GetAllocatedBytesForCurrentThread`), `cs_css_alpha_linear` (L4, F11: CSS rgba() panels in a
+  Linear Unity project, fixtures are Chromium's pixels), `cs_test_movement` (L4, H02/H03: **the model writes the tests**;
+  a hidden pytest grader, `grade.reference.d/`, requires them to pass on the real code and counts how many of 12 hidden
+  faulty versions of Movement.cs they catch — the "mutation-killing" grading mode, built from the existing test command
+  and partial-credit parser, no harness change).
 
   **Game-dev diagnosis (21, opt-in; 4 harder ones added 2026-10-12) — `--task-group gamedev_diag`:** one multiple-choice question per
   task (`diag_*`, L1–L5); the model writes the letter of the best answer to `answers/<id>.txt`, graded

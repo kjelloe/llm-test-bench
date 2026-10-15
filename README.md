@@ -89,7 +89,7 @@ BENCH_BACKEND=llama-server ./compare.sh --model-file models/experimental.txt
 
 `--task-group` and `--tasks` are mutually exclusive. Task groups: `coding` (19), `web` (4), `l6` /
 `para` (4 stepped Paratrooper steps), `l6_full` (1, the from-scratch Paratrooper implementation),
-`context` (6), `multihop` (5), `spot` (10-task candidate-evaluation subset), `gamedev` (28 Unity-client
+`context` (6), `multihop` (5), `spot` (10-task candidate-evaluation subset), `gamedev` (32 Unity-client
 C#, Node-authority and build-script tasks), `gamedev_diag` (21 multiple-choice diagnosis questions),
 `fastengine` (16 tasks for the second build engine, .NET 10 on Raylib-cs: 13 C#, 3 bash) and `fastengine_diag` (18
 questions); all four are **opt-in**: not part of a default all-tasks run, so they don't change the 39-task totals or
