@@ -1914,8 +1914,8 @@ partial = mean weighted partial credit over the tasks run; most models have only
 | laguna-s-2.1:118b-iq4 (3×24) | 8/28 | 0.56 | 17/17 | — |
 | gemma4:26b-qat | 4/27 | 0.46 | 15/17 | 0/4, 0.29 |
 | qwen3.8:27b-nvfp4-mix (2026-10-14) | 9/28 | 0.56 | 19/21 | 4/16, 0.51 |
-| swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | — |
-| qwen3.5-122b:a10b (3×24, 2026-10-14) | 8/28 | 0.48 | 19/21 | — |
+| swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | 7/16, 0.68 (16 tasks) |
+| qwen3.5-122b:a10b (3×24, 2026-10-14) | 8/28 | 0.48 | 19/21 | 4/16, 0.52 (16 tasks) |
 | qwen3-next:80b (3×24, 2026-10-14) | 1/28 | 0.33 | 15/21 | — |
 | qwen3.5:27b | 3/9 | 0.59 | 16/17 | — |
 | everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | ≤0.51 |
@@ -2004,8 +2004,12 @@ and `llm-service-provider/status.sh`, via `./run.sh` (hwmonitor on). Times are r
 
 *Other suggested model runs:*
 1. Cross-GPU sensitivity on the top single-GPU models (equinox:31b, qwen3.6:27b, gemma4:31b-qat) at
-   2×24 GB `tensor_split=1|1` — split arity has flipped close calls before. (gemma4:31b-qat done 2026-10-13: 16/28, two
-   tasks flip to PASS; equinox:31b and qwen3.6:27b not yet.)
+   2×24 GB `tensor_split=1|1` — split arity has flipped close calls before. **DONE for all three:** gemma4:31b-qat
+   (2026-10-13) 16/28, equinox:31b 13/28 (0.70, single 11/28; flips `cs_ws_client`, `cs_main_thread_dispatch`), qwen3.6:27b
+   14/28 (0.70, single 12/28; flips `cs_protocol_codec`, `crossplay_ws_roundtrip`) (night 2026-10-15, `output/t13-gamedev-*`).
+   **Each gained exactly two passes and lost none**; diag unchanged. Caveat: the split runs used order-independent mode, the
+   single-GPU ones the old server defaults, so mode and split are confounded; all flips helping, none hurting, is unlike
+   the both-ways cross-GPU sweeps, which points at the mode at least as much as at the split.
 2. The vLLM box: `qwen3.8-27b:nvfp4-next` (tp=2, 2× RTX 5060 Ti) — needs .NET 9 SDK and Node there.
 3. DeepSeek-V4.1-Flash on one or two short gamedev tasks (e.g. `cs_coord_bam`) — its model files were
    deleted 2026-10-08 to free disk, so this first needs the ~502 GB re-download — as a capability
@@ -2099,7 +2103,12 @@ with the core clock locked; no stall):**
 | qwen3.6:27b | cc | 0.58 | cc | cc | 0.89 | 0.83 | **P** | 0.50 | **P** | cc | cc | 0.50 | 0.78 | 0.74 | 0.79 | 0.56 | 2/16 | 0.51 |
 | equinox:31b | cc | 0.00 | 0.00 | cc | cc | **P** | **P** | 0.50 | **P** | cc | cc | 0.78 | 0.89 | 0.69 | **P** | **P** | 5/16 | 0.49 |
 | qwen3.8:27b | cc | **P** | cc | cc | 0.42 | 0.67 | cc | 0.50 | **P** | cc | cc | 0.44 | 0.78 | 0.74 | **P** | **P** | 4/16 | 0.47 |
+| swift-1.5-flash-next (2026-10-15, order-independent, 30-scene order) | cc | 0.47 | **P** | 0.07 | **P** | **P** | **P** | 0.50 | **P** | 0.11 | 0.10 | 0.78 | 0.89 | **P** | **P** | 0.89 | 7/16 | 0.68 |
+| qwen3.5-122b:a10b (2026-10-15, order-independent, 30-scene order) | **P** | 0.42 | 0.50 | cc | cc | **P** | cc | 0.50 | 0.47 | 0.05 | 0.80 | 0.33 | 0.67 | 0.57 | **P** | **P** | 4/16 | 0.52 |
 
+Night 2026-10-15 (`output/t13-fe-*.json`, 3×24 GB, clocks locked, no stall): **swift-1.5-flash-next 7/16, 0.68, diag 18/18** —
+passes `fe_render_order` (30 scenes; only flash-next before), `fe_solo_server` and `fe_view_math` (none of the first seven did);
+**qwen3.5-122b:a10b 4/16, 0.52, diag 15/18**. The per-task line below is still over the first seven.
 Per task, pass / mean partial: geom 1 / 0.14, ttf 2 / 0.39, solo 0 / 0.44, css 2 / 0.29, view 0 / 0.56, urls 4 / 0.79,
 flex 5 / 0.80, pkg 0 / 0.50, order 7 / 1.00, obj3d 0 / 0.02, ico 3 / 0.51, i18n 0 / 0.64, session 2 / 0.89, color 2 /
 0.83, stamp 6 / 0.97, job 4 / 0.83; 23 of 112 do not compile (36 on net9.0).
