@@ -1932,6 +1932,10 @@ on net10.0, `t9-fe16-*`/`t13-fe-*`, diag out of 18):
 | qwen3.5:27b | 3/9 | 0.59 | 16/17 | — | — |
 | everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | — | first four only: ≤0.51 |
 
+Mixed run modes in this table: most rows are the old server defaults; the split column, the 2026-10-14/15 rows and these
+one-GPU order-independent re-runs (2026-10-15, `t15-gamedev-*-1gpu`) are not: equinox:31b 13/28 (0.66), qwen3.6:27b 12/28
+(0.67), gemma4:31b-qat 12/28 (0.73). Cells move ±2 between modes — compare partial credit, and like with like.
+
 Run 2026-10-14: `qwen3.8:27b-nvfp4-mix` 9/28 (0.56, below its Q4_K_M sibling's 0.61); `swift-1.5-flash-next` on the
 19 newer tasks 10/19 (0.66), 16/28 overall (~0.71, ties gemma4:31b-qat on passes; 4 C# tasks do not compile), diag 20/21.
 Also 2026-10-14 (3×24 GB, order-independent mode): `qwen3.5-122b:a10b` on the 19 newer tasks 6/19 (0.42; 5 do not compile,
@@ -2120,10 +2124,12 @@ with the core clock locked; no stall):**
 | qwen3.8:27b | cc | **P** | cc | cc | 0.42 | 0.67 | cc | 0.50 | **P** | cc | cc | 0.44 | 0.78 | 0.74 | **P** | **P** | 4/16 | 0.47 |
 | swift-1.5-flash-next (2026-10-15, order-independent, 30-scene order) | cc | 0.47 | **P** | 0.07 | **P** | **P** | **P** | 0.50 | **P** | 0.11 | 0.10 | 0.78 | 0.89 | **P** | **P** | 0.89 | 7/16 | 0.68 |
 | qwen3.5-122b:a10b (2026-10-15, order-independent, 30-scene order) | **P** | 0.42 | 0.50 | cc | cc | **P** | cc | 0.50 | 0.47 | 0.05 | 0.80 | 0.33 | 0.67 | 0.57 | **P** | **P** | 4/16 | 0.52 |
+| qwen3.8:27b-byteshape (2026-10-15, order-independent, 1 GPU) | cc | 0.32 | 0.60 | cc | 0.89 | **P** | 0.83 | 0.50 | 0.93 | cc | 0.80 | 0.72 | 0.89 | 0.74 | **P** | 0.11 | 2/16 | 0.58 |
 
 Night 2026-10-15 (`output/t13-fe-*.json`, 3×24 GB, clocks locked, no stall): **swift-1.5-flash-next 7/16, 0.68, diag 18/18** —
 passes `fe_render_order` (30 scenes; only flash-next before), `fe_solo_server` and `fe_view_math` (none of the first seven did);
-**qwen3.5-122b:a10b 4/16, 0.52, diag 15/18**. The per-task line below is still over the first seven.
+**qwen3.5-122b:a10b 4/16, 0.52, diag 15/18**; qwen3.8:27b-byteshape (1 GPU, `t15-fe-byteshape`) 2/16, 0.58, diag 17/18. The
+per-task line below is still over the first seven.
 Per task, pass / mean partial: geom 1 / 0.14, ttf 2 / 0.39, solo 0 / 0.44, css 2 / 0.29, view 0 / 0.56, urls 4 / 0.79,
 flex 5 / 0.80, pkg 0 / 0.50, order 7 / 1.00, obj3d 0 / 0.02, ico 3 / 0.51, i18n 0 / 0.64, session 2 / 0.89, color 2 /
 0.83, stamp 6 / 0.97, job 4 / 0.83; 23 of 112 do not compile (36 on net9.0).

@@ -1830,4 +1830,5 @@ qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_ty
 
 # lfm2.5 with the `thinking` flag (2026-10-15 test, user decision 3): does a reasoning prefix stop the plain-text budget
 # exhaustion on the L6 tasks? Compare with the plain entry at the same --num-predict/--num-ctx.
+# RESULT 2026-10-15: token-identical to the plain entry on all five L6 tasks — the flag is a no-op for this model.
 lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
