@@ -1911,26 +1911,27 @@ gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
   `fdiag_fill_culling`); the 12 "harder" ones added since 10-12 did not help. They still catch weak models. Rank leaders on code.
 
 **Standings, all gamedev records to 2026-10-15** (latest valid record per model × task; stalled/TOOL_ERROR left out;
-partial = mean weighted partial credit over the tasks run; most models have only the first nine; fastengine = all 16 tasks
+**ranked by partial = mean weighted partial credit over the tasks run** (user's rule, 2026-10-15: pass counts move ±2 between
+run conditions, so they are secondary); most models have only the first nine; fastengine = all 16 tasks
 on net10.0, `t9-fe16-*`/`t13-fe-*`, diag out of 18):
 
-| Model | gamedev pass | partial | diag | gamedev split 2×24 (2026-10-13/15) | fastengine 16 |
+| Model | gamedev partial (ranks) | gamedev pass | diag | gamedev split 2×24 (2026-10-13/15) | fastengine 16 |
 |---|---|---|---|---|---|
-| gpt-oss:120b (3×24) | 13/28 | 0.80 | 18/21 | — | 7/16, 0.74 |
-| gemma4:31b-qat (1 GPU) | 16/28 | 0.74 | 19/21 | 16/28, 0.74 | 7/16, 0.74 |
-| swift-1.5-flash-next (3×24) | 16/28 | 0.71 | 20/21 | — | 7/16, 0.68 (diag 18/18) |
-| qwen3.6:27b | 12/28 | 0.67 | 20/21 | 14/28, 0.70 | 2/16, 0.51 |
-| equinox:31b | 11/28 | 0.66 | 19/21 | 13/28, 0.70 | 5/16, 0.49 |
-| qwen3.8-flash-next (3×24) | 12/28 | 0.65 | 20/21 | — | 7/16, 0.66 |
-| qwen3.8:27b | 11/28 | 0.61 | 19/21 | — | 4/16, 0.47 |
-| laguna-s-2.1:118b-iq4 (3×24) | 8/28 | 0.56 | 17/17 | — | — |
-| qwen3.8:27b-nvfp4-mix (2026-10-14) | 9/28 | 0.56 | 19/21 | — | 6/16, 0.60 |
-| qwen3.8:27b-byteshape (2026-10-15) | 9/28 | 0.57 | 19/21 | — | 2/16, 0.58 (diag 17/18) |
-| qwen3.5-122b:a10b (3×24, 2026-10-14) | 8/28 | 0.48 | 19/21 | — | 4/16, 0.52 (diag 15/18) |
-| gemma4:26b-qat | 4/27 | 0.46 | 15/17 | — | first four only: 0/4, 0.29 |
-| qwen3-next:80b (3×24, 2026-10-14) | 1/28 | 0.33 | 15/21 | — | — |
-| qwen3.5:27b | 3/9 | 0.59 | 16/17 | — | — |
-| everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0-2/9 | 0.04-0.54 | 8-17 | — | first four only: ≤0.51 |
+| gpt-oss:120b (3×24) | 0.80 | 13/28 | 18/21 | — | 7/16, 0.74 |
+| gemma4:31b-qat (1 GPU) | 0.74 | 16/28 | 19/21 | 16/28, 0.74 | 7/16, 0.74 |
+| swift-1.5-flash-next (3×24) | 0.71 | 16/28 | 20/21 | — | 7/16, 0.68 (diag 18/18) |
+| qwen3.6:27b | 0.67 | 12/28 | 20/21 | 14/28, 0.70 | 2/16, 0.51 |
+| equinox:31b | 0.66 | 11/28 | 19/21 | 13/28, 0.70 | 5/16, 0.49 |
+| qwen3.8-flash-next (3×24) | 0.65 | 12/28 | 20/21 | — | 7/16, 0.66 |
+| qwen3.8:27b | 0.61 | 11/28 | 19/21 | — | 4/16, 0.47 |
+| qwen3.8:27b-byteshape (2026-10-15) | 0.57 | 9/28 | 19/21 | — | 2/16, 0.58 (diag 17/18) |
+| laguna-s-2.1:118b-iq4 (3×24) | 0.56 | 8/28 | 17/17 | — | — |
+| qwen3.8:27b-nvfp4-mix (2026-10-14) | 0.56 | 9/28 | 19/21 | — | 6/16, 0.60 |
+| qwen3.5-122b:a10b (3×24, 2026-10-14) | 0.48 | 8/28 | 19/21 | — | 4/16, 0.52 (diag 15/18) |
+| gemma4:26b-qat | 0.46 | 4/27 | 15/17 | — | first four only: 0/4, 0.29 |
+| qwen3-next:80b (3×24, 2026-10-14) | 0.33 | 1/28 | 15/21 | — | — |
+| qwen3.5:27b | 0.59 | 3/9 | 16/17 | — | — |
+| everything else (A3B MoE, coder fine-tunes, glm4.7-flash, deepseek-r1, gpt-oss:20b) | 0.04-0.54 | 0-2/9 | 8-17 | — | first four only: ≤0.51 |
 
 Mixed run modes in this table: most rows are the old server defaults; the split column, the 2026-10-14/15 rows and these
 one-GPU order-independent re-runs (2026-10-15, `t15-gamedev-*-1gpu`) are not: equinox:31b 13/28 (0.66), qwen3.6:27b 12/28
