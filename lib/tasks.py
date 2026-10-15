@@ -1352,6 +1352,32 @@ CS_CSS_ALPHA_LINEAR = Task(
                   "AlphaForLinear_GrayOnGray": 2.0},
 )
 
+CS_TEST_MOVEMENT = Task(
+    id="cs_test_movement",
+    difficulty=4,
+    description=(
+        "Write the tests, not the code (builder items H02/H03). src/GameClient/Movement.cs is a correct port of "
+        "js/movement.mjs, the movement integrator boombrawl's server and client both run every tick; do not change it. "
+        "tests/GameClientTests/MovementTests.cs has one test, which passed the first time it ran. Replace it with a "
+        "test set that would catch realistic bugs in Movement.StepEntity: you are graded by running your tests against "
+        "a dozen hidden faulty versions of Movement.cs (each a single plausible mistake someone porting or editing this "
+        "code could make) and counting how many make at least one of your tests fail. Your tests must all pass on the "
+        "real Movement.cs, or nothing counts, and must exercise Movement only through its public API (no reading "
+        "files, no reflection). The test project is net9.0 with xunit; Movement.Blocked is the wall callback."
+    ),
+    subdir="cs_test_movement",
+    editable_files=["tests/GameClientTests/MovementTests.cs"],
+    context_files=["src/GameClient/Movement.cs", "js/movement.mjs", "js/const.mjs", "js/fixedmath.mjs",
+                   "tests/GameClientTests/GameClientTests.csproj"],
+    test_cmd=["python3", "-m", "pytest", "grade.reference.d", "-v", "--tb=short"],
+    test_timeout=900,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"test_your_tests_pass_on_the_real_movement": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2368,6 +2394,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_FIXED_TIMESTEP,
     CS_INTERP_ALLOC_FREE,
     CS_CSS_ALPHA_LINEAR,
+    CS_TEST_MOVEMENT,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2465,7 +2492,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_port_helm", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_fake_null", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity", "crossplay_ws_roundtrip", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
-        "cs_fixed_timestep", "cs_interp_alloc_free", "cs_css_alpha_linear",
+        "cs_fixed_timestep", "cs_interp_alloc_free", "cs_css_alpha_linear", "cs_test_movement",
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],

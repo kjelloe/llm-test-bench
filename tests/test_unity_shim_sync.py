@@ -98,6 +98,10 @@ def test_every_test_weight_key_names_a_real_test():
         task = TASK_MAP[tid]
         test_files = [f for f in task.context_files if "test" in Path(f).name.lower()]
         text = "".join((TASK_DATA_DIR / task.subdir / f).read_text(encoding="utf-8") for f in test_files)
+        for arg in task.test_cmd:   # a hidden grader the test command runs (cs_test_movement)
+            path = TASK_DATA_DIR / task.subdir / arg
+            if path.is_dir():
+                text += "".join(p.read_text(encoding="utf-8") for p in path.glob("*.py"))
         for key in task.test_weights or {}:
             assert key in text, f"{tid}: weight key {key!r} matches no test in {test_files}"
 
