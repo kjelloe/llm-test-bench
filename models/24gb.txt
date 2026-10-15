@@ -223,6 +223,10 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_typ
 #   embedded (no spec flags). Full default set 2026-10-13: 36/39 at 43.9 tok/s (only node_paratrooper fails; 128k/256k
 #   skipped by max_ctx 65536). 1 GB smaller than the Q4_K_M at the same speed. f16 KV for python_hashmap.
 qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:cdiamond/Qwen3.8-27B-iMatrix-NVFP4-MTP-GGUF
+# qwen3.8:27b-byteshape: byteshape ShapeLearn IQ4_XS-3.84bpw (per-tensor learned types), 13.1 GB, MTP embedded (no spec
+#   flags). Full default set 2026-10-15: 37/38 eligible at 49.3 tok/s (only node_paratrooper, 39/40) — the Q4_K_M's score
+#   at 5 GB less. Promoted 2026-10-15 (user). f16 KV for python_hashmap. Untested on a 16 GB card.
+qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:byteshape/Qwen3.8-27B-GGUF
 # UPDATE (2026-08-23, investigation CLOSED): extended tiebreaker to 6 independent builds × 3 GPU
 #   configs. THIS file remains the only one that passes on both single-GPU and 3-GPU — bartowski's
 #   Q5_K_M (qwen3.8:27b-q5km, candidates.txt) is the only other clean PASS anywhere but is

@@ -1824,4 +1824,9 @@ lfm2.5:24b-a2b  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # without spec flags). Scouted 2026-10-15 (1.5M downloads); 12 GB-class build that could fit a 16 GB card. Same params as
 # qwen3.8:27b (thinking, f16 KV for the hashmap canary). Qwen3.8-27B builds are file-sensitive here: test, don't assume.
 # RESULT 2026-10-15: spot 9/10 @52 tok/s; full default set 37/38 eligible @49.3 (only node_paratrooper, 39/40).
+# PROMOTED to models/24gb.txt 2026-10-15.
 qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:byteshape/Qwen3.8-27B-GGUF
+
+# lfm2.5 with the `thinking` flag (2026-10-15 test, user decision 3): does a reasoning prefix stop the plain-text budget
+# exhaustion on the L6 tasks? Compare with the plain entry at the same --num-predict/--num-ctx.
+lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
