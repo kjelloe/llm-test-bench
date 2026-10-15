@@ -165,10 +165,21 @@ def test_output_color_fixtures_match_three_in_chromium():
     assert out.stdout == (root / "tests" / "FastengineTests" / "fixtures.json").read_text(encoding="utf-8")
 
 
+# cs_css_alpha_linear's fixtures are what Chromium draws for CSS rgba() panels (a screenshot read back).
+@pytest.mark.skipif(shutil.which("node") is None or not _PLAYWRIGHT.is_dir(), reason="node or Playwright not available")
+def test_css_alpha_fixtures_match_chromium():
+    import os
+    root = TASK_DATA_DIR / "cs_css_alpha_linear"
+    out = subprocess.run(["node", "tools/make_fixtures.reference.mjs"], cwd=root, capture_output=True, text=True,
+                         timeout=180, check=True, env={**os.environ, "PLAYWRIGHT": str(_PLAYWRIGHT)})
+    assert out.stdout == (root / "tests" / "GameClientTests" / "fixtures.json").read_text(encoding="utf-8")
+
+
 def test_every_fixture_generator_is_guarded():
     """A task whose fixtures come from a generator must have that generator in one of the guards above."""
     guarded = {(t, s) for t, s, _ in JS_FIXTURES} | {(t, s) for t, s, _ in PY_FIXTURES}
-    guarded |= {("fe_flex_wrap", "tools/make_fixtures.reference.mjs"), ("fe_output_color", "tools/make_fixtures.reference.mjs")}
+    guarded |= {("fe_flex_wrap", "tools/make_fixtures.reference.mjs"), ("fe_output_color", "tools/make_fixtures.reference.mjs"),
+                ("cs_css_alpha_linear", "tools/make_fixtures.reference.mjs")}
     found = set()
     for path in TASK_DATA_DIR.glob("*/**/make[-_]fixtures*"):
         rel = path.relative_to(TASK_DATA_DIR)

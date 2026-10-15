@@ -1324,6 +1324,34 @@ CS_INTERP_ALLOC_FREE = Task(
     test_weights={"EverySample_MatchesTheJavaScript": 3.0, "Sample_AllocatesNothingPerFrame": 3.0},
 )
 
+CS_CSS_ALPHA_LINEAR = Task(
+    id="cs_css_alpha_linear",
+    difficulty=4,
+    description=(
+        "Incident F11: the Unity client draws the browser game's HUD panels and chips with the CSS rgba() colour and "
+        "alpha copied into a material, and in the Linear colour space project they look lighter than in the browser. "
+        "Fix src/GameClient/CssAlpha.cs. BrowserOver must give what Chromium draws for CSS rgba(css, alpha) over an "
+        "opaque backdrop (the tests compare with pixels read back from Chromium, within one level per channel); "
+        "LinearOver what a Linear-colour-space Unity project draws for a material of that colour and alpha (blend in "
+        "linear light using the exact sRGB transfer curve, then encode back to sRGB, rounded); AlphaForLinear the alpha "
+        "to give the Unity material instead of the CSS alpha so that its result has the browser result's luminance "
+        "(Rec. 709 weights in linear light): within 3 sRGB levels of luminance for colour, every channel within 2 for "
+        "gray on gray, always in [0, 1], and the CSS alpha unchanged when the panel and backdrop have the same "
+        "luminance. All results are opaque (a = 255)." + UNITY_CONSTRAINTS
+    ),
+    subdir="cs_css_alpha_linear",
+    editable_files=["src/GameClient/CssAlpha.cs"],
+    context_files=["tests/GameClientTests/CssAlphaTests.cs"] + UNITY_CONTEXT,
+    test_cmd=["dotnet", "test", "--verbosity", "normal"],
+    test_timeout=180,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"BrowserOver_MatchesWhatChromiumDraws": 2.0, "AlphaForLinear_ReproducesTheBrowserLuminance": 3.0,
+                  "AlphaForLinear_GrayOnGray": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2339,6 +2367,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_FAKE_NULL,
     CS_FIXED_TIMESTEP,
     CS_INTERP_ALLOC_FREE,
+    CS_CSS_ALPHA_LINEAR,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2436,7 +2465,7 @@ TASK_GROUPS: dict[str, list[str]] = {
         "cs_coord_convert", "cs_coord_bam", "cs_port_movement", "cs_port_heightmap", "cs_port_webaudio", "cs_port_qr", "cs_port_helm", "cs_tick_interp", "cs_snapshot_coalesce", "cs_ws_abort_reconnect", "cs_reconnect_policy", "cs_ws_client", "cs_primitive_compose", "cs_input_last_pressed", "cs_fake_null", "cs_mesh_winding", "cs_light_port", "cs_main_thread_dispatch", "cs_protocol_codec", "cs_snapshot_interp",
         "cs_predict_reconcile", "node_room_authority", "node_seat_reconnect",
         "crossplay_statehash_parity", "crossplay_ws_roundtrip", "bash_accept_matrix", "bash_timeout_kill", "bash_kill_by_port",
-        "cs_fixed_timestep", "cs_interp_alloc_free",
+        "cs_fixed_timestep", "cs_interp_alloc_free", "cs_css_alpha_linear",
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
