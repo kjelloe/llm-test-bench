@@ -426,7 +426,7 @@ task_data/
                           constraints), xunit tests at net9.0; reference solutions are *.reference.cs (excluded
                           from compile and from --export-task)
   node_room_authority/, node_seat_reconnect/   gamedev Node tasks (node:test, no npm deps)
-  cs_test_movement/       the "write the tests" task: tests/…/MovementTests.cs is editable; grade.reference.d/ (a pytest
+  cs_test_movement/, fe_test_css_color/   the "write the tests" tasks: tests/…/MovementTests.cs is editable; grade.reference.d/ (a pytest
                           grader plus 12 faulty Movement.cs versions) is the test command and is never exported or shown
   bash_accept_matrix/, bash_timeout_kill/, bash_kill_by_port/   gamedev bash tasks (pytest drives the script;
                           *.reference.sh solutions; tests kill leftovers by session id, see the uutils note)
@@ -453,7 +453,7 @@ Task groups (--task-group):
             builder's task list; OPT-IN (lib/tasks.py OPT_IN_GROUPS): excluded from a run with no
             --tasks/--task-group; see "Game-dev task group" below
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
-  fastengine    16 tasks (13 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
+  fastengine    17 tasks (14 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
 ```
 
@@ -635,7 +635,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (32), gamedev_diag (21), fastengine (16) and fastengine_diag (18) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (32), gamedev_diag (21), fastengine (17) and fastengine_diag (18) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks
@@ -2112,6 +2112,7 @@ single-bug mutants caught, `--export-task` leaves references out); C# at **net10
 | `fe_output_color` | 4 | B08/B11 | three r162's tone mapping (None/Linear/Reinhard/ACES with exposure), sRGB encode and Fog/FogExp2 on the CPU; **fixtures are pixels three itself rendered in headless Chromium** (Playwright, SwiftShader WebGL2); excerpt of three's GLSL chunks + `getParameters` + `refreshFogUniforms` | stub (fastengine's approach) 19/42, ref 42/42 within ±1, 11/11 |
 | `fe_bash_stamp` | 2 | F01 | fastengine's `build_version`: both short commits, `-dirty` for edited/staged/deleted/untracked in either tree but not for ignored build output, `uncommitted` without a commit (and `-dirty` with only staged files), the game repo as a relative path with spaces or through a symlink. **Hardened 2026-10-14** after 7/7 models passed the first 9 tests | stub 8/14, ref 14/14, 5/5 first set + 5/5 hardening mutants (diff HEAD, counting ignored files, ls-files without --exclude-standard, unquoted path, describe) |
 | `fe_bash_job` | 3 | H05/H07 | fastengine's worker `build.sh` reduced: clear the lane's output, work outside the tree and remove it, check every step (exit 1 build, 4 environment), manifest of zips | stub 0/7, ref 7/7, 5/9 (4 equivalent: the clear and fresh work dir make them unobservable) |
+| `fe_test_css_color` | 5 | H02/H03 on fastengine | **the model writes the tests** for the real `CssColor` (fe_css_color's reference); hidden grader `grade.reference.d/` as in `cs_test_movement`: tests must pass on the real code, then 13 single-fault versions (4-digit hex, 8-digit alpha, rounding, 255 vs 256 percent, alpha %, case rules, negative hue, turn units, trim, cache, invalid hex, saturation clamp) | stub catches 0/13 (score 0.13), reference test set 13/13; a lightness-clamp mutant was dropped as equivalent (the final 0-255 clamp hides it) |
 
 `fastengine_diag` (18 `fdiag_*`): A03 libraylib publish, A05 rlgl culling of 2D fills, B09 mirror target
 linear/untoned, B14 premultiplied target in the HUD, C04 port the browser not the other port, C09 Chromium
