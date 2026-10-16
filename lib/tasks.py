@@ -1373,8 +1373,8 @@ CS_TEST_MOVEMENT = Task(
     test_timeout=900,
     setup_cmd=["dotnet", "restore"],
     setup_timeout=180,
-    num_ctx=24576,
-    min_predict=12000,
+    num_ctx=32768,
+    min_predict=20000,
     test_weights={"test_your_tests_pass_on_the_real_movement": 2.0},
 )
 
@@ -1399,8 +1399,8 @@ FE_TEST_CSS_COLOR = Task(
     test_timeout=900,
     setup_cmd=["dotnet", "restore"],
     setup_timeout=180,
-    num_ctx=24576,
-    min_predict=12000,
+    num_ctx=32768,
+    min_predict=20000,
     test_weights={"test_your_tests_pass_on_the_real_code": 2.0},
 )
 

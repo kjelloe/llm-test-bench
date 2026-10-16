@@ -2112,7 +2112,7 @@ single-bug mutants caught, `--export-task` leaves references out); C# at **net10
 | `fe_output_color` | 4 | B08/B11 | three r162's tone mapping (None/Linear/Reinhard/ACES with exposure), sRGB encode and Fog/FogExp2 on the CPU; **fixtures are pixels three itself rendered in headless Chromium** (Playwright, SwiftShader WebGL2); excerpt of three's GLSL chunks + `getParameters` + `refreshFogUniforms` | stub (fastengine's approach) 19/42, ref 42/42 within ±1, 11/11 |
 | `fe_bash_stamp` | 2 | F01 | fastengine's `build_version`: both short commits, `-dirty` for edited/staged/deleted/untracked in either tree but not for ignored build output, `uncommitted` without a commit (and `-dirty` with only staged files), the game repo as a relative path with spaces or through a symlink. **Hardened 2026-10-14** after 7/7 models passed the first 9 tests | stub 8/14, ref 14/14, 5/5 first set + 5/5 hardening mutants (diff HEAD, counting ignored files, ls-files without --exclude-standard, unquoted path, describe) |
 | `fe_bash_job` | 3 | H05/H07 | fastengine's worker `build.sh` reduced: clear the lane's output, work outside the tree and remove it, check every step (exit 1 build, 4 environment), manifest of zips | stub 0/7, ref 7/7, 5/9 (4 equivalent: the clear and fresh work dir make them unobservable) |
-| `fe_test_css_color` | 5 | H02/H03 on fastengine | **the model writes the tests** for the real `CssColor` (fe_css_color's reference); hidden grader `grade.reference.d/` as in `cs_test_movement`: tests must pass on the real code, then 13 single-fault versions (4-digit hex, 8-digit alpha, rounding, 255 vs 256 percent, alpha %, case rules, negative hue, turn units, trim, cache, invalid hex, saturation clamp) | stub catches 0/13 (score 0.13), reference test set 13/13; a lightness-clamp mutant was dropped as equivalent (the final 0-255 clamp hides it) |
+| `fe_test_css_color` | 5 | H02/H03 on fastengine (budget 20k, ctx 32k since 2026-10-17) | **the model writes the tests** for the real `CssColor` (fe_css_color's reference); hidden grader `grade.reference.d/` as in `cs_test_movement`: tests must pass on the real code, then 13 single-fault versions (4-digit hex, 8-digit alpha, rounding, 255 vs 256 percent, alpha %, case rules, negative hue, turn units, trim, cache, invalid hex, saturation clamp) | stub catches 0/13 (score 0.13), reference test set 13/13; a lightness-clamp mutant was dropped as equivalent (the final 0-255 clamp hides it) |
 
 `fastengine_diag` (18 `fdiag_*`): A03 libraylib publish, A05 rlgl culling of 2D fills, B09 mirror target
 linear/untoned, B14 premultiplied target in the HUD, C04 port the browser not the other port, C09 Chromium
@@ -2151,6 +2151,17 @@ context, C01 pixel comparison, the Windows-interop items, I01-I06; E04's "name s
 says ".NET 10"; all 13 C# references pass and all stubs fail as before, a test pins the framework, and `preflight.sh`
 warns without the .NET 10 SDK (the gamedev tests still need the .NET 9 runtime). The result table below was measured on
 net9.0; the re-run on net10.0 is queued (`t9`).
+
+**Order-independent re-run (night 2026-10-16/17, `output/t18-fe-*.json`, no stall; partial over the 16 older tasks, then
+the new write-the-tests task):** gpt-oss:120b 8/16, 0.75 (was 7, 0.74); gemma4:31b-qat 5/16, 0.72 (7, 0.74); flash-next
+8/16, 0.69 (7, 0.66); nvfp4-mix 5/16, 0.59 (6, 0.60); equinox:31b 4/16, 0.51 (5, 0.49); qwen3.8:27b 3/16, 0.47 (4, 0.47);
+qwen3.6:27b 1/16, 0.45 (2, 0.51). Same order at the top; pass counts move ±2, partial ±0.06. **`fe_test_css_color` gave no
+usable result on any of 10 models:** four wrote tests that fail on the correct parser (wrong expected values: `0.5turn` is
+cyan, `#f008` alpha 136), and six produced no file — they opened the test file and kept adding tests until the 12k budget
+ran out, several in repetition loops (swift-1.5 repeated one assertion; qwen3.8:27b wrote 118 near-identical variants).
+Budget raised to 20k / ctx 32k for both write-the-tests tasks (2026-10-17); the six no-file pairs plus swift-1.5's
+`cs_test_movement` are re-run in t19 (2026-10-17 22:00). If the loops persist, that is the finding: on an open-ended
+"write tests" brief most models spam near-duplicate tests rather than aiming at faults.
 
 **Current: all 16 tasks on net10.0, seven models (re-run 2026-10-14 07:33-10:18, `output/t9-fe16-*.json`, after the
 move to .NET 10 and the hardened 14-test fe_bash_stamp; default server settings; gpt-oss:120b and flash-next on 3×24 GB
