@@ -1515,6 +1515,13 @@ Fourth wave, 2026-10-16 (user: "build those, then we test"), from the backlog. L
 
 All four pass end to end through `run_one` with the reference as the model's answer (baseline fails, score 1.0).
 
+**First model results (night 2026-10-16, `output/t17-new4-*.json`, nine leaders):** `cs_fixed_timestep` 9/9 (too easy;
+proposed L2), `cs_interp_alloc_free` 5/9, mean 0.85 (proposed L3; flash-next looped, NO_BLOCKS), `cs_css_alpha_linear`
+1/9, mean 0.42 (only swift-1.5; proposed L5; two do not compile), `cs_test_movement` 0/9, mean 0.35 (proposed L5): best
+qwen3.8:27b 9/12 faults caught, byteshape 8, gemma4:31b-qat and gpt-oss:120b 7; **four models (equinox, flash-next,
+nvfp4-mix, qwen3.6:27b) wrote tests that fail on the correct Movement.cs** — wrong expected values for branchy integer
+code — so none of their catches count; swift-1.5 ran out of budget. Levels stay as built until the user confirms.
+
 `gamedev_diag` (21 `diag_*` tasks, opt-in; 17 until 2026-10-12): multiple-choice versions of the builder's incident/"why?"
 items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the
 model writes one letter. Options are written as "cause; fix" of similar length: the first draft had the
@@ -1923,6 +1930,25 @@ gpt-oss:120b 0.71 (12), equinox:31b 0.68, qwen3.6:27b 0.65, qwen3.8:27b 0.61.
 - **Diag sets are a floor check, not a ranking (user's decision 2026-10-14).** Over all records only five of the 39 questions
   separate the top ten models (`diag_white_flash_shot`, `diag_mirror_audit`, `diag_timeout_ignored`, `fdiag_smart_app_control`,
   `fdiag_fill_culling`); the 12 "harder" ones added since 10-12 did not help. They still catch weak models. Rank leaders on code.
+
+**Standings in order-independent mode (2026-10-15/16; same mode for every row, so these supersede the mixed table below
+for the leaders).** Gamedev = the 28 older tasks, ranked by mean partial credit; new 4 = the fourth wave
+(`t17-new4-*`); one RTX 4090 except gpt-oss/flash-next/swift (3×24 GB, clocks locked):
+
+| Model | gamedev 28 partial (ranks) | pass | new 4: pass, partial | source |
+|---|---|---|---|---|
+| gpt-oss:120b | 0.86 | 20/28 | 1/4, 0.76 | `t16-gptoss` |
+| gemma4:31b-qat | 0.73 | 12/28 | 2/4, 0.75 | `t15-gamedev-gemma31-1gpu` |
+| qwen3.6:27b | 0.67 | 12/28 | 1/4, 0.49 | `t15-gamedev-qwen36-1gpu` |
+| equinox:31b | 0.66 | 13/28 | 2/4, 0.62 | `t15-gamedev-equinox-1gpu` |
+| qwen3.8-flash-next | 0.62 | 12/28 | 1/4, 0.37 | `t16-flashnext` |
+| swift-1.5-flash-next | 0.61 | 11/28 | 2/4, 0.72 | `t16-swift15` |
+| qwen3.8:27b | 0.61 | 11/28 | 2/4, 0.70 | `t17-qwen38-gd32` (clean; the overlapped `t16-qwen38` gave the same answers) |
+| qwen3.8:27b-nvfp4-mix | 0.56 | 9/28 | 2/4, 0.66 | `t16-nvfp4mix` |
+
+Against each model's earlier records: the single-GPU ones barely move (qwen3.8:27b and nvfp4-mix identical), the multi-GPU
+ones swing — gpt-oss:120b +6 passes (14→20, 0.80→0.86), swift-1.5 -5 (16→11, 0.71→0.61), flash-next ±1 — the
+split/boot sensitivity, not a mode effect alone. gpt-oss:120b now leads clearly.
 
 **Standings, all gamedev records to 2026-10-15** (latest valid record per model × task; stalled/TOOL_ERROR left out;
 **ranked by partial = mean weighted partial credit over the tasks run** (user's rule, 2026-10-15: pass counts move ±2 between
