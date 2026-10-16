@@ -1378,6 +1378,32 @@ CS_TEST_MOVEMENT = Task(
     test_weights={"test_your_tests_pass_on_the_real_movement": 2.0},
 )
 
+FE_TEST_CSS_COLOR = Task(
+    id="fe_test_css_color",
+    difficulty=5,
+    description=(
+        "Write the tests, not the code (the fastengine twin of cs_test_movement). src/Fastengine/CssColor.cs is "
+        "fastengine's correct CSS colour parser for its HUD (hex, named colours, legacy and modern rgb()/hsl() syntax, "
+        "percentages, alpha, hue units, a parse cache); do not change it. tests/FastengineTests/CssColorTests.cs has one "
+        "test, which passed the first time it ran. Replace it with a test set that would catch realistic bugs in "
+        "CssColor: you are graded by running your tests against a dozen hidden faulty versions of CssColor.cs (each a "
+        "single plausible mistake) and counting how many make at least one of your tests fail. Your tests must all pass "
+        "on the real CssColor.cs, or nothing counts, and must use only its public API (no reading files, no "
+        "reflection). The parse cache and its ParseCount are static and shared by every test in the run. "
+        "The projects target .NET 10 (net10.0, latest C#) with xunit."
+    ),
+    subdir="fe_test_css_color",
+    editable_files=["tests/FastengineTests/CssColorTests.cs"],
+    context_files=["src/Fastengine/CssColor.cs", "tests/FastengineTests/FastengineTests.csproj"],
+    test_cmd=["python3", "-m", "pytest", "grade.reference.d", "-v", "--tb=short"],
+    test_timeout=900,
+    setup_cmd=["dotnet", "restore"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    test_weights={"test_your_tests_pass_on_the_real_code": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2395,6 +2421,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_INTERP_ALLOC_FREE,
     CS_CSS_ALPHA_LINEAR,
     CS_TEST_MOVEMENT,
+    FE_TEST_CSS_COLOR,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2496,7 +2523,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job"],
+    "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
