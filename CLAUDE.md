@@ -1504,14 +1504,14 @@ credit): each is graded on many independent cases, so partial credit spreads. Al
 | `crossplay_ws_roundtrip` [5c] | 5 | real Node authority `tests/server.mjs` (stdlib, own RFC 6455) + builder's `WebSocketConnection` | queued commands once and in order across a drop, acked never resent, token reclaim of the same seat, no reconnect after 4000 or Dispose. Reference 5/5 stable, ~8 s per run |
 | `cs_fake_null` [D10] (2026-10-12) | 5 | builder's HUD incident; its own shim adds Unity's object lifetime (`Object` ==/bool, `Destroy` at frame end, `MissingReferenceException`, `AddComponent`, `DefaultExecutionOrder`, a `PlayerLoop` test driver) and is exempt from the shim-copy guard so the other prompts don't change | canvas under the game root dies with `NewGame`; labels must run after `CameraRig` (order 100) in LateUpdate; `is null`/`?.` miss a destroyed unit; `Object` clashes with `System.Object`. Stub 1/6, reference 6/6, 7 of 8 mutants caught: removing from the Dictionary inside its foreach survives, because .NET 9 allows it while Unity's Mono throws. Results 2026-10-12: gpt-oss:120b PASS; qwen3.8-flash-next 0.56, qwen3.6:27b and qwen3.8:27b 0.44; gemma4:31b-qat and equinox:31b do not compile (CS0136 scoping, and others) |
 
-Fourth wave, 2026-10-16 (user: "build those, then we test"), from the backlog. Levels provisional until models run them.
+Fourth wave, 2026-10-16 (user: "build those, then we test"), from the backlog. Levels set from the first nine models' results.
 
 | Task | L | Source | Main traps | Validation |
 |---|---|---|---|---|
-| `cs_fixed_timestep` | 3 | boombrawl `client/main.js` (20 Hz `setInterval` tick, rAF render) | accumulate in double (an hour at 144 fps must not drift), `while` not `if`, cap 5 per frame and drop the rest, Alpha, skip the first delta after a pause, `Pause(false)` at startup changes nothing | stub 1/17, ref 17/17, 10/10 mutants |
+| `cs_fixed_timestep` | 2 | boombrawl `client/main.js` (20 Hz `setInterval` tick, rAF render) | accumulate in double (an hour at 144 fps must not drift), `while` not `if`, cap 5 per frame and drop the rest, Alpha, skip the first delta after a pause, `Pause(false)` at startup changes nothing | stub 1/17, ref 17/17, 10/10 mutants |
 | `cs_interp_alloc_free` | 3 | boombrawl `client/interpolator.js` (real), fixtures from it under Node | same 388 samples as the JS (newest decides existence, kind from the newer snapshot) with zero bytes allocated per `Sample` and per full-buffer `Push` | stub 3/5 (correct but allocating), ref 5/5, 10/11 (1 equivalent: zero span is unreachable) |
-| `cs_css_alpha_linear` | 4 | unityworks F11; fixtures are Chromium's own pixels (Playwright screenshot, 160 panel/backdrop pairs) | the browser blends sRGB values, Unity linear light; exact sRGB curve, not 2.2; solve the alpha on Rec. 709 luminance in linear light; clamp; equal luminance | stub 3/8, ref 8/8, 8/9 (truncating encode is within the ±1 tolerance). Chromium's exact 8-bit rounding is not any simple formula (best 129/160 exact); tests allow ±1 |
-| `cs_test_movement` | 4 | unityworks H02/H03 on boombrawl's movement port | **the model writes the tests**; graded by a hidden pytest grader (`grade.reference.d/`, not exported): tests must pass on the real `Movement.cs`, then each of 12 single-fault versions counts when a test fails; no file reading or reflection | stub catches 0/12 (score 0.2), reference test set 12/12 |
+| `cs_css_alpha_linear` | 5 | unityworks F11; fixtures are Chromium's own pixels (Playwright screenshot, 160 panel/backdrop pairs) | the browser blends sRGB values, Unity linear light; exact sRGB curve, not 2.2; solve the alpha on Rec. 709 luminance in linear light; clamp; equal luminance | stub 3/8, ref 8/8, 8/9 (truncating encode is within the ±1 tolerance). Chromium's exact 8-bit rounding is not any simple formula (best 129/160 exact); tests allow ±1 |
+| `cs_test_movement` | 5 | unityworks H02/H03 on boombrawl's movement port | **the model writes the tests**; graded by a hidden pytest grader (`grade.reference.d/`, not exported): tests must pass on the real `Movement.cs`, then each of 12 single-fault versions counts when a test fails; no file reading or reflection | stub catches 0/12 (score 0.2), reference test set 12/12 |
 
 All four pass end to end through `run_one` with the reference as the model's answer (baseline fails, score 1.0).
 
@@ -1520,7 +1520,8 @@ proposed L2), `cs_interp_alloc_free` 5/9, mean 0.85 (proposed L3; flash-next loo
 1/9, mean 0.42 (only swift-1.5; proposed L5; two do not compile), `cs_test_movement` 0/9, mean 0.35 (proposed L5): best
 qwen3.8:27b 9/12 faults caught, byteshape 8, gemma4:31b-qat and gpt-oss:120b 7; **four models (equinox, flash-next,
 nvfp4-mix, qwen3.6:27b) wrote tests that fail on the correct Movement.cs** — wrong expected values for branchy integer
-code — so none of their catches count; swift-1.5 ran out of budget. Levels stay as built until the user confirms.
+code — so none of their catches count; swift-1.5 ran out of budget. **Levels set 2026-10-16 (user): fixed_timestep L2 — kept as a floor task like `fe_bash_stamp`, not hardened —,
+interp_alloc_free L3, css_alpha_linear L5, test_movement L5.**
 
 `gamedev_diag` (21 `diag_*` tasks, opt-in; 17 until 2026-10-12): multiple-choice versions of the builder's incident/"why?"
 items (C05, D04, D05, E01, E03, E04, I03, I04, I08, I09, J01, J04, B09, L05, F03), 5 options each, the

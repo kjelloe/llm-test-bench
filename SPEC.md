@@ -138,10 +138,10 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   (L3), `cs_light_port` (L2), `bash_accept_matrix` (L2), `bash_timeout_kill` (L4), `bash_kill_by_port` (L2); third wave (2026-10-09, chosen to
   separate models): `cs_port_qr` (L5), `cs_port_helm` (L4), `cs_snapshot_coalesce` (L3), `crossplay_ws_roundtrip` (L5);
   2026-10-12: `cs_fake_null` (L5, Unity object lifetime, with its own extended shim); fourth wave (2026-10-16, levels
-  provisional until models have run them): `cs_fixed_timestep` (L3, a 20 Hz tick off Unity's frame loop: no drift, capped
+  from the first nine models' results): `cs_fixed_timestep` (L2, a floor task, a 20 Hz tick off Unity's frame loop: no drift, capped
   hitches, pause), `cs_interp_alloc_free` (L3, zero-allocation port of boombrawl's interpolator, fixtures from the real JS,
-  allocation measured with `GC.GetAllocatedBytesForCurrentThread`), `cs_css_alpha_linear` (L4, F11: CSS rgba() panels in a
-  Linear Unity project, fixtures are Chromium's pixels), `cs_test_movement` (L4, H02/H03: **the model writes the tests**;
+  allocation measured with `GC.GetAllocatedBytesForCurrentThread`), `cs_css_alpha_linear` (L5, F11: CSS rgba() panels in a
+  Linear Unity project, fixtures are Chromium's pixels), `cs_test_movement` (L5, H02/H03: **the model writes the tests**;
   a hidden pytest grader, `grade.reference.d/`, requires them to pass on the real code and counts how many of 12 hidden
   faulty versions of Movement.cs they catch — the "mutation-killing" grading mode, built from the existing test command
   and partial-credit parser, no harness change).

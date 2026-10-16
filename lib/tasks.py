@@ -1272,7 +1272,7 @@ CS_INPUT_LAST_PRESSED = Task(
 
 CS_FIXED_TIMESTEP = Task(
     id="cs_fixed_timestep",
-    difficulty=3,
+    difficulty=2,
     description=(
         "The browser client (js/main-loop.js, real code) runs the input/prediction tick with setInterval at 20 Hz, "
         "independent of the render loop. The Unity port has only Update(), which calls TickDriver.Frame("
@@ -1326,7 +1326,7 @@ CS_INTERP_ALLOC_FREE = Task(
 
 CS_CSS_ALPHA_LINEAR = Task(
     id="cs_css_alpha_linear",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Incident F11: the Unity client draws the browser game's HUD panels and chips with the CSS rgba() colour and "
         "alpha copied into a material, and in the Linear colour space project they look lighter than in the browser. "
@@ -1354,7 +1354,7 @@ CS_CSS_ALPHA_LINEAR = Task(
 
 CS_TEST_MOVEMENT = Task(
     id="cs_test_movement",
-    difficulty=4,
+    difficulty=5,
     description=(
         "Write the tests, not the code (builder items H02/H03). src/GameClient/Movement.cs is a correct port of "
         "js/movement.mjs, the movement integrator boombrawl's server and client both run every tick; do not change it. "
