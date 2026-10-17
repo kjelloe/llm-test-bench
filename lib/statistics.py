@@ -168,6 +168,7 @@ _SHORT_ERROR: dict[str, str] = {
     "CTX_TRUNCATED":                "TRUNC",
     "SKIPPED_CTX":                  "SKIP_CTX",
     "SKIPPED_VRAM":                 "SKIP_VRAM",
+    "SKIPPED_ENV":                  "SKIP_ENV",
     "TOOL_ERROR":                   "T/O",
     "NO_BLOCKS":                    "FAIL",
     "TESTS_STILL_FAIL":             "FAIL",
@@ -183,7 +184,7 @@ def _run_date(path: Path) -> str:
     return datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%d")
 
 
-_INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM"})
+_INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM", "SKIPPED_ENV"})
 
 
 def _difficulty_summary(recs: list[dict]) -> str:

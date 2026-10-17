@@ -175,6 +175,16 @@ else
   fail "dotnet not found — https://dotnet.microsoft.com/download"
 fi
 
+# ── Display stack for fastengine_gl (software OpenGL under Xvfb) ─────────────
+section "OpenGL (fastengine_gl)"
+if command -v xvfb-run &>/dev/null; then
+  GL=$(LIBGL_ALWAYS_SOFTWARE=1 timeout 30 xvfb-run -a glxinfo -B 2>/dev/null | grep -E 'core profile version string' | sed 's/.*string: //')
+  if [[ -n $GL ]]; then ok "xvfb-run + Mesa llvmpipe: OpenGL $GL"
+  else warn "xvfb-run works but glxinfo found no OpenGL (install mesa-utils, libgl1-mesa-dri) — fastengine_gl tasks will fail"; fi
+else
+  warn "no xvfb-run — fastengine_gl tasks are skipped (SKIPPED_ENV); install xvfb, libgl1-mesa-dri and mesa-utils"
+fi
+
 # ── 7. Java ───────────────────────────────────────────────────────────────────
 section "Java"
 if command -v java &>/dev/null; then

@@ -25,10 +25,16 @@ class Task:
     min_predict: int | None = None      # floor on --num-predict for this task
     model_timeout: int | None = None    # override global --model-timeout for this task (seconds)
     min_vram_gb: int = 0                # skip task on hardware with less total VRAM (0 = no guard)
+    requires: tuple[str, ...] = ()      # programs that must be on PATH (e.g. xvfb-run); else SKIPPED_ENV
     wall_time_budget_s: int | None = None  # PASS_BUT_SLOW threshold; None = no limit
     thinking_budget: int | None = None  # max thinking tokens for thinking models; None = unlimited
     # Partial-credit weights: test-name substring -> weight (first match wins, default 1).
     test_weights: dict[str, float] | None = None
+
+
+def missing_requirements(task: Task) -> list[str]:
+    """Programs the task needs that are not on PATH (a box without a display stack skips GL tasks)."""
+    return [p for p in task.requires if shutil.which(p) is None]
 
 
 def build_prompt(task: Task, workdir: Path) -> str:
@@ -1404,6 +1410,34 @@ FE_TEST_CSS_COLOR = Task(
     test_weights={"test_your_tests_pass_on_the_real_code": 2.0},
 )
 
+FE_GL_SCREENSHOT = Task(
+    id="fe_gl_screenshot",
+    difficulty=3,
+    description=(
+        "fastengine spec A02 (GL context: the tests run the code under Xvfb with Mesa's software OpenGL). "
+        "Fastengine.Shot.Capture in src/Fastengine/Shot.cs saves a scripted run's screenshot, and the shots it writes "
+        "are upside down, aliased and accepted even when the frame is blank. Make it render the frame at 2x (draw gets the "
+        "pixel size of the target it draws into), reduce it to width x height with a 2x2 box filter (bilinear "
+        "sampling at exactly half size does that), write an upright PNG to path (a render target is stored bottom-up: "
+        "GL's origin is bottom-left), log \"[Shot] <path>\" and return true; when every pixel of the frame has the "
+        "same colour, still write the file but log \"[Shot] image is a single colour\" and return false. "
+        "tools/SceneRunner draws the test scenes through Capture; tests/test_shots.py compares each PNG with the same "
+        "scene rendered at 2x and read back raw, within 2 levels per channel. Raylib-cs 8.1.0, .NET 10."
+    ),
+    subdir="fe_gl_screenshot",
+    editable_files=["src/Fastengine/Shot.cs"],
+    context_files=["tools/SceneRunner/Program.cs", "tests/test_shots.py", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+    test_weights={"test_matches_the_supersampled_upright_render": 2.0, "test_upright": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2422,6 +2456,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_CSS_ALPHA_LINEAR,
     CS_TEST_MOVEMENT,
     FE_TEST_CSS_COLOR,
+    FE_GL_SCREENSHOT,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2523,11 +2558,12 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
+    "fastengine_gl": ["fe_gl_screenshot"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
 # totals and Skill levels) until their difficulty levels are validated across models.
-OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine", "fastengine_diag")
+OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine", "fastengine_diag", "fastengine_gl")
 _OPT_IN_IDS = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
 DEFAULT_TASKS: list[Task] = [t for t in BUILTIN_TASKS if t.id not in _OPT_IN_IDS]

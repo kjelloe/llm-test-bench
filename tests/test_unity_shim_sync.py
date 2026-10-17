@@ -35,7 +35,7 @@ def test_shim_copies_match_canonical():
 
 
 def test_gamedev_tasks_have_reference_solution():
-    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"]:
+    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"] + TASK_GROUPS["fastengine_gl"]:
         task = TASK_MAP[tid]
         editable = Path(task.editable_files[0])
         reference = TASK_DATA_DIR / task.subdir / editable.with_name(editable.stem + ".reference" + editable.suffix)
@@ -94,7 +94,7 @@ def test_diag_key_covers_every_question_and_matches_the_reference(group):
 
 
 def test_every_test_weight_key_names_a_real_test():
-    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"]:
+    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"] + TASK_GROUPS["fastengine_gl"]:
         task = TASK_MAP[tid]
         test_files = [f for f in task.context_files if "test" in Path(f).name.lower()]
         text = "".join((TASK_DATA_DIR / task.subdir / f).read_text(encoding="utf-8") for f in test_files)
@@ -109,7 +109,7 @@ def test_every_test_weight_key_names_a_real_test():
 def test_context_fits_prompt_plus_thinking_budget():
     # Longest measured gamedev prompt: ~9.3k tokens (cs_predict_reconcile, 2026-10-08). The node
     # tasks once ran at the 8192 default and cut thinking models off mid-file.
-    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"]:
+    for tid in TASK_GROUPS["gamedev"] + TASK_GROUPS["fastengine"] + TASK_GROUPS["fastengine_gl"]:
         task = TASK_MAP[tid]
         assert task.num_ctx and task.num_ctx >= task.min_predict + 9500, tid
 
@@ -193,6 +193,14 @@ def test_every_fixture_generator_is_guarded():
 
 def test_fastengine_tasks_target_what_fastengine_targets():
     """fastengine moved to .NET 10 (net10.0) on 2026-10-14; its tasks follow it, the Unity ones stay netstandard2.1/net9.0."""
-    for tid in TASK_GROUPS["fastengine"]:
+    for tid in TASK_GROUPS["fastengine"] + TASK_GROUPS["fastengine_gl"]:
         for proj in (TASK_DATA_DIR / TASK_MAP[tid].subdir).rglob("*.csproj"):
             assert "<TargetFramework>net10.0</TargetFramework>" in proj.read_text(), f"{proj} is not net10.0"
+
+
+def test_gl_tasks_declare_their_display_stack():
+    """fastengine_gl tasks run under xvfb-run with Mesa's software OpenGL; a box without it must skip them (SKIPPED_ENV)."""
+    for tid in TASK_GROUPS["fastengine_gl"]:
+        task = TASK_MAP[tid]
+        assert "xvfb-run" in task.requires and "xvfb-run" in task.test_cmd, tid
+        assert "LIBGL_ALWAYS_SOFTWARE=1" in task.test_cmd, f"{tid}: must force llvmpipe so results do not depend on the GPU"

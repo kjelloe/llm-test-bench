@@ -40,7 +40,7 @@ def load_results(path: str) -> tuple[list[dict], dict | None]:
     return data["results"], data.get("hardware")
 
 
-_INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM"})
+_INFRA_ERROR_KINDS = frozenset({"CTX_TRUNCATED", "TOOL_ERROR", "SKIPPED_CTX", "SKIPPED_VRAM", "SKIPPED_ENV"})
 
 
 def _pass_for_skill(model: str, t: str, idx: dict) -> bool:

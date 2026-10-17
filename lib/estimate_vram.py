@@ -184,7 +184,7 @@ def _extract_anchors(results: list[dict]) -> dict[str, dict]:
 
 _CLEAN_128K = frozenset({None})       # error kinds that count as a clean 128k pass
 _BAD_128K   = frozenset({             # treated as "bad anchor" → estimate from 8k speed
-    "SKIPPED_CTX", "SKIPPED_VRAM",
+    "SKIPPED_CTX", "SKIPPED_VRAM", "SKIPPED_ENV",
     "NO_BLOCKS", "TOOL_ERROR", "TESTS_STILL_FAIL", "EDITED_NONEDITABLE_FILE",
 })
 

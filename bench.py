@@ -14,7 +14,7 @@ from lib.hw_snapshot import get_hw_snapshot
 from lib.ollama_client import OllamaError
 from lib.parsing import parse_file_blocks, validate_edits
 from lib.reporting import print_comparison_table, print_summary, write_results
-from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, prepare_workdir, run_setup, run_tests, run_tests_scored
+from lib.tasks import BUILTIN_TASKS, DEFAULT_TASKS, TASK_MAP, TASK_GROUPS, Task, build_prompt, export_task, missing_requirements, prepare_workdir, run_setup, run_tests, run_tests_scored
 
 
 def _safe_model_name(model: str) -> str:
@@ -608,6 +608,16 @@ def main() -> None:
                       f"need {task.min_vram_gb} GB, have {total_vram_gb:.0f} GB")
                 _r = _skip_record("SKIPPED_VRAM",
                     f"task requires {task.min_vram_gb} GB VRAM; hardware has {total_vram_gb:.0f} GB")
+                results.append(_r)
+                if checkpoint_dir_path is not None:
+                    _ckpt_buf.append(_r)
+                    _write_model_checkpoint(checkpoint_dir_path, model, _ckpt_buf)
+                continue
+
+            missing = missing_requirements(task)
+            if missing:
+                print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_ENV) missing {', '.join(missing)}")
+                _r = _skip_record("SKIPPED_ENV", f"task requires {', '.join(missing)} on PATH (see preflight.sh)")
                 results.append(_r)
                 if checkpoint_dir_path is not None:
                     _ckpt_buf.append(_r)
