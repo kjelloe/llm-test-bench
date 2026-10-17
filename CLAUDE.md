@@ -1520,7 +1520,8 @@ proposed L2), `cs_interp_alloc_free` 5/9, mean 0.85 (proposed L3; flash-next loo
 1/9, mean 0.42 (only swift-1.5; proposed L5; two do not compile), `cs_test_movement` 0/9, mean 0.35 (proposed L5): best
 qwen3.8:27b 9/12 faults caught, byteshape 8, gemma4:31b-qat and gpt-oss:120b 7; **four models (equinox, flash-next,
 nvfp4-mix, qwen3.6:27b) wrote tests that fail on the correct Movement.cs** — wrong expected values for branchy integer
-code — so none of their catches count; swift-1.5 ran out of budget. **Levels set 2026-10-16 (user): fixed_timestep L2 — kept as a floor task like `fe_bash_stamp`, not hardened —,
+code — so none of their catches count; swift-1.5 ran out of budget at 12k, and at 20k (t19) also wrote tests that fail on the
+real code. **Levels set 2026-10-16 (user): fixed_timestep L2 — kept as a floor task like `fe_bash_stamp`, not hardened —,
 interp_alloc_free L3, css_alpha_linear L5, test_movement L5.**
 
 `gamedev_diag` (21 `diag_*` tasks, opt-in; 17 until 2026-10-12): multiple-choice versions of the builder's incident/"why?"
@@ -2160,8 +2161,11 @@ usable result on any of 10 models:** four wrote tests that fail on the correct p
 cyan, `#f008` alpha 136), and six produced no file — they opened the test file and kept adding tests until the 12k budget
 ran out, several in repetition loops (swift-1.5 repeated one assertion; qwen3.8:27b wrote 118 near-identical variants).
 Budget raised to 20k / ctx 32k for both write-the-tests tasks (2026-10-17); the six no-file pairs plus swift-1.5's
-`cs_test_movement` are re-run in t19 (2026-10-17 22:00). If the loops persist, that is the finding: on an open-ended
-"write tests" brief most models spam near-duplicate tests rather than aiming at faults.
+`cs_test_movement` were re-run (t19, 2026-10-17 03:42-05:07, `output/t19-*.json`). **The loops persist:** all six still
+produce no file — five use the full 20k (finish=length), qwen3.8:27b stops by itself at the same 11,615 tokens mid-file.
+**That is the finding:** on an open-ended "write tests" brief for code with many input variants (CssColor), these models
+keep writing near-duplicate cases instead of a focused set aimed at likely faults; more budget does not cure it.
+`fe_test_css_color` stays L5 (0/10 usable). swift-1.5 now finishes `cs_test_movement`, but its tests fail on the real code.
 
 **Current: all 16 tasks on net10.0, seven models (re-run 2026-10-14 07:33-10:18, `output/t9-fe16-*.json`, after the
 move to .NET 10 and the hardened 14-test fe_bash_stamp; default server settings; gpt-oss:120b and flash-next on 3×24 GB
