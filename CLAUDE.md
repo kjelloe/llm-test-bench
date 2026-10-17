@@ -391,6 +391,7 @@ tests/
   test_harness_e2e.py         End-to-end mock-chat_fn self-test of run_one() + comparison table + skill-level logic
   test_power_check.py         lib/power_check.evaluate() unit tests
   test_load_check.py          lib/load_check.evaluate() unit tests (CPU hogs, busy GPUs, own process tree ignored) + clock_warnings()
+  test_task_requires.py       Task.requires → missing_requirements, SKIPPED_ENV is an infrastructure skip
   test_gpuclock.py            gpuclock.sh against a stand-in nvidia-smi: printed lock/unlock commands, PowerShell quoting, status verdict
   test_task_levels_doc.py     task levels in SPEC.md and CLAUDE.md's task tables match lib/tasks.py (added after the 2026-10-14 re-level left SPEC stale)
   test_export_task.py         --export-task bundling unit tests (every opt-in task: its files present, no *.reference.*); also pins the TASK.md format that
@@ -436,6 +437,8 @@ task_data/
                           exported), three rendered in Chromium (fe_output_color), Chromium's layout (fe_flex_wrap),
                           the game's i18n.js (fe_i18n), an independent Python reader (fe_ttf_metrics);
                           *.reference.cs adapted from fastengine's own code
+  fe_gl_*/                fastengine GL tasks: src/Fastengine (Raylib-cs 8.1.0, net10.0), tools/SceneRunner (draws the
+                          scenes under xvfb-run + llvmpipe, saves PNGs), tests/test_*.py (pytest probes them; pngread.py)
   fe_bash_package/, fe_bash_stamp/, fe_bash_job/   fastengine bash tasks (pytest drives the script, *.reference.sh)
   fastengine_diag/        18 multiple-choice questions, same layout and generator pattern as gamedev_diag
   gamedev_diag/           21 multiple-choice questions: questions/<id>.md, answers/<id>.txt (stub "?"),
@@ -455,6 +458,7 @@ Task groups (--task-group):
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
   fastengine    17 tasks (14 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
+  fastengine_gl    4 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -2260,6 +2264,28 @@ no usable file); kept for the per-model notes below:**
 - **The other 15 single-GPU models (night 2026-10-13, `output/night-fe-*.json`): no code task passed by any.** Best
   partial: qwen3-coder-rtpurbo:30b 0.51 (geometry 0.85, css 0.71), gemma4:26b-qat 0.29, devstral-small-2 0.21; eleven
   at ≤0.14, mostly compile errors. Diag 5-9/10. The top-six ranking stands (gemma4:31b-qat 0.45 best overall).
+
+#### fastengine GL tasks (`--task-group fastengine_gl`, added 2026-10-17)
+
+The fastengine spec items that need a GL context, which `fastengine` left out. This rig already had Xvfb and Mesa 26.0.3
+(llvmpipe: OpenGL 4.5 core; EGL surfaceless works too); a spike drew a GLSL 330 shader into a render texture and read back
+exactly albedo·N·L/π gamma-encoded, identical on repeat. fastengine itself renders its core scenes the same way
+(`tests/render.sh`: xvfb + llvmpipe vs three r162 in Chromium). Harness: no change to the run flow — the test command is
+`env LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a … python3 -m pytest tests`; a task's `tools/SceneRunner` (one process, one GL
+context, since contexts are thread-bound) draws the scenes through the model's code and saves PNGs; pytest probes them.
+New: `Task.requires` → `SKIPPED_ENV` when `xvfb-run`/`dotnet` is missing (an infrastructure skip, not a failure), and a
+`preflight.sh` OpenGL check. Guards: `test_gl_tasks_declare_their_display_stack` (requires + forced llvmpipe), net10.0,
+references present. A test run costs ~1.5 s after the build. Plan and analysis: `docs/plan-2026-10-10.md` (2026-10-17).
+
+| Task | L | Spec | What is tested | Validation |
+|---|---|---|---|---|
+| `fe_gl_screenshot` | 3 | A02 | fastengine's screenshot path: 2x render, halving with bilinear (a 2x2 box filter), upright PNG (GL's origin is bottom-left), `[Shot] path`, single-colour frame → false. Expected = the scene's raw 2x readback flipped and box-filtered, ±2 per channel | stub 2/8, ref 8/8, 8/8 mutants (a first-row-only single-colour check needed a scene with one small mark) |
+| `fe_gl_canvas_fill` | 3 | A05 | fastengine's Canvas2D.Fill under rlgl's back-face culling: flush, culling off, draw, flush, culling on. Probes: both windings fill; back-facing triangles before and after a fill stay culled | stub 5/8, ref 8/8, 5/5 (no flush before / after, culling left off or never off, fan) |
+| `fe_gl_premultiplied` | 3 | B13/B14 | an offscreen HUD canvas: separate blend factors while painting (premultiplied colour, alpha not squared), premultiplied blend + (a,a,a,a) tint when drawing, bilinear. Expected = the browser's a·C + (1-a)·B, overlap composited first, half-scale lines without a dark halo | stub 2/7, ref 7/7, 6/6 |
+| `fe_gl_mirror_target` | 4 | B09 | three r162's colour handling around a mirror: the target pass linear and untoned, toned (ACES, exposure) and encoded once on screen, screen output restored after the pass. Shader verbatim from fastengine; expected computed with the same ACES fit and 8-bit target storage | stub 3/5 (mirror (195,201,208) vs three's (118,139,170), the incident), ref 5/5, 6/6 |
+
+Next candidate: B07 (a browser ShaderMaterial under GLSL 330 with three's names; CarrierDominion's weather shaders are
+real material) — needs three r162-in-Chromium fixtures like `fe_output_color`'s generator.
 
 #### What NOT to do
 

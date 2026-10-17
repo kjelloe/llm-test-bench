@@ -102,7 +102,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (127 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 17 `fastengine` and 18 `fastengine_diag` tasks are opt-in):
+- Built-in tasks (131 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 17 `fastengine` and 18 `fastengine_diag` and 4 `fastengine_gl` tasks are opt-in):
 
   **fastengine tasks (17, opt-in, 2026-10-12/16) — `--task-group fastengine`:** C# for the second build engine
   (fastengine: plain .NET 10 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD), from its
@@ -124,6 +124,15 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   **Levels of the gamedev and fastengine tasks were re-set on 2026-10-14 from the leaders' pass rate** (≥80% L2, 50-79% L3,
   20-49% L4, <20% L5); three canaries keep L2 although nobody passes them: `cs_coord_convert`, `fe_i18n`, `fe_bash_package`.
   `tests/test_task_levels_doc.py` keeps the levels written here and in CLAUDE.md's task tables equal to `lib/tasks.py`.
+
+  **fastengine GL tasks (4, opt-in, 2026-10-17) — `--task-group fastengine_gl`:** tasks that need an OpenGL context. Their
+  test command runs pytest under `xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=1` (Mesa's llvmpipe, OpenGL 4.5 core); each task
+  has a `tools/SceneRunner` console program (Raylib-cs 8.1.0, .NET 10) that draws the test scenes through the model's code
+  and saves PNGs, which the pytest file probes (GL contexts are thread-bound, so not inside xunit). `requires=("xvfb-run",
+  "dotnet")` → `SKIPPED_ENV` on a box without them; `preflight.sh` checks the stack. Tasks: `fe_gl_screenshot` (L3, A02:
+  2x render, box filter, upright PNG, single-colour check), `fe_gl_canvas_fill` (L3, A05: clockwise fills culled by rlgl's
+  batch), `fe_gl_premultiplied` (L3, B13/B14: a HUD canvas composited like a browser composites a canvas),
+  `fe_gl_mirror_target` (L4, B09: a mirror's target pass linear and untoned). Levels provisional until models run them.
 
   **Game-dev tasks (32, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),
@@ -247,6 +256,7 @@ gemma4:26b         gemma-4-27b-it-Q4_K_M.gguf       n_cpu_moe=18,no_mmap
   - `TESTS_STILL_FAIL` — edits applied but tests still fail
   - `TOOL_ERROR` — setup/test runner timeout or crash
   - `SKIPPED_VRAM` — task's `min_vram_gb` exceeds total VRAM; task skipped without calling the model
+  - `SKIPPED_ENV` — a program in the task's `requires` (e.g. `xvfb-run` for `fastengine_gl`) is not on PATH; skipped without calling the model (2026-10-17)
   - `SKIPPED_CTX` — task requires a context window larger than the model's `max_ctx` architecture limit; task skipped without restarting the server (llama-server only)
 
 7) Outputs
