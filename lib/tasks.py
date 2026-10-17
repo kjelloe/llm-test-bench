@@ -1438,6 +1438,31 @@ FE_GL_SCREENSHOT = Task(
     test_weights={"test_matches_the_supersampled_upright_render": 2.0, "test_upright": 2.0},
 )
 
+FE_GL_CANVAS_FILL = Task(
+    id="fe_gl_canvas_fill",
+    difficulty=3,
+    description=(
+        "fastengine incident A05 (GL context: the tests run under Xvfb with Mesa's software OpenGL). Canvas.Fill in "
+        "src/Fastengine/Canvas.cs fills the HUD's paths through rlgl's triangle batch, and some shapes never show: the "
+        "ones whose points arrive clockwise on screen (y down) vanish. rlgl keeps back-face culling on, because the 3D "
+        "renderer relies on it. Fix Fill so a convex path shows in either winding, without changing what other draws see: "
+        "triangles sent to rlgl before or after a fill must still be culled exactly as before. tools/SceneRunner draws "
+        "the test scenes; tests/test_fill.py probes their pixels. Raylib-cs 8.1.0, .NET 10."
+    ),
+    subdir="fe_gl_canvas_fill",
+    editable_files=["src/Fastengine/Canvas.cs"],
+    context_files=["tools/SceneRunner/Program.cs", "tests/test_fill.py", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+    test_weights={"clockwise": 2.0, "stays_culled": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2457,6 +2482,7 @@ BUILTIN_TASKS: list[Task] = [
     CS_TEST_MOVEMENT,
     FE_TEST_CSS_COLOR,
     FE_GL_SCREENSHOT,
+    FE_GL_CANVAS_FILL,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2558,7 +2584,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine_gl": ["fe_gl_screenshot"],
+    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
