@@ -2284,6 +2284,14 @@ references present. A test run costs ~1.5 s after the build. Plan and analysis: 
 | `fe_gl_premultiplied` | 3 | B13/B14 | an offscreen HUD canvas: separate blend factors while painting (premultiplied colour, alpha not squared), premultiplied blend + (a,a,a,a) tint when drawing, bilinear. Expected = the browser's a·C + (1-a)·B, overlap composited first, half-scale lines without a dark halo | stub 2/7, ref 7/7, 6/6 |
 | `fe_gl_mirror_target` | 4 | B09 | three r162's colour handling around a mirror: the target pass linear and untoned, toned (ACES, exposure) and encoded once on screen, screen output restored after the pass. Shader verbatim from fastengine; expected computed with the same ACES fit and 8-bit target storage | stub 3/5 (mirror (195,201,208) vs three's (118,139,170), the incident), ref 5/5, 6/6 |
 
+**First model results (2026-10-17 17:55-18:29, `output/t20-gl-*.json`, nine leaders, no stall):** `fe_gl_screenshot` 0/9
+(all compile errors or no file), `fe_gl_canvas_fill` 3/9 (qwen3.8:27b, byteshape, qwen3.6:27b), `fe_gl_premultiplied`
+0/9, `fe_gl_mirror_target` 1/9 (gpt-oss:120b; seven others left the pass logic as it was — the washed-out mirror).
+**Most failures do not compile because the models invent Raylib-cs API** (`Rlgl.Draw`, `Rlgl.Disable`,
+`TextureFilter.TextureFilterBilinear`, `BlendMode.BlendPremultiplied`, `Raylib.ImageResizeBilinear`, `GetBlendMode`,
+`Image.data`): they see only the calls in their file and the scene runner. Open question for the user: give these tasks a
+short Raylib-cs API excerpt as context (what an engine developer has at hand), or keep the API knowledge as part of the test.
+
 Next candidate: B07 (a browser ShaderMaterial under GLSL 330 with three's names; CarrierDominion's weather shaders are
 real material) — needs three r162-in-Chromium fixtures like `fe_output_color`'s generator.
 
