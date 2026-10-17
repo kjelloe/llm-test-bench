@@ -1491,6 +1491,34 @@ FE_GL_PREMULTIPLIED = Task(
     test_weights={"glass_panel": 2.0, "overlap": 2.0, "no_dark_halo": 2.0},
 )
 
+FE_GL_MIRROR_TARGET = Task(
+    id="fe_gl_mirror_target",
+    difficulty=4,
+    description=(
+        "fastengine incident B09 (GL context: the tests run under Xvfb with Mesa's software OpenGL). MirrorRenderer in "
+        "src/Fastengine/MirrorRenderer.cs is a piece of fastengine's three.js-style renderer: flat surfaces, and a mirror "
+        "that renders the scene into a render target (three's Reflector: setRenderTarget, render) and then shows that "
+        "texture times its reflectivity. The renderer uses ACES Filmic tone mapping with an exposure, onto an sRGB "
+        "canvas. Next to the browser the mirror looks washed out and too bright. Make the reflection pass and the screen "
+        "pass treat colour the way three r162 does, so every surface and the mirror show what the browser shows, and "
+        "surfaces drawn after the mirror's pass are unaffected. The shader (src/Fastengine/Shaders.cs, fastengine's own "
+        "output stage) is correct; do not change it. tools/SceneRunner draws the test frame; tests/test_mirror.py probes "
+        "it. Raylib-cs 8.1.0, .NET 10."
+    ),
+    subdir="fe_gl_mirror_target",
+    editable_files=["src/Fastengine/MirrorRenderer.cs"],
+    context_files=["src/Fastengine/Shaders.cs", "tools/SceneRunner/Program.cs", "tests/test_mirror.py", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+    test_weights={"mirror_shows": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2512,6 +2540,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_GL_SCREENSHOT,
     FE_GL_CANVAS_FILL,
     FE_GL_PREMULTIPLIED,
+    FE_GL_MIRROR_TARGET,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2613,7 +2642,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied"],
+    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
