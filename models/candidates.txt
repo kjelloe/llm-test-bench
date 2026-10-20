@@ -420,7 +420,8 @@
 # gemma4:26b-qat  gemma-4-26B-A4B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-26B-A4B-it-QAT-GGUF
 
 # Gemma 4 12B dense QAT (official Google release, 6.5 GB, single RTX 4090).
-# GONE 2026-07-30: lmstudio-community/gemma-4-12B-it-QAT-GGUF deleted from HuggingFace. Do not download.
+# GONE 2026-07-30: lmstudio-community/gemma-4-12B-it-QAT-GGUF deleted from HuggingFace; BACK per 2026-10-21 scout (6.5 GB).
+# Never tested here. Worth a spot now that its 31B QAT sibling leads gamedev (16 GB tier candidate).
 # Dense 12B — small baseline; was low priority anyway (12B unlikely to beat A3B MoE on L3+ tasks).
 # gemma4:12b-qat  gemma-4-12b-it-qat-q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:google/gemma-4-12B-it-qat-q4_0-gguf
 
@@ -1570,7 +1571,7 @@ qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
 #   further. Full detail in next-runs.md.
 
 # ── Dirk-Qwen3.8-27B (peculiar-ragdoll, added 2026-09-24) ──────────────────────
-# ⚠ GONE per 2026-10-15 scout (repo removed; file not on disk).
+# ⚠ GONE per 2026-10-15 scout; BACK per 2026-10-21 scout (now UD-Q4_K_M 15.3 GB, 1.4M downloads). Spot 8/10 above.
 # Found via scout 2026-09-24. Same uploader as our promoted tiel-coder:35b (18/19 coding,
 # 4/4 web incl. fastapi, 6/6 context incl. 256k single-GPU — a genuine standout in this VRAM
 # tier). Unclear fine-tune/merge lineage from the name alone ("Dirk") — untested, spot-checking
@@ -1832,3 +1833,9 @@ qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_ty
 # exhaustion on the L6 tasks? Compare with the plain entry at the same --num-predict/--num-ctx.
 # RESULT 2026-10-15: token-identical to the plain entry on all five L6 tasks — the flag is a no-op for this model.
 lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
+
+# Mellum2.1-12B-A2.5B-Thinking (JetBrains, repo 2026-10-07, 7.5 GB Q4_K_M, arch `mellum`). Scouted 2026-10-21.
+# Needs llama.cpp past the pin: a6b91d8c5e (read MoE gating params from GGUF, 2026-10-15) and 5e03a1ff45 (precision
+# handling for MELLUM, 2026-10-16); MTP 9a16f1dbe4 (not used: no spec flags in benchmarks). Run with LLAMA_SERVER_BIN on a
+# rebuilt ~/GIT/llama.cpp-master worktree, not the pin. Mellum2 12B-thinking was 20/33 (2026-06-08).
+# mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF
