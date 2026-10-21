@@ -1637,6 +1637,37 @@ FE_GL_INSTANCED = Task(
     requires=("xvfb-run", "dotnet"),
 )
 
+FE_GL_NESTED = Task(
+    id="fe_gl_nested",
+    difficulty=4,
+    description=(
+        "fastengine spec B16 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games' mirrors "
+        "render a second scene from three.js onBeforeRender hooks, in the middle of a frame (renderer.setRenderTarget "
+        "+ render), with the mirror camera's projectionMatrix set by hand. src/Fastengine/Renderer.cs is a cut-down "
+        "fastengine renderer: Render(scene, camera) runs the scene's OnBeforeRender hooks, then draws its meshes into the "
+        "frame's target (Renderer.Target, which the caller has bound); RenderInto(target, scene, camera, clear) is the "
+        "mirror's pass. With a mirror in the scene the frame goes wrong. Fix Renderer.cs so that: a camera's Projection, "
+        "when set, replaces the projection its fov gives; RenderInto clears its target to `clear` and renders into it; "
+        "afterwards the frame continues exactly where it was (its target, viewport and matrices), so everything drawn "
+        "before and after shows as without the mirror; hooks run once per frame (each Render call from the app), never in "
+        "a nested pass. src/Fastengine/Scene.cs (not editable) holds the scene types; tools/SceneRunner renders two frames; "
+        "tests/test_nested.py compares regions with fastengine's own RenderInto within 3 levels. Raylib-cs 8.1.0 (its API: "
+        "docs/raylib-cs-api.txt), .NET 10."
+    ),
+    subdir="fe_gl_nested",
+    editable_files=["src/Fastengine/Renderer.cs"],
+    context_files=["docs/raylib-cs-api.txt", "src/Fastengine/Scene.cs", "tools/SceneRunner/Program.cs",
+                   "tests/test_nested.py", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2662,6 +2693,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_GL_LAMBERT,
     FE_GL_SHADOW,
     FE_GL_INSTANCED,
+    FE_GL_NESTED,
     FE_GL_SHADER_PORT,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
@@ -2764,7 +2796,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target", "fe_gl_shader_port", "fe_gl_lambert", "fe_gl_shadow", "fe_gl_instanced"],
+    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target", "fe_gl_shader_port", "fe_gl_lambert", "fe_gl_shadow", "fe_gl_instanced", "fe_gl_nested"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
