@@ -133,7 +133,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   "dotnet")` → `SKIPPED_ENV` on a box without them; `preflight.sh` checks the stack. Tasks: `fe_gl_screenshot` (L5, A02:
   2x render, box filter, upright PNG, single-colour check), `fe_gl_canvas_fill` (L4, A05: clockwise fills culled by rlgl's
   batch), `fe_gl_premultiplied` (L5, B13/B14: a HUD canvas composited like a browser composites a canvas),
-  `fe_gl_mirror_target` (L4, B09: a mirror's target pass linear and untoned), `fe_gl_shader_port` (L4, B07: a browser three.js ShaderMaterial under GLSL 330; CarrierDominion's real ocean and sun-beam shaders; fixtures rendered with fastengine's own port under the same llvmpipe). Levels set 2026-10-21 from ten models' pass rates.
+  `fe_gl_mirror_target` (L4, B09: a mirror's target pass linear and untoned), `fe_gl_shader_port` (L5, B07: a browser three.js ShaderMaterial under GLSL 330; CarrierDominion's real ocean and sun-beam shaders; fixtures rendered with fastengine's own port under the same llvmpipe). Levels set 2026-10-21 from ten models' pass rates.
 
   **Game-dev tasks (32, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),

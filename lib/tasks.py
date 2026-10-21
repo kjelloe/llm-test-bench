@@ -1521,7 +1521,7 @@ FE_GL_MIRROR_TARGET = Task(
 
 FE_GL_SHADER_PORT = Task(
     id="fe_gl_shader_port",
-    difficulty=4,
+    difficulty=5,
     description=(
         "fastengine spec B07 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games' "
         "three.js ShaderMaterials must run unchanged on fastengine's raylib renderer (GL 3.3, GLSL 330). Implement "
