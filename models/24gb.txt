@@ -6,12 +6,12 @@
 #   params     comma-separated llama-server flags, e.g. n_cpu_moe=35,no_mmap,mlock
 #   hf:        HuggingFace repo for fetch-hf.sh download helper (position-independent)
 #
-# Recommendations (2026-10-14, one RTX 4090; one GPU needs no clock lock):
-#   default coding set:  qwen3.8:27b-nvfp4-mix (36/39 @44 tok/s, 17 GB) or qwen3.8:27b; qwopus3.6:35b for speed (19/19 @162)
-#   Unity/C# gamedev and fastengine:  gemma4:31b-qat (gamedev 16/28, 0.74; fastengine 7/16, 0.74), then equinox:31b,
-#                                     qwen3.6:27b; A3B MoE coder fine-tunes score < 0.5 there
-#   repeatable answers (order-independent): add parallel=1 to the params and run with BENCH_CACHE_PROMPT=0
-#   (qwen3.8:27b that way: 38/38 eligible incl. node_paratrooper)
+# Recommendations (2026-10-21, one RTX 4090; one GPU needs no clock lock; runs are order-independent by default):
+#   default coding set:  qwen3.8:27b (38/38 eligible), qwen3.8:27b-byteshape (37/38, 13.1 GB, 49 tok/s) or nvfp4-mix;
+#                        qwopus3.6:35b for speed (19/19 @162)
+#   small and fast:      gemma4:12b-qat (34/37, coding 19/19, 6.5 GB, 83 tok/s)
+#   Unity/C# gamedev and fastengine:  gemma4:31b-qat (gamedev 0.73, fastengine 0.72 in order-independent mode), then
+#                                     qwen3.6:27b, equinox:31b; A3B MoE coder fine-tunes score < 0.5 there
 
 # qwopus3.6:35b        # ~162 tok/s  GPU only (Coder MXFP4 MOE Q8_0-Imatrix ~19.8 GB, Ampere+); 19/19 coding PERFECT — fastest perfect-score model; Skill L4 (confirmed 2026-07-22)
 # quest:35b            # ~160 tok/s  GPU only (RL MXFP4 MOE, ~19 GB); 16/19 coding; Skill L6
@@ -157,6 +157,11 @@ equinox:31b  Equinox-31B-MXFP4_Q8_0-Imatrix.gguf  ngl=999,no_mmap,cache_type_k=f
 # f16 KV (unknown architecture — safe default). max_ctx=32768 (16.4 GB + ~5.5 GB f16 KV = ~22 GB at 32k).
 # MULTIHOP: chain_5 PASS (28 tok/s); cross_5 PASS (28 tok/s). 5/5 multihop (confirmed 2026-08-15). Dense QAT passes both.
 gemma4:31b-qat  gemma-4-31B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:lmstudio-community/gemma-4-31B-it-QAT-GGUF
+
+# gemma4:12b-qat: Gemma 4 12B dense QAT Q4_0 (lmstudio-community, 6.5 GB). Promoted 2026-10-21 (user): full default set
+#   34/37 in 6.8 min at 82.7 tok/s — coding 19/19 incl. csv_nordic and python_hashmap (f16 KV), web 3/4 (fastapi), L6 stepped
+#   3/4 (entities), multihop 5/5, ctx to 64k by its max_ctx. The strongest model under 8 GB tested here.
+gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-12B-it-QAT-GGUF
 # qwen3.8:27b: Alibaba Qwen3.8-27B Q4_K_M (~18.4 GB, no Ampere+ required, single RTX 4090).
 # Gated DeltaNet hybrid architecture: 64 layers = 16 Gated Attention (GQA 24Q/4KV) + 48 Gated DeltaNet.
 # REQUIRES llama-server build ≥ 2026-08-13 (qwen35.cpp merged commit 0d0bfcd4f, binary 27df9199d).

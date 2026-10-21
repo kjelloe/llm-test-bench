@@ -40,6 +40,7 @@ Measured on an RTX 5060 Ti box (WSL2, ~86 GB RAM visible) unless noted.
 | Role | Model | Size | tok/s\* | Score | Notes |
 |---|---|---|---|---|---|
 | Big-model quality | `qwen3.8-flash-next-16gb` | 111 GB file, ~14 GB in VRAM | \*18.1 | 37/38 eligible | 180B-param MoE paged off NVMe via `--fit` + `--no-repack`; keep the model on a fast local filesystem (not `/mnt/c` under WSL2). Also runs as a **served lane** (llm-service-provider, 2026-09-16): loads in ~70 s, smoke 9/9 with tool calls. See [`how-to-test-flash-next.md`](../how-to-test-flash-next.md) |
+| Small, fast, strong coder | `gemma4:12b-qat` | 6.5 GB | \*83 on RTX 4090 | 34/37 eligible | Gemma 4 12B QAT Q4_0, coding 19/19 (2026-10-21); in `models/16gb.txt` with max_ctx 32768; not yet run on a 5060 Ti |
 | Fits fully in VRAM | `qwen3.8-27b-gsqrco` | 11.8 GB | \*~55 on RTX 4090 | 9/10 spot | Not yet measured on a 5060 Ti; expect roughly 24 tok/s there (estimate from its lower memory bandwidth). In `models/16gb.txt` |
 
 vLLM on this tier (by hand, 2026-09-15/16): Qwen2.5-Coder-14B AWQ runs at 43-44 tok/s, but its

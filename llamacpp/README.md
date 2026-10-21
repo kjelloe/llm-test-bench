@@ -223,7 +223,8 @@ VRAM for it** — `common/fit.cpp` never reads the cache size — so raise `fit_
 per-GPU share (e.g. a 6144 MiB cache over 3 GPUs → `fit_target` 512 + 2048 = 2560), or the cache
 allocation runs out of memory after `--fit` has filled the cards. The pinned `67a17c17c` binary does
 not have the flag. A separate master build for testing lives in the worktree `~/GIT/llama.cpp-master`
-(same CMake flags as the pin), used via `LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server`;
+(same CMake flags as the pin; at `1242be66f6` since 2026-10-21, which lost a leader's pass, so the pin stayed), used via
+`LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server`;
 the pinned build in `~/GIT/llama.cpp/build` stays the production binary. Evaluation in progress
 2026-10-09 (`next-runs.md`).
 
