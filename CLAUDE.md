@@ -396,7 +396,7 @@ tests/
   test_task_requires.py       Task.requires → missing_requirements, SKIPPED_ENV is an infrastructure skip
   test_gpuclock.py            gpuclock.sh against a stand-in nvidia-smi: printed lock/unlock commands, PowerShell quoting, status verdict
   test_task_levels_doc.py     task levels in SPEC.md and CLAUDE.md's task tables match lib/tasks.py (added after the 2026-10-14 re-level left SPEC stale)
-  test_export_task.py         --export-task bundling unit tests (every opt-in task: its files present, no *.reference.*); also pins the TASK.md format that
+  test_export_task.py         --export-task bundling unit tests (every opt-in task: its files present, no *.reference.*, no dotnet bin/obj); also pins the TASK.md format that
                               llm-service-provider's `selftest.sh --bench` parses ("## Files you may
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
   test_hwmonitor.py           hwmonitor threshold state-machine unit tests; exits when its --pid is gone
@@ -411,7 +411,8 @@ tests/
   test_unity_shim_sync.py     gamedev guards (incl. every test_weights key names a real test): per-task UnityEngine shim copies match task_data/_shared/UnityShim,
                               every gamedev task has a *.reference.* solution, parity fixtures match the JS spec;
                               every fixture generator (JS under Node, Python, three/Chromium via Playwright) regenerates
-                              its fixtures byte for byte, and none is left unguarded; GL tasks carry the canonical Raylib-cs
+                              its fixtures byte for byte (incl. the GL fixtures rendered by fastengine's own code under llvmpipe:
+                              fe_gl_shader_port, fe_gl_shadow, fe_gl_instanced, fe_gl_nested), and none is left unguarded; GL tasks carry the canonical Raylib-cs
                               API excerpt, which its generator reproduces; weight keys may also name tests in a
                               hidden grader the test command runs (cs_test_movement)
 task_data/
@@ -647,7 +648,7 @@ trusting as-is.
 # Check all dependencies
 ./preflight.sh
 
-# Full benchmark (models/default.txt set × 39 tasks; gamedev (32), gamedev_diag (21), fastengine (17) and fastengine_diag (18) are opt-in via --task-group)
+# Full benchmark (models/default.txt set × 39 tasks; gamedev (32), gamedev_diag (21), fastengine (17), fastengine_diag (18) and fastengine_gl (9) are opt-in via --task-group)
 ./compare.sh
 
 # Single model / subset of tasks

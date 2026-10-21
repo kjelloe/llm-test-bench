@@ -118,3 +118,13 @@ All overridable via CLI flags.
   with a startup notice.
 - **Single abort per CRIT**: Once a PID has been signalled, subsequent CRITs (e.g. temperature
   recovered then spiked again) will not re-send signals. Restart hwmonitor to re-arm.
+
+## After an unexplained reboot: crash-evidence.sh
+
+hwmonitor cannot see a crash that takes the whole machine down (its log just stops). `hwmonitor/crash-evidence.sh [N]`
+prints what Windows recorded about the last N unexpected shutdowns (Kernel-Power 41): bugcheck code, minutes from the last
+logged event to the next boot (about 1 = restarted by itself; longer = hung or off until reset by hand), WHEA and nvlddmkm
+events in the 24 h before, warnings in the 20 min before, minidumps written, plus the RAM speed, BIOS and current GPU power
+limits. WSL only. Add each crash, with the workload and what the screen and fans did, to the crash log in
+`hw-upgrade-july-2026.md` (local). A minidump can be read with WinDbg's `cdb.exe` via PowerShell (WSL cannot start
+WindowsApps executables): `& '<WinDbg dir>\amd64\cdb.exe' -z <dump> -y "srv*<cache>*https://msdl.microsoft.com/download/symbols" -c '!analyze -v; q'`.
