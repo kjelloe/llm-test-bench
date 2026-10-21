@@ -1519,6 +1519,37 @@ FE_GL_MIRROR_TARGET = Task(
     test_weights={"mirror_shows": 2.0},
 )
 
+FE_GL_SHADER_PORT = Task(
+    id="fe_gl_shader_port",
+    difficulty=4,
+    description=(
+        "fastengine spec B07 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games' "
+        "three.js ShaderMaterials must run unchanged on fastengine's raylib renderer (GL 3.3, GLSL 330). Implement "
+        "ShaderPort.Vertex and ShaderPort.Fragment in src/Fastengine/ShaderPort.cs: take a shader's GLSL exactly as the "
+        "browser game ships it (WebGL style, three r162's built-in names: position, normal, uv, modelMatrix, viewMatrix, "
+        "projectionMatrix, modelViewMatrix, normalMatrix, cameraPosition, gl_FragColor, attribute/varying, precision "
+        "lines, texture2D) and return GLSL 330 that raylib compiles and that draws what three draws. Raylib binds its own "
+        "names (vertexPosition, vertexTexCoord, vertexNormal; matModel, matView, matProjection, mvp); the renderer sets a "
+        "`cameraPosition` uniform. tools/SceneRunner ports CarrierDominion's real ocean and sun-beam shaders (shaders/, "
+        "verbatim) and renders three scenes; tests/test_port.py checks each compiles and matches fastengine's own port "
+        "within 3 levels. Raylib-cs 8.1.0 (its API: docs/raylib-cs-api.txt), .NET 10."
+    ),
+    subdir="fe_gl_shader_port",
+    editable_files=["src/Fastengine/ShaderPort.cs"],
+    context_files=["docs/raylib-cs-api.txt", "shaders/ocean.vert", "shaders/ocean.frag", "shaders/ocean-detail.frag",
+                   "shaders/beam.vert", "shaders/beam.frag", "tools/SceneRunner/Program.cs", "tests/test_port.py",
+                   "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+    test_weights={"test_scene_matches_fastengine": 2.0},
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2541,6 +2572,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_GL_CANVAS_FILL,
     FE_GL_PREMULTIPLIED,
     FE_GL_MIRROR_TARGET,
+    FE_GL_SHADER_PORT,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
     BASH_ACCEPT_MATRIX,
@@ -2642,7 +2674,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target"],
+    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target", "fe_gl_shader_port"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 

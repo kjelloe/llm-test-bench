@@ -462,7 +462,7 @@ Task groups (--task-group):
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
   fastengine    17 tasks (14 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
-  fastengine_gl    4 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
+  fastengine_gl    5 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -2287,6 +2287,7 @@ references present. A test run costs ~1.5 s after the build. Plan and analysis: 
 | `fe_gl_canvas_fill` | 4 | A05 | fastengine's Canvas2D.Fill under rlgl's back-face culling: flush, culling off, draw, flush, culling on. Probes: both windings fill; back-facing triangles before and after a fill stay culled | stub 5/8, ref 8/8, 5/5 (no flush before / after, culling left off or never off, fan) |
 | `fe_gl_premultiplied` | 5 | B13/B14 | an offscreen HUD canvas: separate blend factors while painting (premultiplied colour, alpha not squared), premultiplied blend + (a,a,a,a) tint when drawing, bilinear. Expected = the browser's a·C + (1-a)·B, overlap composited first, half-scale lines without a dark halo | stub 2/7, ref 7/7, 6/6 |
 | `fe_gl_mirror_target` | 4 | B09 | three r162's colour handling around a mirror: the target pass linear and untoned, toned (ACES, exposure) and encoded once on screen, screen output restored after the pass. Shader verbatim from fastengine; expected computed with the same ACES fit and 8-bit target storage | stub 3/5 (mirror (195,201,208) vs three's (118,139,170), the incident), ref 5/5, 6/6 |
+| `fe_gl_shader_port` | 4 | B07 | port a browser three.js ShaderMaterial to raylib's GLSL 330: three's built-in names onto raylib's (`position`/`uv`/`normal` → `vertexPosition`/…, `modelMatrix`/`viewMatrix`/`projectionMatrix` → `matModel`/…, `cameraPosition` uniform, `gl_FragColor`, `attribute`/`varying`, precision, `#include` chunks). Scenes: CarrierDominion's real ocean (Medium and High-tier fragment) and sun-beam shaders, verbatim. **Fixtures are the same scenes rendered with fastengine's own port** (`ShaderPort.reference.cs`, validated by fastengine's render.sh against three r162) under the same llvmpipe, so no renderer mismatch; generator `tools/make_fixtures.reference.py`, guarded byte for byte. Compiled = the scene's own uniform exists (raylib falls back silently) | stub 0/6, ref 6/6, 5/5 mutants (matrix, uv, cameraPosition, position, view/projection). Mesa's compiler accepts `gl_FragColor`, `varying` and `precision` under `#version 330`, so mutants of those are equivalent here (a strict core driver would reject them) |
 
 **First model results (2026-10-17 17:55-18:29, `output/t20-gl-*.json`, nine leaders, no stall):** `fe_gl_screenshot` 0/9
 (all compile errors or no file), `fe_gl_canvas_fill` 3/9 (qwen3.8:27b, byteshape, qwen3.6:27b), `fe_gl_premultiplied`
@@ -2305,8 +2306,8 @@ nvfp4-mix, swift-1.5, gemma4:12b — the three that passed in t20 now 0.67), `fe
 `fe_gl_mirror_target` 2/10 (0.54; gpt-oss, nvfp4-mix). **Levels set by the pass-rate rule (user's order, 3b):** screenshot
 L5, canvas_fill L4, premultiplied L5, mirror_target L4.
 
-Next candidate: B07 (a browser ShaderMaterial under GLSL 330 with three's names; CarrierDominion's weather shaders are
-real material) — needs three r162-in-Chromium fixtures like `fe_output_color`'s generator.
+B07 built 2026-10-21 (`fe_gl_shader_port`, above). Not built: B03 (Lambert on the GPU), B10 (PCF shadows), B15 (instanced
+attributes: the weather shaders' `attribute vec3 aSeed`), B16 (nested renders).
 
 #### What NOT to do
 

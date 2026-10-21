@@ -183,7 +183,8 @@ def test_every_fixture_generator_is_guarded():
     """A task whose fixtures come from a generator must have that generator in one of the guards above."""
     guarded = {(t, s) for t, s, _ in JS_FIXTURES} | {(t, s) for t, s, _ in PY_FIXTURES}
     guarded |= {("fe_flex_wrap", "tools/make_fixtures.reference.mjs"), ("fe_output_color", "tools/make_fixtures.reference.mjs"),
-                ("cs_css_alpha_linear", "tools/make_fixtures.reference.mjs")}
+                ("cs_css_alpha_linear", "tools/make_fixtures.reference.mjs"),
+                ("fe_gl_shader_port", "tools/make_fixtures.reference.py")}
     found = set()
     for path in TASK_DATA_DIR.glob("*/**/make[-_]fixtures*"):
         rel = path.relative_to(TASK_DATA_DIR)
@@ -224,3 +225,12 @@ def test_raylib_api_excerpt_matches_its_generator():
     out = subprocess.run(["dotnet", "run", "-v", "q"], cwd=_RAYLIB_API.parent / "ApiDump", capture_output=True, text=True,
                          stdin=subprocess.DEVNULL, timeout=300, check=True)
     assert out.stdout == _RAYLIB_API.read_text(encoding="utf-8")
+
+
+# fe_gl_shader_port's fixtures are its scenes rendered with fastengine's own port under xvfb + llvmpipe.
+@pytest.mark.skipif(shutil.which("xvfb-run") is None or shutil.which("dotnet") is None, reason="no xvfb-run or dotnet")
+def test_shader_port_fixtures_match_their_generator(tmp_path):
+    root = TASK_DATA_DIR / "fe_gl_shader_port"
+    subprocess.run([sys.executable, "tools/make_fixtures.reference.py", str(tmp_path)], cwd=root, check=True, timeout=600)
+    for name in ("ocean.png", "ocean-detail.png", "beam.png"):
+        assert (tmp_path / name).read_bytes() == (root / "tests" / "fixtures" / name).read_bytes(), name
