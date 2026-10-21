@@ -462,7 +462,7 @@ Task groups (--task-group):
   gamedev_diag  21 multiple-choice diagnosis questions (diag_*), one task each; also OPT-IN
   fastengine    17 tasks (14 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
-  fastengine_gl    5 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
+  fastengine_gl    9 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -2292,6 +2292,10 @@ references present. A test run costs ~1.5 s after the build. Plan and analysis: 
 | `fe_gl_premultiplied` | 5 | B13/B14 | an offscreen HUD canvas: separate blend factors while painting (premultiplied colour, alpha not squared), premultiplied blend + (a,a,a,a) tint when drawing, bilinear. Expected = the browser's a·C + (1-a)·B, overlap composited first, half-scale lines without a dark halo | stub 2/7, ref 7/7, 6/6 |
 | `fe_gl_mirror_target` | 4 | B09 | three r162's colour handling around a mirror: the target pass linear and untoned, toned (ACES, exposure) and encoded once on screen, screen output restored after the pass. Shader verbatim from fastengine; expected computed with the same ACES fit and 8-bit target storage | stub 3/5 (mirror (195,201,208) vs three's (118,139,170), the incident), ref 5/5, 6/6 |
 | `fe_gl_shader_port` | 5 | B07 | port a browser three.js ShaderMaterial to raylib's GLSL 330: three's built-in names onto raylib's (`position`/`uv`/`normal` → `vertexPosition`/…, `modelMatrix`/`viewMatrix`/`projectionMatrix` → `matModel`/…, `cameraPosition` uniform, `gl_FragColor`, `attribute`/`varying`, precision, `#include` chunks). Scenes: CarrierDominion's real ocean (Medium and High-tier fragment) and sun-beam shaders, verbatim. **Fixtures are the same scenes rendered with fastengine's own port** (`ShaderPort.reference.cs`, validated by fastengine's render.sh against three r162) under the same llvmpipe, so no renderer mismatch; generator `tools/make_fixtures.reference.py`, guarded byte for byte. Compiled = the scene's own uniform exists (raylib falls back silently) | stub 0/6, ref 6/6, 5/5 mutants (matrix, uv, cameraPosition, position, view/projection). Mesa's compiler accepts `gl_FragColor`, `varying` and `precision` under `#version 330`, so mutants of those are equivalent here (a strict core driver would reject them) |
+| `fe_gl_lambert` | 4 | B03 | MeshLambertMaterial with three r162's physical light units in GLSL 330: colours (material and lights) decoded from sRGB, ambient + hemisphere mix(ground, sky, n.y/2 + 1/2) + Σ colour·intensity·max(N·L, 0) with L towards the light, × albedo/π (BRDF_Lambert; no legacy ×π), clamped and sRGB-encoded. 20 flat quads (CarrierDominion-like deck/hull lighting among them), each pixel computed analytically in the test from three's formulas, ±1 | stub (legacy shader: no /π, no decode, no hemisphere, unclamped N·L, light direction reversed) 0/20, ref 20/20, 15/15 mutants |
+| `fe_gl_shadow` | 4 | B10 | one shadow-casting DirectionalLight with PCFShadowMap: the light's view-projection (ortho shadow camera with three's GL depth range), back faces into the depth map (three's shadowSide), getShadow's 17-tap PCF spread by shadow.radius, bias, nothing shadowed outside the shadow camera (incl. beyond its far plane). Two scenes (crate, floating ball, a pillar across the shadow camera's edge); **fixtures rendered with fastengine's own ShadowPass/shadowMask** under the same llvmpipe, compared region by region (±3) and as whole frames | stub (projection×view, y flipped, one tap, no bounds check) 2/12, ref 12/12, 11/15 mutants; 4 equivalent in these scenes (no GL depth-range fix, bias sign, no bias, no perspective divide: orthographic and back-face casters hide them) |
+| `fe_gl_instanced` | 4 | B15 | three's InstancedBufferGeometry: one mesh, one DrawMesh, every copy reading its own InstancedBufferAttribute values through the browser's unchanged GLSL (fastengine's way: the base shape repeated, the first attribute in raylib's tangent slot as vec4, the second in texcoord2, the declarations mapped by #define), unrolled to a plain triangle list past raylib's 16-bit indices. Scenes: 12 quads with two attributes and 20,000 2×2 px quads (80,000 vertices) checked analytically; CarrierDominion's real rain shader and 11,000 seeded drops against **fixtures from fastengine's own instancing** | stub (tight vec3 stride in the vec4 slot, declarations left unbound, indices wrap at 65,536) 3/19, ref 19/19, 10/10 mutants |
+| `fe_gl_nested` | 4 | B16 | a mirror's pass from an onBeforeRender hook in the middle of a frame (fastengine's `RenderInto`): the camera's hand-set projection (an off-centre frustum) replaces its fov's, the mirror's target cleared and rendered, then the frame's target, viewport and matrices back, so 2D drawn before and after and a later frame are untouched; hooks once per frame, never in the nested pass. Fixtures from fastengine's own RenderInto under llvmpipe, 8 regions over two frames plus hook counts | stub (Begin/EndTextureMode, projection ignored, hooks re-run) 3/9, ref 9/9, 10/11 mutants (depth mask before the clear: already on, equivalent) |
 
 **First model results (2026-10-17 17:55-18:29, `output/t20-gl-*.json`, nine leaders, no stall):** `fe_gl_screenshot` 0/9
 (all compile errors or no file), `fe_gl_canvas_fill` 3/9 (qwen3.8:27b, byteshape, qwen3.6:27b), `fe_gl_premultiplied`
@@ -2300,7 +2304,7 @@ references present. A test run costs ~1.5 s after the build. Plan and analysis: 
 `TextureFilter.TextureFilterBilinear`, `BlendMode.BlendPremultiplied`, `Raylib.ImageResizeBilinear`, `GetBlendMode`,
 `Image.data`): they see only the calls in their file and the scene runner. **Since 2026-10-21 every GL task gets a Raylib-cs API excerpt as a context file** (user's
 decision): `docs/raylib-cs-api.txt`, a copy of `task_data/_shared/RaylibApi/raylib-cs-8.1.0-api.txt` (484 lines, ~5k
-tokens), printed by reflection from the Raylib-cs 8.1.0 package by `_shared/RaylibApi/ApiDump` — whole groups (every Rlgl
+tokens; 585 since B15), printed by reflection from the Raylib-cs 8.1.0 package by `_shared/RaylibApi/ApiDump` — whole groups (every Rlgl
 method and its blend/culling constants, Raylib's texture/render-texture/shader/blend/mode/draw/image-readback calls, the full
 relevant enums and structs), never only a task's answer. Guards: every GL task carries it and its copy equals the canonical
 file; the generator reproduces it byte for byte. The t20 results above predate it.
@@ -2314,8 +2318,16 @@ B07 built 2026-10-21 (`fe_gl_shader_port`, above). **First results (t24, ten mod
 port fails to compile** (nvfp4-mix and qwen3.6:27b do not even build the C#; flash-next gives no file). Read in gemma4:12b-qat's
 and gpt-oss's answers: they rename three's names to raylib's (`matModel`, `vertexPosition`) but never declare them —
 three injects those declarations into every ShaderMaterial, raylib binds only what the shader declares — and gpt-oss writes
-`modelViewMatrix` as `matModel * matView` (wrong order). A genuine gap; level L5 by the pass-rate rule. Not built: B03 (Lambert on the GPU), B10 (PCF shadows), B15 (instanced
-attributes: the weather shaders' `attribute vec3 aSeed`), B16 (nested renders).
+`modelViewMatrix` as `matModel * matView` (wrong order). A genuine gap; level L5 by the pass-rate rule.
+
+**B03, B10, B15, B16 built 2026-10-21** (user: "make the 4 fastengine GL items"; table above), all from fastengine's own
+code at `6ae4ed8`, levels L4 from the spec until models have run them. Grading: B03 analytic (three's formulas in the test),
+B10/B15/B16 against fixtures rendered by the reference under the same llvmpipe (generators guarded byte for byte).
+**The API excerpt grew the same day** (585 lines, ~6k tokens): B15 needs `Mesh` (`AllocTangents`, `AllocTexCoords2`,
+`UploadMesh`), so the generator now also lists meshes, materials, `BeginMode3D`/`EndMode3D`, `Mesh`/`Material`/`MaterialMap`/
+`Camera3D` with their instance methods, `MaterialMapIndex` and `CameraProjection`. Every GL task's prompt changed with it;
+t22/t24 ran on the 484-line version. Not built: the rest of B (B04-B06, B08, B11-B14 need a full scene renderer or are
+covered by `fastengine`), C01 (pixel comparison against Chromium), the Windows items.
 
 #### What NOT to do
 

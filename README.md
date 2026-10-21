@@ -92,7 +92,7 @@ BENCH_BACKEND=llama-server ./compare.sh --model-file models/experimental.txt
 `context` (6), `multihop` (5), `spot` (10-task candidate-evaluation subset), `gamedev` (32 Unity-client
 C#, Node-authority and build-script tasks), `gamedev_diag` (21 multiple-choice diagnosis questions),
 `fastengine` (17 tasks for the second build engine, .NET 10 on Raylib-cs: 14 C#, 3 bash) and `fastengine_diag` (18
-questions) and `fastengine_gl` (5 tasks that need an OpenGL context, run under `xvfb-run` with Mesa's software
+questions) and `fastengine_gl` (9 tasks that need an OpenGL context, run under `xvfb-run` with Mesa's software
 renderer); all five are **opt-in**: not part of a default all-tasks run, so they don't change the 39-task totals or
 Skill levels until their difficulty levels are validated.
 

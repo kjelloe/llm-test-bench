@@ -102,7 +102,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (132 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 17 `fastengine` and 18 `fastengine_diag` and 5 `fastengine_gl` tasks are opt-in):
+- Built-in tasks (136 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 17 `fastengine` and 18 `fastengine_diag` and 9 `fastengine_gl` tasks are opt-in):
 
   **fastengine tasks (17, opt-in, 2026-10-12/16) — `--task-group fastengine`:** C# for the second build engine
   (fastengine: plain .NET 10 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD), from its
@@ -125,7 +125,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   20-49% L4, <20% L5); three canaries keep L2 although nobody passes them: `cs_coord_convert`, `fe_i18n`, `fe_bash_package`.
   `tests/test_task_levels_doc.py` keeps the levels written here and in CLAUDE.md's task tables equal to `lib/tasks.py`.
 
-  **fastengine GL tasks (5, opt-in, 2026-10-17/21) — `--task-group fastengine_gl`:** tasks that need an OpenGL context. Their
+  **fastengine GL tasks (9, opt-in, 2026-10-17/21) — `--task-group fastengine_gl`:** tasks that need an OpenGL context. Their
   test command runs pytest under `xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=1` (Mesa's llvmpipe, OpenGL 4.5 core); each task
   has a `tools/SceneRunner` console program (Raylib-cs 8.1.0, .NET 10) that draws the test scenes through the model's code
   and saves PNGs, which the pytest file probes (GL contexts are thread-bound, so not inside xunit). Since 2026-10-21 each also gets
@@ -133,7 +133,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   "dotnet")` → `SKIPPED_ENV` on a box without them; `preflight.sh` checks the stack. Tasks: `fe_gl_screenshot` (L5, A02:
   2x render, box filter, upright PNG, single-colour check), `fe_gl_canvas_fill` (L4, A05: clockwise fills culled by rlgl's
   batch), `fe_gl_premultiplied` (L5, B13/B14: a HUD canvas composited like a browser composites a canvas),
-  `fe_gl_mirror_target` (L4, B09: a mirror's target pass linear and untoned), `fe_gl_shader_port` (L5, B07: a browser three.js ShaderMaterial under GLSL 330; CarrierDominion's real ocean and sun-beam shaders; fixtures rendered with fastengine's own port under the same llvmpipe). Levels set 2026-10-21 from ten models' pass rates.
+  `fe_gl_mirror_target` (L4, B09: a mirror's target pass linear and untoned), `fe_gl_shader_port` (L5, B07: a browser three.js ShaderMaterial under GLSL 330; CarrierDominion's real ocean and sun-beam shaders; fixtures rendered with fastengine's own port under the same llvmpipe), `fe_gl_lambert` (L4, B03: MeshLambertMaterial with physical light units, pixels computed analytically from three's formulas), `fe_gl_shadow` (L4, B10: a directional light's PCFShadowMap), `fe_gl_instanced` (L4, B15: InstancedBufferGeometry, CarrierDominion's rain shader, past raylib's 16-bit indices), `fe_gl_nested` (L4, B16: a mirror's pass from an onBeforeRender hook mid-frame with a hand-set projection). B10/B15/B16 compare with fixtures rendered by fastengine's own code under the same llvmpipe. Levels of the first five set 2026-10-21 from ten models' pass rates; the last four are the spec's L4 until models have run them.
 
   **Game-dev tasks (32, opt-in) — select with `--task-group gamedev`:** Unity-client C# (built at
   netstandard2.1 + C# 9 against a minimal UnityEngine shim, tested with xunit via `dotnet test`),

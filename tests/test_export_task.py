@@ -101,3 +101,23 @@ def test_workdir_leaves_out_local_test_caches(tmp_path, monkeypatch):
             shutil.rmtree(work)
     finally:
         shutil.rmtree(cache)
+
+
+def test_dotnet_build_output_stays_out_of_workdirs_and_exports(tmp_path):
+    """A local dotnet build leaves obj/ and bin/ in the task dir; they hold absolute paths and must not travel."""
+    import shutil
+    from lib import tasks
+    task = TASK_MAP["fe_gl_lambert"]
+    obj = tasks.TASK_DATA_DIR / task.subdir / "tools" / "SceneRunner" / "obj"
+    obj.mkdir(exist_ok=True)
+    (obj / "project.assets.json").write_text("{}")
+    try:
+        work = tasks.prepare_workdir(task)
+        try:
+            assert not list(work.rglob("obj"))
+        finally:
+            shutil.rmtree(work)
+        export_task(task, tmp_path / "out")
+        assert not list((tmp_path / "out").rglob("obj"))
+    finally:
+        shutil.rmtree(obj)
