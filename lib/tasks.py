@@ -1412,7 +1412,7 @@ FE_TEST_CSS_COLOR = Task(
 
 FE_GL_SCREENSHOT = Task(
     id="fe_gl_screenshot",
-    difficulty=3,
+    difficulty=5,
     description=(
         "fastengine spec A02 (GL context: the tests run the code under Xvfb with Mesa's software OpenGL). "
         "Fastengine.Shot.Capture in src/Fastengine/Shot.cs saves a scripted run's screenshot, and the shots it writes "
@@ -1440,7 +1440,7 @@ FE_GL_SCREENSHOT = Task(
 
 FE_GL_CANVAS_FILL = Task(
     id="fe_gl_canvas_fill",
-    difficulty=3,
+    difficulty=4,
     description=(
         "fastengine incident A05 (GL context: the tests run under Xvfb with Mesa's software OpenGL). Canvas.Fill in "
         "src/Fastengine/Canvas.cs fills the HUD's paths through rlgl's triangle batch, and some shapes never show: the "
@@ -1465,7 +1465,7 @@ FE_GL_CANVAS_FILL = Task(
 
 FE_GL_PREMULTIPLIED = Task(
     id="fe_gl_premultiplied",
-    difficulty=3,
+    difficulty=5,
     description=(
         "fastengine incidents B13/B14 (GL context: the tests run under Xvfb with Mesa's software OpenGL). HudCanvas in "
         "src/Fastengine/HudCanvas.cs is an offscreen HUD canvas (a CanvasTexture or RenderTarget drawn into the HUD): "
