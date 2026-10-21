@@ -1842,9 +1842,13 @@ lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k
 
 # ── Scout 2026-10-21, user: "test Gemma 4 12 QAT, unsloth's Ornith-1.0-9B and the Tiel-Coder Genesis" ──────────────
 # Gemma 4 12B dense QAT Q4_0 (6.5 GB; arch gemma4, 256k ctx). Same params as gemma4:31b-qat.
+# RESULT 2026-10-21 spot 9/10 at 86 tok/s (only node_paratrooper; passes csv_nordic, hashmap, node_para_core). Full set run.
 gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-12B-it-QAT-GGUF
 # Ornith-1.0-9B (unsloth Q4_K_M, 5.3 GB; arch qwen35 — the Qwen3.5 GDN hybrid). Params as ornith:1.5-9b.
+# RESULT 2026-10-21 spot 6/10 at 119 tok/s — REJECTED (fails csv_nordic, hashmap, node_para_core, paratrooper); ornith:1.5-9b stays.
 ornith:1.0-9b  Ornith-1.0-9B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Ornith-1.0-9B-GGUF
 # Tiel-Coder-35B-A3B Genesis (LuffyTheFox, "APEX-Compact" mixed quant, 18.8 GB; arch qwen35moe). The non-MTP file; params
 # as tiel-coder:35b (18/19 coding, 4/4 web, gamedev 0.24).
+# RESULT 2026-10-21 spot 7/10 at 151 tok/s — REJECTED: gains node_slugify over tiel-coder:35b but loses csv_nordic and
+# python_hashmap; node_paratrooper NO_BLOCKS.
 tiel-coder:35b-genesis  Tiel-Coder-35B-A3B-Genesis-APEX-Compact.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:LuffyTheFox/Tiel-Coder-35B-A3B-Genesis-Hermes-GGUF
