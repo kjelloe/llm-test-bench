@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Prints raylib-cs-8.1.0-api.txt (the API excerpt the fastengine_gl tasks get as context) by reflection. -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>disable</Nullable></PropertyGroup>
+  <ItemGroup><PackageReference Include="Raylib-cs" Version="8.1.0" /></ItemGroup>
+</Project>

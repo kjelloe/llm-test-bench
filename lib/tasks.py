@@ -1422,11 +1422,11 @@ FE_GL_SCREENSHOT = Task(
         "GL's origin is bottom-left), log \"[Shot] <path>\" and return true; when every pixel of the frame has the "
         "same colour, still write the file but log \"[Shot] image is a single colour\" and return false. "
         "tools/SceneRunner draws the test scenes through Capture; tests/test_shots.py compares each PNG with the same "
-        "scene rendered at 2x and read back raw, within 2 levels per channel. Raylib-cs 8.1.0, .NET 10."
+        "scene rendered at 2x and read back raw, within 2 levels per channel. Raylib-cs 8.1.0 (its API: docs/raylib-cs-api.txt), .NET 10."
     ),
     subdir="fe_gl_screenshot",
     editable_files=["src/Fastengine/Shot.cs"],
-    context_files=["tools/SceneRunner/Program.cs", "tests/test_shots.py", "src/Fastengine/Fastengine.csproj"],
+    context_files=["docs/raylib-cs-api.txt", "tools/SceneRunner/Program.cs", "tests/test_shots.py", "src/Fastengine/Fastengine.csproj"],
     test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
               "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
     test_timeout=600,
@@ -1447,11 +1447,11 @@ FE_GL_CANVAS_FILL = Task(
         "ones whose points arrive clockwise on screen (y down) vanish. rlgl keeps back-face culling on, because the 3D "
         "renderer relies on it. Fix Fill so a convex path shows in either winding, without changing what other draws see: "
         "triangles sent to rlgl before or after a fill must still be culled exactly as before. tools/SceneRunner draws "
-        "the test scenes; tests/test_fill.py probes their pixels. Raylib-cs 8.1.0, .NET 10."
+        "the test scenes; tests/test_fill.py probes their pixels. Raylib-cs 8.1.0 (its API: docs/raylib-cs-api.txt), .NET 10."
     ),
     subdir="fe_gl_canvas_fill",
     editable_files=["src/Fastengine/Canvas.cs"],
-    context_files=["tools/SceneRunner/Program.cs", "tests/test_fill.py", "src/Fastengine/Fastengine.csproj"],
+    context_files=["docs/raylib-cs-api.txt", "tools/SceneRunner/Program.cs", "tests/test_fill.py", "src/Fastengine/Fastengine.csproj"],
     test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
               "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
     test_timeout=600,
@@ -1475,11 +1475,11 @@ FE_GL_PREMULTIPLIED = Task(
         "content C with alpha a over the page B shows a*C + (1-a)*B (sRGB values), content overlapping inside the "
         "canvas is composited first, Draw's alpha multiplies the whole canvas, and a canvas drawn at another size is "
         "filtered bilinearly, as the browser does. tools/SceneRunner draws the test scenes; tests/test_composite.py "
-        "probes their pixels. Raylib-cs 8.1.0, .NET 10."
+        "probes their pixels. Raylib-cs 8.1.0 (its API: docs/raylib-cs-api.txt), .NET 10."
     ),
     subdir="fe_gl_premultiplied",
     editable_files=["src/Fastengine/HudCanvas.cs"],
-    context_files=["tools/SceneRunner/Program.cs", "tests/test_composite.py", "src/Fastengine/Fastengine.csproj"],
+    context_files=["docs/raylib-cs-api.txt", "tools/SceneRunner/Program.cs", "tests/test_composite.py", "src/Fastengine/Fastengine.csproj"],
     test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
               "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
     test_timeout=600,
@@ -1503,11 +1503,11 @@ FE_GL_MIRROR_TARGET = Task(
         "pass treat colour the way three r162 does, so every surface and the mirror show what the browser shows, and "
         "surfaces drawn after the mirror's pass are unaffected. The shader (src/Fastengine/Shaders.cs, fastengine's own "
         "output stage) is correct; do not change it. tools/SceneRunner draws the test frame; tests/test_mirror.py probes "
-        "it. Raylib-cs 8.1.0, .NET 10."
+        "it. Raylib-cs 8.1.0 (its API: docs/raylib-cs-api.txt), .NET 10."
     ),
     subdir="fe_gl_mirror_target",
     editable_files=["src/Fastengine/MirrorRenderer.cs"],
-    context_files=["src/Fastengine/Shaders.cs", "tools/SceneRunner/Program.cs", "tests/test_mirror.py", "src/Fastengine/Fastengine.csproj"],
+    context_files=["docs/raylib-cs-api.txt", "src/Fastengine/Shaders.cs", "tools/SceneRunner/Program.cs", "tests/test_mirror.py", "src/Fastengine/Fastengine.csproj"],
     test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
               "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
     test_timeout=600,
