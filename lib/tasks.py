@@ -1552,7 +1552,7 @@ FE_GL_SHADER_PORT = Task(
 
 FE_GL_LAMBERT = Task(
     id="fe_gl_lambert",
-    difficulty=4,
+    difficulty=5,
     description=(
         "fastengine spec B03 (GL context: the tests run under Xvfb with Mesa's software OpenGL). src/Fastengine/Lambert.cs "
         "is a first port of three.js's MeshLambertMaterial to raylib (GLSL 330): the shader and the per-draw upload of the "
@@ -1579,7 +1579,7 @@ FE_GL_LAMBERT = Task(
 
 FE_GL_SHADOW = Task(
     id="fe_gl_shadow",
-    difficulty=4,
+    difficulty=5,
     description=(
         "fastengine spec B10 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games light "
         "their scenes with one shadow-casting DirectionalLight and renderer.shadowMap.type = PCFShadowMap. "
@@ -1609,7 +1609,7 @@ FE_GL_SHADOW = Task(
 
 FE_GL_INSTANCED = Task(
     id="fe_gl_instanced",
-    difficulty=4,
+    difficulty=5,
     description=(
         "fastengine spec B15 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games draw "
         "rain and spray with three.js InstancedBufferGeometry: one base shape drawn thousands of times in one draw call, "
@@ -1639,7 +1639,7 @@ FE_GL_INSTANCED = Task(
 
 FE_GL_NESTED = Task(
     id="fe_gl_nested",
-    difficulty=4,
+    difficulty=5,
     description=(
         "fastengine spec B16 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games' mirrors "
         "render a second scene from three.js onBeforeRender hooks, in the middle of a frame (renderer.setRenderTarget "
