@@ -410,7 +410,8 @@ tests/
   test_unity_shim_sync.py     gamedev guards (incl. every test_weights key names a real test): per-task UnityEngine shim copies match task_data/_shared/UnityShim,
                               every gamedev task has a *.reference.* solution, parity fixtures match the JS spec;
                               every fixture generator (JS under Node, Python, three/Chromium via Playwright) regenerates
-                              its fixtures byte for byte, and none is left unguarded; weight keys may also name tests in a
+                              its fixtures byte for byte, and none is left unguarded; GL tasks carry the canonical Raylib-cs
+                              API excerpt, which its generator reproduces; weight keys may also name tests in a
                               hidden grader the test command runs (cs_test_movement)
 task_data/
   python_safe_div/        L1 Python pytest task (19 coding tasks total, L1–L5)
@@ -420,6 +421,8 @@ task_data/
   distractor_notes/       L2 decoy-resistant retrieval
   multihop_chain_5/       L4 5-hop config inheritance (correct answer: 90; sibling distractor: 45; top-level distractor: 30)
   multihop_cross_5/       L4 5-doc cross-reference (correct: oncall-emea-w-high; criticality distractor: oncall-emea-w-crit)
+  _shared/RaylibApi/      the Raylib-cs 8.1.0 API excerpt every fe_gl_* task gets as docs/raylib-cs-api.txt, and ApiDump/
+                          (its reflection generator); never a task itself
   _shared/UnityShim/      canonical minimal UnityEngine shim (Vector2/3, Quaternion incl. LookRotation, Mathf incl.
                           sRGB curves, Color/Color32, Mesh, GameObject/Transform, KeyCode/Input with test hooks,
                           MonoBehaviour base, Debug); copied into each
@@ -2290,8 +2293,12 @@ references present. A test run costs ~1.5 s after the build. Plan and analysis: 
 0/9, `fe_gl_mirror_target` 1/9 (gpt-oss:120b; seven others left the pass logic as it was — the washed-out mirror).
 **Most failures do not compile because the models invent Raylib-cs API** (`Rlgl.Draw`, `Rlgl.Disable`,
 `TextureFilter.TextureFilterBilinear`, `BlendMode.BlendPremultiplied`, `Raylib.ImageResizeBilinear`, `GetBlendMode`,
-`Image.data`): they see only the calls in their file and the scene runner. Open question for the user: give these tasks a
-short Raylib-cs API excerpt as context (what an engine developer has at hand), or keep the API knowledge as part of the test.
+`Image.data`): they see only the calls in their file and the scene runner. **Since 2026-10-21 every GL task gets a Raylib-cs API excerpt as a context file** (user's
+decision): `docs/raylib-cs-api.txt`, a copy of `task_data/_shared/RaylibApi/raylib-cs-8.1.0-api.txt` (484 lines, ~5k
+tokens), printed by reflection from the Raylib-cs 8.1.0 package by `_shared/RaylibApi/ApiDump` — whole groups (every Rlgl
+method and its blend/culling constants, Raylib's texture/render-texture/shader/blend/mode/draw/image-readback calls, the full
+relevant enums and structs), never only a task's answer. Guards: every GL task carries it and its copy equals the canonical
+file; the generator reproduces it byte for byte. The t20 results above predate it; the re-run with it is t22.
 
 Next candidate: B07 (a browser ShaderMaterial under GLSL 330 with three's names; CarrierDominion's weather shaders are
 real material) — needs three r162-in-Chromium fixtures like `fe_output_color`'s generator.

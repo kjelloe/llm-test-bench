@@ -93,7 +93,7 @@ tests/
   test_powerlimit_output.py   Regression test for powerlimit.sh's WSL2 elevated-PowerShell one-liner (invokes the real script; skipped off-WSL2 since the non-WSL path calls sudo nvidia-smi for real)
   test_hangwatch.py           llamacpp/hangwatch.sh "task still in progress" detection
   test_test_results.py        Partial-credit parsing (xunit, node:test, pytest per-test lines and summary counts), test_weights, and C# build-error classification (Unity rules)
-  test_unity_shim_sync.py     Opt-in task guards: UnityShim copies match the canonical one, every gamedev/fastengine task has a *.reference.* solution, every test_weights key names a real test, diag keys match their generator, every fixture generator (Node, Python, Chromium via Playwright, incl. cs_css_alpha_linear's screenshot) regenerates its fixtures byte for byte and none is unguarded; weight keys may name tests in a hidden grader the test command runs
+  test_unity_shim_sync.py     Opt-in task guards: UnityShim copies match the canonical one, every gamedev/fastengine task has a *.reference.* solution, every test_weights key names a real test, diag keys match their generator, every fixture generator (Node, Python, Chromium via Playwright, incl. cs_css_alpha_linear's screenshot) regenerates its fixtures byte for byte and none is unguarded; GL tasks carry the canonical Raylib-cs API excerpt and ApiDump regenerates it; weight keys may name tests in a hidden grader the test command runs
   test_run_sh_pip_bootstrap.py  Static regression guard for run.sh's venv/pip setup (ensurepip fallback present; requirements.txt installed via "$VENV/bin/python3" -m pip, never a bare pip — see the Debian externally-managed-environment finding in CLAUDE.md)
 task_data/
   node_slugify/           package.json, src/slug.js (baseline), tests/slug.test.js
@@ -133,6 +133,8 @@ task_data/
   cs_coord_convert/ cs_coord_bam/ cs_main_thread_dispatch/ cs_protocol_codec/ cs_snapshot_interp/ cs_predict_reconcile/ crossplay_statehash_parity/
                           GameClient.sln; src/GameClient (netstandard2.1, LangVersion 9.0, the editable file + read-only types, *.reference.cs excluded from compile); tests/GameClientTests (net9.0 xunit); crossplay_* also has js/ (the JS spec + make-fixtures.js)  [gamedev, opt-in]
   node_room_authority/ node_seat_reconnect/   src/<module>.js stub + .reference.js, tests/*.test.js (node:test, no npm deps)  [gamedev, opt-in]
+  _shared/RaylibApi/      raylib-cs-8.1.0-api.txt (copied into each fe_gl_* task as docs/raylib-cs-api.txt) + ApiDump/ (reflection generator)
+  fe_gl_*/                fastengine_gl tasks: src/Fastengine (Raylib-cs), tools/SceneRunner (renders under xvfb-run + llvmpipe), tests/test_*.py, docs/raylib-cs-api.txt  [fastengine_gl, opt-in]
   cs_test_movement/       editable test file; test_cmd runs grade.reference.d/ (pytest grader + 12 mutants of Movement.cs; hidden, not exported): the model's tests must pass on the real code, each mutant they fail on scores  [gamedev, opt-in]
   bash_accept_matrix/ bash_timeout_kill/ bash_kill_by_port/   scripts/<job>.sh stub + .reference.sh, tests/test_*.py (pytest drives the script)  [gamedev, opt-in]
   gamedev_diag/ fastengine_diag/   questions/<id>.md, answers/<id>.txt ("?"), tests/answer_key.json (salted sha256), make_diag.reference.py (the key's source)  [opt-in]
