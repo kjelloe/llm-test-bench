@@ -27,3 +27,5 @@ hf-token.txt
 # Local notes, not shared
 next-runs.md
 hw-upgrade-july-2026.md
+/task_data/**/bin/
+/task_data/**/obj/

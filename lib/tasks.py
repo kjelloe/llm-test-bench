@@ -76,13 +76,13 @@ def prepare_workdir(task: Task) -> Path:
     src = TASK_DATA_DIR / task.subdir
     tmp = Path(tempfile.mkdtemp(prefix=f"bench_{task.id}_"))
     # a cache left by a local test run would make tracebacks name task_data/ instead of the workdir
-    shutil.copytree(src, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+    shutil.copytree(src, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache", "bin", "obj"))
     return tmp
 
 
 # Files present in task_data/ that must never reach an export — human-only reference
 # solutions or generated cache junk from a prior local test run.
-_EXPORT_EXCLUDE_GLOBS = ("*.reference.*", ".pytest_cache", "__pycache__", ".git", "node_modules")
+_EXPORT_EXCLUDE_GLOBS = ("*.reference.*", ".pytest_cache", "__pycache__", ".git", "node_modules", "bin", "obj")
 
 
 def export_task(task: Task, dest_dir: Path) -> None:
@@ -1550,6 +1550,63 @@ FE_GL_SHADER_PORT = Task(
     test_weights={"test_scene_matches_fastengine": 2.0},
 )
 
+FE_GL_LAMBERT = Task(
+    id="fe_gl_lambert",
+    difficulty=4,
+    description=(
+        "fastengine spec B03 (GL context: the tests run under Xvfb with Mesa's software OpenGL). src/Fastengine/Lambert.cs "
+        "is a first port of three.js's MeshLambertMaterial to raylib (GLSL 330): the shader and the per-draw upload of the "
+        "scene's lights (src/Fastengine/Lights.cs: ambient, hemisphere and directional lights with the browser game's hex "
+        "colours and intensities). Next to the browser, surfaces lit by it come out wrong. Fix Lambert.cs so each surface "
+        "shows exactly what three r162 draws for a MeshLambertMaterial with these lights (physical light units, the default "
+        "since r155; NoToneMapping; sRGB output). Keep the uNormal uniform: the caller sets the world-space normal of each "
+        "flat quad. tools/SceneRunner draws 20 quads; tests/test_lambert.py checks each within one level. Raylib-cs 8.1.0 "
+        "(its API: docs/raylib-cs-api.txt), .NET 10."
+    ),
+    subdir="fe_gl_lambert",
+    editable_files=["src/Fastengine/Lambert.cs"],
+    context_files=["docs/raylib-cs-api.txt", "src/Fastengine/Lights.cs", "tools/SceneRunner/Program.cs",
+                   "tests/test_lambert.py", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+)
+
+FE_GL_SHADOW = Task(
+    id="fe_gl_shadow",
+    difficulty=4,
+    description=(
+        "fastengine spec B10 (GL context: the tests run under Xvfb with Mesa's software OpenGL). The browser games light "
+        "their scenes with one shadow-casting DirectionalLight and renderer.shadowMap.type = PCFShadowMap. "
+        "src/Fastengine/Shadows.cs is a first port of three r162's WebGLShadowMap for that light: the light's "
+        "view-projection (light.shadow.camera, an OrthographicCamera), the face culling of the depth pass, and the GLSL "
+        "shadowMask() the scene shader multiplies the light's direct term by. Its shadows land in the wrong places, come "
+        "out hard-edged and appear where three draws none. Fix Shadows.cs so the shadows match what three r162 draws for "
+        "these lights: placement, which faces cast, the PCFShadowMap filter (getShadow's SHADOWMAP_TYPE_PCF branch, spread "
+        "by shadow.radius), shadow.bias, and nothing shadowed outside the shadow camera. src/Fastengine/ShadowRenderer.cs "
+        "(not editable) draws the depth pass and the scene with it; tools/SceneRunner renders two scenes; "
+        "tests/test_shadow.py compares regions and frames with fastengine's own shadows within 3 levels. Raylib-cs 8.1.0 "
+        "(its API: docs/raylib-cs-api.txt), .NET 10."
+    ),
+    subdir="fe_gl_shadow",
+    editable_files=["src/Fastengine/Shadows.cs"],
+    context_files=["docs/raylib-cs-api.txt", "src/Fastengine/ShadowLight.cs", "src/Fastengine/ShadowRenderer.cs",
+                   "tools/SceneRunner/Program.cs", "tests/test_shadow.py", "src/Fastengine/Fastengine.csproj"],
+    test_cmd=["env", "LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a", "-s", "-screen 0 640x480x24",
+              "python3", "-m", "pytest", "tests", "-v", "--tb=short"],
+    test_timeout=600,
+    setup_cmd=["dotnet", "restore", "tools/SceneRunner"],
+    setup_timeout=180,
+    num_ctx=24576,
+    min_predict=12000,
+    requires=("xvfb-run", "dotnet"),
+)
+
 CS_FAKE_NULL = Task(
     id="cs_fake_null",
     difficulty=5,
@@ -2572,6 +2629,8 @@ BUILTIN_TASKS: list[Task] = [
     FE_GL_CANVAS_FILL,
     FE_GL_PREMULTIPLIED,
     FE_GL_MIRROR_TARGET,
+    FE_GL_LAMBERT,
+    FE_GL_SHADOW,
     FE_GL_SHADER_PORT,
     CS_MESH_WINDING,
     CS_LIGHT_PORT,
@@ -2674,7 +2733,7 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
-    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target", "fe_gl_shader_port"],
+    "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target", "fe_gl_shader_port", "fe_gl_lambert", "fe_gl_shadow"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
