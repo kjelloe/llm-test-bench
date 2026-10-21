@@ -351,6 +351,7 @@ hw-upgrade-july-2026.md    Hardware state/crash-incident log + VRAM-tier upgrade
                     3-GPU rig; git-ignored on purpose (local). October 2026 addendum corrects the
                     "node_paratrooper never passes" premise and adds the vLLM-concurrency axis.
 hwmonitor/
+  crash-evidence.sh After an unexplained reboot: the Windows record of the last N crashes (bugcheck, freeze gap, WHEA, dumps, RAM speed)
   hwmonitor.py      Live hardware watchdog: GPU temp/power/VRAM, CPU temp, RAM; WARN/CRIT on threshold breach; aborts bench.py on CRIT (SIGINT → SIGTERM)
   SPEC.md           hwmonitor specification and threshold reference
 lib/
@@ -630,6 +631,9 @@ trusting as-is.
   requests (TOOL_ERROR "model 'gpt-oss:120b' not found" in 4 s); (4) scratchpad queue scripts under `/tmp` are gone.
   Windows Update auto-restart is blocked by policy since 2026-10-14 (`NoAutoRebootWithLoggedOnUsers=1`, `AUOptions=3`
   under `HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU`; works only while signed in).
+- **Unexplained hard crashes (4 since 2026-08-29, the last under CPU-only load).** After one, run
+  `hwmonitor/crash-evidence.sh` and add a row to the crash log in `hw-upgrade-july-2026.md` (hypotheses there; leading: the
+  2×48 GB DDR5 at EXPO 6400), and `git fsck` any repo that was being written (the 2026-10-21 crash emptied 35 git objects).
 - **New box: run `./preflight.sh` before the first benchmark.** The RTX 5060 Ti box had only .NET
   SDK 8, so `dotnet_sas` failed as TOOL_ERROR in 0.9s: a false negative that looks like a model
   failure in the results table. Fixed by installing `dotnet-sdk-9.0`.
