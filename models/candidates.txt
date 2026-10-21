@@ -1838,7 +1838,7 @@ lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k
 # Needs llama.cpp past the pin: a6b91d8c5e (read MoE gating params from GGUF, 2026-10-15) and 5e03a1ff45 (precision
 # handling for MELLUM, 2026-10-16); MTP 9a16f1dbe4 (not used: no spec flags in benchmarks). Run with LLAMA_SERVER_BIN on a
 # rebuilt ~/GIT/llama.cpp-master worktree, not the pin. Mellum2 12B-thinking was 20/33 (2026-06-08).
-# mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF
+mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF
 
 # ── Scout 2026-10-21, user: "test Gemma 4 12 QAT, unsloth's Ornith-1.0-9B and the Tiel-Coder Genesis" ──────────────
 # Gemma 4 12B dense QAT Q4_0 (6.5 GB; arch gemma4, 256k ctx). Same params as gemma4:31b-qat.
