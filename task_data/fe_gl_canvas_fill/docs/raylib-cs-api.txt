@@ -192,7 +192,8 @@ static class Rlgl (every public method; of its constants, the blend and culling 
   void* GetProcAddress(sbyte* procName)
   void* ReadTexturePixels(uint id, int width, int height, PixelFormat format)
 
-static class Raylib (window set-up, modes, shapes and texture draws, textures, render textures, shaders, blending, image readback)
+static class Raylib (window set-up, modes, shapes and texture draws, textures, render textures, shaders, blending, image readback, meshes, materials, 3D mode)
+  BoundingBox GetMeshBoundingBox(Mesh mesh)
   CBool ExportImage(Image image, string fileName)
   CBool ExportImageAsCode(Image image, string fileName)
   CBool IsRenderTextureValid(RenderTexture2D target)
@@ -212,6 +213,18 @@ static class Raylib (window set-up, modes, shapes and texture draws, textures, r
   Image LoadImageFromScreen()
   Image LoadImageFromTexture(Texture2D texture)
   Image LoadImageRaw(string fileName, int width, int height, PixelFormat format, int headerSize)
+  Material LoadMaterialDefault()
+  Mesh GenMeshCone(float radius, float height, int slices)
+  Mesh GenMeshCube(float width, float height, float length)
+  Mesh GenMeshCubicmap(Image cubicmap, Vector3 cubeSize)
+  Mesh GenMeshCylinder(float radius, float height, int slices)
+  Mesh GenMeshHeightmap(Image heightmap, Vector3 size)
+  Mesh GenMeshHemiSphere(float radius, int rings, int slices)
+  Mesh GenMeshKnot(float radius, float size, int radSeg, int sides)
+  Mesh GenMeshPlane(float width, float length, int resX, int resZ)
+  Mesh GenMeshPoly(int sides, float radius)
+  Mesh GenMeshSphere(float radius, int rings, int slices)
+  Mesh GenMeshTorus(float radius, float size, int radSeg, int sides)
   RenderTexture2D LoadRenderTexture(int width, int height)
   Shader LoadShader(string vsFileName, string fsFileName)
   Shader LoadShaderFromMemory(string vsCode, string fsCode)
@@ -227,6 +240,7 @@ static class Raylib (window set-up, modes, shapes and texture draws, textures, r
   int GetShaderLocationAttrib(Shader shader, string attribName)
   void BeginBlendMode(BlendMode mode)
   void BeginDrawing()
+  void BeginMode3D(Camera3D camera)
   void BeginScissorMode(int x, int y, int width, int height)
   void BeginShaderMode(Shader shader)
   void BeginTextureMode(RenderTexture2D target)
@@ -239,6 +253,8 @@ static class Raylib (window set-up, modes, shapes and texture draws, textures, r
   void DrawLineEx(Vector2 startPos, Vector2 endPos, float thick, Color color)
   void DrawLineStrip(Vector2[] points, int pointCount, Color color)
   void DrawLineV(Vector2 startPos, Vector2 endPos, Color color)
+  void DrawMesh(Mesh mesh, Material material, Matrix4x4 transform)
+  void DrawMeshInstanced(Mesh mesh, Material material, Matrix4x4[] transforms, int instances)
   void DrawPixel(int posX, int posY, Color color)
   void DrawPixelV(Vector2 position, Color color)
   void DrawRectangle(int posX, int posY, int width, int height, Color color)
@@ -267,9 +283,11 @@ static class Raylib (window set-up, modes, shapes and texture draws, textures, r
   void DrawTriangleStrip3D(Vector3[] points, int pointCount, Color color)
   void EndBlendMode()
   void EndDrawing()
+  void EndMode3D()
   void EndScissorMode()
   void EndShaderMode()
   void EndTextureMode()
+  void GenMeshTangents(ref Mesh mesh)
   void GenTextureMipmaps(ref Texture2D texture)
   void ImageAlphaPremultiply(ref Image image)
   void ImageColorBrightness(ref Image image, int brightness)
@@ -285,6 +303,8 @@ static class Raylib (window set-up, modes, shapes and texture draws, textures, r
   void ImageResizeNN(ref Image image, int newWidth, int newHeight)
   void InitWindow(int width, int height, string title)
   void SetConfigFlags(ConfigFlags flags)
+  void SetMaterialTexture(ref Material material, MaterialMapIndex mapType, Texture2D texture)
+  void SetMaterialTexture(ref Model model, int materialIndex, MaterialMapIndex mapIndex, ref Texture2D texture)
   void SetShaderValue(Shader shader, int locIndex, Span<T> values, ShaderUniformDataType uniformType)
   void SetShaderValue(Shader shader, int locIndex, T value, ShaderUniformDataType uniformType)
   void SetShaderValue(Shader shader, int locIndex, T[] values, ShaderUniformDataType uniformType)
@@ -298,13 +318,17 @@ static class Raylib (window set-up, modes, shapes and texture draws, textures, r
   void UnloadImage(Image image)
   void UnloadImageColors(Color* colors)
   void UnloadImagePalette(Color* colors)
+  void UnloadMaterial(Material material)
+  void UnloadMesh(Mesh mesh)
   void UnloadRenderTexture(RenderTexture2D target)
   void UnloadShader(Shader shader)
   void UnloadTexture(Texture2D texture)
+  void UpdateMeshBuffer(Mesh mesh, int index, ReadOnlySpan<T> data, int offset)
   void UpdateTexture(Texture2D texture, ReadOnlySpan<T> pixels)
   void UpdateTexture(Texture2D texture, T[] pixels)
   void UpdateTextureRec(Texture2D texture, Rectangle rec, ReadOnlySpan<T> pixels)
   void UpdateTextureRec(Texture2D texture, Rectangle rec, T[] pixels)
+  void UploadMesh(ref Mesh mesh, CBool dynamic)
 
 enum BlendMode : int
   Alpha = 0
@@ -433,6 +457,25 @@ enum ShaderLocationIndex : int
   MatrixBoneTransforms = 28
   VertexInstanceTransform = 29
 
+enum MaterialMapIndex : int
+  Albedo = 0
+  Diffuse = 0
+  Metalness = 1
+  Specular = 1
+  Normal = 2
+  Roughness = 3
+  Occlusion = 4
+  Emission = 5
+  Height = 6
+  Cubemap = 7
+  Irradiance = 8
+  Prefilter = 9
+  Brdf = 10
+
+enum CameraProjection : int
+  Perspective = 0
+  Orthographic = 1
+
 struct Color
   byte R
   byte G
@@ -445,6 +488,7 @@ struct Color
   Color(float r, float g, float b, float a)
   Color(float r, float g, float b)
   static readonly Color: LightGray, Gray, DarkGray, Yellow, Gold, Orange, Pink, Red, Maroon, Green, Lime, DarkGreen, SkyBlue, Blue, DarkBlue, Purple, Violet, DarkPurple, Beige, Brown, DarkBrown, White, Black, Blank, Magenta, RayWhite
+  void GetHSV(ref float h, ref float s, ref float v)
 
 struct Rectangle
   float X
@@ -458,6 +502,9 @@ struct Rectangle
   Rectangle(Vector2 position, float width, float height)
   Rectangle(float x, float y, Vector2 size)
   Rectangle(Vector2 position, Vector2 size)
+  void GetIntegerValues(ref int x, ref int y, ref int width, ref int height)
+  void Grow(float growth)
+  void Shrink(float shrink)
 
 struct Image
   void* Data
@@ -483,4 +530,56 @@ struct RenderTexture2D
 struct Shader
   uint Id
   int* Locs
+
+struct Mesh
+  int VertexCount
+  int TriangleCount
+  float* Vertices
+  float* TexCoords
+  float* TexCoords2
+  float* Normals
+  float* Tangents
+  byte* Colors
+  ushort* Indices
+  int BoneCount
+  byte* BoneIndices
+  float* BoneWeights
+  float* AnimVertices
+  float* AnimNormals
+  uint VaoId
+  uint* VboId
+  Mesh(int vertexCount, int triangleCount)
+  static readonly Mesh: VboIdIndexVertices, VboIdIndexTexCoords, VboIdIndexNormals, VboIdIndexColors, VboIdIndexTangents, VboIdIndexTexCoords2, VboIdIndexIndices
+  void AllocColors()
+  void AllocIndices()
+  void AllocNormals()
+  void AllocTangents()
+  void AllocTexCoords()
+  void AllocTexCoords2()
+  void AllocVertices()
+  Span<T> ColorsAs()
+  Span<T> IndicesAs()
+  Span<T> NormalsAs()
+  Span<T> TangentsAs()
+  Span<T> TexCoords2As()
+  Span<T> TexCoordsAs()
+  Span<T> VerticesAs()
+
+struct Material
+  Shader Shader
+  MaterialMap* Maps
+  fixed float Param[4]
+
+struct MaterialMap
+  Texture2D Texture
+  Color Color
+  float Value
+
+struct Camera3D
+  Vector3 Position
+  Vector3 Target
+  Vector3 Up
+  float FovY
+  CameraProjection Projection
+  Camera3D(Vector3 position, Vector3 target, Vector3 up, float fovY, CameraProjection projection)
 
