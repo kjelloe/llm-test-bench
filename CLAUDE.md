@@ -2360,6 +2360,16 @@ covered by `fastengine`), C01 (pixel comparison against Chromium), the Windows i
   buffers (gemma4:31b-qat's scene runner aborts with heap corruption); gpt-oss:120b gets everything but the 16-bit index
   limit (0.89). **Lambert:** varied colour-handling errors; qwen3.8:27b closest (0.70, hemisphere wrong).
 
+#### Other engines under evaluation (not benchmarked)
+
+- **bj-engine** (`~/GIT/bj-engine`, separate repo): native Linux/Windows clients for the same three.js + Node `ws` games,
+  in **Rust on Bevy 0.19**, built for the high graphics tier (shadows, bloom, lighting) on RTX cards; Boombrawl M0–M5 done
+  as of 2026-10-21. The user is evaluating it next to fastengine for lighting/shadow builds. **No Rust tasks yet — the user
+  decides later whether to add them** (2026-10-22). Their observation: work in that engine seems to need frontier models
+  (Claude Opus, Fable), which fits the GL results here (0/10 on every hard `fastengine_gl` task). Read-only from this repo.
+- **Decisions 2026-10-22 (user):** the `fastengine_gl` tasks stay as they are (no hints for the shared misses), and the GL
+  results are not reported to fastengine's ally (model errors, nothing for fastengine to fix).
+
 #### What NOT to do
 
 - Don't implement multi-turn autonomous "agent loops" in v1.
