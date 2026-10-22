@@ -1861,7 +1861,9 @@ tiel-coder:35b-genesis  Tiel-Coder-35B-A3B-Genesis-APEX-Compact.gguf  ngl=999,no
 # swift-1.5:27b — UkisAI's Swift 1.5 on the DENSE Qwen3.8-27B (released 2026-09-21; we only tested the flash-next
 # variant). "58.5% fewer thinking tokens, +0.35% vs base, 1.95x faster", RL/OPD on agentic/coding. Base model gated, the
 # GGUFs are not; UkisAI's own Q4_K_M 17.4 GB (bartowski has the same tiers). Params as qwen3.8:27b (f16 KV: hashmap canary).
-# NOT RUN YET. Plan: spot → full default set → gamedev 32 + fastengine 17 against qwen3.8:27b (38/38, gamedev 0.61).
+# 2026-10-23 spot 9/10 at 44.8 tok/s (t27): fails only node_paratrooper (39/40, test 33); base qwen3.8:27b 10/10 in the same
+# mode with almost identical token counts. Reasoning is off on llama-server without --think, so Swift's selling point is
+# untested; a fair comparison needs --think on both. Not promoted.
 swift-1.5:27b  Swift-1.5-Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:ukisai/Swift-1.5-Qwen3.8-27B-GGUF
 # ornith:1.5-35b-apex — mudler's APEX mixed-precision quant of Ornith-1.5-35B-A3B (I-Quality 22.8 GB, imatrix; 309k
 # downloads). Same model as ornith:1.5-35b (jashepp MXFP4, 14th L6-stepped completer, ~155 tok/s). Tight on 24 GB with f16

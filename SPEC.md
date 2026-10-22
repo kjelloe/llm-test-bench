@@ -61,7 +61,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `--num-predict` (default: 400; compare.sh sets 8000; individual tasks may raise this floor via `Task.min_predict`)
   - `--model-timeout` (default: 300, seconds)
   - `--startup-timeout` (default: 600, seconds; time to wait for llama-server to become ready)
-  - `--think` (enable thinking/reasoning mode for Ollama; for llama-server, thinking is controlled per-model by the `thinking` keyword in `models/*.txt`, not this flag)
+  - `--think` (enable thinking/reasoning mode). **On llama-server it is this flag that turns reasoning on**: without it every request sends `chat_template_kwargs: {enable_thinking: false}`, so Qwen3-family models answer without reasoning even when their `models/*.txt` line says `thinking`; the keyword only picks the system prompt ("After your reasoning, …" when `--think` is also given). Models that reason regardless of that kwarg (gpt-oss, deepseek-r1) still reason. Corrected 2026-10-23; every Qwen3.x llama-server result here so far ran with reasoning off.
   - `--warmup` (send a tiny prompt to each model before the benchmark loop to force model load; no-op for llama-server — model is loaded during server startup)
   - `--single-gpu INDEX` (run on a single CUDA device; strips `tensor_split` from model params and sets `CUDA_VISIBLE_DEVICES=INDEX` for the llama-server subprocess; -1 = use all GPUs (default); normally set via `gpu-mode.sh` / `.gpu-mode` rather than directly)
   - `--out` (default: `output/results.json`)
