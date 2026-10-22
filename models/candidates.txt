@@ -1856,3 +1856,14 @@ ornith:1.0-9b  Ornith-1.0-9B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache
 # RESULT 2026-10-21 spot 7/10 at 151 tok/s — REJECTED: gains node_slugify over tiel-coder:35b but loses csv_nordic and
 # python_hashmap; node_paratrooper NO_BLOCKS.
 tiel-coder:35b-genesis  Tiel-Coder-35B-A3B-Genesis-APEX-Compact.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:LuffyTheFox/Tiel-Coder-35B-A3B-Genesis-Hermes-GGUF
+
+# ── Scout 2026-10-23 ──
+# swift-1.5:27b — UkisAI's Swift 1.5 on the DENSE Qwen3.8-27B (released 2026-09-21; we only tested the flash-next
+# variant). "58.5% fewer thinking tokens, +0.35% vs base, 1.95x faster", RL/OPD on agentic/coding. Base model gated, the
+# GGUFs are not; UkisAI's own Q4_K_M 17.4 GB (bartowski has the same tiers). Params as qwen3.8:27b (f16 KV: hashmap canary).
+# NOT RUN YET. Plan: spot → full default set → gamedev 32 + fastengine 17 against qwen3.8:27b (38/38, gamedev 0.61).
+swift-1.5:27b  Swift-1.5-Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:ukisai/Swift-1.5-Qwen3.8-27B-GGUF
+# ornith:1.5-35b-apex — mudler's APEX mixed-precision quant of Ornith-1.5-35B-A3B (I-Quality 22.8 GB, imatrix; 309k
+# downloads). Same model as ornith:1.5-35b (jashepp MXFP4, 14th L6-stepped completer, ~155 tok/s). Tight on 24 GB with f16
+# KV, hence max_ctx 32768. NOT RUN YET; lower priority (a different quant of a model already measured).
+ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mudler/Ornith-1.5-35B-A3B-APEX-GGUF
