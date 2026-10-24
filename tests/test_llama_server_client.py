@@ -241,3 +241,29 @@ def test_order_independent_by_default(monkeypatch):
     monkeypatch.delenv("BENCH_CACHE_PROMPT")
     monkeypatch.setenv("BENCH_ORDER_INDEPENDENT", "0")
     assert order_args({}) == [] and cache_prompt() is True   # the old server defaults
+
+
+def test_chat_sends_enable_thinking_from_think(monkeypatch):
+    """Reasoning is off unless think=True: the model file's `thinking` keyword does not reach the request (2026-10-23)."""
+    import io
+    import json as _json
+    import urllib.request
+    from lib import llama_server_client as lsc
+    sent = []
+
+    class _Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        sent.append(_json.loads(req.data))
+        return _Resp(_json.dumps({"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                                  "usage": {"prompt_tokens": 1, "completion_tokens": 1}}).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
+    lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}], think=True)
+    assert [p["chat_template_kwargs"]["enable_thinking"] for p in sent] == [False, True]

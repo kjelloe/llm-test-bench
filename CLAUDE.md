@@ -494,6 +494,13 @@ traffic being served through the tunnel. Coordinate before launching a benchmark
 via `llmctl stop backend` there would interrupt a live remote pipeline, so don't do that
 unilaterally — check with whoever/whatever depends on it first).
 
+**On this rig since 2026-10-24 the lanes run locally** (gateway + llama router, tunnel paused, autostart off, so nothing
+comes up after a reboot unless started): `local-coder` = tiel-coder:35b on GPU0 (4090, ~21.6 GB) and `local-strong` =
+gemma4:31b-qat on GPU1 (3090, ~22.8 GB, 49,152 ctx; chosen over qwen3.8:27b by an A/B through real Claude Code, see that
+repo's SPEC). Before a benchmark here: `~/GIT/llm-service-provider/bin/llmctl stop`, afterwards `bin/llmctl start`; a
+single-GPU run can instead use the free GPU2 (`--single-gpu 2`). Coding agents on this PC may use the lanes as helpers per
+`~/GIT/llm-service-provider/local-helper-guide.md`.
+
 **On the RTX 5060 Ti box this is no longer hypothetical**: its units are enabled, so a lane is
 serving on boot and holds most of the 16 GB card. Since 2026-09-16 that lane may be **llama-server
 running `qwen3.8-flash-next`** (this repo's own 37/38 model, served through

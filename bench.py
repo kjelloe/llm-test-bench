@@ -308,7 +308,8 @@ def main() -> None:
     parser.add_argument("--num-thread", type=int, default=10,
                         help="CPU threads for inference; 0 = let backend decide (default: 10)")
     parser.add_argument("--think", action="store_true", default=False,
-                        help="Enable thinking/reasoning mode (ollama only; default: off)")
+                        help="Enable thinking/reasoning mode (default: off). On llama-server and vLLM, without it every "
+                             "request sends enable_thinking=false, so Qwen3-family models do not reason")
     parser.add_argument("--warmup", action="store_true", default=False,
                         help="Warm up each model before its first task (ollama only; default: off)")
     parser.add_argument("--single-gpu", type=int, default=-1, metavar="INDEX",
