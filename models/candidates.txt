@@ -1876,8 +1876,10 @@ ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cac
 # ornith:1.5-122b — ornith-ai's Ornith-1.5-122B (MoE, 2026-10-20, 110k downloads; Ornith-1.0 was built on Qwen3.5 and
 # Gemma4, so likely the Qwen3.5-122B-A10B base our qwen3.5-122b:a10b scores 19/19 on). Card: TerminalBench 2.1 81.2
 # (Qwen3.8-Flash-Next 83.4, Qwen3.8-27B 71.9). Q4_K_M is 75.8 GB > 72 GB VRAM, so --fit with some experts on CPU, as
-# flash-next (no ngl/tensor_split with fit). The ornith family's 35B is our 3rd node_paratrooper passer. NOT RUN YET;
-# needs all three GPUs (llm-service-provider lanes stopped). Downloaded 2026-10-25 with HF_HUB_DISABLE_XET=0 (too large
+# flash-next (no ngl/tensor_split with fit). The ornith family's 35B is our 3rd node_paratrooper passer. SPOT 2026-10-25
+# (t30, pin, order-independent, clocks locked): 9/10 at ~35 tok/s (33-47), 7.7 min; only node_paratrooper fails (38/40);
+# python_hashmap, csv_nordic (98 s), node_csv_parser, node_para_core PASS. Same score as its base qwen3.5-122b:a10b (9/10
+# at 40.8 tok/s, R3) and slightly slower: no gain worth a full run. Needs all three GPUs (lanes stopped). Downloaded 2026-10-25 with HF_HUB_DISABLE_XET=0 (too large
 # for plain HTTP), SHA256 729fe18c…f40c matches HF. GGUF: arch qwen35moe, name "Qwen3.5-122B-A10B-ck2100-v1014-MTP1740"
 # (the qwen3.5-122b:a10b base, with an MTP head; harmless without spec flags); template has tools and enable_thinking.
 ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=65536  hf:ornith-ai/Ornith-1.5-122B-GGUF
