@@ -647,7 +647,8 @@ trusting as-is.
 - **`next-runs.md` and `hw-upgrade-july-2026.md` are local and git-ignored (user's decision, 2026-10-14).** References
   to them (this file, models/*.txt, ARCHITECTURE.md, SPEC.md, ...) only resolve on this rig; a fresh clone lacks them.
 - **After every reboot (a forced Windows Update reboot on 2026-10-14 cost a queue):** (1) reapply the power limits
-  (`./powerlimit.sh --per-gpu` in an admin Windows shell; `run.sh` refuses 3-GPU runs until then); (2) `./gpuclock.sh lock`
+  (`./powerlimit.sh --per-gpu` in an admin Windows shell; `run.sh` refuses 3-GPU runs until then, and so does
+  llm-service-provider's `llmctl start` for its 3-GPU lane since 2026-10-25, `POWER_GUARD=1` on this rig only); (2) `./gpuclock.sh lock`
   for multi-GPU runs; (3) set `BENCH_BACKEND=llama-server` — Ollama now starts with Windows and otherwise answers the
   requests (TOOL_ERROR "model 'gpt-oss:120b' not found" in 4 s); (4) scratchpad queue scripts under `/tmp` are gone.
   Windows Update auto-restart is blocked by policy since 2026-10-14 (`NoAutoRebootWithLoggedOnUsers=1`, `AUOptions=3`
