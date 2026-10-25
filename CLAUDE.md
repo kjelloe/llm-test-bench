@@ -495,6 +495,10 @@ traffic being served through the tunnel. Coordinate before launching a benchmark
 via `llmctl stop backend` there would interrupt a live remote pipeline, so don't do that
 unilaterally — check with whoever/whatever depends on it first).
 
+**Since 2026-10-25 evening the rig's lanes are ONE gpt-oss:120b on all three GPUs** (`local-strong`, 128k; `local-coder`
+is an alias of it), so while it is up there is no free GPU here: `~/GIT/llm-service-provider/bin/llmctl stop` before any
+benchmark, `bin/llmctl start` after (it needs the core clock lock, `./gpuclock.sh lock`, after a reboot). The paragraph
+below describes the two-lane setup it replaced (rollback kept in that repo's `presets/models.ini`).
 **On this rig since 2026-10-24 the lanes run locally** (gateway + llama router, tunnel paused, autostart off, so nothing
 comes up after a reboot unless started): `local-coder` = tiel-coder:35b on GPU0 (4090, ~21.6 GB) and `local-strong` =
 gemma4:31b-qat on GPU1 (3090, ~23.0 GB, 98,304 ctx with q8_0 KV since 2026-10-25; chosen over qwen3.8:27b by an A/B
