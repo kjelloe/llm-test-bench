@@ -415,6 +415,11 @@ def main() -> None:
          f"cpu≥{thresholds.warn_cpu_temp:.0f}°C/CRIT{thresholds.crit_cpu_temp:.0f}°C  "
          f"power≥{thresholds.warn_power_pct:.0f}%  ram≥{thresholds.warn_ram_pct:.0f}%")
 
+    # Under systemd's PATH (llm-service-provider's lane) WSL's nvidia-smi was missing and every line logged only RAM;
+    # say so once, loudly, instead of watching nothing (2026-10-26).
+    if not collect_gpu(hotspot):
+        emit(_warn_fmt("WARN  no GPU readings (nvidia-smi not on PATH or failing): GPU temperatures and power are NOT watched"))
+
     if bench_pid:
         emit(f"  watching bench.py PID {bench_pid}")
     else:

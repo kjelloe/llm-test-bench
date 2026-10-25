@@ -7,6 +7,8 @@ benchmark process when a critical thermal or resource threshold is breached.
 Also used by `~/GIT/llm-service-provider/bin/serve.sh` on this rig (2026-10-26): it watches the llama-server router
 with `--pid`; a CRIT stops the local lane, which then stays down (exit 75). "bench.py" in its messages means whichever
 PID it watches.
+At start it emits one WARN when nvidia-smi gives no GPU readings (not on PATH, as under systemd on WSL, or failing):
+GPU thresholds are then not watched. CPU temperature reads N/A under WSL, so the CPU thresholds never fire there.
 
 ## Quick start
 

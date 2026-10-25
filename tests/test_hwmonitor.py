@@ -207,3 +207,13 @@ def test_format_line_shows_pstate_and_core_clock_when_known():
     g.pstate, g.sm_mhz = "P8", 210
     line = format_line(_sample(gpus=[g]))
     assert line.split("GPU0[")[1].split("CPU")[0].rstrip().endswith("80% P8 210MHz")
+
+
+def test_warns_when_no_gpu_can_be_read(tmp_path):
+    """No nvidia-smi on PATH: one loud WARN at start, not a log of RAM-only lines that looks like monitoring."""
+    import subprocess as sp, sys as _sys
+    script = Path(__file__).resolve().parent.parent / "hwmonitor" / "hwmonitor.py"
+    dead = sp.Popen(["true"]); dead.wait()
+    r = sp.run([_sys.executable, str(script), "--pid", str(dead.pid), "--quiet", "--log", str(tmp_path / "hw.log")],
+               env={"PATH": str(tmp_path)}, capture_output=True, text=True, timeout=30)
+    assert "no GPU readings" in r.stdout + r.stderr
