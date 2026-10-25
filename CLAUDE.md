@@ -329,6 +329,9 @@ specific tier's number is cross-referenced elsewhere in this file — those are 
 bench.py            CLI runner
 install.sh          Interactive dependency installer
 run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; bootstraps a missing venv pip via ensurepip before installing requirements.txt (Debian/Ubuntu boxes without python3-pip otherwise hit a confusing externally-managed-environment error, see the Debian pip finding below; added 2026-09-24, test_run_sh_pip_bootstrap.py); auto-starts hwmonitor in background (--no-hwmonitor to skip); logs to logs/run-NN.log (run-latest.log symlink); BENCH_NO_LOG=1 prevents double-logging from compare.sh; in multi-GPU mode with 3+ GPUs, aborts before launching if power limits look unsafe for MAX_PSU_WATT (default 1200, override to match your PSU) — SKIP_POWER_CHECK=1 bypasses (added 2026-08-29 after a hard-crash incident, see hw-upgrade-july-2026.md)
+lanes-window.sh     Run a GPU command in a quiet window of llm-service-provider's lane (it holds every GPU): waits for
+                    `llmctl idle 30` (no helper request for 30 min), stops the backend, runs, starts it again on any exit
+                    (2026-10-26, tests/test_lanes_window.py)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 gpuclock.sh         GPU clock lock for multi-GPU runs: status | lock [--memory] | unlock [--memory] [--print]; under WSL an
                     elevated PowerShell (UAC) or the printed admin command; run.sh --lock-clocks / BENCH_LOCK_CLOCKS=auto|prompt|off
@@ -410,6 +413,7 @@ tests/
                               edit" bullets, the fenced line under "## Check your work", **Setup:**)
   test_hwmonitor.py           hwmonitor threshold state-machine unit tests; exits when its --pid is gone
   test_hangwatch.py           llamacpp/hangwatch.sh "task still in progress" detection
+  test_lanes_window.py        lanes-window.sh: waits for idle, stops, runs, restarts even on failure, leaves a stopped backend alone
   test_stall_watch.py         bench's stall watchdog (all GPUs idle with a request open → stop, record stalled; statistics drop it)
   test_reporting.py           lib/reporting skill-level scoring unit tests
   test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
@@ -496,8 +500,8 @@ via `llmctl stop backend` there would interrupt a live remote pipeline, so don't
 unilaterally — check with whoever/whatever depends on it first).
 
 **Since 2026-10-25 evening the rig's lanes are ONE gpt-oss:120b on all three GPUs** (`local-strong`, 128k; `local-coder`
-is an alias of it), so while it is up there is no free GPU here: `~/GIT/llm-service-provider/bin/llmctl stop` before any
-benchmark, `bin/llmctl start` after (it needs the core clock lock, `./gpuclock.sh lock`, after a reboot). The paragraph
+is an alias of it), so while it is up there is no free GPU here: wrap a benchmark as `./lanes-window.sh -- ./run.sh ...`
+(waits for 30 minutes without helper requests, stops the lane, restarts it afterwards), or `bin/llmctl stop`/`start` by hand (it needs the core clock lock, `./gpuclock.sh lock`, after a reboot). The paragraph
 below describes the two-lane setup it replaced (rollback kept in that repo's `presets/models.ini`).
 **On this rig since 2026-10-24 the lanes run locally** (gateway + llama router, tunnel paused, autostart off, so nothing
 comes up after a reboot unless started): `local-coder` = tiel-coder:35b on GPU0 (4090, ~21.6 GB) and `local-strong` =

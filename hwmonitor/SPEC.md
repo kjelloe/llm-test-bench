@@ -4,6 +4,10 @@ Standalone script that runs alongside `bench.py` in a second terminal. Polls GPU
 at a configurable interval, emits timestamped lines to stdout and a log file, and aborts the
 benchmark process when a critical thermal or resource threshold is breached.
 
+Also used by `~/GIT/llm-service-provider/bin/serve.sh` on this rig (2026-10-26): it watches the llama-server router
+with `--pid`; a CRIT stops the local lane, which then stays down (exit 75). "bench.py" in its messages means whichever
+PID it watches.
+
 ## Quick start
 
 `run.sh` starts hwmonitor automatically alongside every benchmark run — no separate terminal needed:
