@@ -496,8 +496,8 @@ unilaterally — check with whoever/whatever depends on it first).
 
 **On this rig since 2026-10-24 the lanes run locally** (gateway + llama router, tunnel paused, autostart off, so nothing
 comes up after a reboot unless started): `local-coder` = tiel-coder:35b on GPU0 (4090, ~21.6 GB) and `local-strong` =
-gemma4:31b-qat on GPU1 (3090, ~22.8 GB, 49,152 ctx; chosen over qwen3.8:27b by an A/B through real Claude Code, see that
-repo's SPEC). Before a benchmark here: `~/GIT/llm-service-provider/bin/llmctl stop`, afterwards `bin/llmctl start`; a
+gemma4:31b-qat on GPU1 (3090, ~23.0 GB, 98,304 ctx with q8_0 KV since 2026-10-25; chosen over qwen3.8:27b by an A/B
+through real Claude Code, see that repo's SPEC). Claude Code helpers need `CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192` (guide). Before a benchmark here: `~/GIT/llm-service-provider/bin/llmctl stop`, afterwards `bin/llmctl start`; a
 single-GPU run can instead use the free GPU2 (`--single-gpu 2`). Coding agents on this PC may use the lanes as helpers per
 `~/GIT/llm-service-provider/local-helper-guide.md`.
 
