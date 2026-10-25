@@ -1871,3 +1871,11 @@ swift-1.5:27b  Swift-1.5-Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f
 # downloads). Same model as ornith:1.5-35b (jashepp MXFP4, 14th L6-stepped completer, ~155 tok/s). Tight on 24 GB with f16
 # KV, hence max_ctx 32768. NOT RUN YET; lower priority (a different quant of a model already measured).
 ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mudler/Ornith-1.5-35B-A3B-APEX-GGUF
+
+# ── Scout 2026-10-25 ──
+# ornith:1.5-122b — ornith-ai's Ornith-1.5-122B (MoE, 2026-10-20, 110k downloads; Ornith-1.0 was built on Qwen3.5 and
+# Gemma4, so likely the Qwen3.5-122B-A10B base our qwen3.5-122b:a10b scores 19/19 on). Card: TerminalBench 2.1 81.2
+# (Qwen3.8-Flash-Next 83.4, Qwen3.8-27B 71.9). Q4_K_M is 75.8 GB > 72 GB VRAM, so --fit with some experts on CPU, as
+# flash-next (no ngl/tensor_split with fit). The ornith family's 35B is our 3rd node_paratrooper passer. NOT RUN YET;
+# check the GGUF's architecture key after download; needs all three GPUs (llm-service-provider lanes stopped).
+ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=65536  hf:ornith-ai/Ornith-1.5-122B-GGUF
