@@ -1883,3 +1883,13 @@ ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cac
 # for plain HTTP), SHA256 729fe18c…f40c matches HF. GGUF: arch qwen35moe, name "Qwen3.5-122B-A10B-ck2100-v1014-MTP1740"
 # (the qwen3.5-122b:a10b base, with an MTP head; harmless without spec flags); template has tools and enable_thinking.
 ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=65536  hf:ornith-ai/Ornith-1.5-122B-GGUF
+
+# deepseek-v4.1-flash-1017 — scout 2026-10-27. Mainline llama.cpp supports DeepSeek-V4.1-Flash since 74bca3950 (#31086,
+# 2026-10-25, unsloth co-authored) + a07421535; NOT in our pin 67a17c17c, so it needs a master build (~/GIT/llama.cpp-master).
+# 763B MoE, 384 experts, 6 active. Formats differ: unsloth/DeepSeek-V4.1-Flash-1017-GGUF keeps the Engram tables inside
+# the model GGUF (mainline's format, blk.N.engram_kv/engram_gate); ISTA-DASLab's GSQ-RCO GGUFs (IQ1_M 121 GB + a separate
+# 111 GB Engram file, arch keys engram.file / blk.N.engram_embd) do NOT load in mainline (header read 2026-10-27; their card
+# says Strata only). Smallest mainline-format build: unsloth UD-IQ1_S 233 GB (Engram read lazily from disk with
+# --lazy-mode on; unsloth: "128GB+ RAM device"); disk has 159 GB free, so this waits for the NAS cleanup. Would need all
+# three GPUs (lane stopped, ./lanes-window.sh). Earlier fork run (JigSawPT, 1 GPU, 2026-10-06/08): ~0.9 tok/s.
+# deepseek-v4.1-flash-1017  UD-IQ1_S/DeepSeek-V4.1-Flash-1017-UD-IQ1_S-00001-of-00005.gguf  fit=on,fit_target=512,lazy_mode=on,no_repack,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,max_ctx=32768  hf:unsloth/DeepSeek-V4.1-Flash-1017-GGUF
