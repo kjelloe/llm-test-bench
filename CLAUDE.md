@@ -2393,6 +2393,8 @@ covered by `fastengine`), C01 (pixel comparison against Chromium), the Windows i
   as of 2026-10-21. The user is evaluating it next to fastengine for lighting/shadow builds. **No Rust tasks yet — the user
   decides later whether to add them** (2026-10-22). Their observation: work in that engine seems to need frontier models
   (Claude Opus, Fable), which fits the GL results here (0/10 on every hard `fastengine_gl` task). Read-only from this repo.
+- **Since 2026-10-26 the bj-engine coding ally also uses the local lane** (llm-service-provider, gpt-oss:120b) as a helper for
+  contained Rust work; the message it got keeps shaders, render pipeline and ECS architecture with the ally (untested in Rust).
 - **Decisions 2026-10-22 (user):** the `fastengine_gl` tasks stay as they are (no hints for the shared misses), and the GL
   results are not reported to fastengine's ally (model errors, nothing for fastengine to fix).
 
