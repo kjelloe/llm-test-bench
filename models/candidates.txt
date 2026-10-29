@@ -1840,6 +1840,12 @@ lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k
 # rebuilt ~/GIT/llama.cpp-master worktree, not the pin. Mellum2 12B-thinking was 20/33 (2026-06-08).
 # RESULT 2026-10-21 on master 1242be66f6: spot 4/10 at 3.7 tok/s — provisional; the 4090 ran at ~60 W with llama-server at
 # ~700% CPU (part of the new MELLUM path likely on the CPU). RETRY on a newer master around 2026-11-04 (user: in two weeks).
+# RETRY 2026-10-29 (t32, master 522021325, one RTX 4090 via --single-gpu 0, order-independent, `output/t32-mellum21-*`):
+# spot 6/10 at ~195 tok/s (a direct request: 194 tok/s decode; GGML_SCHED_DEBUG shows no op on the CPU). REJECTED (< 8/10).
+# PASS slugify, safe_div, node_csv_parser, lru_cache, tokenizer, node_para_core; FAIL csv_nordic, expr_eval, python_hashmap,
+# paratrooper (all TESTS_STILL_FAIL, no truncation). Same token counts as 10-21 on 5 tasks, so the old 3.7 tok/s was a speed
+# problem only; its cause is unconfirmed (older master, and that run had no single-GPU index, i.e. split over three cards).
+# Slightly below Mellum2 12B-thinking's class; fastest model at this size apart from lfm2.5.
 mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF
 
 # ── Scout 2026-10-21, user: "test Gemma 4 12 QAT, unsloth's Ornith-1.0-9B and the Tiel-Coder Genesis" ──────────────
