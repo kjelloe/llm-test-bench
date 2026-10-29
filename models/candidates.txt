@@ -1901,3 +1901,10 @@ ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k
 # alternative. Disk: 159 GB free on 2026-10-28, so after the NAS cleanup. All three GPUs (lane stopped via ./lanes-window.sh);
 # backbone 112 GB > 72 GB VRAM, so --fit puts experts in RAM. Earlier JigSawPT fork run (1 GPU, 2026-10-06/08): ~0.9 tok/s.
 # deepseek-v4.1-flash-1017  DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF
+
+# qwen3.8-flash-next-ad (AtomicChat "AD" quants, re-cut 2026-10-29) — scout 2026-10-30. Same qwen4exp model (48 layers,
+# 512 experts; header read 2026-10-30), so the pin 67a17c17c should load it. Card numbers: AD-4.27bpw-Q4_K_M-M64 = 56.1 GB
+# backbone + 38.4 GB n-gram table (read lazily from disk), KLD 0.084, top-1 89.5%, "the one to take"; AD-3.84bpw-IQ4_XS
+# 45.8 + 39.1 GB. Interest: the 56 GB backbone fits entirely in 72 GB of VRAM, where unsloth's UD-Q4_K_XL (~106 GB) has
+# --fit move experts to RAM; it could decode well above flash-next's ~27 tok/s. Not downloaded (94.5 GB; 159 GB free).
+# qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,no_repack,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=131072  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF

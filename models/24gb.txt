@@ -318,4 +318,7 @@ tiel-coder:35b  Tiel-Coder-35B-A3B-UD-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=
 # not a property of "N-way splits are safe/unsafe." **Use single-GPU to reliably reproduce the
 # L6-full pass; do not trust 2-GPU tensor_split=1|1 for this task.** Config variants
 # (ornith:1.0-35b-2gpu, -3gpu) kept in models/candidates.txt for reference.
+# ⚠ HF repo ornith-ai/Ornith-1.0-35B-GGUF GONE per 2026-10-30 scout — the local file (21.2 GB, 2026-09-25) is the only copy;
+#   keep it (one of three models ever to pass node_paratrooper), back it up to the NAS with the Qwen3.8-27B original.
+#   SHA256 ff25291b2599fb927a835e624d2b3540106af61761c3fa57ac4264046dbec002 (2026-10-30), to verify the NAS copy.
 ornith:1.0-35b  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:ornith-ai/Ornith-1.0-35B-GGUF
