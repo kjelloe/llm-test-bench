@@ -1820,7 +1820,8 @@ qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache
 # RESULT 2026-10-15: spot 7/10 @238 tok/s; full default set 30/38 eligible @236 (coding 18/19, web 2/4, L6 1/4, ctx to 64k,
 # multihop 5/5). L6 at 24k budget/32k ctx: core PASS, turret/entities/combat wrong logic (0.65-0.76), paratrooper out of
 # budget; the `thinking` variant below gives token-identical answers. Capability gap. Fast coder, not promoted.
-lfm2.5:24b-a2b  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# lfm2.5:24b-a2b  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
 
 # byteshape Qwen3.8-27B ShapeLearn IQ4_XS-3.84bpw (13.1 GB; per-tensor learned datatypes, MTP head embedded, harmless
 # without spec flags). Scouted 2026-10-15 (1.5M downloads); 12 GB-class build that could fit a 16 GB card. Same params as
@@ -1832,7 +1833,8 @@ qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_ty
 # lfm2.5 with the `thinking` flag (2026-10-15 test, user decision 3): does a reasoning prefix stop the plain-text budget
 # exhaustion on the L6 tasks? Compare with the plain entry at the same --num-predict/--num-ctx.
 # RESULT 2026-10-15: token-identical to the plain entry on all five L6 tasks — the flag is a no-op for this model.
-lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:LiquidAI/LFM2.5-24B-A2B-GGUF
 
 # Mellum2.1-12B-A2.5B-Thinking (JetBrains, repo 2026-10-07, 7.5 GB Q4_K_M, arch `mellum`). Scouted 2026-10-21.
 # Needs llama.cpp past the pin: a6b91d8c5e (read MoE gating params from GGUF, 2026-10-15) and 5e03a1ff45 (precision
@@ -1846,7 +1848,8 @@ lfm2.5:24b-a2b-think  LFM2.5-24B-A2B-QAD-Q4_0.gguf  ngl=999,no_mmap,cache_type_k
 # paratrooper (all TESTS_STILL_FAIL, no truncation). Same token counts as 10-21 on 5 tasks, so the old 3.7 tok/s was a speed
 # problem only; its cause is unconfirmed (older master, and that run had no single-GPU index, i.e. split over three cards).
 # Slightly below Mellum2 12B-thinking's class; fastest model at this size apart from lfm2.5.
-mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:JetBrains/Mellum2.1-12B-A2.5B-Thinking-GGUF
 
 # ── Scout 2026-10-21, user: "test Gemma 4 12 QAT, unsloth's Ornith-1.0-9B and the Tiel-Coder Genesis" ──────────────
 # Gemma 4 12B dense QAT Q4_0 (6.5 GB; arch gemma4, 256k ctx). Same params as gemma4:31b-qat.
@@ -1856,12 +1859,14 @@ mellum2.1:12b-thinking  Mellum2.1-12B-A2.5B-Thinking-Q4_K_M.gguf  ngl=999,no_mma
 gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:lmstudio-community/gemma-4-12B-it-QAT-GGUF
 # Ornith-1.0-9B (unsloth Q4_K_M, 5.3 GB; arch qwen35 — the Qwen3.5 GDN hybrid). Params as ornith:1.5-9b.
 # RESULT 2026-10-21 spot 6/10 at 119 tok/s — REJECTED (fails csv_nordic, hashmap, node_para_core, paratrooper); ornith:1.5-9b stays.
-ornith:1.0-9b  Ornith-1.0-9B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Ornith-1.0-9B-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# ornith:1.0-9b  Ornith-1.0-9B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:unsloth/Ornith-1.0-9B-GGUF
 # Tiel-Coder-35B-A3B Genesis (LuffyTheFox, "APEX-Compact" mixed quant, 18.8 GB; arch qwen35moe). The non-MTP file; params
 # as tiel-coder:35b (18/19 coding, 4/4 web, gamedev 0.24).
 # RESULT 2026-10-21 spot 7/10 at 151 tok/s — REJECTED: gains node_slugify over tiel-coder:35b but loses csv_nordic and
 # python_hashmap; node_paratrooper NO_BLOCKS.
-tiel-coder:35b-genesis  Tiel-Coder-35B-A3B-Genesis-APEX-Compact.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:LuffyTheFox/Tiel-Coder-35B-A3B-Genesis-Hermes-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# tiel-coder:35b-genesis  Tiel-Coder-35B-A3B-Genesis-APEX-Compact.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:LuffyTheFox/Tiel-Coder-35B-A3B-Genesis-Hermes-GGUF
 
 # ── Scout 2026-10-23 ──
 # swift-1.5:27b — UkisAI's Swift 1.5 on the DENSE Qwen3.8-27B (released 2026-09-21; we only tested the flash-next
@@ -1872,11 +1877,13 @@ tiel-coder:35b-genesis  Tiel-Coder-35B-A3B-Genesis-APEX-Compact.gguf  ngl=999,no
 # untested; a fair comparison needs --think on both. Not promoted.
 # 2026-10-23 t28 with --think: Swift 9/10, 51k tokens, 20 min; qwen3.8:27b 9/10, 74k tokens, 28 min (both run out on
 # node_paratrooper). Swift is ~30% leaner than its base when reasoning, but reasoning off beats both. Not promoted.
-swift-1.5:27b  Swift-1.5-Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:ukisai/Swift-1.5-Qwen3.8-27B-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# swift-1.5:27b  Swift-1.5-Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:ukisai/Swift-1.5-Qwen3.8-27B-GGUF
 # ornith:1.5-35b-apex — mudler's APEX mixed-precision quant of Ornith-1.5-35B-A3B (I-Quality 22.8 GB, imatrix; 309k
 # downloads). Same model as ornith:1.5-35b (jashepp MXFP4, 14th L6-stepped completer, ~155 tok/s). Tight on 24 GB with f16
 # KV, hence max_ctx 32768. NOT RUN YET; lower priority (a different quant of a model already measured).
-ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mudler/Ornith-1.5-35B-A3B-APEX-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:mudler/Ornith-1.5-35B-A3B-APEX-GGUF
 
 # ── Scout 2026-10-25 ──
 # ornith:1.5-122b — ornith-ai's Ornith-1.5-122B (MoE, 2026-10-20, 110k downloads; Ornith-1.0 was built on Qwen3.5 and
@@ -1888,7 +1895,8 @@ ornith:1.5-35b-apex  Ornith-1.5-35B-A3B-APEX-I-Quality.gguf  ngl=999,no_mmap,cac
 # at 40.8 tok/s, R3) and slightly slower: no gain worth a full run. Needs all three GPUs (lanes stopped). Downloaded 2026-10-25 with HF_HUB_DISABLE_XET=0 (too large
 # for plain HTTP), SHA256 729fe18c…f40c matches HF. GGUF: arch qwen35moe, name "Qwen3.5-122B-A10B-ck2100-v1014-MTP1740"
 # (the qwen3.5-122b:a10b base, with an MTP head; harmless without spec flags); template has tools and enable_thinking.
-ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=65536  hf:ornith-ai/Ornith-1.5-122B-GGUF
+# GGUF deleted 2026-10-30 (rejected or not promoted); re-download via ./fetch-hf.sh to run again.
+# ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=65536  hf:ornith-ai/Ornith-1.5-122B-GGUF
 
 # deepseek-v4.1-flash-1017 — scouts 2026-10-27/28. Mainline llama.cpp supports DeepSeek-V4.1-Flash since 74bca3950 (#31086,
 # b11870, 2026-10-25) + a07421535, 838093f19 and a7af149a2 (CUDA top-k MoE fusion for its 384 experts); NOT in our pin
@@ -1907,4 +1915,11 @@ ornith:1.5-122b  Ornith-1.5-122B-Q4_K_M.gguf  fit=on,fit_target=512,cache_type_k
 # backbone + 38.4 GB n-gram table (read lazily from disk), KLD 0.084, top-1 89.5%, "the one to take"; AD-3.84bpw-IQ4_XS
 # 45.8 + 39.1 GB. Interest: the 56 GB backbone fits entirely in 72 GB of VRAM, where unsloth's UD-Q4_K_XL (~106 GB) has
 # --fit move experts to RAM; it could decode well above flash-next's ~27 tok/s. Not downloaded (94.5 GB; 159 GB free).
-# qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,no_repack,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=1024,ubatch_size=512,max_ctx=131072  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF
+# Flags as 3x24gb.txt's qwen3.8-flash-next (f16 KV, thinking prompt) so the two builds compare like for like.
+# RESULT 2026-10-30 (t33, pin 67a17c17c, 3 GPUs via --fit, clocks locked, order-independent, A-B-A, `output/t33-*`):
+# spot 8/10 at 34.3 tok/s decode, 422/375 tok/s prefill, 400 s per spot set, 58.9 GB VRAM (the whole backbone on the GPUs),
+# identical answers in both runs. unsloth UD-Q4_K_XL between them: 6/10 at 20.7 tok/s, 186 tok/s prefill, 680 s, 69.8 GB.
+# The AD build also PASSES node_csv_parser and node_para_core (unsloth: NO_BLOCKS / FAIL; node_para_core failed 6/6 there).
+# Both fail csv_nordic_property (NO_BLOCKS: the file never gets its END_FILE, the model's known habit) and node_paratrooper.
+# PROMOTE candidate: full profile next.
+qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF
