@@ -124,6 +124,17 @@ class LlamaServerManager:
         self.stop()
         self._start(cfg, ctx_size, num_threads=num_threads, startup_timeout=startup_timeout)
 
+    def crash_report(self) -> str | None:
+        """Exit code and the last stderr lines when the server died on its own, else None.
+
+        Used after a TOOL_ERROR: "Remote end closed connection" alone does not say why the server went
+        (t34, 2026-10-30, qwen3.8-flash-next-ad on multihop_reverse); startup failures already report this."""
+        if self._proc is None or self._proc.poll() is None:
+            return None
+        time.sleep(0.2)  # let the drain thread take the last lines
+        tail = "".join(self._stderr_tail).strip() if not self.debug else ""
+        return f"llama-server exited with code {self._proc.returncode}" + (f"\n--- stderr ---\n{tail[-2000:]}" if tail else "")
+
     def stop(self) -> None:
         """Terminate the running server. No-op if not running."""
         if self._proc is None:

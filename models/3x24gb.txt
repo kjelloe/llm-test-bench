@@ -255,4 +255,9 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_t
 # the mainline-vs-fork speed comparison, and the IQ1_S stretch-goal result (faster but a real
 # capability regression on python_expr_eval — do not use IQ1_S as a general substitute) in
 # models/candidates.txt.
-qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+# 2026-10-30: replaced by the AtomicChat AD-4.27bpw build (user's decision; t33/t34-t36). Its 56 GB backbone fits in VRAM:
+#   spot 8/10 at 34.3 tok/s vs this unsloth build's 6/10 at 20.7 (same window), full default set 36/39 in 40 min incl.
+#   context_256k. Caveat: twice (t34, t35) the first request after context_64k on one server crashed or stalled; alone and in
+#   a third sequence (t36) it passed, and the unsloth build passed the same sequence once. Rollback: the line below.
+# qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF

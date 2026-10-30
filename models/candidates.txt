@@ -1922,4 +1922,5 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # The AD build also PASSES node_csv_parser and node_para_core (unsloth: NO_BLOCKS / FAIL; node_para_core failed 6/6 there).
 # Both fail csv_nordic_property (NO_BLOCKS: the file never gets its END_FILE, the model's known habit) and node_paratrooper.
 # PROMOTE candidate: full profile next.
-qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF
+# PROMOTED 2026-10-30 to 3x24gb.txt (replaces the unsloth entry there); full set t34 36/39.
+# qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF

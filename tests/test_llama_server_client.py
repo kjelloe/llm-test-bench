@@ -267,3 +267,27 @@ def test_chat_sends_enable_thinking_from_think(monkeypatch):
     lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}])
     lsc.chat("http://x", "m", [{"role": "user", "content": "hi"}], think=True)
     assert [p["chat_template_kwargs"]["enable_thinking"] for p in sent] == [False, True]
+
+
+def test_crash_report_names_exit_code_and_last_stderr(tmp_path):
+    """A server that dies mid-request: the TOOL_ERROR record must say why (t34 lost the cause)."""
+    import subprocess, sys, time
+    from lib.llama_server_client import _drain
+    mgr = lsc.LlamaServerManager(models_dir=str(tmp_path))
+    assert mgr.crash_report() is None  # no server
+    mgr._proc = subprocess.Popen([sys.executable, "-c", "import sys; sys.stderr.write('CUDA error: an illegal memory access\\n'); sys.exit(134)"],
+                                 stderr=subprocess.PIPE)  # binary, like the real server's pipe
+    mgr._stderr_tail = _drain(mgr._proc.stderr)
+    mgr._proc.wait()
+    report = mgr.crash_report()
+    assert "exited with code 134" in report and "illegal memory access" in report
+
+
+def test_crash_report_is_none_while_the_server_runs(tmp_path):
+    import subprocess, sys
+    mgr = lsc.LlamaServerManager(models_dir=str(tmp_path))
+    mgr._proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(5)"])
+    try:
+        assert mgr.crash_report() is None
+    finally:
+        mgr._proc.kill(); mgr._proc.wait()

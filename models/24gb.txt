@@ -231,6 +231,8 @@ qwen3.8:27b-nvfp4-mix  Qwen3.8-27B-iMatrix-NVFP4-MTP.gguf  ngl=999,no_mmap,cache
 # qwen3.8:27b-byteshape: byteshape ShapeLearn IQ4_XS-3.84bpw (per-tensor learned types), 13.1 GB, MTP embedded (no spec
 #   flags). Full default set 2026-10-15: 37/38 eligible at 49.3 tok/s (only node_paratrooper, 39/40) — the Q4_K_M's score
 #   at 5 GB less. Promoted 2026-10-15 (user). f16 KV for python_hashmap. Untested on a 16 GB card.
+# ⚠ HF repo byteshape/Qwen3.8-27B-GGUF GONE per 2026-10-30 scout (it flip-flopped before: back 10-30 morning, gone at
+#   night). Local file (13.1 GB, 2026-10-15) SHA256 89434f23dc89c5f990894e3fe9fdad19d88c370f0d3638a176f29933f218b78b; NAS-backup it.
 qwen3.8:27b-byteshape  Qwen3.8-27B-IQ4_XS-3.84bpw.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:byteshape/Qwen3.8-27B-GGUF
 # UPDATE (2026-08-23, investigation CLOSED): extended tiebreaker to 6 independent builds × 3 GPU
 #   configs. THIS file remains the only one that passes on both single-GPU and 3-GPU — bartowski's

@@ -193,6 +193,7 @@ For each `(model, task)` pair:
 6. **Parse** — extract `BEGIN_FILE … END_FILE` blocks from raw response text (`parsing.parse_file_blocks`).
 7. **Validate** — check all edited paths are in `task.editable_files` (`parsing.validate_edits`).
 8. **Apply** — overwrite files in the workdir.
+8b. **Crash report** — after a TOOL_ERROR on the llama-server backend, `crash_report()` attaches the exit code and stderr tail of a server that died on its own (`server_crash`).
 9. **Test** — re-run `task.test_cmd`; record `tests_pass`, plus `test_score` (partial credit) and `build_errors` (C# compile errors) parsed from the full runner output before it is truncated for `error_detail` (`run_tests_scored`, `lib/test_results.py`).
 10. **Cleanup** — delete workdir (unless `--keep-workdirs`).
 
