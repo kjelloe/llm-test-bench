@@ -1299,7 +1299,8 @@
 #   on this rig to go further (would need sudo) - real mechanism is likely GPU-side kernel
 #   dispatch, not source-readable. fix/qwen4exp-moe-perf branch kept locally for reference, not
 #   merged; repo restored to and rebuilt at the 67a17c17c pin. Full trail in next-runs.md.
-qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b/d81aef199/bed0a8566 are CONFIRMED REGRESSIONS for this model, bed0a8566 is the first to also cost a capability (node_paratrooper) not just speed; speed regression root-caused to c61b98b875 but a real fix attempt failed, pin stands — see comment block above; verify speed AND node_paratrooper determinism after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
+# Files moved to the NAS 2026-11-01 (LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL, LLM/Swift-1.5-Flash-Next-Q4_K_M); copy back to run.
+# qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — build mainline llama.cpp PINNED to commit 67a17c17c (49c0dc82b/d81aef199/bed0a8566 are CONFIRMED REGRESSIONS for this model, bed0a8566 is the first to also cost a capability (node_paratrooper) not just speed; speed regression root-caused to c61b98b875 but a real fix attempt failed, pin stands — see comment block above; verify speed AND node_paratrooper determinism after any future rebuild before switching); fork at LLAMA_SERVER_BIN=~/GIT/llama.cpp-qwen4exp/build/bin/llama-server remains a fallback
 
 # ik_llama.cpp (ikawrakow fork) variant — CLI conventions differ from mainline: `--fit` is a bare
 # boolean here (mainline takes `--fit on`), so `fit=on` errors with "unknown argument: on" — use
@@ -1702,7 +1703,8 @@ ornith:1.0-35b-3gpu  ornith-1.0-35b-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|
 # --no-repack, letting llama.cpp auto-place MoE experts to CPU) but on a 24 GB card instead of
 # 16 GB, ~74 GB free RAM (vs 88 GB on the 5060 Ti box) — tests whether more VRAM headroom lets
 # --fit keep more experts GPU-resident and go faster than the confirmed 18.4 tok/s baseline.
-qwen3.8-flash-next-24gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — same file as qwen3.8-flash-next; single-GPU (GPU2, RTX 3090) variant of the confirmed 16gb recipe, see comment block above
+# Files moved to the NAS 2026-11-01 (LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL, LLM/Swift-1.5-Flash-Next-Q4_K_M); copy back to run.
+# qwen3.8-flash-next-24gb  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,no_repack,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking,max_ctx=131072  hf:unsloth/Qwen3.8-Flash-Next-GGUF  # 4-part model — same file as qwen3.8-flash-next; single-GPU (GPU2, RTX 3090) variant of the confirmed 16gb recipe, see comment block above
 #
 # RESULT — CONFIRMED 2026-09-26, 10-task spot check: **8/10 at 16.7 tok/s avg** (15.4-17.7 range),
 #   1070.8s of task time, 18m39s total runtime. llama.cpp 67a17c17c (pinned build). GPU2 (RTX 3090,
@@ -1778,15 +1780,19 @@ noctrex-qwen3.6:35b-3gpu  Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,te
 #   4.2-28.6 tok/s, 7.6-13 on the long tasks: not faster than base here despite the "1.8x" claim; output
 #   lengths (eval_count) were close to base's. Verdict: different trade-offs from base (gains csv_parser and
 #   para_core, loses paratrooper), not a clear upgrade; worth the full gamedev group in the 3x24GB phase.
-swift-1.5-flash-next  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
+# Files moved to the NAS 2026-11-01 (LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL, LLM/Swift-1.5-Flash-Next-Q4_K_M); copy back to run.
+# swift-1.5-flash-next  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
 
 # MoE-cache variants (2026-10-09) for llama.cpp master >= c811cb8f0 (multi-GPU MoE cache, #30112) —
 # run with LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server; the pinned 67a17c17c
 # binary has no --moe-cache-mib. --fit does not reserve VRAM for the cache (common/fit.cpp never
 # reads moe_cache_size), so fit_target is raised by the cache's per-GPU share (cache / 3 GPUs).
-qwen3.8-flash-next-moecache6g   UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
-qwen3.8-flash-next-moecache12g  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=4608,moe_cache_mib=12288,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
-swift-1.5-flash-next-moecache6g  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
+# Files moved to the NAS 2026-11-01 (LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL, LLM/Swift-1.5-Flash-Next-Q4_K_M); copy back to run.
+# qwen3.8-flash-next-moecache6g   UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+# Files moved to the NAS 2026-11-01 (LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL, LLM/Swift-1.5-Flash-Next-Q4_K_M); copy back to run.
+# qwen3.8-flash-next-moecache12g  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=4608,moe_cache_mib=12288,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
+# Files moved to the NAS 2026-11-01 (LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL, LLM/Swift-1.5-Flash-Next-Q4_K_M); copy back to run.
+# swift-1.5-flash-next-moecache6g  Q4_K_M/Swift-1.5-Qwen3.8-Flash-Next-Q4_K_M-00001-of-00003.gguf  fit=on,fit_target=2560,moe_cache_mib=6144,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ukisai/Swift-1.5-Qwen3.8-Flash-Next-GGUF
 
 # ── byteshape/Qwen3.8-27B-GGUF (scout 2026-10-10, 1.2M downloads) — NOT RUN ──────────────────────────────
 # ⚠ GONE per the 2026-10-13 scout (repo removed or renamed); nothing downloaded.
