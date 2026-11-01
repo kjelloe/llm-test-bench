@@ -1917,7 +1917,15 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # IQ2_XXS 129 + 110.6 GB matches the base model on their AIME25/GPQA/LCB numbers. unsloth's UD-IQ1_S (233 GB) is the
 # alternative. Disk: 159 GB free on 2026-10-28, so after the NAS cleanup. All three GPUs (lane stopped via ./lanes-window.sh);
 # backbone 112 GB > 72 GB VRAM, so --fit puts experts in RAM. Earlier JigSawPT fork run (1 GPU, 2026-10-06/08): ~0.9 tok/s.
-# deepseek-v4.1-flash-1017  DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF
+# 2026-11-01 run config (t37): master only (LLAMA_SERVER_BIN=~/GIT/llama.cpp-master/build/bin/llama-server), mmap on (no
+# no_mmap: the Engram shard is read lazily), --fit across the three GPUs, default KV type, reasoning off like every other
+# run here (the card measured reasoning effort 50).
+# RESULT 2026-11-01 (t37, master 522021325, 3 GPUs, `output/t37-dsv41-*`): spot 8/10, decode 6.2 tok/s, prefill 61 tok/s,
+# 31 min, 69.8 GB VRAM at 100% util (part of the 112 GB backbone in RAM, Engram read from disk). PASS csv_nordic (438 s),
+# node_csv_parser, expr_eval, tokenizer, node_para_core. FAIL python_hashmap 6/11 (wrong tombstone handling: KeyError when
+# deleting along a probe chain; the 2026-10-08 JigSawPT-fork run of the same model at a higher precision passed 11/11) and
+# node_paratrooper 39/40 (a different test than the usual 33: no helicopter spawned at line 166). Reasoning was off.
+deepseek-v4.1-flash-1017  DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=off,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF
 
 # qwen3.8-flash-next-ad (AtomicChat "AD" quants, re-cut 2026-10-29) — scout 2026-10-30. Same qwen4exp model (48 layers,
 # 512 experts; header read 2026-10-30), so the pin 67a17c17c should load it. Card numbers: AD-4.27bpw-Q4_K_M-M64 = 56.1 GB
