@@ -291,3 +291,19 @@ def test_crash_report_is_none_while_the_server_runs(tmp_path):
         assert mgr.crash_report() is None
     finally:
         mgr._proc.kill(); mgr._proc.wait()
+
+
+def test_crash_report_on_a_dropped_connection_keeps_the_running_server_s_log(tmp_path):
+    """t38: the connection closed but llama-server kept running; its log still says what it was doing."""
+    import subprocess, sys, time
+    from lib.llama_server_client import _drain
+    mgr = lsc.LlamaServerManager(models_dir=str(tmp_path))
+    mgr._proc = subprocess.Popen([sys.executable, "-c", "import sys, time; sys.stderr.write('srv  slot 0: aborting\\n'); sys.stderr.flush(); time.sleep(5)"],
+                                 stderr=subprocess.PIPE)
+    mgr._stderr_tail = _drain(mgr._proc.stderr)
+    try:
+        time.sleep(0.5)
+        report = mgr.crash_report(dropped=True)
+        assert report.startswith("llama-server still running") and "aborting" in report
+    finally:
+        mgr._proc.kill(); mgr._proc.wait()

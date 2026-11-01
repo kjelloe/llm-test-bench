@@ -734,7 +734,7 @@ def main() -> None:
                     record["hf_repo"] = cfg.hf_repo
 
             if record.get("error_kind") == "TOOL_ERROR" and llama_manager is not None:
-                crash = llama_manager.crash_report()
+                crash = llama_manager.crash_report(dropped="closed connection" in (record.get("error_detail") or ""))
                 if crash:
                     record["server_crash"] = crash
                     record["error_detail"] = f"{record.get('error_detail') or ''}\n{crash}".strip()

@@ -124,16 +124,22 @@ class LlamaServerManager:
         self.stop()
         self._start(cfg, ctx_size, num_threads=num_threads, startup_timeout=startup_timeout)
 
-    def crash_report(self) -> str | None:
-        """Exit code and the last stderr lines when the server died on its own, else None.
+    def crash_report(self, dropped: bool = False) -> str | None:
+        """What the server said when a request failed: its exit code and last stderr lines if it died, or, with
+        dropped=True (the connection closed mid-request), its last stderr lines while it still runs. None otherwise.
 
-        Used after a TOOL_ERROR: "Remote end closed connection" alone does not say why the server went
-        (t34, 2026-10-30, qwen3.8-flash-next-ad on multihop_reverse); startup failures already report this."""
-        if self._proc is None or self._proc.poll() is None:
+        "Remote end closed connection" alone does not say why (t34 2026-10-30, qwen3.8-flash-next-ad; t38 2026-11-01,
+        DeepSeek-V4.1 on python_fastapi_endpoint, where the server kept running); startup failures already report this."""
+        if self._proc is None:
+            return None
+        alive = self._proc.poll() is None
+        if alive and not dropped:
             return None
         time.sleep(0.2)  # let the drain thread take the last lines
         tail = "".join(self._stderr_tail).strip() if not self.debug else ""
-        return f"llama-server exited with code {self._proc.returncode}" + (f"\n--- stderr ---\n{tail[-2000:]}" if tail else "")
+        head = ("llama-server still running after the connection dropped" if alive
+                else f"llama-server exited with code {self._proc.returncode}")
+        return head + (f"\n--- stderr ---\n{tail[-2000:]}" if tail else "")
 
     def stop(self) -> None:
         """Terminate the running server. No-op if not running."""
