@@ -1925,7 +1925,11 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # node_csv_parser, expr_eval, tokenizer, node_para_core. FAIL python_hashmap 6/11 (wrong tombstone handling: KeyError when
 # deleting along a probe chain; the 2026-10-08 JigSawPT-fork run of the same model at a higher precision passed 11/11) and
 # node_paratrooper 39/40 (a different test than the usual 33: no helicopter spawned at line 166). Reasoning was off.
-deepseek-v4.1-flash-1017  DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=off,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF
+# GGUF deleted 2026-11-02 after t37/t38 (results recorded); re-download 223 GB + link the Engram as shard 6 to run again.
+# deepseek-v4.1-flash-1017  DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=off,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF
+# Reasoning on at effort 50, as ISTA's card measured (t38; run with --think so the request asks for it too).
+# GGUF deleted 2026-11-02 after t37/t38 (results recorded); re-download 223 GB + link the Engram as shard 6 to run again.
+# deepseek-v4.1-flash-1017-think  DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ1_M-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=on,reasoning_effort=50,thinking,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF
 
 # qwen3.8-flash-next-ad (AtomicChat "AD" quants, re-cut 2026-10-29) — scout 2026-10-30. Same qwen4exp model (48 layers,
 # 512 experts; header read 2026-10-30), so the pin 67a17c17c should load it. Card numbers: AD-4.27bpw-Q4_K_M-M64 = 56.1 GB
