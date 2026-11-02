@@ -1952,4 +1952,5 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # RESULT 2026-11-02 (t40, pin, one 4090, `output/t40-spot-distill.json`): spot 6/10 at ~135 tok/s, 2 min. REJECTED (< 8/10).
 # FAIL csv_nordic, node_csv_parser, python_hashmap, node_paratrooper (all wrong answers). The Qwen3.8 distillation does not lift
 # the A3B class: the same tasks fail as for other Qwen3.6-35B-A3B builds, and tiel-coder:35b (8/10 spot, 164 tok/s) stays ahead.
-qwen3.8-35b-a3b-distill  Qwen3.8-35B-A3B-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:empero-ai/Qwen3.8-35B-A3B-Distill-GGUF
+# GGUF deleted 2026-11-03 (rejected); re-download via ./fetch-hf.sh to run again.
+# qwen3.8-35b-a3b-distill  Qwen3.8-35B-A3B-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:empero-ai/Qwen3.8-35B-A3B-Distill-GGUF
