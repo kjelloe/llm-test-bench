@@ -1945,3 +1945,11 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # PROMOTE candidate: full profile next.
 # PROMOTED 2026-10-30 to 3x24gb.txt (replaces the unsloth entry there); full set t34 36/39.
 # qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF
+
+# qwen3.8-35b-a3b-distill — empero-ai Qwen3.8-35B-A3B-Distill (Qwen3.6-35B-A3B MoE distilled from Qwen3.8; 30 Gated DeltaNet +
+# 10 attention layers, 256 experts / 8 active). Scout 2026-11-02 (1.3M downloads). IQ4_XS 19.6 GB, SHA256 b645af45…8d65.
+# Flags as the qwen3.6:35b-A3B entries (f16 KV, thinking prompt), one GPU, 32k context. Spot t40.
+# RESULT 2026-11-02 (t40, pin, one 4090, `output/t40-spot-distill.json`): spot 6/10 at ~135 tok/s, 2 min. REJECTED (< 8/10).
+# FAIL csv_nordic, node_csv_parser, python_hashmap, node_paratrooper (all wrong answers). The Qwen3.8 distillation does not lift
+# the A3B class: the same tasks fail as for other Qwen3.6-35B-A3B builds, and tiel-coder:35b (8/10 spot, 164 tok/s) stays ahead.
+qwen3.8-35b-a3b-distill  Qwen3.8-35B-A3B-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:empero-ai/Qwen3.8-35B-A3B-Distill-GGUF
