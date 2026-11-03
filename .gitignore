@@ -18,6 +18,7 @@ llama_models
 /kv-stream-experiment/
 .gpu-mode
 /backup-to-NAS.sh
+/nas.txt
 /HF_TOKEN.txt
 *_TOKEN.txt
 hf-token.txt
