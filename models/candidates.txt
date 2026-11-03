@@ -1938,6 +1938,8 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # vs base 81.2, LiveCodeBench v6 88.6 vs 89.7 (effort 50). Needs llama.cpp b11870+ (master worktree 522021325 qualifies).
 # The backbone about fills 72 GB, so --fit keeps most of it on the GPUs: expect well above t37's 6.2 tok/s. Downloaded 2026-11-03
 # (shards flat in allmodels, the Engram linked as shard 6).
+# t41 2026-11-03 (master 6cb3e672e, 3 GPUs, reasoning off): spot 8/10 at 11.8 tok/s mean (t37's IQ1_M 6.3), 22 min, 70 GB VRAM.
+# Fails the same two as t37: python_hashmap 6/11, node_paratrooper 37/40. Pruning kept the coding score; ~1.9x faster.
 deepseek-v4.1-flash-1017-coder  DeepSeek-V4.1-Flash-1017-GSQ-RCO-Coder-IQ2_XXS-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=off,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-Coder-GGUF
 
 # qwen3.8-flash-next-ad (AtomicChat "AD" quants, re-cut 2026-10-29) — scout 2026-10-30. Same qwen4exp model (48 layers,
