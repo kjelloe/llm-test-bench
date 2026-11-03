@@ -1941,6 +1941,8 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # t41 2026-11-03 (master 6cb3e672e, 3 GPUs, reasoning off): spot 8/10 at 11.8 tok/s mean (t37's IQ1_M 6.3), 22 min, 70 GB VRAM.
 # Fails the same two as t37: python_hashmap 6/11, node_paratrooper 37/40. Pruning kept the coding score; ~1.9x faster.
 deepseek-v4.1-flash-1017-coder  DeepSeek-V4.1-Flash-1017-GSQ-RCO-Coder-IQ2_XXS-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=off,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-Coder-GGUF
+# Reasoning on at effort 50, as ISTA's card measured (t42; run with --think).
+deepseek-v4.1-flash-1017-coder-think  DeepSeek-V4.1-Flash-1017-GSQ-RCO-Coder-IQ2_XXS-00001-of-00006.gguf  fit=on,fit_target=512,no_repack,flash_attn,reasoning=on,reasoning_effort=50,thinking,max_ctx=32768  hf:ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-Coder-GGUF
 
 # qwen3.8-flash-next-ad (AtomicChat "AD" quants, re-cut 2026-10-29) — scout 2026-10-30. Same qwen4exp model (48 layers,
 # 512 experts; header read 2026-10-30), so the pin 67a17c17c should load it. Card numbers: AD-4.27bpw-Q4_K_M-M64 = 56.1 GB
