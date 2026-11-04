@@ -3,7 +3,7 @@
 > **⚠ Title/intro updated 2026-09-17** — this doc originally framed the whole project around
 > Ollama; the harness has since grown two more backends (`llama-server` — now the default/
 > primary choice for serious runs, 2-4× faster than Ollama; `vllm` — for AWQ/GPTQ/FP8/GGUF-
-> plugin formats) via `--backend {ollama,llama-server,vllm}`. The body of "Type 1" below was
+> plugin formats) via `--backend {ollama,llama-server,vllm,mlx}`. The body of "Type 1" below was
 > already kept current for all three; only this framing paragraph and the title lagged.
 
 #### Problem
@@ -54,6 +54,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   - `--tasks` (optional subset; default: all built-in)
   - `--backend ollama|llama-server|vllm` (default: `ollama`; env var `BENCH_BACKEND` as fallback; `llama-server` is the de facto default for real benchmark runs — see `CLAUDE.md`)
   - `--model-file PATH` (path to a `models/*.txt` file for GGUF/param lookup; required when `--backend llama-server`; env var `BENCH_MODEL_FILE` as fallback)
+  - `--backend mlx` (2026-11-04): `--mlx-url` (env `BENCH_MLX_URL`, required) names an `mlx_lm.server` the harness does not own: it is never started, stopped or asked to load a model (requests name `default_model`); exactly one model per run; `--model-file` optional (`models/*.mlx`: field 2 = served local dir or `-`, params `max_ctx`, `thinking`, `revision`); `--mlx-host-info` (env `BENCH_MLX_HOST_INFO`) = JSON from `mlx-host-info.sh`. Records: no GPU snapshots, `tok_per_s` 0 and `prompt_eval_duration_ms`/`eval_duration_ms` null (no timings from mlx-lm), `backend_notes` = `effective` request settings, `unsupported` controls, `decode_timing: unavailable`, and when they occur `cached_prompt_tokens`, `usage: missing`, `content_from_reasoning`, `reasoning_despite_off`. `hardware.inference_host` = endpoint, `same_machine_as_tests`, `declared_model`/`declared_revision`, `model_listed` (in /v1/models), `server_health`, `host`; `hardware.order_independent` = true only if every reported `cached_prompt_tokens` is 0 (null if none reported). Local VRAM checks (`min_vram_gb`) do not apply; `max_ctx` gates. `run.sh` skips power/clock checks and hwmonitor.
   - `--ollama-url` (default: `http://localhost:11434`; ignored when `--backend llama-server`)
   - `--num-ctx` (default: 8192; overridden by `DEFAULT_CTX` env var if set — see §4a)
   - `--temperature` (default: 0.0)

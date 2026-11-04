@@ -39,6 +39,8 @@ def get_hw_snapshot(
 
 def hw_summary(hw: dict) -> str:
     """One-line summary for table headers."""
+    if hw.get("inference_host"):
+        return _mlx_summary(hw)
     parts = []
     for g in hw.get("gpu") or []:
         vram = round(g.get("vram_total_mb", 0) / 1024)
@@ -61,6 +63,23 @@ def hw_summary(hw: dict) -> str:
 
 
 # ── GPU ───────────────────────────────────────────────────────────────────────
+
+def _mlx_summary(hw: dict) -> str:
+    """MLX runs: the model runs on the inference host (often a Mac); this machine only prepares and grades the tasks,
+    so its GPUs are not named. Apple memory is unified RAM, never called VRAM."""
+    inf = hw["inference_host"]
+    host = inf.get("host") or {}
+    where = "this machine" if inf.get("same_machine_as_tests") else inf.get("endpoint", "?")
+    if host:
+        mem = host.get("memory_gb")
+        label = f"{host.get('chip', 'Apple Silicon')}{f' {mem} GB unified memory' if mem else ''}"
+        sw = ", ".join(f"{k} {host[k]}" for k in ("macos", "mlx", "mlx_lm") if host.get(k))
+        inference = f"{label} ({sw})" if sw else label
+    else:
+        inference = "hardware not recorded (--mlx-host-info)"
+    tests = ", ".join(x for x in (hw.get("platform"), hw.get("cpu")) if x and x != "unknown")
+    return f"inference: MLX on {inference} at {where}  |  tests: {tests or 'unknown'}"
+
 
 def _gpu_info() -> list[dict]:
     """GPU list via nvidia-smi, including thermal, power, and compute capability."""

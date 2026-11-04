@@ -45,6 +45,7 @@ lib/                      Python support modules (imported by bench.py and shell
   ollama_client.py        POST /api/chat (non-streaming), metrics extraction; unload_model()
   llama_server_client.py  LlamaServerManager (spawn/restart/stop llama-server process) + chat() for OpenAI-compatible /v1/chat/completions; same interface as ollama_client; order-independent by default (--parallel 1 unless the model sets parallel, cache_prompt false; BENCH_ORDER_INDEPENDENT=0 / BENCH_CACHE_PROMPT=1 restore the server defaults; recorded as hardware.order_independent); a daemon thread drains the server's stderr (last 200 lines kept for crash messages) so a long session never blocks on a full pipe
   vllm_client.py          VLLMManager (spawn/restart/stop vllm serve process) + chat() for OpenAI-compatible /v1/chat/completions; mirrors LlamaServerManager interface exactly
+  mlx_client.py           chat() for an external mlx_lm.server (Apple Silicon; never started/stopped/loaded by the harness), server_info()/model_listed() for /health + /v1/models; stdlib only
   model_config.py         Parses models/*.txt 3-field format (ollama-name gguf-file params) into ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
   reporting.py            Comparison table (paginated), failure detail, JSON writer
@@ -245,6 +246,20 @@ Provides the same `chat()` / `unload_model()` signatures as `ollama_client.py` s
 - `chat(base_url, model, messages, ...)` — POST `/v1/chat/completions` (OpenAI-compatible). `model`, `num_ctx`, `num_thread`, `keep_alive`, `think` are ignored (llama-server is single-model per process; these are configured at startup). Request payload includes explicit deterministic sampling params (`top_p=1.0`, `top_k=1`, `repeat_penalty=1.0`) alongside `temperature` and `seed` — llama-server defaults differ from Ollama's, so these are set explicitly to guarantee equivalent decoding. Response body is parsed by `_parse_body(body, elapsed_ns)`. `tok_per_s` uses `timings.predicted_ms` from the llama.cpp response extension (generation phase only); falls back to `completion_tokens / wall_time` on older builds.
 - **`_parse_body(body, elapsed_ns)`** — standalone helper that extracts `content`, `thinking`, `finish_reason`, and metrics from a `/v1/chat/completions` response dict. Reads `message.content` for the answer, `message.reasoning_content` for thinking (the field llama.cpp uses for reasoning models), and `choices[0].finish_reason` for the stop reason (`"stop"` / `"length"`). **Fallback:** when `content` is empty but `reasoning_content` is non-empty, `reasoning_content` is promoted to `content` — this recovers cases where thinking models (gpt-oss:120b, qwen3.5:35b) exhaust their token budget inside the `<think>` phase and produce nothing in the non-reasoning section. Separated from `chat()` so it can be unit-tested without HTTP mocking.
 - `unload_model(...)` — no-op; lifecycle is managed by `LlamaServerManager.stop()`.
+
+#### `mlx_client.py` — MLX Backend Adapter (external server)
+
+Same `chat()` signature, but no manager: `bench.py --backend mlx` leaves `llama_manager` at `None` and points
+`client_url` at `--mlx-url`, so nothing in the loop starts, stops, restarts or unloads a server. Requests use mlx-lm
+0.32's fields (`max_tokens`, `seed`, `top_p`, `chat_template_kwargs.enable_thinking`) and always `model:
+"default_model"`, because a request naming another model makes mlx-lm load it. A seed also keeps mlx-lm off its
+batched path. Responses: `message.content`/`message.reasoning`, `usage` incl. `prompt_tokens_details.cached_tokens`.
+Malformed bodies, HTTP errors, refused connections and timeouts raise `OllamaError` (→ TOOL_ERROR). Metrics: token
+counts and the end-to-end time only; durations stay 0/null and `tok_per_s` 0. `OllamaResponse.backend_notes` carries
+the effective/unsupported controls and cache/reasoning flags into the record. `run_one` skips local GPU snapshots and
+the peak poller for `backend == "mlx"`, and treats `prompt_eval_count == 0` as unknown rather than a truncated prompt.
+Startup checks `/health` and `/v1/models` against the declared model; `hw_summary()` then names the inference host
+(`hardware.inference_host`) instead of the local GPUs, and never calls unified memory VRAM.
 
 #### `vllm_client.py` — vLLM Backend Adapter
 

@@ -341,6 +341,8 @@ gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu
 gpuclock.sh         GPU clock lock for multi-GPU runs: status | lock [--memory] | unlock [--memory] [--print]; under WSL an
                     elevated PowerShell (UAC) or the printed admin command; run.sh --lock-clocks / BENCH_LOCK_CLOCKS=auto|prompt|off
                     calls it before multi-GPU runs (added 2026-10-14, tests/test_gpuclock.py)
+mlx-host-info.sh    Run on the Mac serving an MLX model: chip, unified memory, macOS, mlx/mlx-lm versions as JSON
+                    (bench.py --mlx-host-info); models/m3pro-36gb.mlx = the first tester's model list (M3 Pro 36 GB)
 powerlimit.sh       GPU power cap; uniform mode (all GPUs, called by compare.sh) or --per-gpu (4090@300W, 3090@280W); WSL2-aware
 compare.sh          Runs the canonical models/default.txt set (10 models as of 2026-09-15) (model-timeout 1200, num-predict 8000); auto-names output by backend (results-compare.json / results-compare-ls.json); sets BENCH_NO_LOG=1 to suppress per-run log duplication; logs to logs/compare-NN.log
 compare-results.sh  Merge two result JSONs and print speed summary + full task table for backend comparison
@@ -379,6 +381,9 @@ lib/
   ollama_client.py        Ollama /api/chat client
   llama_server_client.py  LlamaServerManager (spawn/stop llama-server) + chat() for OpenAI-compatible API
   vllm_client.py          VLLMManager (spawn/stop vllm serve) + chat() for OpenAI-compatible API
+  mlx_client.py           --backend mlx (2026-11-04): chat() for an mlx_lm.server the harness does NOT own (often a Mac;
+                          requests always name default_model, since naming another makes mlx-lm load it); honest metrics
+                          (no timings → tok_per_s 0), backend_notes, order independence verified from cached_tokens
   model_config.py         Parse models/*.txt 3-field format → ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser + allow-list validator
   reporting.py            Comparison table (paginated), failure detail, JSON writer
@@ -425,6 +430,8 @@ tests/
   test_stall_watch.py         bench's stall watchdog (all GPUs idle with a request open → stop, record stalled; statistics drop it)
   test_reporting.py           lib/reporting skill-level scoring unit tests
   test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
+  test_mlx_client.py          MLX client against a stand-in mlx-lm server (fields, errors, timeouts, missing usage, cache
+                              hits, reasoning while off) + bench.py --backend mlx end to end (grades python_safe_div)
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)

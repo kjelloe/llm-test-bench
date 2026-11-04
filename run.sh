@@ -60,6 +60,17 @@ for _arg in "$@"; do
 done
 set -- "${_PASSTHROUGH[@]+"${_PASSTHROUGH[@]}"}"
 
+# --backend mlx: the model runs in an mlx-lm server elsewhere (often a Mac), so this machine's NVIDIA checks (power
+# limits, clock lock, hwmonitor's GPU watchdog) say nothing about it and are skipped.
+_MLX=0
+[[ "${BENCH_BACKEND:-}" == "mlx" ]] && _MLX=1
+_prev=""
+for _arg in "$@"; do
+    [[ "$_arg" == "--backend=mlx" || ( "$_prev" == "--backend" && "$_arg" == "mlx" ) ]] && _MLX=1
+    [[ "$_prev" == "--backend" && "$_arg" != "mlx" ]] && _MLX=0
+    _prev="$_arg"
+done
+
 # ── GPU mode ─────────────────────────────────────────────────────────────────
 # Source .gpu-mode if present (written by gpu-mode.sh).
 # single-GPU mode: export CUDA_VISIBLE_DEVICES (inherited by all backends) and
@@ -84,7 +95,7 @@ fi
 # than risk uncapped GPUs pulling combined power the PSU wasn't sized for.
 # Override MAX_PSU_WATT if your PSU differs from the 1200W this repo was built around;
 # SKIP_POWER_CHECK=1 bypasses the check entirely for advanced/known-safe setups.
-if [[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${SKIP_POWER_CHECK:-0}" -ne 1 ]]; then
+if [[ "$_MLX" -eq 0 && "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${SKIP_POWER_CHECK:-0}" -ne 1 ]]; then
     python3 "$_SCRIPT_DIR/lib/power_check.py" "${MAX_PSU_WATT:-1200}" "${SYSTEM_OVERHEAD_WATT:-175}" || exit 1
 fi
 
@@ -93,14 +104,14 @@ fi
 # stuck Unity smoke test, a leftover llama-server). BENCH_ABORT_ON_BUSY=1 aborts instead.
 # In multi-GPU mode it also warns when the GPU core clocks are not locked (2026-10-12).
 _LOAD_ARGS=()
-[[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" ]] && _LOAD_ARGS=(--multi-gpu)
+[[ "$_MLX" -eq 0 && "${GPU_SINGLE_INDEX:-"-1"}" == "-1" ]] && _LOAD_ARGS=(--multi-gpu)
 python3 "$_SCRIPT_DIR/lib/load_check.py" "${_LOAD_ARGS[@]+"${_LOAD_ARGS[@]}"}" || exit 1
 
 # ── GPU core clock lock for multi-GPU runs (2026-10-14) ─────────────────────
 # A layer split decodes ~7x slower on long answers when the driver downclocks idle GPUs (Known Issues in CLAUDE.md).
 # BENCH_LOCK_CLOCKS: prompt (default) prints how to lock; auto (or --lock-clocks) locks now through gpuclock.sh — under
 # WSL an elevated PowerShell, so a UAC prompt on the Windows desktop; off skips the check. Single-GPU runs skip it.
-if [[ "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${BENCH_LOCK_CLOCKS:-prompt}" != "off" ]] && command -v nvidia-smi >/dev/null \
+if [[ "$_MLX" -eq 0 && "${GPU_SINGLE_INDEX:-"-1"}" == "-1" && "${BENCH_LOCK_CLOCKS:-prompt}" != "off" ]] && command -v nvidia-smi >/dev/null \
    && [[ $(nvidia-smi -L 2>/dev/null | wc -l) -gt 1 ]] && ! "$_SCRIPT_DIR/gpuclock.sh" status >/dev/null; then
     if [[ "${BENCH_LOCK_CLOCKS:-prompt}" == "auto" ]]; then
         "$_SCRIPT_DIR/gpuclock.sh" lock || echo "[clocks] not locked; continuing (multi-GPU decode will be slow)"
@@ -118,7 +129,7 @@ _BENCH_PID=$!
 # Quiet mode: data lines go to log only; WARN/CRIT/OK appear on stderr.
 # Skipped if --no-hwmonitor passed or hwmonitor.py not found.
 _HW_PID=""
-if [[ "$_NO_HWMONITOR" -eq 0 && -x "$_SCRIPT_DIR/hwmonitor/hwmonitor.py" ]]; then
+if [[ "$_NO_HWMONITOR" -eq 0 && "$_MLX" -eq 0 && -x "$_SCRIPT_DIR/hwmonitor/hwmonitor.py" ]]; then
     mkdir -p "$_SCRIPT_DIR/output"
     _HW_LOG="$_SCRIPT_DIR/output/hwmonitor-$(date '+%Y%m%d-%H%M%S').log"
     python3 "$_SCRIPT_DIR/hwmonitor/hwmonitor.py" \

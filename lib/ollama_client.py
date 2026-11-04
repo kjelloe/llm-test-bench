@@ -25,6 +25,7 @@ class OllamaResponse:
     thinking: str          # non-empty for models with thinking mode (deepseek-r1, gemma4, etc.)
     metrics: OllamaMetrics
     finish_reason: str = ""  # "stop" | "length" | "eos" | "" if unavailable
+    backend_notes: dict = field(default_factory=dict)  # MLX: effective/unsupported controls, cache hits (lib/mlx_client.py)
 
 
 class OllamaError(Exception):

@@ -184,6 +184,7 @@ of `./statistics.sh --detail`.
 | Ollama | default | Simplest setup; `ollama pull` and go |
 | [llama-server](https://github.com/ggerganov/llama.cpp) | `--backend llama-server` | MoE-specific tuning (`n_cpu_moe`, KV cache dtype per model), multi-GPU `tensor_split`, the primary backend this repo's own findings are benchmarked on |
 | [vLLM](https://github.com/vllm-project/vllm) | `--backend vllm` | Tensor-parallel multi-GPU, AWQ/GPTQ/FP8, continuous batching |
+| [MLX](https://github.com/ml-explore/mlx-lm) (Apple Silicon) | `--backend mlx` | A Mac doing the inference: an `mlx_lm.server` already running, this harness (Linux or the Mac) preparing and grading the tasks |
 
 **llama-server** needs `LLAMA_MODELS_DIR` pointed at your GGUF directory and a `models/*.txt` entry
 mapping each model name to a GGUF filename plus optional params:
@@ -209,6 +210,28 @@ qwen2.5-coder:14b-vl  Qwen2.5-Coder-14B-Q4_K_M.gguf  tp=1,dtype=auto,max_model_l
 ```bash
 ./compare.sh --backend vllm
 ```
+
+**MLX** (step 1 of the plan from the first Mac tester, 2026-11-04) connects to an `mlx_lm.server` that is already
+running; the harness never starts, stops or loads a model there, and every request asks for the model the server was
+started with. Pass its URL and, optionally, a `models/*.mlx` file (same format; field 2 is the served local directory,
+`max_ctx`/`thinking`/`revision=<sha>` as params) and the Mac's facts from `mlx-host-info.sh`:
+
+```bash
+# on the Mac (prompt cache off: no answer reuses an earlier task's prefix)
+hf download mlx-community/Qwen2.5-Coder-7B-Instruct-4bit --revision 019cc73c45c7 --local-dir ~/mlx-models/qwen2.5-coder-7b
+mlx_lm.server --model ~/mlx-models/qwen2.5-coder-7b --host 127.0.0.1 --port 8085 --prompt-cache-size 0
+./mlx-host-info.sh > mac.json
+# on the harness machine, through an SSH tunnel (ssh -N -L 8085:127.0.0.1:8085 mac)
+./run.sh --backend mlx --mlx-url http://127.0.0.1:8085 --model-file models/m3pro-36gb.mlx \
+         --mlx-host-info mac.json --models qwen2.5-coder:7b-mlx --tasks python_safe_div
+```
+
+mlx-lm reports no prefill/decode timings, so MLX records carry the end-to-end time and token counts only (`tok_per_s`
+stays 0; it is never completion tokens over request time). Each record's `backend_notes` lists the effective
+settings, the requested controls MLX does not apply (`num_ctx`, `num_thread`), prompt-cache hits and whether reasoning
+came back although it was off; `hardware.inference_host` names the Mac and `hardware.order_independent` is computed
+from the cache hits, not assumed. `run.sh` skips the NVIDIA checks (power, clocks, hwmonitor) for MLX runs. No Apple
+package is needed on Linux. Not done yet: a harness-managed server on the Mac, `compare.sh` and `statistics.sh` support.
 
 Both backends have significant edge cases (MoE GGUF loading, GPTQ/AWQ quirks, KV-cache dtype vs.
 task-precision sensitivity, WSL2 networking) — see the **llama-server backend** and **vLLM backend**
@@ -310,7 +333,8 @@ The essentials:
 | `--export-task TASK_ID` / `--export-dir PATH` | Write a shareable task package and exit — no model needed |
 | `--list-tasks` | Print every task id/difficulty/group/description and exit |
 | `--tasks ID [...]` / `--task-group GROUP [...]` | Mutually exclusive; pick specific tasks or whole groups |
-| `--backend {ollama,llama-server,vllm}` | Default `ollama`; env `BENCH_BACKEND` |
+| `--backend {ollama,llama-server,vllm,mlx}` | Default `ollama`; env `BENCH_BACKEND` |
+| `--mlx-url URL` / `--mlx-host-info PATH` | MLX: the running `mlx_lm.server`; the Mac's facts from `mlx-host-info.sh` |
 | `--model-file PATH` | Required for llama-server/vllm backends |
 | `--num-ctx` / `--num-predict` | Context window / max output tokens (default 400; use 8000+ for thinking models) |
 | `--temperature` / `--seed` | Default `0` / `1` — determinism by default |

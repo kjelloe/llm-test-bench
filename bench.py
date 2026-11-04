@@ -46,6 +46,27 @@ def _no_blocks_detail(resp, num_predict: int) -> str:
     return "\n".join(parts) if parts else "(empty response)"
 
 
+def _same_machine(url: str) -> bool:
+    """MLX inference runs on macOS only, so a harness on another OS is never the inference host — even at 127.0.0.1,
+    which is then the end of an SSH tunnel."""
+    import platform
+    from urllib.parse import urlparse
+    return platform.system() == "Darwin" and (urlparse(url).hostname or "") in ("localhost", "127.0.0.1", "::1")
+
+
+def mlx_order_independent(records: list[dict]) -> bool | None:
+    """Verified, not assumed: True when no MLX answer reused another request's prompt cache (usage.cached_tokens = 0),
+    False when one did, None when the server reported no cache counts."""
+    cached = [r["backend_notes"]["cached_prompt_tokens"] for r in records
+              if "cached_prompt_tokens" in (r.get("backend_notes") or {})]
+    return None if not cached else not any(cached)
+
+
+def _finished_thread() -> threading.Thread:
+    t = threading.Thread(target=lambda: None)
+    t.start()
+    return t
+
 def run_one(
     model: str,
     task: Task,
@@ -117,9 +138,11 @@ def run_one(
         effective_num_predict = max(num_predict, task.min_predict) if task.min_predict else num_predict
         # Task overrides only ever raise the limit (slow context tasks), never undercut --model-timeout.
         effective_timeout = max(model_timeout, task.model_timeout) if task.model_timeout else model_timeout
-        vram_pre = get_gpu_snapshot()   # before prompt eval — weights loaded, no KV cache yet
+        # MLX infers on another machine (or on Apple unified memory): local NVIDIA telemetry would describe the wrong host
+        local_gpu = backend != "mlx"
+        vram_pre = get_gpu_snapshot() if local_gpu else None   # before prompt eval — weights loaded, no KV cache yet
         stop_poll = threading.Event()
-        poll_thread, snap_holder = launch_peak_poller(stop_poll)
+        poll_thread, snap_holder = launch_peak_poller(stop_poll) if local_gpu else (_finished_thread(), [])
         stall_thread, stalled = launch_stall_watch(stop_poll, stall_s, on_stall) if on_stall else (None, [])
         try:
             # Use "After your reasoning..." only when we're actually asking the model to think.
@@ -167,7 +190,7 @@ def run_one(
                                           f"server stopped by the watchdog. " + record["error_detail"])[:500]
             record["gpu_snapshots"] = {"before_load": gpu_before, "after_load": gpu_after, "peak_during_gen": None}
             return record
-        vram_post = get_gpu_snapshot()  # after full inference — weights + KV cache (prompt + output)
+        vram_post = get_gpu_snapshot() if local_gpu else None  # after full inference — weights + KV cache
         stop_poll.set()
         poll_thread.join(timeout=2.0)
         peak_snap = snap_holder[0] if snap_holder else None
@@ -175,7 +198,9 @@ def run_one(
             "before_load": gpu_before,
             "after_load": gpu_after,
             "peak_during_gen": peak_snap,
-        }
+        } if local_gpu else None
+        if resp.backend_notes:
+            record["backend_notes"] = resp.backend_notes
 
         m = resp.metrics
         record["metrics"] = {
@@ -187,11 +212,15 @@ def run_one(
             "total_duration_ms": round(m.total_duration / 1e6, 1),
         }
         record["tok_per_s"] = round(m.tok_per_s, 1)
+        if resp.backend_notes.get("decode_timing") == "unavailable":
+            # only the end-to-end time is known; tok_per_s stays 0 rather than tokens over request time
+            record["metrics"]["prompt_eval_duration_ms"] = record["metrics"]["eval_duration_ms"] = None
         # Detect silent num_ctx downgrade: Ollama may cap the context below our request
         # when VRAM is insufficient. Actual chars/token for this workload is ~3-4, so
         # len(prompt)//5 is a conservative floor. Using //4 caused false positives on
         # small code prompts where the actual ratio is ~4.1 chars/token.
-        record["ctx_truncated"] = m.prompt_eval_count < len(prompt) // 5
+        # 0 = the backend reported no usage (unknown), not a truncated prompt
+        record["ctx_truncated"] = 0 < m.prompt_eval_count < len(prompt) // 5
 
         total_kv_tokens = m.prompt_eval_count + m.eval_count
         kv_delta_mb: int | None = None
@@ -288,8 +317,19 @@ def main() -> None:
     )
     parser.add_argument(
         "--backend", default=os.environ.get("BENCH_BACKEND", "ollama"),
-        choices=["ollama", "llama-server", "vllm"],
-        help="Inference backend (default: ollama; env: BENCH_BACKEND)",
+        choices=["ollama", "llama-server", "vllm", "mlx"],
+        help="Inference backend (default: ollama; env: BENCH_BACKEND). mlx = an already-running mlx-lm server "
+             "(--mlx-url), never started or stopped by the harness",
+    )
+    parser.add_argument(
+        "--mlx-url", default=os.environ.get("BENCH_MLX_URL"), metavar="URL",
+        help="Base URL of a running mlx_lm.server, e.g. http://127.0.0.1:8085 through an SSH tunnel (--backend mlx; "
+             "env: BENCH_MLX_URL). Keep it on a trusted network: mlx-lm's server is not built for exposure",
+    )
+    parser.add_argument(
+        "--mlx-host-info", default=os.environ.get("BENCH_MLX_HOST_INFO"), metavar="PATH",
+        help="JSON from mlx-host-info.sh run on the inference Mac (chip, memory, macOS, mlx/mlx-lm versions); "
+             "recorded as hardware.inference_host.host (--backend mlx)",
     )
     parser.add_argument(
         "--model-file", default=os.environ.get("BENCH_MODEL_FILE"), metavar="PATH",
@@ -458,6 +498,42 @@ def main() -> None:
         model_configs = {c.ollama_name: c for c in cfgs}
         llama_manager = VLLMManager(models_dir=models_dir, bin_path=bin_path, debug=args.debug)
 
+    elif args.backend == "mlx":
+        from lib import mlx_client
+        from lib.mlx_client import chat as _chat_fn
+        from lib.model_config import load_model_file
+
+        if not args.mlx_url:
+            parser.error("--mlx-url (or BENCH_MLX_URL) is required for --backend mlx: the URL of a running mlx_lm.server")
+        if len(args.models) != 1:
+            parser.error("--backend mlx takes exactly one model: an mlx-lm server serves the model it was started with")
+        if args.model_file:
+            model_configs = {c.ollama_name: c for c in load_model_file(args.model_file)}
+            if args.models[0] not in model_configs:
+                parser.error(f"Model {args.models[0]!r} not found in {args.model_file}")
+        try:
+            mlx_info = mlx_client.server_info(args.mlx_url)
+        except OllamaError as exc:
+            parser.error(f"MLX server not reachable: {exc}")
+        mlx_cfg = model_configs.get(args.models[0])
+        declared = (mlx_cfg.gguf_file if mlx_cfg and mlx_cfg.gguf_file not in (None, "-") else
+                    mlx_cfg.hf_repo if mlx_cfg else None)
+        listed = mlx_client.model_listed(declared, mlx_info["models"]) if declared else None
+        if declared and not listed:
+            print(f"  [mlx] WARNING: {declared!r} is not in the server's /v1/models listing; "
+                  f"it may be serving another model")
+        host_info = json.loads(Path(args.mlx_host_info).read_text()) if args.mlx_host_info else None
+        mlx_inference_host = {
+            "backend": "mlx",
+            "endpoint": args.mlx_url,
+            "same_machine_as_tests": _same_machine(args.mlx_url),
+            "declared_model": declared,
+            "declared_revision": mlx_cfg.params.get("revision") if mlx_cfg else None,
+            "model_listed": listed,
+            "server_health": mlx_info["health"],
+            "host": host_info,   # None unless --mlx-host-info: then the inference hardware is not recorded
+        }
+
     else:
         from lib.ollama_client import chat as _chat_fn
         from lib.ollama_client import unload_model as _unload_fn
@@ -516,11 +592,15 @@ def main() -> None:
         server_name="vllm" if args.backend == "vllm" else "llama-server",
         models_dir=models_dir or None,
     )
+    if args.backend == "mlx":
+        hw["inference_host"] = mlx_inference_host
     # GPU VRAM is reported in MiB and is never exactly a round number (e.g. RTX 4090 = 24564 MiB,
     # not 24576). Add 0.1 GB tolerance so 2× "24 GB" cards (49140 MiB = 47.99 GB) pass the 48 GB check.
     total_vram_gb: float = sum(
         g.get("vram_total_mb", 0) for g in (hw.get("gpu") or [])
     ) / 1024.0 + 0.1
+    if args.backend == "mlx":
+        total_vram_gb = 0   # the local GPUs do not run the model; unified memory is not VRAM, max_ctx gates instead
 
     pairs = [(m, tk) for m in args.models for tk in tasks_to_run]
     results: list[dict] = []
@@ -665,6 +745,20 @@ def main() -> None:
                     current_ctx = effective_ctx
                 client_url = llama_manager.base_url
 
+            elif args.backend == "mlx":
+                cfg = model_configs.get(model)
+                if cfg and cfg.max_ctx and effective_ctx > cfg.max_ctx:
+                    print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_CTX) "
+                          f"need ctx={effective_ctx}, model max={cfg.max_ctx}")
+                    _r = _skip_record("SKIPPED_CTX",
+                        f"task needs ctx={effective_ctx}; model limit (max_ctx in {args.model_file}) is {cfg.max_ctx}")
+                    results.append(_r)
+                    if checkpoint_dir_path is not None:
+                        _ckpt_buf.append(_r)
+                        _write_model_checkpoint(checkpoint_dir_path, model, _ckpt_buf)
+                    continue
+                client_url = args.mlx_url
+
             else:
                 # Ollama: restart on model switch only
                 if model != current_model:
@@ -704,9 +798,7 @@ def main() -> None:
                     current_model = model
                 client_url = args.ollama_url
 
-            _is_thinking = (
-                cfg.is_thinking if (llama_manager is not None and cfg is not None) else args.think
-            )
+            _is_thinking = cfg.is_thinking if cfg is not None else args.think
             print(f"[{i}/{total}] model={model!r}  task={task.id!r} ...", end=" ", flush=True)
             record = run_one(
                 model=model,
@@ -728,7 +820,7 @@ def main() -> None:
                 on_stall=llama_manager.stop if llama_manager is not None else None,
                 stall_s=float(os.environ.get("BENCH_STALL_ABORT_S", "300")),
             )
-            if llama_manager is not None:
+            if model_configs:
                 cfg = model_configs.get(model)
                 if cfg and cfg.hf_repo:
                     record["hf_repo"] = cfg.hf_repo
@@ -760,6 +852,8 @@ def main() -> None:
     finally:
         if llama_manager is not None:
             llama_manager.stop()
+        if results and args.backend == "mlx":
+            hw["order_independent"] = mlx_order_independent(results)
         if results:
             write_results(results, args.out, hardware=hw)
             print(f"\nResults written to {args.out}")
