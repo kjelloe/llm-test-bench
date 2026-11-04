@@ -33,3 +33,14 @@ def test_clock_warning_when_any_gpu_is_not_locked():
     assert len(w) == 1
     assert "GPU1 210 MHz" in w[0] and "GPU2 405 MHz" in w[0] and "GPU0" not in w[0]
     assert "nvidia-smi -lgc" in w[0]
+
+
+def test_main_runs_without_proc(monkeypatch):
+    """macOS has no /proc and no nvidia-smi: the check must pass, not crash run.sh (an MLX tester's Mac)."""
+    import os
+
+    from lib import load_check
+    monkeypatch.setattr(load_check.os.path, "isdir", lambda p: False if p == "/proc" else os.path.isdir(p))
+    monkeypatch.setattr(load_check, "_gpus", lambda: [])
+    monkeypatch.setattr(load_check, "_processes", lambda: (_ for _ in ()).throw(AssertionError("read /proc")))
+    assert load_check.main() == 0

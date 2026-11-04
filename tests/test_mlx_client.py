@@ -232,6 +232,11 @@ def test_bench_end_to_end_against_external_server(server, tmp_path):
     assert data["hardware"]["order_independent"] is True
     assert len(server.requests) == 1 and server.requests[0]["model"] == "default_model"
 
+    from lib.statistics import _hw_gpu, _hw_total_vram_gb, load_file
+    _, shw = load_file(out)            # statistics describe the Mac, not this machine's GPUs
+    assert _hw_gpu(shw) == "Apple M3 Pro (MLX, unified memory)" and _hw_total_vram_gb(shw) == ""
+    assert shw["ram_total_gb"] == 36 and shw["platform"] == "macOS 15.6" and shw["server_name"] == "mlx-lm"
+
 
 def test_bench_requires_url_and_one_model(tmp_path):
     run = lambda *a: subprocess.run([sys.executable, "bench.py", "--backend", "mlx", *a], cwd=REPO,

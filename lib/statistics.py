@@ -60,8 +60,26 @@ def load_file(path: Path) -> tuple[list[dict], dict | None]:
         results = data["results"]
         if not results or "task" not in results[0]:
             raise ValueError("not a results file")
-        return [r for r in results if not r.get("stalled")], data.get("hardware")
+        hw = data.get("hardware")
+        return [r for r in results if not r.get("stalled")], _inference_view(hw) if hw and hw.get("inference_host") else hw
     raise ValueError("unrecognised file format")
+
+
+def _inference_view(hw: dict) -> dict:
+    """MLX runs infer on another machine (a Mac): describe that one, not the GPUs of the machine that graded the tasks.
+    Unified memory is reported as RAM, never as VRAM; unrecorded facts stay empty."""
+    host = hw["inference_host"].get("host") or {}
+    chip = host.get("chip") or "Apple Silicon (not recorded)"
+    return {
+        "gpu": [],
+        "accelerator": f"{chip} (MLX, unified memory)",
+        "cpu": chip,
+        "ram_total_gb": host.get("memory_gb") or "",
+        "platform": f"macOS {host['macos']}" if host.get("macos") else "",
+        "llama_server_version": host.get("mlx_lm") or "",
+        "server_name": "mlx-lm",
+        "order_independent": hw.get("order_independent"),
+    }
 
 
 # ── Hardware helpers ──────────────────────────────────────────────────────────
@@ -70,7 +88,7 @@ def _hw_gpu(hw: dict | None) -> str:
     """'2× RTX 3090 24GB (48GB total)' for multi-GPU, 'RTX 5060 Ti 16GB' for single."""
     gpus = (hw or {}).get("gpu") or []
     if not gpus:
-        return ""
+        return (hw or {}).get("accelerator") or ""
     total_vram = sum(round(g.get("vram_total_mb", 0) / 1024) for g in gpus)
     if len(gpus) == 1:
         g = gpus[0]

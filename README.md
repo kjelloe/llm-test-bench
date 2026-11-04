@@ -231,7 +231,9 @@ stays 0; it is never completion tokens over request time). Each record's `backen
 settings, the requested controls MLX does not apply (`num_ctx`, `num_thread`), prompt-cache hits and whether reasoning
 came back although it was off; `hardware.inference_host` names the Mac and `hardware.order_independent` is computed
 from the cache hits, not assumed. `run.sh` skips the NVIDIA checks (power, clocks, hwmonitor) for MLX runs. No Apple
-package is needed on Linux. Not done yet: a harness-managed server on the Mac, `compare.sh` and `statistics.sh` support.
+package is needed on Linux; `statistics.sh` describes MLX runs by the Mac, not by the grading machine. Not done yet: a
+harness-managed server on the Mac, `compare.sh` support, Mac memory/thermal telemetry. What still has to happen on a
+Mac (validation checks for a tester, then Mac-only development) is in [`docs/mlx-mac-plan.md`](docs/mlx-mac-plan.md).
 
 Both backends have significant edge cases (MoE GGUF loading, GPTQ/AWQ quirks, KV-cache dtype vs.
 task-precision sensitivity, WSL2 networking) — see the **llama-server backend** and **vLLM backend**

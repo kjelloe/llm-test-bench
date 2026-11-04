@@ -364,6 +364,8 @@ vllm-plan.md        Copy-paste steps: Qwen3.5-9B AWQ on vLLM for agentic tool ca
                     capacity and DDR5 sizing, benchmark steps point back here)
 docs/HOME_LAB_GUIDE.md     llama.cpp vs vLLM home-lab guide, recommended models by VRAM tier; §2.5 holds external Mac Studio M5 Ultra numbers
 docs/gpt-oss-120b-speed-debug-plan.md  Evidence + test plan for gpt-oss:120b's hangs and long-answer slowdown on 3×24 GB (2026-10-09)
+docs/mlx-mac-plan.md       --backend mlx: what needs a Mac (tester validation checks V1-V7, then managed server, memory/
+                           thermal telemetry, macOS run.sh/preflight) and what can be done from Linux (2026-11-04)
 docs/plan-2026-10-10.md    The ordered plan from 2026-10-10: hang control + A/B arms, re-runs, new gamedev tasks, model runs
 reports/            Symlink to ../llm-service-provider/reports/: the monthly model-status reports; models-status-November-2026.md
                     is the current scorecard (latest score per kept model, recomputed from output/ with record_score); update it

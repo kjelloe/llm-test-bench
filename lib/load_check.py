@@ -124,7 +124,9 @@ def _ancestors(pid: int) -> set[int]:
 
 def main() -> int:
     gpus = _gpus()
-    warnings = evaluate(_processes(), [(i, used) for i, used, _ in gpus], _ancestors(os.getpid()))
+    # macOS (an MLX tester's Mac) has no /proc: the CPU check is Linux-only, the run goes on without it
+    procs = _processes() if os.path.isdir("/proc") else []
+    warnings = evaluate(procs, [(i, used) for i, used, _ in gpus], _ancestors(os.getpid()))
     if "--multi-gpu" in sys.argv[1:]:
         warnings += clock_warnings([(i, mhz) for i, _, mhz in gpus])
     if not warnings:
