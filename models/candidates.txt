@@ -1970,3 +1970,15 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # the A3B class: the same tasks fail as for other Qwen3.6-35B-A3B builds, and tiel-coder:35b (8/10 spot, 164 tok/s) stays ahead.
 # GGUF deleted 2026-11-03 (rejected); re-download via ./fetch-hf.sh to run again.
 # qwen3.8-35b-a3b-distill  Qwen3.8-35B-A3B-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:empero-ai/Qwen3.8-35B-A3B-Distill-GGUF
+
+# qwen3.8-flash-next Gyro (agentionai, scout 2026-11-06; repo since 2026-09-30, 796k downloads) — trellis-coded experts
+# (TQK6/TQK7/TQ2_T/TQP5-7 in a rotated basis; "TQ1_0/TQ2_0/TQ3_0" in the names is only a size class). **Upstream llama.cpp
+# cannot load these files**: needs agentionai's fork (gitlab.com/agentionai-group/llama.cpp, CUDA) or Strata. Their KLD
+# against the full model: Gyro-L 0.146 in 50.2 GiB (AtomicChat AD-4.27bpw, our 3x24gb entry: 0.228 in 52.3 GiB), Gyro-M
+# 0.291 in 35.0 GiB. Files: L 108.3 GB (53.9 GB -noPLE + the shared n-gram table via --ple from
+# Delgon/Qwen3.8-Flash-Next-PLE-GGUF), M 92.0 GB, S 58.5 GB.
+# Gyro-Coder (agentionai/Qwen3.8-Flash-Next-Gyro-Coder-GGUF, 2026-10-21): 256 of 512 experts kept for code, 19.92 GiB on
+# the GPU: flash-next on ONE 24 GB card (TQ2_0 75.8 GB with the table; Coder-L 27.5 GiB for 32 GB cards).
+# Not downloaded: a fork build outside the pin, results not comparable to stock llama.cpp numerics. Decision pending.
+# qwen3.8-flash-next-gyro-l      Qwen3.8-Flash-Next-Gyro-L-TQ3_0.gguf          fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,thinking  hf:agentionai/Qwen3.8-Flash-Next-Gyro-GGUF
+# qwen3.8-flash-next-gyro-coder  Qwen3.8-Flash-Next-Gyro-Coder-TQ2_0.gguf      cache_type_k=f16,cache_type_v=f16,flash_attn,max_ctx=65536,thinking  hf:agentionai/Qwen3.8-Flash-Next-Gyro-Coder-GGUF

@@ -674,7 +674,9 @@ trusting as-is.
   requests (TOOL_ERROR "model 'gpt-oss:120b' not found" in 4 s); (4) scratchpad queue scripts under `/tmp` are gone.
   Windows Update auto-restart is blocked by policy since 2026-10-14 (`NoAutoRebootWithLoggedOnUsers=1`, `AUOptions=3`
   under `HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU`; works only while signed in).
-- **Unexplained hard crashes (4 since 2026-08-29, the last under CPU-only load).** After one, run
+- **Unexplained hard crashes (5 since 2026-08-29; the 4th under CPU-only load, the 5th a hang at near idle on 2026-11-05,
+  fans at 100%, frozen ~2 h before the reset). Next step decided 2026-11-06: the user lowers the RAM speed (EXPO 6000 or
+  off); count crashes from that date.** After one, run
   `hwmonitor/crash-evidence.sh` and add a row to the crash log in `hw-upgrade-july-2026.md` (hypotheses there; leading: the
   2×48 GB DDR5 at EXPO 6400), and `git fsck` any repo that was being written (the 2026-10-21 crash emptied 35 git objects).
 - **New box: run `./preflight.sh` before the first benchmark.** The RTX 5060 Ti box had only .NET
