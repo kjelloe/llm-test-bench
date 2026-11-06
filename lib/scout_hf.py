@@ -92,6 +92,7 @@ SCOUT_QUERIES: list[str] = [
     "tulu 3 70b instruct",               # AI2 Tulu 3 70B dense instruct
     "deepseek coder 33b instruct",       # older dense coder tier, cheap to re-check for regressions/updates
     "yi 1.5 34b instruct",               # Yi-1.5-34B dense — fits comfortably even at Q6-Q8 on 72 GB
+    "nanbeige 33b gguf",                 # Nanbeige4.3-33B dense (Llama arch, 2026-10-24); missed by every query above until 11-06
 ]
 
 _REPOS_PER_QUERY = 10

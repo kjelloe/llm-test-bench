@@ -1982,3 +1982,22 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # Not downloaded: a fork build outside the pin, results not comparable to stock llama.cpp numerics. Decision pending.
 # qwen3.8-flash-next-gyro-l      Qwen3.8-Flash-Next-Gyro-L-TQ3_0.gguf          fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,thinking  hf:agentionai/Qwen3.8-Flash-Next-Gyro-GGUF
 # qwen3.8-flash-next-gyro-coder  Qwen3.8-Flash-Next-Gyro-Coder-TQ2_0.gguf      cache_type_k=f16,cache_type_v=f16,flash_attn,max_ctx=65536,thinking  hf:agentionai/Qwen3.8-Flash-Next-Gyro-Coder-GGUF
+
+# nanbeige4.3:33b — Nanbeige/Nanbeige4.3-33B (2026-10-24, Apache-2.0). Dense 33B, plain LlamaForCausalLM (52 layers, GQA 8 KV
+# heads, head 128, 512k context, rope_theta 1.2e8), so the pin 67a17c17c loads it. Card claims, all at highest thinking effort
+# with its own harnesses: Terminal-Bench 2.1 80.9 vs Qwen3.8-27B 73.0, DeepSWE 65.5 vs 42.5, SWE-Bench Pro 60.3 vs 61.7, GPQA
+# 89.5 vs 89.2. Template has enable_thinking (default ON); the harness sends enable_thinking=false without --think, so a spot
+# here measures it with reasoning off, which is not what the card measured: run both.
+# Missed by the scout (no query matched "nanbeige"); query added 2026-11-06. bartowski Q4_K_M 20.79 GB (IQ4_XS 18.64).
+# KV is ~208 KiB/token at f16 (52 x 2 x 8 x 128 x 2 B): 32k = 7.0 GB, so Q4_K_M + 32k f16 does not fit one 24 GB card;
+# 2x24 GB with tensor_split as the 27B/31B entries (cross-GPU caveat applies). One-GPU variant: IQ4_XS at max_ctx 16384.
+# Not downloaded. Decision pending (2026-11-06).
+# nanbeige4.3:33b        Nanbeige_Nanbeige4.3-33B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:bartowski/Nanbeige_Nanbeige4.3-33B-GGUF
+# nanbeige4.3:33b-1gpu   Nanbeige_Nanbeige4.3-33B-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=16384  hf:bartowski/Nanbeige_Nanbeige4.3-33B-GGUF
+
+# Scout 2026-11-06 via HF trending (gguf, sortByTrending) — not in the query list, NOT downloaded:
+# - Jackrong/Qwopus3.8-27B-Coder-Flash-GGUF (2026-10-28): coder fine-tune on Qwen3.8-27B, Q4_K_M 16.8 GB, one GPU. Jackrong's
+#   qwopus3.6:35b was 19/19 but failed fastapi; worth a spot against qwen3.8:27b's 10/10.
+# - ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF (2026-09-26, 745k): expert-pruned flash-next coder, IQ1_M 58.4 GB, stock
+#   llama.cpp layout (no fork, unlike Gyro-Coder). An alternative to the Gyro decision.
+# - AtomicChat/Ripple-65B-Preview-GGUF (2026-11-04): ricursiveai Ripple, support only on master (fecdc81ee, 2026-11-05), not the pin.
