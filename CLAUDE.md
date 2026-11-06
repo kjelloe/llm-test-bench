@@ -354,7 +354,7 @@ statistics.sh       Aggregate all output/*.json into one sharable dataset: summa
                      docs/reports/qwen3.8-27b-nvfp4-2x-rtx5060ti-vllm-export.json)
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; pre-checks repos for 404/deleted before downloading
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
-scout-hf.sh         Periodic HF Hub scanner; diffs against saved state (output/hf-scout-state.json); use --vllm for AWQ/GPTQ/FP8 transformers repos (state: output/hf-scout-vllm-state.json); --no-save for dry-run; --show-all to include unchanged repos
+scout-hf.sh         Periodic HF Hub scanner; diffs against saved state (output/hf-scout-state.json); use --vllm for AWQ/GPTQ/FP8 transformers repos (state: output/hf-scout-vllm-state.json); --no-save for dry-run; --show-all to include unchanged repos; GGUF mode also reads HF's top-50 trending GGUF list (`[trending]` in the output, `--no-trending` to skip; a repo seen only there is not reported GONE when it drops off; added 2026-11-07, tests/test_scout_trending.py)
 preflight.sh        Dependency checker. Run it first on a new box: dotnet_sas needs .NET 9+
 how-to-vllm.md      vLLM on an RTX 50xx (Blackwell) box: setup, GGUF plugin, model picks (models/16gb.vllm, models/2x16gb.vllm)
 how-to-test-flash-next.md  Step-by-step: qwen3.8-flash-next on 16 GB VRAM + RAM + NVMe expert paging
@@ -433,6 +433,7 @@ tests/
   test_stall_watch.py         bench's stall watchdog (all GPUs idle with a request open → stop, record stalled; statistics drop it)
   test_reporting.py           lib/reporting skill-level scoring unit tests
   test_hw_snapshot.py         hw_summary unit tests (results header names the right serving engine)
+  test_scout_trending.py      scout_hf's trending pass: HF trending query, dropping off trending is not GONE
   test_mlx_client.py          MLX client against a stand-in mlx-lm server (fields, errors, timeouts, missing usage, cache
                               hits, reasoning while off) + bench.py --backend mlx end to end (grades python_safe_div)
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)

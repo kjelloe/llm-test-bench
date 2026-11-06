@@ -267,7 +267,13 @@ def _suggested_size(rec: dict) -> int | None:
 
 # ── HF search ─────────────────────────────────────────────────────────────────
 
+TRENDING = "<trending>"      # pseudo-query: HF's trending GGUF list, catches families no fixed query names
+_TRENDING_LIMIT = 50
+
+
 def _search_repos(api, query: str, limit: int) -> list:
+    if query == TRENDING:
+        return list(api.list_models(sort="trendingScore", filter="gguf", limit=_TRENDING_LIMIT))
     results = list(api.list_models(search=query, filter="gguf", limit=max(limit * 4, 20)))
     results.sort(key=lambda m: getattr(m, "downloads", 0) or 0, reverse=True)
     return results[:limit]
@@ -331,6 +337,18 @@ def _file_set(rec: dict) -> set[str]:
     return {f["name"] for f in rec.get("files", [])}
 
 
+def _trending_only(rec: dict) -> bool:
+    return rec.get("source_queries") == [TRENDING]
+
+
+def _carry_trending(old_repos: dict, new_repos: dict) -> None:
+    """A repo seen only through trending stays in the state after it leaves the list: dropping off trending is not GONE,
+    and it must not come back as NEW the next time it trends."""
+    for rid, rec in old_repos.items():
+        if rid not in new_repos and _trending_only(rec):
+            new_repos[rid] = rec
+
+
 def _compute_diff(
     old_repos: dict, new_repos: dict
 ) -> tuple[list[tuple], list[tuple], list[str]]:
@@ -350,8 +368,8 @@ def _compute_diff(
             if added or removed:
                 updated_entries.append((rid, rec, added, removed))
 
-    for rid in old_repos:
-        if rid not in new_repos:
+    for rid, rec in old_repos.items():
+        if rid not in new_repos and not _trending_only(rec):
             gone_entries.append(rid)
 
     return new_entries, updated_entries, gone_entries
@@ -369,7 +387,8 @@ def _print_repo_line(rid: str, rec: dict, indent: str = "    ") -> None:
     moe_tag = " [MoE]" if rec.get("is_moe") else ""
     dl_str = f"  {dl}" if dl else ""
     size_part = f"  {size_str}{moe_tag}  {tiers}" if size_str else (moe_tag.strip() or "")
-    print(f"{indent}{rid}{dl_str}{size_part}")
+    trend = "  [trending]" if TRENDING in rec.get("source_queries", []) else ""
+    print(f"{indent}{rid}{dl_str}{size_part}{trend}")
     if sug:
         print(f"{indent}  → {sug}")
 
@@ -635,6 +654,8 @@ def main() -> None:
                         help="HuggingFace API token (default: HF_TOKEN env var)")
     parser.add_argument("--limit", type=int, default=_REPOS_PER_QUERY,
                         help=f"Repos fetched per query (default: {_REPOS_PER_QUERY})")
+    parser.add_argument("--no-trending", action="store_true",
+                        help="GGUF mode: skip the pass over HF's trending GGUF repos (top 50)")
     parser.add_argument("--no-save", action="store_true",
                         help="Print results without updating the state file")
     parser.add_argument("--show-all", action="store_true",
@@ -725,6 +746,8 @@ def main() -> None:
 
     # ── GGUF branch (original behaviour) ──────────────────────────────────────
     queries = args.queries or SCOUT_QUERIES
+    if not args.no_trending:
+        queries = [*queries, TRENDING]
 
     print("═" * 64)
     print("  HuggingFace GGUF Scout")
@@ -758,6 +781,7 @@ def main() -> None:
     for rid, rec in new_repos.items():
         rec["first_seen"] = old_repos[rid].get("first_seen", now) if rid in old_repos else now
         rec["last_seen"] = now
+    _carry_trending(old_repos, new_repos)
 
     if args.no_save:
         print("\n  (--no-save: state file not updated)")

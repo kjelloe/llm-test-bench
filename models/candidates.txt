@@ -2005,3 +2005,19 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # - ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF (2026-09-26, 745k): expert-pruned flash-next coder, IQ1_M 58.4 GB, stock
 #   llama.cpp layout (no fork, unlike Gyro-Coder). An alternative to the Gyro decision.
 # - AtomicChat/Ripple-65B-Preview-GGUF (2026-11-04): ricursiveai Ripple, support only on master (fecdc81ee, 2026-11-05), not the pin.
+
+# ── t44 queue (2026-11-07, user: Qwopus spot go, ISTA coder if possible) ─────────────────────────────────────────────
+# Qwopus3.8-27B-Coder-Flash (Jackrong, coder fine-tune of Qwen3.8-27B), Q4_K_M 16.8 GB, rev 603caf4c. One GPU, f16 KV
+# (the qwen3.8 hashmap rule), reasoning off as for every Qwen3 run here. Result: pending (output/t44-qwopus38-spot.json).
+# qwopus3.8:27b-coder  Qwopus3.8-27B-Coder-Flash-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:Jackrong/Qwopus3.8-27B-Coder-Flash-GGUF
+# ISTA Qwen3.8-Flash-Next GSQ-RCO-Coder: half the experts pruned for code (RCO), 3.5 bpw, IQ1_M dir, 2 shards: 29.6 GB
+# transformer + 28.8 GB n-gram table (IQ4_NL), rev bba88856 (first shard re-cut 2026-10-17). Stock llama.cpp layout; tried on
+# the pin first, master if it does not load. Result: pending (output/t44-fncoder-spot*.json).
+# qwen3.8-flash-next-coder  Qwen3.8-Flash-Next-GSQ-RCO-IQ1_M-00001-of-00002.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF
+# (downloaded by hand: the files sit in an IQ1_M/ subfolder of the repo, which fetch-hf.sh does not resolve.)
+
+# Lead from the first trending pass (2026-11-07), NOT downloaded:
+# - unsloth/flint-GGUF (RecursiveSI/flint, 2026-10-20, 287k): Recursive's coding-agent MoE, 39.8B total / ~2.5B active, 256
+#   experts + shared, sliding-window/full attention mix, 262k ctx. Card: SWE-bench Verified 74.2, Terminal-Bench 2.1 54.9.
+#   Arch `flint` is in llama.cpp master only (a37cc4610), not the pin. UD-Q3_K_XL 18.5 GB fits one GPU, UD-Q4_K_XL 25.1 GB
+#   needs two. A2.5B: expect the A3B class's misses (csv_nordic, hashmap) unless it breaks the pattern.
