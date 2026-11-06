@@ -1991,7 +1991,10 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # Missed by the scout (no query matched "nanbeige"); query added 2026-11-06. bartowski Q4_K_M 20.79 GB (IQ4_XS 18.64).
 # KV is ~208 KiB/token at f16 (52 x 2 x 8 x 128 x 2 B): 32k = 7.0 GB, so Q4_K_M + 32k f16 does not fit one 24 GB card;
 # 2x24 GB with tensor_split as the 27B/31B entries (cross-GPU caveat applies). One-GPU variant: IQ4_XS at max_ctx 16384.
-# Not downloaded. Decision pending (2026-11-06).
+# RESULT 2026-11-06 (t43, pin, 2x24 GB tensor_split 1|1, lane window, order-independent; SHA256 2cef7985…4c37):
+# reasoning off spot 8/10 at 37.5 tok/s (fails node_csv_parser: `const row` reassigned; node_paratrooper 6/40, a crash);
+# python_safe_div passes but repeats "Final answer." + the file to the 8000 limit. --think (32k/16k): 7/10, 61k tokens, 31 min
+# (csv_nordic and paratrooper out of budget). Below qwen3.8:27b (10/10 off, one GPU, ~45 tok/s). NOT PROMOTED.
 # nanbeige4.3:33b        Nanbeige_Nanbeige4.3-33B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=65536  hf:bartowski/Nanbeige_Nanbeige4.3-33B-GGUF
 # nanbeige4.3:33b-1gpu   Nanbeige_Nanbeige4.3-33B-IQ4_XS.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=16384  hf:bartowski/Nanbeige_Nanbeige4.3-33B-GGUF
 
