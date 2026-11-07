@@ -2016,7 +2016,9 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 # transformer + 28.8 GB n-gram table (IQ4_NL), rev bba88856 (first shard re-cut 2026-10-17). Stock llama.cpp layout; tried on
 # the pin first, master if it does not load. RESULT 2026-11-07 (t44, PIN loads it, 3x24 --fit): spot 9/10 at 36.2 tok/s
 # decode, 403 prefill, 6.3 min; only node_paratrooper fails (38/40). 33.8 GB VRAM after load (the n-gram shard stays
-# mmap'd), so it should fit 2x24 GB. Best flash-next spot so far (AD 8/10 at 34.2, unsloth 6/10 at 20.7). Full profile next.
+# mmap'd), so it should fit 2x24 GB. Best flash-next spot so far (AD 8/10 at 34.2, unsloth 6/10 at 20.7).
+# FULL SET 2026-11-07 (t46): 38/39 in 29 min (only node_paratrooper), context_256k PASS 18.3 tok/s; 2x24 GB spot 9/10 at 59 tok/s.
+# PROMOTED: replaces flash-next-ad in 3x24gb.txt, added to 2x24gb.txt.
 # qwen3.8-flash-next-coder  Qwen3.8-Flash-Next-GSQ-RCO-IQ1_M-00001-of-00002.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF
 # (downloaded by hand: the files sit in an IQ1_M/ subfolder of the repo, which fetch-hf.sh does not resolve.)
 
@@ -2025,3 +2027,8 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 #   experts + shared, sliding-window/full attention mix, 262k ctx. Card: SWE-bench Verified 74.2, Terminal-Bench 2.1 54.9.
 #   Arch `flint` is in llama.cpp master only (a37cc4610), not the pin. UD-Q3_K_XL 18.5 GB fits one GPU, UD-Q4_K_XL 25.1 GB
 #   needs two. A2.5B: expect the A3B class's misses (csv_nordic, hashmap) unless it breaks the pattern.
+# RESULT 2026-11-07 (t46, master bcb015287, one 4090, UD-Q3_K_XL, f16 KV, reasoning off): spot 7/10 at 138.6 tok/s, 6 min,
+#   20.8 GB VRAM. PASSES python_hashmap (breaks the A3B pattern there), node_csv_parser, expr_eval. Fails csv_nordic (NO_BLOCKS in 4 s:
+#   an agent preamble 'Let me look at the test file...' and no file), node_para_core (literal '...content...' left in game.js) and
+#   node_paratrooper (wrote to the placeholder 'path/to/file.ext'): agentic-format habits, not budget. REJECTED; GGUF deleted.
+# flint  flint-UD-Q3_K_XL.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:unsloth/flint-GGUF

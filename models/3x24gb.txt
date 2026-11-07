@@ -261,4 +261,8 @@ qwen3.8:27b  Qwen3.8-27B-Q4_K_M.gguf  ngl=999,no_mmap,tensor_split=1|1|1,cache_t
 #   a third sequence (t36) it passed, and the unsloth build passed the same sequence once. Rollback: the line below
 #   (its files moved to the NAS 2026-11-01: LLM/Qwen3.8-Flash-Next-UD-Q4_K_XL; copy back to allmodels/UD-Q4_K_XL first).
 # qwen3.8-flash-next  UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
-qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF
+# 2026-11-07: replaced by the ISTA GSQ-RCO-Coder build (user's decision; t44/t46). Full default set 38/39 in 29 min
+#   (AD 36/39 in 40 min), incl. context_256k (18.3 tok/s); csv_nordic PASSES; ~34 GB VRAM after load (AD 58.9; the n-gram
+#   shard stays mmap'd); no fault after context_64k. Rollback: the AD line below (files kept in allmodels/).
+qwen3.8-flash-next-coder  Qwen3.8-Flash-Next-GSQ-RCO-IQ1_M-00001-of-00002.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF
+# qwen3.8-flash-next-ad  Qwen3.8-Flash-Next-AD-4.27bpw-Q4_K_M-M64-00001-of-00003.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:AtomicChat/Qwen3.8-Flash-Next-GGUF

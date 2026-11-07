@@ -410,3 +410,7 @@ quest:35b  QUEST-35B-RL-MTP-MXFP4_MOE.gguf  ngl=999,no_mmap,tensor_split=1|1,cac
 # node_para_core; fails python_hashmap and node_csv_parser (TESTS_STILL_FAIL).
 # ~11 GB for KV across both cards; max_ctx=32768 confirmed safe.
 llama3.3:70b  Llama-3.3-70B-Instruct-Q4_K_S.gguf  ngl=999,no_mmap,tensor_split=1|1,cache_type_k=q8_0,cache_type_v=q8_0,flash_attn,batch_size=512,ubatch_size=128,max_ctx=32768  hf:bartowski/Llama-3.3-70B-Instruct-GGUF
+
+# 2026-11-07 (t46): ISTA flash-next GSQ-RCO-Coder IQ1_M on 2×24 GB via --fit: spot 9/10 at 59 tok/s (faster than on three
+# GPUs, 36), 33 GB VRAM; only node_paratrooper fails. Full set only run on 3×24 GB (38/39).
+qwen3.8-flash-next-coder  Qwen3.8-Flash-Next-GSQ-RCO-IQ1_M-00001-of-00002.gguf  fit=on,fit_target=512,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=1024,ubatch_size=512,thinking  hf:ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF
