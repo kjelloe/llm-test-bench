@@ -2032,3 +2032,12 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 #   an agent preamble 'Let me look at the test file...' and no file), node_para_core (literal '...content...' left in game.js) and
 #   node_paratrooper (wrote to the placeholder 'path/to/file.ext'): agentic-format habits, not budget. REJECTED; GGUF deleted.
 # flint  flint-UD-Q3_K_XL.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,max_ctx=65536  hf:unsloth/flint-GGUF
+
+# Scout 2026-11-10 (trending), NOT downloaded, decision pending:
+# - ConceptCountry/qwen-concept-27b (2026-11-08, 59k): Qwen3.8-27B with nine down-projections rewritten by "weight-space
+#   programming" (no training). Card: GPQA-D +4.3, LiveCodeBench v6 +13.0, 27-54% fewer thinking tokens, all at bf16 served as
+#   Q8_0; the Q4_K_M (16.8 GB) is not separately evaluated. Stock qwen3.8 arch (pin loads it). Reasoning is off here, so the
+#   token claim cannot show; the coding claim can. Files sit in a gguf/ subfolder: download by hand, as the ISTA coder.
+# qwen-concept:27b  qwen-concept-27b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:ConceptCountry/qwen-concept-27b
+# - aj9o9/Qwen3.8-27B-DSpine-b16-GGUF: a speculative-decoding DRAFT model (Tencent DSpine, needs a fork branch); spec decoding
+#   is off in benchmarks. Serving interest only (the 5060 Ti box's Qwen3.8-27B lane), not a benchmark candidate.
