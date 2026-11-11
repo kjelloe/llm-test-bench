@@ -2,6 +2,7 @@
 """CLI runner for the Ollama / llama-server coding benchmark."""
 
 import argparse
+import functools
 import json
 import os
 import shutil
@@ -317,14 +318,28 @@ def main() -> None:
     )
     parser.add_argument(
         "--backend", default=os.environ.get("BENCH_BACKEND", "ollama"),
-        choices=["ollama", "llama-server", "vllm", "mlx"],
+        choices=["ollama", "llama-server", "vllm", "mlx", "openai-ext"],
         help="Inference backend (default: ollama; env: BENCH_BACKEND). mlx = an already-running mlx-lm server "
-             "(--mlx-url), never started or stopped by the harness",
+             "(--mlx-url), never started or stopped by the harness; openai-ext = an already-running OpenAI-compatible "
+             "server on this machine's GPUs, e.g. Strata (--ext-url)",
     )
     parser.add_argument(
         "--mlx-url", default=os.environ.get("BENCH_MLX_URL"), metavar="URL",
         help="Base URL of a running mlx_lm.server, e.g. http://127.0.0.1:8085 through an SSH tunnel (--backend mlx; "
              "env: BENCH_MLX_URL). Keep it on a trusted network: mlx-lm's server is not built for exposure",
+    )
+    parser.add_argument(
+        "--ext-url", default=os.environ.get("BENCH_EXT_URL"), metavar="URL",
+        help="Base URL of a running OpenAI-compatible server for --backend openai-ext (env: BENCH_EXT_URL)",
+    )
+    parser.add_argument(
+        "--ext-model", default=os.environ.get("BENCH_EXT_MODEL"), metavar="ID",
+        help="Model id to request when the --ext-url server lists more than one (env: BENCH_EXT_MODEL)",
+    )
+    parser.add_argument(
+        "--ext-label", default=os.environ.get("BENCH_EXT_LABEL"), metavar="TEXT",
+        help="Engine and version serving --ext-url, recorded as the server, e.g. 'strata 0.1.48 abc1234' "
+             "(env: BENCH_EXT_LABEL; required for --backend openai-ext)",
     )
     parser.add_argument(
         "--mlx-host-info", default=os.environ.get("BENCH_MLX_HOST_INFO"), metavar="PATH",
@@ -534,6 +549,30 @@ def main() -> None:
             "host": host_info,   # None unless --mlx-host-info: then the inference hardware is not recorded
         }
 
+    elif args.backend == "openai-ext":
+        from lib import openai_ext_client
+        from lib.openai_ext_client import chat as _chat_fn
+
+        if not args.ext_url:
+            parser.error("--ext-url (or BENCH_EXT_URL) is required for --backend openai-ext")
+        if not args.ext_label:
+            parser.error("--ext-label (or BENCH_EXT_LABEL) is required for --backend openai-ext: "
+                         "name the engine and version serving it, e.g. 'strata 0.1.48 abc1234'")
+        if len(args.models) != 1:
+            parser.error("--backend openai-ext takes exactly one model: the server serves what it was started with")
+        if args.model_file:
+            from lib.model_config import load_model_file
+            model_configs = {c.ollama_name: c for c in load_model_file(args.model_file)}
+            if args.models[0] not in model_configs:
+                parser.error(f"Model {args.models[0]!r} not found in {args.model_file}")
+        try:
+            ext_served = openai_ext_client.served_model(
+                openai_ext_client.server_info(args.ext_url)["models"], args.ext_model)
+        except OllamaError as exc:
+            parser.error(f"openai-ext server: {exc}")
+        # results keep the harness's model name; requests carry the id the server serves
+        _chat_fn = functools.partial(openai_ext_client.chat_as, ext_served)
+
     else:
         from lib.ollama_client import chat as _chat_fn
         from lib.ollama_client import unload_model as _unload_fn
@@ -594,6 +633,11 @@ def main() -> None:
     )
     if args.backend == "mlx":
         hw["inference_host"] = mlx_inference_host
+    if args.backend == "openai-ext":
+        # same machine, same GPUs: keep the local snapshot; the engine is whatever the operator declared
+        hw["server_name"], _, hw["llama_server_version"] = args.ext_label.partition(" ")
+        hw["ext_endpoint"] = args.ext_url
+        hw["ext_served_model"] = ext_served
     # GPU VRAM is reported in MiB and is never exactly a round number (e.g. RTX 4090 = 24564 MiB,
     # not 24576). Add 0.1 GB tolerance so 2× "24 GB" cards (49140 MiB = 47.99 GB) pass the 48 GB check.
     total_vram_gb: float = sum(
@@ -759,6 +803,20 @@ def main() -> None:
                     continue
                 client_url = args.mlx_url
 
+            elif args.backend == "openai-ext":
+                cfg = model_configs.get(model)
+                if cfg and cfg.max_ctx and effective_ctx > cfg.max_ctx:
+                    print(f"[{i}/{total}] model={model!r}  task={task.id!r} ... SKIP(SKIPPED_CTX) "
+                          f"need ctx={effective_ctx}, model max={cfg.max_ctx}")
+                    _r = _skip_record("SKIPPED_CTX",
+                        f"task needs ctx={effective_ctx}; model limit (max_ctx in {args.model_file}) is {cfg.max_ctx}")
+                    results.append(_r)
+                    if checkpoint_dir_path is not None:
+                        _ckpt_buf.append(_r)
+                        _write_model_checkpoint(checkpoint_dir_path, model, _ckpt_buf)
+                    continue
+                client_url = args.ext_url
+
             else:
                 # Ollama: restart on model switch only
                 if model != current_model:
@@ -852,7 +910,7 @@ def main() -> None:
     finally:
         if llama_manager is not None:
             llama_manager.stop()
-        if results and args.backend == "mlx":
+        if results and args.backend in ("mlx", "openai-ext"):
             hw["order_independent"] = mlx_order_independent(results)
         if results:
             write_results(results, args.out, hardware=hw)

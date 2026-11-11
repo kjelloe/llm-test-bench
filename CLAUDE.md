@@ -390,6 +390,10 @@ lib/
   mlx_client.py           --backend mlx (2026-11-04): chat() for an mlx_lm.server the harness does NOT own (often a Mac;
                           requests always name default_model, since naming another makes mlx-lm load it); honest metrics
                           (no timings → tok_per_s 0), backend_notes, order independence verified from cached_tokens
+  openai_ext_client.py    --backend openai-ext (2026-11-11): an OpenAI-compatible server the harness does NOT own, on this
+                          machine's GPUs (e.g. Strata's strata-server); --ext-url, --ext-label "engine version" (required,
+                          recorded as server_name/version), --ext-model if it lists several; tok/s only from llama.cpp-style
+                          `timings`; order independence verified from cached_tokens; local GPU telemetry and hwmonitor stay on
   model_config.py         Parse models/*.txt 3-field format → ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser + allow-list validator
   reporting.py            Comparison table (paginated), failure detail, JSON writer
@@ -439,6 +443,8 @@ tests/
   test_scout_trending.py      scout_hf's trending pass: HF trending query, dropping off trending is not GONE
   test_mlx_client.py          MLX client against a stand-in mlx-lm server (fields, errors, timeouts, missing usage, cache
                               hits, reasoning while off) + bench.py --backend mlx end to end (grades python_safe_div)
+  test_openai_ext_client.py   openai-ext client against the MLX stand-in server (served-model id, timings, reasoning while off)
+                              + bench.py --backend openai-ext end to end
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)

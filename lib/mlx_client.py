@@ -63,7 +63,7 @@ def _parse_body(body: object, elapsed_ns: int, notes: dict) -> OllamaResponse:
     if not isinstance(msg, dict):
         raise OllamaError(f"malformed response (no message): {json.dumps(choice)[:200]}")
     content = msg.get("content") or ""
-    thinking = msg.get("reasoning") or ""
+    thinking = msg.get("reasoning") or msg.get("reasoning_content") or ""
     if not content and thinking:
         # same rule as the llama-server and vLLM clients: a reasoning-only answer is parsed as the answer
         content, thinking = thinking, ""
