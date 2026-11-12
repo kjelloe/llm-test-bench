@@ -1,3 +1,4 @@
 # Models served by Strata (Niko1221/Strata, ~/GIT/Strata) for --backend openai-ext; run through ./strata-run.sh.
 # The gguf field is "-": the harness does not load these, Strata's config names the files. max_ctx gates context tasks.
 qwen3.8-flash-next-coder-strata  -  max_ctx=131072,thinking  hf:ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF
+qwen3.8-flash-next-strata  -  max_ctx=131072,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
