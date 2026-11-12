@@ -37,6 +37,8 @@ if curl -s -m 2 "$URL/v1/models" >/dev/null; then echo "strata-run: something al
 VERSION=$(cd "$ENGINE_DIR" && git describe --tags --always --dirty 2>/dev/null || echo unknown)
 
 if [ "$ENGINE" = ro99 ]; then
+    # Under WSL a native driver's libcuda.so (no GPU) can shadow the WSL one when the engine opens "libcuda.so".
+    [ -d /usr/lib/wsl/lib ] && export LD_LIBRARY_PATH=/usr/lib/wsl/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
     (cd "$ENGINE_DIR" && exec ./build/strata-server "${SERVER_ARGS[@]}" --host 127.0.0.1 --port "$PORT") >"$LOG" 2>&1 &
 else
     (cd "$ENGINE_DIR" && exec .venv/bin/python serve/server.py --engine strata --config "$CONFIG" \
