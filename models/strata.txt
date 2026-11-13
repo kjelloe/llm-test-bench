@@ -3,3 +3,4 @@
 qwen3.8-flash-next-coder-strata  -  max_ctx=131072,thinking  hf:ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF
 qwen3.8-flash-next-strata  -  max_ctx=131072,thinking  hf:unsloth/Qwen3.8-Flash-Next-GGUF
 gemma4:31b-strata  -  max_ctx=32768  hf:BCCard/MoAI-gemma-4-31B-it-mxfp4  # ro99/strata, GPTQ MXFP4A16 of stock gemma-4-31B-it (not QAT), one 3090
+edge0-145b-strata  -  max_ctx=131072,thinking  hf:Edge0/Edge0-145B-q3k  # edge0-strata (Niko fork), STRATA_ENGINE=edge0 STRATA_DIR=~/GIT/edge0/edge0-strata; latent MoE from Qwen3.8-Flash-Next

@@ -21,7 +21,7 @@ if [ "${1:-}" = "--ro99" ]; then
     NAME=$(printf '%s\n' "${SERVER_ARGS[@]}" | grep -A1 -x -- '--model-id' | tail -1 || true)
     LOG_DIR=${STRATA_LOG_DIR:-$ENGINE_DIR/bench-logs}
 else
-    ENGINE=niko
+    ENGINE=${STRATA_ENGINE:-niko}   # a fork with the same server (e.g. edge0-strata): STRATA_ENGINE=edge0 STRATA_DIR=...
     ENGINE_DIR=${STRATA_DIR:-$HOME/GIT/Strata}
     [ $# -ge 1 ] || usage
     CONFIG=$(realpath "$1"); shift
