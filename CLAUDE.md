@@ -344,6 +344,9 @@ run.sh              Venv setup + bench.py wrapper; sources .gpu-mode; bootstraps
 lanes-window.sh     Run a GPU command in a quiet window of llm-service-provider's lane (it holds every GPU): waits for
                     `llmctl idle 30` (no helper request for 30 min), stops the backend, runs, starts it again on any exit
                     (2026-10-26, tests/test_lanes_window.py)
+strata-run.sh       Benchmark one model on a Strata engine through --backend openai-ext: start its server (Niko1221/Strata
+                    or a fork from a JSON config, STRATA_DIR/STRATA_ENGINE; ro99/strata with --ro99 <strata-server args>, WSL libcuda
+                    first on LD_LIBRARY_PATH), wait until it serves, run ./run.sh, stop it on any exit (2026-11-11, tests/test_strata_run.py)
 gpu-mode.sh         List GPUs; toggle/set single vs. multi-GPU mode; writes .gpu-mode (gitignored, sourced by run.sh)
 gpuclock.sh         GPU clock lock for multi-GPU runs: status | lock [--memory] | unlock [--memory] [--print]; under WSL an
                     elevated PowerShell (UAC) or the printed admin command; run.sh --lock-clocks / BENCH_LOCK_CLOCKS=auto|prompt|off
@@ -448,6 +451,8 @@ tests/
                               hits, reasoning while off) + bench.py --backend mlx end to end (grades python_safe_div)
   test_openai_ext_client.py   openai-ext client against the MLX stand-in server (served-model id, timings, reasoning while off)
                               + bench.py --backend openai-ext end to end
+  test_strata_run.py          strata-run.sh against stand-in Niko/ro99 servers: run.sh gets the endpoint and label (STRATA_ENGINE for
+                              forks), WSL libcuda first for ro99, refuses an occupied port, a crash during load fails the run
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)

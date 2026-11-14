@@ -30,6 +30,7 @@ gpu-mode.sh               Lists detected GPUs; toggles/sets single vs. multi-GPU
 gpuclock.sh               GPU clock lock: status | lock [--memory] | unlock [--memory] [--print]; under WSL runs nvidia-smi in an elevated PowerShell (UAC) or prints the admin command; run.sh calls it before multi-GPU runs when BENCH_LOCK_CLOCKS=auto (--lock-clocks), else prints a hint
 compare.sh                Runs a model set (default/extended/full); reads models/*.txt; --num-predict 8000; forwards extra args
 configure.sh              Prints current env variable state with set instructions; interactive wizard sets backend, URLs, paths, HF token, and runs the model optimizer (Step 7)
+strata-run.sh             Starts a Strata server (Niko1221/Strata or a fork from a JSON config; ro99/strata with --ro99), waits until it serves, runs run.sh --backend openai-ext against it, stops it on any exit
 compare-results.sh        Merges two result JSONs and prints speed summary + full task table for backend comparison; thin wrapper for lib/compare_results.py
 statistics.sh             Aggregates output/*.json into a flat dataset (markdown/CSV/JSON); supports --summary, --detail, --sort-by; --estimate-vram (VRAM scalability table via lib/estimate_vram.py); --export/--import (cross-hardware result sharing via lib/export.py); thin wrapper
 fetch-hf.sh               Downloads GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; thin wrapper for lib/fetch_hf.py
@@ -46,6 +47,7 @@ lib/                      Python support modules (imported by bench.py and shell
   llama_server_client.py  LlamaServerManager (spawn/restart/stop llama-server process) + chat() for OpenAI-compatible /v1/chat/completions; same interface as ollama_client; order-independent by default (--parallel 1 unless the model sets parallel, cache_prompt false; BENCH_ORDER_INDEPENDENT=0 / BENCH_CACHE_PROMPT=1 restore the server defaults; recorded as hardware.order_independent); a daemon thread drains the server's stderr (last 200 lines kept for crash messages) so a long session never blocks on a full pipe
   vllm_client.py          VLLMManager (spawn/restart/stop vllm serve process) + chat() for OpenAI-compatible /v1/chat/completions; mirrors LlamaServerManager interface exactly
   mlx_client.py           chat() for an external mlx_lm.server (Apple Silicon; never started/stopped/loaded by the harness), server_info()/model_listed() for /health + /v1/models; stdlib only
+  openai_ext_client.py    chat() for an OpenAI-compatible server on this machine the harness does not own (Strata); server_info()/served_model() for /v1/models, chat_as() names the served model; tok/s only from llama.cpp-style timings; stdlib only
   model_config.py         Parses models/*.txt 3-field format (ollama-name gguf-file params) into ModelConfig dataclasses
   parsing.py              BEGIN_FILE/END_FILE parser, allow-list validation
   reporting.py            Comparison table (paginated), failure detail, JSON writer

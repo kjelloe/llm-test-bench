@@ -185,6 +185,7 @@ of `./statistics.sh --detail`.
 | [llama-server](https://github.com/ggerganov/llama.cpp) | `--backend llama-server` | MoE-specific tuning (`n_cpu_moe`, KV cache dtype per model), multi-GPU `tensor_split`, the primary backend this repo's own findings are benchmarked on |
 | [vLLM](https://github.com/vllm-project/vllm) | `--backend vllm` | Tensor-parallel multi-GPU, AWQ/GPTQ/FP8, continuous batching |
 | [MLX](https://github.com/ml-explore/mlx-lm) (Apple Silicon) | `--backend mlx` | A Mac doing the inference: an `mlx_lm.server` already running, this harness (Linux or the Mac) preparing and grading the tasks |
+| Any OpenAI-compatible server on this machine (e.g. [Strata](https://github.com/Niko1221/Strata)) | `--backend openai-ext` | Engines the harness cannot start itself; `./strata-run.sh` starts a Strata server, runs `run.sh` against it and stops it (Niko1221/Strata and its forks via a JSON config, ro99/strata via `--ro99`) |
 
 **llama-server** needs `LLAMA_MODELS_DIR` pointed at your GGUF directory and a `models/*.txt` entry
 mapping each model name to a GGUF filename plus optional params:
