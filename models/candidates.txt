@@ -2038,10 +2038,12 @@ gemma4:12b-qat  gemma-4-12B-it-QAT-Q4_0.gguf  ngl=999,no_mmap,cache_type_k=f16,c
 #   programming" (no training). Card: GPQA-D +4.3, LiveCodeBench v6 +13.0, 27-54% fewer thinking tokens, all at bf16 served as
 #   Q8_0; the Q4_K_M (16.8 GB) is not separately evaluated. Stock qwen3.8 arch (pin loads it). Reasoning is off here, so the
 #   token claim cannot show; the coding claim can. Files sit in a gguf/ subfolder: download by hand, as the ISTA coder.
+#   RESULT 2026-11-14 (t55b): spot 9/10 at 44.1 tok/s, loses node_paratrooper (36/40; base 10/10). Not promoted, GGUF deleted.
 # qwen-concept:27b  qwen-concept-27b-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=131072  hf:ConceptCountry/qwen-concept-27b
 # - aj9o9/Qwen3.8-27B-DSpine-b16-GGUF: a speculative-decoding DRAFT model (Tencent DSpine, needs a fork branch); spec decoding
 #   is off in benchmarks. Serving interest only (the 5060 Ti box's Qwen3.8-27B lane), not a benchmark candidate.
 
 # - Jackrong/DeepSeek-V4-Pro-Qwen3.5-9B-MTP-GGUF (scout 2026-11-13, 172K dl, trending): dense Qwen3.5-9B distilled from
 #   DeepSeek-V4-Pro (reasoning SFT + GSPO), MTP head embedded (harmless without spec flags). Spot t55.
+#   RESULT 2026-11-14 (t55a): spot 7/10 at 117 tok/s (fails csv_nordic, hashmap 6/11, paratrooper). Rejected, GGUF deleted.
 # dsv4pro-qwen3.5:9b  DeepSeek-V4-Pro-Qwen3.5-9B-MTP-Q4_K_M.gguf  ngl=999,no_mmap,cache_type_k=f16,cache_type_v=f16,flash_attn,batch_size=512,ubatch_size=128,thinking,max_ctx=32768  hf:Jackrong/DeepSeek-V4-Pro-Qwen3.5-9B-MTP-GGUF
