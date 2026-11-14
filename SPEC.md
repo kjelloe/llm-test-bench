@@ -105,7 +105,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
 - See `hwmonitor/SPEC.md` for full CLI reference and threshold table.
 
 3) Task Suite (`tasks.py` + `task_data/`)
-- Built-in tasks (136 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 17 `fastengine` and 18 `fastengine_diag` and 9 `fastengine_gl` tasks are opt-in):
+- Built-in tasks (144 total, difficulty L1–L6; 39 run by default; the 32 `gamedev`, 21 `gamedev_diag`, 17 `fastengine` and 18 `fastengine_diag`, 9 `fastengine_gl` and 8 `rust` tasks are opt-in):
 
   **fastengine tasks (17, opt-in, 2026-10-12/16) — `--task-group fastengine`:** C# for the second build engine
   (fastengine: plain .NET 10 on Raylib-cs, a three.js-shaped scene graph, a canvas/CSS HUD), from its
@@ -127,6 +127,16 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   **Levels of the gamedev and fastengine tasks were re-set on 2026-10-14 from the leaders' pass rate** (≥80% L2, 50-79% L3,
   20-49% L4, <20% L5); three canaries keep L2 although nobody passes them: `cs_coord_convert`, `fe_i18n`, `fe_bash_package`.
   `tests/test_task_levels_doc.py` keeps the levels written here and in CLAUDE.md's task tables equal to `lib/tasks.py`.
+
+  **Rust tasks (8, opt-in, 2026-11-14) — `--task-group rust`:** from bj-engine (the fleet's Rust/Bevy native clients) and
+  the incidents its coding ally reported. Each task is a small standard-library-only crate graded by `cargo test --offline --
+  --test-threads=1` (`requires` cargo); partial credit from cargo's `test <name> ... ok|FAILED` lines, rustc's `error[Exxxx]`
+  counted in `build_errors`. Fixtures are the games' captured data, the game's JS run under Node, or Chromium's own Web Audio
+  render; only fixture data and the task's own Rust ship (no game JS except the movement files `cs_port_movement` already
+  carries). `rs_tick_coalesce` L3 (one input tick per frame on the browser's grid), `rs_fixed_movement` L3 (JS `Math.floor`
+  and `>>> 0` semantics in a bit-exact port), `rs_burst_drain` L3 (newest view, every snapshot's events), `rs_demultiply` L3
+  (a 2× faster, byte-identical alpha conversion), `rs_bayer` L2 (floor task), `rs_audio_ramps` L4 (Web Audio ramps against
+  Chromium), `rs_net_session` L4 (reconnect policy), `rs_ecs_frame` L4 (three Bevy traps on a small ECS shim).
 
   **fastengine GL tasks (9, opt-in, 2026-10-17/21) — `--task-group fastengine_gl`:** tasks that need an OpenGL context. Their
   test command runs pytest under `xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=1` (Mesa's llvmpipe, OpenGL 4.5 core); each task

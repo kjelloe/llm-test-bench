@@ -179,6 +179,9 @@ def test_css_alpha_fixtures_match_chromium():
     assert out.stdout == (root / "tests" / "GameClientTests" / "fixtures.json").read_text(encoding="utf-8")
 
 
+from tests.test_rust_tasks import RUST_FIXTURES  # noqa: E402
+
+
 def test_every_fixture_generator_is_guarded():
     """A task whose fixtures come from a generator must have that generator in one of the guards above."""
     guarded = {(t, s) for t, s, _ in JS_FIXTURES} | {(t, s) for t, s, _ in PY_FIXTURES}
@@ -186,6 +189,7 @@ def test_every_fixture_generator_is_guarded():
                 ("cs_css_alpha_linear", "tools/make_fixtures.reference.mjs"),
                 ("fe_gl_shader_port", "tools/make_fixtures.reference.py"), ("fe_gl_shadow", "tools/make_fixtures.reference.py"),
                 ("fe_gl_instanced", "tools/make_fixtures.reference.py"), ("fe_gl_nested", "tools/make_fixtures.reference.py")}
+    guarded |= {(t, s) for t, s, _ in RUST_FIXTURES}  # tests/test_rust_tasks.py
     found = set()
     for path in TASK_DATA_DIR.glob("*/**/make[-_]fixtures*"):
         rel = path.relative_to(TASK_DATA_DIR)

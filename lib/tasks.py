@@ -76,13 +76,13 @@ def prepare_workdir(task: Task) -> Path:
     src = TASK_DATA_DIR / task.subdir
     tmp = Path(tempfile.mkdtemp(prefix=f"bench_{task.id}_"))
     # a cache left by a local test run would make tracebacks name task_data/ instead of the workdir
-    shutil.copytree(src, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache", "bin", "obj"))
+    shutil.copytree(src, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache", "bin", "obj", "target"))
     return tmp
 
 
 # Files present in task_data/ that must never reach an export — human-only reference
 # solutions or generated cache junk from a prior local test run.
-_EXPORT_EXCLUDE_GLOBS = ("*.reference.*", ".pytest_cache", "__pycache__", ".git", "node_modules", "bin", "obj")
+_EXPORT_EXCLUDE_GLOBS = ("*.reference.*", ".pytest_cache", "__pycache__", ".git", "node_modules", "bin", "obj", "target")
 
 
 def export_task(task: Task, dest_dir: Path) -> None:
@@ -2595,6 +2595,90 @@ FE_BASH_JOB = Task(
     test_weights={"second_run_in_the_same_lane": 2.0, "missing_commit_builds_nothing": 2.0},
 )
 
+# Rust tasks from bj-engine (the fleet's Rust/Bevy native clients), from its incident list (2026-11-14): each task is a
+# small std-only crate graded by `cargo test --offline`; fixtures are captured game data or the browser's own output.
+RUST_CONSTRAINTS = (
+    " Rust 2021, standard library only: the crate has no dependencies and builds offline. Keep the public API the tests "
+    "use."
+)
+RUST_TEST = ["cargo", "test", "--offline", "--", "--test-threads=1"]
+
+
+def _rust_task(id: str, difficulty: int, description: str, editable: str, context: list[str], **kw) -> Task:
+    return Task(
+        id=id,
+        difficulty=difficulty,
+        description=description + RUST_CONSTRAINTS,
+        subdir=id,
+        editable_files=[editable],
+        context_files=context + ["Cargo.toml"],
+        test_cmd=RUST_TEST,
+        test_timeout=300,
+        requires=("cargo",),
+        num_ctx=24576,
+        min_predict=12000,
+        **kw,
+    )
+
+
+RS_TICK_COALESCE = _rust_task(
+    "rs_tick_coalesce", 3,
+    "Fix src/ticks.rs, the native client's input clock. The browser sends input from setInterval(50) and the server "
+    "keeps one input per tick; after a frame hitch this port caught up on every missed tick in a burst, which the "
+    "browser never does. The comment at the top is the specification.",
+    "src/ticks.rs", ["tests/ticks.rs"],
+)
+RS_FIXED_MOVEMENT = _rust_task(
+    "rs_fixed_movement", 3,
+    "src/fixed.rs is a first Rust port of the game's fixed-point helpers, movement integrator and seeded xorshift "
+    "(js/fixedmath.mjs, js/movement.mjs, js/rng.mjs). The server runs the JavaScript, so the port must give the same "
+    "integers for every input, or players rubber-band; the tests replay thousands of steps the JavaScript computed. "
+    "Make it match the JavaScript bit for bit.",
+    "src/fixed.rs", ["js/fixedmath.mjs", "js/movement.mjs", "js/rng.mjs", "js/const.mjs", "tests/parity.rs"],
+)
+RS_BURST_DRAIN = _rust_task(
+    "rs_burst_drain", 3,
+    "Fix src/burst.rs: at x16 time compression several CarrierDominion snapshots arrive between two rendered frames. "
+    "Only the newest view is drawn, but every snapshot's events must be kept, in order; the first cut lost them, and "
+    "decoded every snapshot in full. The comment above drain is the specification; the frames in the tests are "
+    "captured from the game.",
+    "src/burst.rs", ["src/wire.rs", "src/json.rs", "tests/burst.rs"],
+)
+RS_DEMULTIPLY = _rust_task(
+    "rs_demultiply", 3,
+    "src/fast.rs converts a canvas from premultiplied to straight alpha, a measured hotspot in bj-engine's HUD. Make "
+    "it at least twice as fast as the canvas's own conversion in src/slow.rs on a typical HUD canvas without changing "
+    "a single output byte for any valid pixel.",
+    "src/fast.rs", ["src/slow.rs", "tests/demultiply.rs"],
+)
+RS_BAYER = _rust_task(
+    "rs_bayer", 2,
+    "Fix src/dither.rs, the CPU twin of the pixel-art styles' ordered-dither pass: it must agree with the GPU pass "
+    "pixel for pixel. The comment at the top is the specification.",
+    "src/dither.rs", ["tests/dither.rs"],
+)
+RS_AUDIO_RAMPS = _rust_task(
+    "rs_audio_ramps", 4,
+    "Implement src/param.rs, a native Web Audio AudioParam for bj-engine's synth: a cue rendered natively must match "
+    "the browser's render sample for sample. The comment at the top is the specification; the tests compare with "
+    "samples Chromium's own Web Audio rendered.",
+    "src/param.rs", ["tests/chromium.rs"],
+)
+RS_NET_SESSION = _rust_task(
+    "rs_net_session", 4,
+    "Implement the reconnect policy in src/session.rs (bj-engine's WebSocket client as a state machine): backoff, "
+    "final close codes, refused upgrades, a seat token per server and abandoned attempts. The comment at the top is "
+    "the specification; the current code reconnects after a second whatever happened.",
+    "src/session.rs", ["tests/session.rs"],
+)
+RS_ECS_FRAME = _rust_task(
+    "rs_ecs_frame", 4,
+    "src/game.rs holds three CarrierDominion client systems on a minimal Bevy-like ECS (src/ecs.rs, read-only). Each "
+    "one is wrong on screen although it looks right in isolation. Fix them so the frame the renderer gets is right.",
+    "src/game.rs", ["src/ecs.rs", "tests/frame.rs"],
+)
+RUST_TASKS = [RS_TICK_COALESCE, RS_FIXED_MOVEMENT, RS_BURST_DRAIN, RS_DEMULTIPLY, RS_BAYER, RS_AUDIO_RAMPS, RS_NET_SESSION, RS_ECS_FRAME]
+
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a
 # salted hash so an export does not carry the key. (question id, difficulty from that list)
@@ -2745,6 +2829,7 @@ BUILTIN_TASKS: list[Task] = [
     FE_OUTPUT_COLOR,
     FE_BASH_STAMP,
     FE_BASH_JOB,
+    *RUST_TASKS,
 ]
 TASK_MAP: dict[str, Task] = {t.id: t for t in BUILTIN_TASKS}
 
@@ -2796,12 +2881,13 @@ TASK_GROUPS: dict[str, list[str]] = {
     ],
     "gamedev_diag": [t.id for t in GAMEDEV_DIAG_TASKS],
     "fastengine_diag": [t.id for t in FASTENGINE_DIAG_TASKS],
+    "rust": [t.id for t in RUST_TASKS],
     "fastengine_gl": ["fe_gl_screenshot", "fe_gl_canvas_fill", "fe_gl_premultiplied", "fe_gl_mirror_target", "fe_gl_shader_port", "fe_gl_lambert", "fe_gl_shadow", "fe_gl_instanced", "fe_gl_nested"],
     "fastengine": ["fe_three_geometry", "fe_ttf_metrics", "fe_solo_server", "fe_css_color", "fe_view_math", "fe_socket_urls", "fe_flex_wrap", "fe_bash_package", "fe_render_order", "fe_object3d", "fe_ico_writer", "fe_i18n", "fe_session_rules", "fe_output_color", "fe_bash_stamp", "fe_bash_job", "fe_test_css_color"],
 }
 
 # Groups left out of a run with no --tasks/--task-group (and so out of compare.sh's default
 # totals and Skill levels) until their difficulty levels are validated across models.
-OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine", "fastengine_diag", "fastengine_gl")
+OPT_IN_GROUPS: tuple[str, ...] = ("gamedev", "gamedev_diag", "fastengine", "fastengine_diag", "fastengine_gl", "rust")
 _OPT_IN_IDS = {tid for g in OPT_IN_GROUPS for tid in TASK_GROUPS[g]}
 DEFAULT_TASKS: list[Task] = [t for t in BUILTIN_TASKS if t.id not in _OPT_IN_IDS]

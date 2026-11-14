@@ -2,19 +2,21 @@
 
 A task's binary pass/fail stays the headline result; this adds how close a failing
 solution came. Supported runners: xunit via `dotnet test --verbosity normal`, Node's
-`node --test` spec reporter, and `pytest -v`.
+`node --test` spec reporter, `pytest -v`, and `cargo test`.
 """
 import re
 
 _XUNIT = re.compile(r"^\s+(Passed|Failed) (\S.*?) \[[^\]]*\]\s*$", re.M)
 _NODE = re.compile(r"^\s*([✔✖]) (.+?) \(\d[\d.]*m?s\)\s*$", re.M)
 _PYTEST = re.compile(r"^(\S+::\S+) (PASSED|FAILED|ERROR)\b", re.M)
+_CARGO = re.compile(r"^test (\S+)(?: - should panic)? \.\.\. (ok|FAILED)$", re.M)
 
 _XUNIT_SUMMARY = re.compile(r"Failed:\s+(\d+), Passed:\s+(\d+), Skipped:\s+\d+, Total:\s+(\d+)")
 _XUNIT_NORMAL_SUMMARY = re.compile(r"Total tests: (\d+)\s+Passed: (\d+)")  # dotnet test --verbosity normal
 _NODE_PASS = re.compile(r"^ℹ pass (\d+)$", re.M)
 _NODE_FAIL = re.compile(r"^ℹ fail (\d+)$", re.M)
 _PYTEST_SUMMARY = re.compile(r"=+ (.*\d+ (?:passed|failed).*?) in [\d.]+s")
+_CARGO_SUMMARY = re.compile(r"^test result: \w+\. (\d+) passed; (\d+) failed;", re.M)
 
 # node --test prints a top-level "✖ <file>" when the test file itself cannot load.
 _NODE_FILE_LEVEL = re.compile(r"^tests?$|\.test\.[cm]?js$")
@@ -32,6 +34,8 @@ def parse_outcomes(output: str) -> dict[str, bool]:
         outcomes[name] = outcomes.get(name, True) and mark == "✔"
     for name, status in _PYTEST.findall(output):
         outcomes[name] = status == "PASSED"
+    for name, status in _CARGO.findall(output):
+        outcomes[name] = status == "ok"
     return outcomes
 
 
@@ -51,6 +55,10 @@ def parse_counts(output: str) -> tuple[int, int] | None:
         counts = dict((k, int(v)) for v, k in re.findall(r"(\d+) (passed|failed|error)", m.group(1)))
         passed = counts.get("passed", 0)
         return passed, passed + counts.get("failed", 0) + counts.get("error", 0)
+    cargo = _CARGO_SUMMARY.findall(output)  # one line per test binary
+    if cargo:
+        passed = sum(int(p) for p, _ in cargo)
+        return passed, passed + sum(int(f) for _, f in cargo)
     return None
 
 
@@ -101,6 +109,7 @@ def record_score(record: dict) -> float:
 
 
 # C# compiler errors (dotnet prints each twice: during the build and in its summary).
+_RS_ERROR = re.compile(r"^error\[(E\d{4})\]: (.+?)\n\s*--> ([^\n]+)", re.M)
 _CS_ERROR = re.compile(r"^(.*?)\berror (CS\d{4}): (.+?)(?: \[[^\]\n]*\])?\s*$", re.M)
 _LANGUAGE_VERSION = re.compile(r"is not available in C# 9\.0")
 _MISSING_FRAMEWORK = re.compile(r"does not exist in the namespace 'System[.']")
@@ -126,6 +135,8 @@ def build_errors(output: str, unity_rules: bool = True) -> dict | None:
     that is plain .NET, like the fastengine tasks, has no Unity constraints to break)."""
     seen: dict[str, tuple[str, str]] = {}
     for where, code, message in _CS_ERROR.findall(output):
+        seen.setdefault(f"{where.strip()} {code} {message}", (code, message))
+    for code, message, where in _RS_ERROR.findall(output):  # rustc: error[E0308]: ... then --> file:line
         seen.setdefault(f"{where.strip()} {code} {message}", (code, message))
     if not seen:
         return None

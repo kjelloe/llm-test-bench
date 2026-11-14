@@ -1,0 +1,1 @@
+{"type":"lobby","lobby":{"code":"2KM66","status":"lobby","options":{"seed":20260818,"islands":8,"teams":2,"enemy":1,"ending":0,"speed":2,"start":0,"observers":1,"network":1},"seats":[{"team":0,"name":"Commander 1","ready":1,"host":1},{"team":1,"name":"Commander 2","ready":1,"host":0}],"ready":1,"chat":[{"team":0,"name":"Commander 1","text":"all hands"}]}}

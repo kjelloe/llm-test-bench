@@ -1,0 +1,17 @@
+default_only
+set_value|setValueAtTime 0.5 0.01
+linear_ramp|setValueAtTime 1 0|linearRampToValueAtTime 0 0.05
+exponential_decay|setValueAtTime 1 0.01|exponentialRampToValueAtTime 0.001 0.06
+exponential_from_zero|setValueAtTime 0 0|exponentialRampToValueAtTime 1 0.05
+exponential_opposite_signs|setValueAtTime -0.5 0.005|exponentialRampToValueAtTime 0.5 0.04
+ramp_without_earlier_event|linearRampToValueAtTime 0 0.04
+exponential_without_earlier_event|exponentialRampToValueAtTime 0.25 0.03
+set_target|setValueAtTime 1 0|setTargetAtTime 0.2 0.02 0.01
+set_target_then_set_value|setTargetAtTime 0 0.01 0.005|setValueAtTime 0.8 0.05
+same_time_later_wins|setValueAtTime 0.3 0.02|setValueAtTime 0.7 0.02
+ramp_ends_between_samples|setValueAtTime 1 0|linearRampToValueAtTime 0 0.0201234
+chained|linearRampToValueAtTime 0.5 0.02|exponentialRampToValueAtTime 0.05 0.05|linearRampToValueAtTime 0.8 0.08
+value_after_ramp|setValueAtTime 1 0|linearRampToValueAtTime 0 0.05|setValueAtTime 0.6 0.07001|exponentialRampToValueAtTime 0.1 0.09
+out_of_order_calls|linearRampToValueAtTime 0.2 0.06|setValueAtTime 0.9 0.01
+target_after_target|setTargetAtTime 0 0.01 0.01|setTargetAtTime 1 0.04 0.005
+ramp_after_target|setTargetAtTime 0.1 0 0.01|setValueAtTime 0.4 0.03|exponentialRampToValueAtTime 0.9 0.07

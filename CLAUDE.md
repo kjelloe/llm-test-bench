@@ -454,6 +454,8 @@ tests/
                               + bench.py --backend openai-ext end to end
   test_strata_run.py          strata-run.sh against stand-in Niko/ro99 servers: run.sh gets the endpoint and label (STRATA_ENGINE for
                               forks), WSL libcuda first for ro99, refuses an occupied port, a crash during load fails the run
+  test_rust_tasks.py          the rust group: every reference passes end to end through run_one while the stub fails, cargo partial
+                              credit and rustc build errors parse, the fixture generators reproduce fixtures/ byte for byte
   test_statistics_server_name.py  statistics._server_name unit tests (llama_server_ver column attribution)
   test_powerlimit_output.py   powerlimit.sh WSL2 PowerShell one-liner regression test (skipped off-WSL2)
   test_run_sh_pip_bootstrap.py  run.sh venv/pip setup regression guard (ensurepip fallback, venv-python pip invocation — see Debian pip finding below)
@@ -515,6 +517,7 @@ Task groups (--task-group):
   fastengine    17 tasks (14 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
   fastengine_gl    9 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
+  rust      8 Rust tasks from bj-engine (std-only crates, cargo test --offline), OPT-IN; see "Rust task group"
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -2426,12 +2429,31 @@ covered by `fastengine`), C01 (pixel comparison against Chromium), the Windows i
   buffers (gemma4:31b-qat's scene runner aborts with heap corruption); gpt-oss:120b gets everything but the 16-bit index
   limit (0.89). **Lambert:** varied colour-handling errors; qwen3.8:27b closest (0.70, hemisphere wrong).
 
+#### Rust task group (`--task-group rust`, added 2026-11-14)
+
+From `~/GIT/bj-engine` (Rust, Bevy 0.20) and the incident list its coding ally sent (plan doc 2026-11-14). Each task is a
+std-only crate in `task_data/rs_*` (`src/<file>.rs` editable, `<file>.reference.rs` never compiled or exported, `tests/*.rs`,
+`fixtures/`), graded by `cargo test --offline -- --test-threads=1` in ~2-5 s; `target/` is kept out of work dirs and exports.
+Validation as for gamedev: the stub fails, the reference passes end to end (`tests/test_rust_tasks.py`), single-bug mutants
+caught (46 of 47; `rs_audio_ramps`' f32-time mutant is equivalent within its 1e-4 tolerance). Levels are first guesses until
+models have run.
+
+| Task | L | From | Traps |
+|---|---|---|---|
+| `rs_tick_coalesce` | 3 | native client burst-caught-up on missed input ticks | one tick per frame on the 50 ms grid, missed beats dropped, grid kept after a late frame, pause/resume starts a new grid |
+| `rs_fixed_movement` | 3 | `Math.floor`/`>>> 0` vs Rust `/` and `as` | `div_euclid`, logical shift in xorshift32, integer (not float) movement, `>=` at the corner-assist threshold; 8,378 JS steps + 2,000 rng values |
+| `rs_burst_drain` | 3 | CarrierDominion ×16 bursts lost events | every snapshot's events in order, one full decode per frame, a welcome ends the old view, broken frames skipped (captured frames, bj-engine `60a8097`) |
+| `rs_demultiply` | 3 | canvas2d's demultiply hotspot | byte-identical to the f64 formula for all valid pixels, ≥2× faster on a 95% opaque/empty canvas |
+| `rs_bayer` | 2 | Bayer digits reversed | standard 2/4/8 matrices, thresholds tiled over negative coordinates, `>=` at the threshold, clamping |
+| `rs_audio_ramps` | 4 | Web Audio ramp semantics (bj and fastengine) | events sorted by time, exponential from 0 or across signs holds, `t >= end`, setTarget chains; 17 cases rendered by Chromium |
+| `rs_net_session` | 4 | kicked kept its token, superseded resumed | 1 s ×1.7 to 5 s, final close codes 4000/4001/4003, 403 final / 401 once, token per server origin, stale generations ignored |
+| `rs_ecs_frame` | 4 | the ally's top three Bevy traps | compare before `get_mut` (no re-upload), change the base `light_system` derives from, order the offset after `sync_transforms` |
+
 #### Other engines under evaluation (not benchmarked)
 
 - **bj-engine** (`~/GIT/bj-engine`, separate repo): native Linux/Windows clients for the same three.js + Node `ws` games,
-  in **Rust on Bevy 0.19**, built for the high graphics tier (shadows, bloom, lighting) on RTX cards; Boombrawl M0–M5 done
-  as of 2026-10-21. The user is evaluating it next to fastengine for lighting/shadow builds. **No Rust tasks yet — the user
-  decides later whether to add them** (2026-10-22). Their observation: work in that engine seems to need frontier models
+  in **Rust on Bevy 0.19** (0.20 since 2026-11-12; Rust tasks since 2026-11-14: "Rust task group" above), built for the high graphics tier (shadows, bloom, lighting) on RTX cards; Boombrawl M0–M5 done
+  as of 2026-10-21. The user is evaluating it next to fastengine for lighting/shadow builds. **Rust tasks: the `rust` group since 2026-11-14** (the user decided 2026-10-22 to wait; built after the bj-engine ally's incident list). Their observation: work in that engine seems to need frontier models
   (Claude Opus, Fable), which fits the GL results here (0/10 on every hard `fastengine_gl` task). Read-only from this repo.
 - **Since 2026-10-26 the bj-engine coding ally also uses the local lane** (llm-service-provider, gpt-oss:120b) as a helper for
   contained Rust work; the message it got keeps shaders, render pipeline and ECS architecture with the ally (untested in Rust).
