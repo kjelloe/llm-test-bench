@@ -2435,19 +2435,43 @@ From `~/GIT/bj-engine` (Rust, Bevy 0.20) and the incident list its coding ally s
 std-only crate in `task_data/rs_*` (`src/<file>.rs` editable, `<file>.reference.rs` never compiled or exported, `tests/*.rs`,
 `fixtures/`), graded by `cargo test --offline -- --test-threads=1` in ~2-5 s; `target/` is kept out of work dirs and exports.
 Validation as for gamedev: the stub fails, the reference passes end to end (`tests/test_rust_tasks.py`), single-bug mutants
-caught (46 of 47; `rs_audio_ramps`' f32-time mutant is equivalent within its 1e-4 tolerance). Levels are first guesses until
-models have run.
+caught (46 of 47; `rs_audio_ramps`' f32-time mutant is equivalent within its 1e-4 tolerance). Levels set 2026-11-14 by
+the t59 pass rates (9 models, ≥80% L2, 50-79% L3, 20-49% L4, <20% L5).
 
 | Task | L | From | Traps |
 |---|---|---|---|
 | `rs_tick_coalesce` | 3 | native client burst-caught-up on missed input ticks | one tick per frame on the 50 ms grid, missed beats dropped, grid kept after a late frame, pause/resume starts a new grid |
-| `rs_fixed_movement` | 3 | `Math.floor`/`>>> 0` vs Rust `/` and `as` | `div_euclid`, logical shift in xorshift32, integer (not float) movement, `>=` at the corner-assist threshold; 8,378 JS steps + 2,000 rng values |
-| `rs_burst_drain` | 3 | CarrierDominion ×16 bursts lost events | every snapshot's events in order, one full decode per frame, a welcome ends the old view, broken frames skipped (captured frames, bj-engine `60a8097`) |
-| `rs_demultiply` | 3 | canvas2d's demultiply hotspot | byte-identical to the f64 formula for all valid pixels, ≥2× faster on a 95% opaque/empty canvas |
+| `rs_fixed_movement` | 5 | `Math.floor`/`>>> 0` vs Rust `/` and `as` | `div_euclid`, logical shift in xorshift32, integer (not float) movement, `>=` at the corner-assist threshold; 8,378 JS steps + 2,000 rng values |
+| `rs_burst_drain` | 5 | CarrierDominion ×16 bursts lost events | every snapshot's events in order, one full decode per frame, a welcome ends the old view, broken frames skipped (captured frames, bj-engine `60a8097`) |
+| `rs_demultiply` | 5 | canvas2d's demultiply hotspot | byte-identical to the f64 formula for all valid pixels, ≥2× faster on a 95% opaque/empty canvas |
 | `rs_bayer` | 2 | Bayer digits reversed | standard 2/4/8 matrices, thresholds tiled over negative coordinates, `>=` at the threshold, clamping |
-| `rs_audio_ramps` | 4 | Web Audio ramp semantics (bj and fastengine) | events sorted by time, exponential from 0 or across signs holds, `t >= end`, setTarget chains; 17 cases rendered by Chromium |
-| `rs_net_session` | 4 | kicked kept its token, superseded resumed | 1 s ×1.7 to 5 s, final close codes 4000/4001/4003, 403 final / 401 once, token per server origin, stale generations ignored |
-| `rs_ecs_frame` | 4 | the ally's top three Bevy traps | compare before `get_mut` (no re-upload), change the base `light_system` derives from, order the offset after `sync_transforms` |
+| `rs_audio_ramps` | 5 | Web Audio ramp semantics (bj and fastengine) | events sorted by time, exponential from 0 or across signs holds, `t >= end`, setTarget chains; 17 cases rendered by Chromium |
+| `rs_net_session` | 5 | kicked kept its token, superseded resumed | 1 s ×1.7 to 5 s, final close codes 4000/4001/4003, 403 final / 401 once, token per server origin, stale generations ignored |
+| `rs_ecs_frame` | 3 | the ally's top three Bevy traps | compare before `get_mut` (no re-upload), change the base `light_system` derives from, order the offset after `sync_transforms` |
+
+**First results (t59, 2026-11-14, `output/t59-rust-*.json`, order-independent; single-GPU models on one 4090, gpt-oss:120b and
+the ISTA coder on 3×24 GB, Edge0 on edge0-strata).** Cell = **P** pass, else partial credit; `cc` = does not compile, `nb` = no
+usable file. Ranked by mean partial credit.
+
+| Model | tick | move | burst | demul | bayer | audio | net | ecs | pass | partial | tok/s |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| gemma4:31b-qat | **P** | 0.86 | 0.90 | 0.57 | **P** | 0.47 | 0.93 | **P** | 3/8 | 0.84 | 40 |
+| gpt-oss:120b | **P** | 0.86 | **P** | 0.57 | **P** | cc | 0.93 | **P** | 4/8 | 0.79 | 66 |
+| qwen3.8:27b-byteshape | **P** | 0.86 | cc | 0.86 | **P** | 0.47 | **P** | **P** | 4/8 | 0.77 | 52 |
+| qwen3.8:27b | 0.91 | 0.86 | 0.90 | 0.86 | **P** | cc | 0.64 | **P** | 2/8 | 0.77 | 45 |
+| equinox:31b | **P** | 0.86 | cc | 0.57 | **P** | 0.59 | 0.00 | 0.78 | 2/8 | 0.60 | 39 |
+| qwen3.8-flash-next-coder | **P** | **P** | cc | nb | **P** | cc | cc | **P** | 4/8 | 0.50 | 35 |
+| gemma4:12b-qat | **P** | cc | 0.80 | 0.57 | **P** | 0.00 | cc | 0.56 | 2/8 | 0.49 | 91 |
+| edge0-145b (edge0-strata) | **P** | cc | nb | nb | **P** | nb | cc | 0.78 | 2/8 | 0.35 | 26 |
+| tiel-coder:35b | 0.09 | nb | 0.70 | 0.86 | 0.40 | cc | cc | 0.78 | 0/8 | 0.35 | 138 |
+
+- **Shared misses:** `rs_demultiply`'s speed (7 of 9 keep the per-pixel f64 division, 1.2-1.4× instead of 2×; none passes);
+  `rs_fixed_movement`'s `world_to_cell` (a hand-written floor such as `(w - 255) / 256` overflows at `i32::MIN`, or is wrong
+  for -1; only the ISTA coder uses `div_euclid`); `rs_ecs_frame`'s system order (4 leave `bob_offset` unordered, so
+  `sync_transforms` overwrites the heave); `rs_audio_ramps` (nobody passes; out-of-order calls and setTarget chains).
+- **Compile errors** are 13 of 72 results; Edge0's three `nb` are complete files without END_FILE (the flash-next habit).
+- gemma4:31b-qat leads again (as on gamedev); gpt-oss:120b, byteshape and the ISTA coder pass the most (4/8). tiel-coder,
+  the fastest single-GPU coder, is last. Edge0 does not carry its 9/10 spot result over to Rust.
 
 #### Other engines under evaluation (not benchmarked)
 

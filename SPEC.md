@@ -133,10 +133,10 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   --test-threads=1` (`requires` cargo); partial credit from cargo's `test <name> ... ok|FAILED` lines, rustc's `error[Exxxx]`
   counted in `build_errors`. Fixtures are the games' captured data, the game's JS run under Node, or Chromium's own Web Audio
   render; only fixture data and the task's own Rust ship (no game JS except the movement files `cs_port_movement` already
-  carries). `rs_tick_coalesce` L3 (one input tick per frame on the browser's grid), `rs_fixed_movement` L3 (JS `Math.floor`
-  and `>>> 0` semantics in a bit-exact port), `rs_burst_drain` L3 (newest view, every snapshot's events), `rs_demultiply` L3
-  (a 2× faster, byte-identical alpha conversion), `rs_bayer` L2 (floor task), `rs_audio_ramps` L4 (Web Audio ramps against
-  Chromium), `rs_net_session` L4 (reconnect policy), `rs_ecs_frame` L4 (three Bevy traps on a small ECS shim).
+  carries). `rs_tick_coalesce` L3 (one input tick per frame on the browser's grid), `rs_fixed_movement` L5 (JS `Math.floor`
+  and `>>> 0` semantics in a bit-exact port), `rs_burst_drain` L5 (newest view, every snapshot's events), `rs_demultiply` L5
+  (a 2× faster, byte-identical alpha conversion), `rs_bayer` L2 (floor task), `rs_audio_ramps` L5 (Web Audio ramps against
+  Chromium), `rs_net_session` L5 (reconnect policy), `rs_ecs_frame` L3 (three Bevy traps on a small ECS shim).
 
   **fastengine GL tasks (9, opt-in, 2026-10-17/21) — `--task-group fastengine_gl`:** tasks that need an OpenGL context. Their
   test command runs pytest under `xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=1` (Mesa's llvmpipe, OpenGL 4.5 core); each task

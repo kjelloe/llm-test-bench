@@ -2629,7 +2629,7 @@ RS_TICK_COALESCE = _rust_task(
     "src/ticks.rs", ["tests/ticks.rs"],
 )
 RS_FIXED_MOVEMENT = _rust_task(
-    "rs_fixed_movement", 3,
+    "rs_fixed_movement", 5,
     "src/fixed.rs is a first Rust port of the game's fixed-point helpers, movement integrator and seeded xorshift "
     "(js/fixedmath.mjs, js/movement.mjs, js/rng.mjs). The server runs the JavaScript, so the port must give the same "
     "integers for every input, or players rubber-band; the tests replay thousands of steps the JavaScript computed. "
@@ -2637,7 +2637,7 @@ RS_FIXED_MOVEMENT = _rust_task(
     "src/fixed.rs", ["js/fixedmath.mjs", "js/movement.mjs", "js/rng.mjs", "js/const.mjs", "tests/parity.rs"],
 )
 RS_BURST_DRAIN = _rust_task(
-    "rs_burst_drain", 3,
+    "rs_burst_drain", 5,
     "Fix src/burst.rs: at x16 time compression several CarrierDominion snapshots arrive between two rendered frames. "
     "Only the newest view is drawn, but every snapshot's events must be kept, in order; the first cut lost them, and "
     "decoded every snapshot in full. The comment above drain is the specification; the frames in the tests are "
@@ -2645,7 +2645,7 @@ RS_BURST_DRAIN = _rust_task(
     "src/burst.rs", ["src/wire.rs", "src/json.rs", "tests/burst.rs"],
 )
 RS_DEMULTIPLY = _rust_task(
-    "rs_demultiply", 3,
+    "rs_demultiply", 5,
     "src/fast.rs converts a canvas from premultiplied to straight alpha, a measured hotspot in bj-engine's HUD. Make "
     "it at least twice as fast as the canvas's own conversion in src/slow.rs on a typical HUD canvas without changing "
     "a single output byte for any valid pixel.",
@@ -2658,21 +2658,21 @@ RS_BAYER = _rust_task(
     "src/dither.rs", ["tests/dither.rs"],
 )
 RS_AUDIO_RAMPS = _rust_task(
-    "rs_audio_ramps", 4,
+    "rs_audio_ramps", 5,
     "Implement src/param.rs, a native Web Audio AudioParam for bj-engine's synth: a cue rendered natively must match "
     "the browser's render sample for sample. The comment at the top is the specification; the tests compare with "
     "samples Chromium's own Web Audio rendered.",
     "src/param.rs", ["tests/chromium.rs"],
 )
 RS_NET_SESSION = _rust_task(
-    "rs_net_session", 4,
+    "rs_net_session", 5,
     "Implement the reconnect policy in src/session.rs (bj-engine's WebSocket client as a state machine): backoff, "
     "final close codes, refused upgrades, a seat token per server and abandoned attempts. The comment at the top is "
     "the specification; the current code reconnects after a second whatever happened.",
     "src/session.rs", ["tests/session.rs"],
 )
 RS_ECS_FRAME = _rust_task(
-    "rs_ecs_frame", 4,
+    "rs_ecs_frame", 3,
     "src/game.rs holds three CarrierDominion client systems on a minimal Bevy-like ECS (src/ecs.rs, read-only). Each "
     "one is wrong on screen although it looks right in isolation. Fix them so the frame the renderer gets is right.",
     "src/game.rs", ["src/ecs.rs", "tests/frame.rs"],
