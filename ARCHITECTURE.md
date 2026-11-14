@@ -95,7 +95,10 @@ tests/
   test_statistics_server_name.py  Unit tests for statistics._server_name — same engine-attribution logic, exercised from the aggregation side
   test_powerlimit_output.py   Regression test for powerlimit.sh's WSL2 elevated-PowerShell one-liner (invokes the real script; skipped off-WSL2 since the non-WSL path calls sudo nvidia-smi for real)
   test_hangwatch.py           llamacpp/hangwatch.sh "task still in progress" detection
-  test_test_results.py        Partial-credit parsing (xunit, node:test, pytest per-test lines and summary counts), test_weights, and C# build-error classification (Unity rules)
+  test_test_results.py        Partial-credit parsing (xunit, node:test, pytest per-test lines and summary counts; cargo's in test_rust_tasks.py), test_weights, and C# build-error classification (Unity rules)
+  test_rust_tasks.py          rust group: every reference passes end to end through run_one while the stub fails; cargo per-test lines and
+                              summaries, rustc error[Exxxx] build errors; fixture generators reproduce fixtures/ byte for byte
+  test_strata_run.py          strata-run.sh against stand-in Strata servers (Niko/fork and ro99 modes)
   test_unity_shim_sync.py     Opt-in task guards: UnityShim copies match the canonical one, every gamedev/fastengine task has a *.reference.* solution, every test_weights key names a real test, diag keys match their generator, every fixture generator (Node, Python, Chromium via Playwright, incl. cs_css_alpha_linear's screenshot) regenerates its fixtures byte for byte and none is unguarded; GL tasks carry the canonical Raylib-cs API excerpt and ApiDump regenerates it; weight keys may name tests in a hidden grader the test command runs
   test_run_sh_pip_bootstrap.py  Static regression guard for run.sh's venv/pip setup (ensurepip fallback present; requirements.txt installed via "$VENV/bin/python3" -m pip, never a bare pip — see the Debian externally-managed-environment finding in CLAUDE.md)
 task_data/
@@ -141,6 +144,10 @@ task_data/
   cs_test_movement/       editable test file; test_cmd runs grade.reference.d/ (pytest grader + 12 mutants of Movement.cs; hidden, not exported): the model's tests must pass on the real code, each mutant they fail on scores  [gamedev, opt-in]
   bash_accept_matrix/ bash_timeout_kill/ bash_kill_by_port/   scripts/<job>.sh stub + .reference.sh, tests/test_*.py (pytest drives the script)  [gamedev, opt-in]
   gamedev_diag/ fastengine_diag/   questions/<id>.md, answers/<id>.txt ("?"), tests/answer_key.json (salted sha256), make_diag.reference.py (the key's source)  [opt-in]
+  rs_*/                   rust tasks: Cargo.toml (no dependencies, except rs_wgsl_lambert's pinned wgpu 30.0.1 with its Cargo.lock),
+                          src/<file>.rs editable + <file>.reference.rs (not a module, never compiled or exported), tests/*.rs, fixtures/,
+                          tools/make_fixtures.reference.* where fixtures are generated; test_cmd cargo test --offline (rs_wgsl_lambert builds
+                          wgpu in the work dir each run)  [rust, opt-in]
   fe_*/                   Fastengine.sln; src/Fastengine (net10.0, latest C#, the editable file, *.reference.cs excluded); tests/FastengineTests (xunit, fixtures.json);
                           js/ or tools/ hold the real code the fixtures come from (three r162 as js/three.reference.mjs, not exported; the game's i18n.js) and
                           the generator; fe_bash_* are bash tasks laid out like the gamedev ones  [fastengine, opt-in]

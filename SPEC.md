@@ -138,7 +138,7 @@ Each dimension runs as a separate benchmark with its own task suite, scripts, mo
   (a 2× faster, byte-identical alpha conversion), `rs_bayer` L2 (floor task), `rs_audio_ramps` L5 (Web Audio ramps against
   Chromium), `rs_net_session` L5 (reconnect policy), `rs_ecs_frame` L3 (three Bevy traps on a small ECS shim); wave 2: `rs_pick_sea` L4 (three's Raycaster onto the sea,
   captured picks), `rs_wgsl_lambert` L5 (a WGSL Lambert shader rendered by wgpu 30 on Vulkan/lavapipe against three r162's
-  formulas; `test.sh` shares wgpu's build across runs).
+  formulas; wgpu builds offline in the work dir, ~15-60 s per run).
 
   **fastengine GL tasks (9, opt-in, 2026-10-17/21) — `--task-group fastengine_gl`:** tasks that need an OpenGL context. Their
   test command runs pytest under `xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=1` (Mesa's llvmpipe, OpenGL 4.5 core); each task

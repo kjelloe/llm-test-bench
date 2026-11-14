@@ -34,7 +34,7 @@ def test_rust_group_is_opt_in_and_needs_cargo():
     for tid in RUST:
         task = TASK_MAP[tid]
         assert task.requires == ("cargo",)
-        assert task.test_cmd[:3] == ["cargo", "test", "--offline"] or task.test_cmd == ["bash", "test.sh"]
+        assert task.test_cmd[:3] == ["cargo", "test", "--offline"]
         assert (TASK_DATA_DIR / task.subdir / "Cargo.toml").is_file()
         assert not (TASK_DATA_DIR / task.subdir / "target").exists(), "a local cargo run left target/ in task_data"
         for rel in task.editable_files + task.context_files:
