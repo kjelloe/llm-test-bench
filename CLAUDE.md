@@ -365,7 +365,7 @@ statistics.sh       Aggregate all output/*.json into one sharable dataset: summa
 fetch-hf.sh         Download GGUF files from HuggingFace Hub based on hf: fields in models/*.txt; pre-checks repos for 404/deleted before downloading
 search-hf.sh        Search HuggingFace Hub for GGUF files; suggests models/*.txt lines to paste
 scout-hf.sh         Periodic HF Hub scanner; diffs against saved state (output/hf-scout-state.json); use --vllm for AWQ/GPTQ/FP8 transformers repos (state: output/hf-scout-vllm-state.json); --no-save for dry-run; --show-all to include unchanged repos; GGUF mode also reads HF's top-50 trending GGUF list (`[trending]` in the output, `--no-trending` to skip; a repo seen only there is not reported GONE when it drops off; added 2026-11-07, tests/test_scout_trending.py)
-preflight.sh        Dependency checker. Run it first on a new box: dotnet_sas needs .NET 9+
+preflight.sh        Dependency checker. Run it first on a new box: dotnet_sas needs .NET 9+; the rust group cargo (+ a Vulkan device for rs_wgsl_lambert)
 how-to-vllm.md      vLLM on an RTX 50xx (Blackwell) box: setup, GGUF plugin, model picks (models/16gb.vllm, models/2x16gb.vllm)
 how-to-test-flash-next.md  Step-by-step: qwen3.8-flash-next on 16 GB VRAM + RAM + NVMe expert paging
 test-plan-5060ti.md Plan for the RTX 5060 Ti box: qwen3.8-27b-gsqrco (llama-server) and first vLLM tests
@@ -517,7 +517,7 @@ Task groups (--task-group):
   fastengine    17 tasks (14 C#, 3 bash) for the second build engine (.NET 10 on Raylib-cs), OPT-IN; see "fastengine task group"
   fastengine_diag  18 multiple-choice questions (fdiag_*), OPT-IN
   fastengine_gl    9 tasks needing an OpenGL context (xvfb-run + Mesa llvmpipe), OPT-IN; see "fastengine GL tasks"
-  rust      8 Rust tasks from bj-engine (std-only crates, cargo test --offline), OPT-IN; see "Rust task group"
+  rust      10 Rust tasks from bj-engine (crates graded by cargo test --offline; one WGSL shader on wgpu/lavapipe), OPT-IN; see "Rust task group"
 ```
 
 #### Pre-flight: check for an active external-facing serving instance
@@ -2435,7 +2435,7 @@ From `~/GIT/bj-engine` (Rust, Bevy 0.20) and the incident list its coding ally s
 std-only crate in `task_data/rs_*` (`src/<file>.rs` editable, `<file>.reference.rs` never compiled or exported, `tests/*.rs`,
 `fixtures/`), graded by `cargo test --offline -- --test-threads=1` in ~2-5 s; `target/` is kept out of work dirs and exports.
 Validation as for gamedev: the stub fails, the reference passes end to end (`tests/test_rust_tasks.py`), single-bug mutants
-caught (46 of 47; `rs_audio_ramps`' f32-time mutant is equivalent within its 1e-4 tolerance). Levels set 2026-11-14 by
+caught (46 of 47; `rs_audio_ramps`' f32-time mutant is equivalent within its 1e-4 tolerance; wave 2, 2026-11-14: 16 of 16). Levels set 2026-11-14 by
 the t59 pass rates (9 models, ≥80% L2, 50-79% L3, 20-49% L4, <20% L5).
 
 | Task | L | From | Traps |
@@ -2448,6 +2448,8 @@ the t59 pass rates (9 models, ≥80% L2, 50-79% L3, 20-49% L4, <20% L5).
 | `rs_audio_ramps` | 5 | Web Audio ramp semantics (bj and fastengine) | events sorted by time, exponential from 0 or across signs holds, `t >= end`, setTarget chains; 17 cases rendered by Chromium |
 | `rs_net_session` | 5 | kicked kept its token, superseded resumed | 1 s ×1.7 to 5 s, final close codes 4000/4001/4003, 403 final / 401 once, token per server origin, stale generations ignored |
 | `rs_ecs_frame` | 3 | the ally's top three Bevy traps | compare before `get_mut` (no re-upload), change the base `light_system` derives from, order the offset after `sync_transforms` |
+| `rs_pick_sea` (wave 2) | 4 | CarrierDominion `pickSea` (three's Raycaster) | vertical fov with aspect on x, lookAt basis, rays that point away miss, engine y = -z, JS `Math.round`; 375 captured picks (135 misses), bj-engine `60a8097` |
+| `rs_wgsl_lambert` (wave 2) | 5 | bj-engine's Lambert pass, the ally's pick for a render task | WGSL fragment shader on wgpu 30 (Vulkan, lavapipe), 20 lighting cases against three r162's formulas ±1: sRGB decode, /π, hemisphere mix, clamped N·L towards the light, sRGB encode; `test.sh` keeps wgpu's build in `~/.cache/llm-test-bench/rs-wgpu-target` (first build ~15 s offline from the cargo cache) |
 
 **First results (t59, 2026-11-14, `output/t59-rust-*.json`, order-independent; single-GPU models on one 4090, gpt-oss:120b and
 the ISTA coder on 3×24 GB, Edge0 on edge0-strata).** Cell = **P** pass, else partial credit; `cc` = does not compile, `nb` = no

@@ -93,7 +93,7 @@ BENCH_BACKEND=llama-server ./compare.sh --model-file models/experimental.txt
 C#, Node-authority and build-script tasks), `gamedev_diag` (21 multiple-choice diagnosis questions),
 `fastengine` (17 tasks for the second build engine, .NET 10 on Raylib-cs: 14 C#, 3 bash) and `fastengine_diag` (18
 questions), `fastengine_gl` (9 tasks that need an OpenGL context, run under `xvfb-run` with Mesa's software
-renderer) and `rust` (8 Rust tasks from bj-engine, graded by `cargo test`); all six are **opt-in**: not part of a default all-tasks run, so they don't change the 39-task totals or
+renderer) and `rust` (10 Rust tasks from bj-engine, graded by `cargo test`, one a WGSL shader rendered by wgpu on Vulkan); all six are **opt-in**: not part of a default all-tasks run, so they don't change the 39-task totals or
 Skill levels until their difficulty levels are validated.
 
 ---

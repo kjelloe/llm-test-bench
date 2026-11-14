@@ -2677,7 +2677,34 @@ RS_ECS_FRAME = _rust_task(
     "one is wrong on screen although it looks right in isolation. Fix them so the frame the renderer gets is right.",
     "src/game.rs", ["src/ecs.rs", "tests/frame.rs"],
 )
-RUST_TASKS = [RS_TICK_COALESCE, RS_FIXED_MOVEMENT, RS_BURST_DRAIN, RS_DEMULTIPLY, RS_BAYER, RS_AUDIO_RAMPS, RS_NET_SESSION, RS_ECS_FRAME]
+RS_PICK_SEA = _rust_task(
+    "rs_pick_sea", 4,
+    "Fix src/pick.rs, the native CarrierDominion client's sea picking: a click must land where three.js's Raycaster "
+    "puts it in the browser (the comment at the top says how the browser does it). The tests replay picks captured from "
+    "the browser.",
+    "src/pick.rs", ["tests/picks.rs"],
+)
+RS_WGSL_LAMBERT = Task(
+    id="rs_wgsl_lambert",
+    difficulty=5,
+    description=(
+        "shaders/lambert.wgsl is bj-engine's MeshLambertMaterial pass in WGSL, ported from an old three.js lighting "
+        "setup. Fix it so every lighting case renders what three r162 draws (physical light units, colours in linear "
+        "space, sRGB output); shaders/three-r162-lambert.txt has the relevant parts of three. The harness (src/lib.rs) "
+        "renders it with wgpu on Vulkan (Mesa's lavapipe without a GPU). Keep the uniform layout and the entry points; "
+        "WGSL as wgpu 30 (naga) accepts it."
+    ),
+    subdir="rs_wgsl_lambert",
+    editable_files=["shaders/lambert.wgsl"],
+    context_files=["shaders/three-r162-lambert.txt", "src/lib.rs", "tests/lambert.rs"],
+    test_cmd=["bash", "test.sh"],
+    test_timeout=900,
+    requires=("cargo",),
+    num_ctx=24576,
+    min_predict=12000,
+)
+RUST_TASKS = [RS_TICK_COALESCE, RS_FIXED_MOVEMENT, RS_BURST_DRAIN, RS_DEMULTIPLY, RS_BAYER, RS_AUDIO_RAMPS, RS_NET_SESSION, RS_ECS_FRAME,
+              RS_PICK_SEA, RS_WGSL_LAMBERT]
 
 # Multiple-choice diagnosis questions from the Unity builder's incident list
 # (task_data/gamedev_diag): the model writes the letter of the best answer, graded against a

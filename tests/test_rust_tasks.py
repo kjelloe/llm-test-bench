@@ -16,7 +16,7 @@ needs_cargo = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo no
 
 def _answer(task) -> str:
     rel = task.editable_files[0]
-    ref = TASK_DATA_DIR / task.subdir / Path(rel).with_name(Path(rel).stem + ".reference.rs")
+    ref = TASK_DATA_DIR / task.subdir / Path(rel).with_name(Path(rel).stem + ".reference" + Path(rel).suffix)
     return f"BEGIN_FILE {rel}\n{ref.read_text()}END_FILE\n"
 
 
@@ -29,11 +29,12 @@ def _chat(text: str):
 
 
 def test_rust_group_is_opt_in_and_needs_cargo():
-    assert len(RUST) == 8
+    assert len(RUST) == 10
     assert not {t.id for t in DEFAULT_TASKS} & set(RUST)
     for tid in RUST:
         task = TASK_MAP[tid]
-        assert task.requires == ("cargo",) and task.test_cmd[:3] == ["cargo", "test", "--offline"]
+        assert task.requires == ("cargo",)
+        assert task.test_cmd[:3] == ["cargo", "test", "--offline"] or task.test_cmd == ["bash", "test.sh"]
         assert (TASK_DATA_DIR / task.subdir / "Cargo.toml").is_file()
         assert not (TASK_DATA_DIR / task.subdir / "target").exists(), "a local cargo run left target/ in task_data"
         for rel in task.editable_files + task.context_files:
@@ -86,6 +87,7 @@ RUST_FIXTURES = [
     ("rs_fixed_movement", "tools/make_fixtures.reference.mjs", "node"),
     ("rs_audio_ramps", "tools/make_fixtures.reference.mjs", "playwright"),
     ("rs_burst_drain", "tools/make_fixtures.reference.py", "bj-engine"),
+    ("rs_pick_sea", "tools/make_fixtures.reference.py", "bj-engine:commander.json"),
 ]
 _PLAYWRIGHT = Path.home() / "GIT" / "boombrawl" / "node_modules" / "playwright-core"
 _BJ = Path.home() / "GIT" / "bj-engine"
@@ -99,9 +101,10 @@ def _regenerate(task: str, script: str, need: str, tmp: Path) -> Path:
     shutil.copytree(TASK_DATA_DIR / task, work)
     shutil.rmtree(work / "fixtures")
     (work / "fixtures").mkdir()
-    if need == "bj-engine":
-        src = tmp / "fixture.json"
-        src.write_bytes(subprocess.run(["git", "-C", str(_BJ), "show", f"{BJ_COMMIT}:games/carrierdominion/Tests/fixture.json"],
+    if need.startswith("bj-engine"):
+        name = need.partition(":")[2] or "fixture.json"
+        src = tmp / name
+        src.write_bytes(subprocess.run(["git", "-C", str(_BJ), "show", f"{BJ_COMMIT}:games/carrierdominion/Tests/{name}"],
                                        capture_output=True, check=True, timeout=60).stdout)
         cmd = ["python3", script, str(src)]
     else:
@@ -112,7 +115,7 @@ def _regenerate(task: str, script: str, need: str, tmp: Path) -> Path:
 
 
 def _available(need: str) -> bool:
-    if need == "bj-engine":
+    if need.startswith("bj-engine"):
         return (_BJ / ".git").exists() and shutil.which("git") is not None
     return shutil.which("node") is not None and (need != "playwright" or _PLAYWRIGHT.is_dir())
 

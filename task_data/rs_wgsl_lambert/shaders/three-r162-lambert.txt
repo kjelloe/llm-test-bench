@@ -1,0 +1,45 @@
+three r162, the parts of MeshLambertMaterial's lighting that matter here (from src/renderers/shaders/ShaderChunk).
+Colours set with Color.setHex/setRGB are sRGB and stored in linear working space (ColorManagement): c_linear =
+SRGBToLinear(c). The renderer's output colour space is sRGB (outputColorSpace = SRGBColorSpace), with NoToneMapping.
+
+// lights_pars_begin.glsl
+vec3 getAmbientLightIrradiance( const in vec3 ambientLightColor ) {
+	vec3 irradiance = ambientLightColor;   // ambientLightColor = colour * intensity, linear
+	return irradiance;
+}
+vec3 getHemisphereLightIrradiance( const in HemisphereLight hemiLight, const in vec3 normal ) {
+	float dotNL = dot( normal, hemiLight.direction );   // direction = (0, 1, 0) for a default HemisphereLight
+	float hemiDiffuseWeight = 0.5 * dotNL + 0.5;
+	vec3 irradiance = mix( hemiLight.groundColor, hemiLight.skyColor, hemiDiffuseWeight );   // both colour * intensity
+	return irradiance;
+}
+// a DirectionalLight's direction is (position - target), normalised, in view space; its colour is colour * intensity
+// (physicallyCorrectLights: no extra PI factor since r155)
+
+// lights_lambert_pars_fragment.glsl
+void RE_Direct_Lambert( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal,
+	const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material,
+	inout ReflectedLight reflectedLight ) {
+	float dotNL = saturate( dot( geometryNormal, directLight.direction ) );
+	vec3 irradiance = dotNL * directLight.color;
+	reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
+}
+void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometryPosition, const in vec3 geometryNormal,
+	const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material,
+	inout ReflectedLight reflectedLight ) {
+	reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
+}
+
+// bsdfs.glsl
+vec3 BRDF_Lambert( const in vec3 diffuseColor ) {
+	return RECIPROCAL_PI * diffuseColor;
+}
+
+// normal_fragment_begin.glsl: the normal is normalised before lighting
+// opaque_fragment.glsl + colorspace_fragment.glsl: gl_FragColor = vec4( outgoingLight, diffuseColor.a ) then
+// linearToOutputTexel(): sRGBTransferOETF, then the output is clamped to [0, 1] by the 8-bit target
+vec4 sRGBTransferOETF( in vec4 value ) {
+	return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92,
+		vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
+}
+// SRGBToLinear( c ) = c < 0.04045 ? c * 0.0773993808 : pow( c * 0.9478672986 + 0.0521327014, 2.4 )

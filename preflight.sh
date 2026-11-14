@@ -185,6 +185,21 @@ else
   warn "no xvfb-run — fastengine_gl tasks are skipped (SKIPPED_ENV); install xvfb, libgl1-mesa-dri and mesa-utils"
 fi
 
+# ── Rust group: cargo, and a Vulkan device for rs_wgsl_lambert (lavapipe is enough) ─
+section "Rust (rust task group)"
+if command -v cargo &>/dev/null; then
+  ok "$(cargo --version)"
+  if command -v vulkaninfo &>/dev/null; then
+    VK=$(timeout 30 vulkaninfo --summary 2>/dev/null | grep -m1 deviceName | sed 's/.*= //')
+    if [[ -n $VK ]]; then ok "Vulkan: $VK"
+    else warn "vulkaninfo found no Vulkan device (install mesa-vulkan-drivers) — rs_wgsl_lambert will fail"; fi
+  else
+    warn "no vulkaninfo — cannot check the Vulkan device rs_wgsl_lambert needs (install vulkan-tools, mesa-vulkan-drivers)"
+  fi
+else
+  warn "no cargo — the rust task group is skipped (SKIPPED_ENV); install Rust (rustup)"
+fi
+
 # ── 7. Java ───────────────────────────────────────────────────────────────────
 section "Java"
 if command -v java &>/dev/null; then
